@@ -10,7 +10,13 @@ const UI = {
   css: `
 #ui{font-family:"Noto Serif SC","Shippori Mincho","Songti SC",serif;--ink:#0d0c12;--paper:#efe6d2;--paper2:#cfc3aa;--dim:#8f8674;--ver:#c8432f;--gold:#e8b04a;--ind:#2c3c6b}
 #ui *{box-sizing:border-box}
-.fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s}
+.fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;z-index:4}
+#sub,#tcard{z-index:6}
+#dlg{z-index:7}
+#barks{position:absolute;inset:0;pointer-events:none;z-index:3}
+#title{z-index:2}
+#pause{z-index:8}
+#loading{z-index:9}
 /* dialogue */
 #dlg{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(900px,94vw);min-height:148px;padding:18px 26px 20px 196px;
   background:linear-gradient(180deg,rgba(14,13,20,.92),rgba(10,9,15,.95));border-top:1px solid rgba(239,230,210,.38);border-bottom:1px solid rgba(239,230,210,.38);

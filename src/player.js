@@ -25,8 +25,8 @@ const PL = {
     e.blink -= dt; if (e.blink < -.12) e.blink = 2 + Math.random() * 3;
     if (e.exprT > 0) { e.exprT -= dt; if (e.exprT <= 0) e.expr = null; }
     if (e.emoteT > 0) { e.emoteT -= dt; if (e.emoteT <= 0) e.emote = null; }
-    const ctl = GAME.canControl() && e.state === "play";
-    let [ax, ay, am] = ctl ? IN.axis() : [0, 0, 0];
+    const ctl = GAME.canControl() && (e.state === "play" || e.state === "pinned");
+    let [ax, ay, am] = ctl && e.state === "play" ? IN.axis() : [0, 0, 0];
     if (e.form === "stone") { if (am > .2 && Math.random() < dt * 8) { e.wobble = .25; } ax = ay = am = 0; }
     this.actions(dt, ctl);
     this.move(dt, ax, ay, am);
@@ -140,7 +140,7 @@ const PL = {
     const top = e.stack[e.stack.length - 1];
     const windF = RD.env.wind[0] * RD.env.wind[2] * (H / 40) * (top.w === 0 ? 3 : 1) * (.5 + .5 * Math.sin(GAME.t * .7));
     const stiff = 9 + e.tail * 4 + (am < .1 ? 6 : 0);
-    e.omega += (-lat * .022 * (1 + H / 36) + windF * .9) * 1;
+    e.omega += -lat * .0065 * (1 + H / 36) + windF * .9 * dt * 2;
     e.omega += (-stiff * e.theta - 2.6 * e.omega) * dt;
     e.theta += e.omega * dt;
     const tmax = clamp(.52 - H / 150, .2, .52) + e.tail * .03;
@@ -199,9 +199,9 @@ const PL = {
     }
     // 取 take weight: from the thing in front of her, or failing that from the heaviest thing on her back
     if (GAME.flags.knowsWeight || GAME.tutorial) {
-      if (wt && (wt.w > 0)) { wt.hl = 1; this.prompts.push(["take", "取", "重 " + wt.w]); }
-      else if (e.stack.length && e.stack.some(s => s.w > 0)) this.prompts.push(["take", "取", "背上的重量"]);
-      if (wt && e.tail > 0) this.prompts.push(["give", "予", "交给它"]);
+      if (e.tail < 6) { if (wt && (wt.w > 0)) { wt.hl = 1; this.prompts.push(["take", "取", "重 " + wt.w]); }
+        else if (e.stack.length && e.stack.some(s => s.w > 0)) this.prompts.push(["take", "取", "背上的重量"]); }
+      if (wt && e.tail > 0 && e.form !== "stone") this.prompts.push(["give", "予", "交给它"]);
       if (IN.hit.take) { IN.consume("take"); this.take(wt); }
       if (IN.hit.give) { IN.consume("give"); this.give(wt); }
     }
@@ -233,7 +233,7 @@ const PL = {
     if (t.type === "lantern") RD.cam.shake = 1;
   },
   setForm(f) {
-    const e = this.e, was = e.form; e.form = f;
+    const e = this.e, was = e.form; if (was === f) return; e.form = f;
     if (f === "stone") { AU.sfx("stone"); RD.cam.shake = 3; FX.burst("dust", e.x, e.y, e.z, 14, { life: .7, c: [.6, .58, .55], speed: .8, up: .4, drag: 3, a: .8 }); STORY.bark("stone"); }
     if (f === "leaf") { AU.sfx("leaf"); FX.burst("leaf", e.x, e.y, e.z + 10, 10, { life: 2, c: [.5, .66, .3], speed: .6, up: .6, g: 20 }); STORY.bark("leaf"); }
     if (f === "normal" && was === "stone") { AU.sfx("unstone"); FX.burst("dust", e.x, e.y, e.z, 8, { life: .5, c: [.6, .58, .55], speed: .6, up: .3, drag: 3, a: .7 }); }
@@ -273,6 +273,11 @@ const PL = {
     }
     // the light she gives off when she holds weight, and the glow of a pale night
     if (e.tail > 0) RD.light(e.x + (e.flip ? 8 : -8), e.y, e.z + 12, 18 + e.tail * 6, .5 * e.tail / 6 + .2, .32 * e.tail / 6 + .1, .08);
+    if (e.form === "leaf") { // a big maple leaf held overhead like a parasol
+      const lx = e.x, lz = e.z + e.hop + 46, sw = Math.sin(GAME.t * 2.4) * 1.2, L = [[0, 0], [-1, 0], [1, 0], [-2, 1], [2, 1], [-3, 1], [3, 1], [-4, 2], [4, 2], [-2, 2], [2, 2], [0, 1], [0, 2], [-1, 1], [1, 1], [-3, 2], [3, 2], [0, -1], [-1, -1], [1, -1], [0, -2]];
+      for (const [dx, dz] of L) RD.part(lx + dx + sw, e.y + 1, lz - dz, 1, dz > 1 ? .36 : .48, dz > 1 ? .52 : .66, dz > 1 ? .22 : .3, 1);
+      for (let k = 0; k < 6; k++) RD.part(lx + Math.round(sw * (1 - k / 6)), e.y + 1, lz - 3 - k, 1, .4, .32, .2, 1);
+    }
     if (e.emote) UI.emote(e);
   },
   EXPR: { smug: { eyes: "smug", mouth: "fang" }, grin: { eyes: "happy", mouth: "fang" }, surprised: { eyes: "open", mouth: "o" }, sad: { eyes: "half", mouth: "idle" }, angry: { eyes: "half", mouth: "open" }, shout: { eyes: "closed", mouth: "open" }, soft: { eyes: "half", mouth: "smile" }, thinking: { eyes: "half", mouth: "idle" }, worried: { eyes: "open", mouth: "idle" }, count: { eyes: "open", mouth: "o" } },

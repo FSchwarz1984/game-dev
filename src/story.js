@@ -87,7 +87,7 @@ const STORY = {
     const [sx, sy] = LM.shrine; GAME.tod = 6.35; GAME.todLock = false;
     const P = PL.init(sx + 26, sy + 28); P.state = "pinned"; P.face = "front"; P.expr = "dazed"; P.exprT = 99;
     WORLDSETUP.afterFar();
-    const beam = mkItem("beam", P.x + 2, P.y + 3, { carry: true }); beam.pin = true; this.beam = beam;
+    const beam = mkItem("beam", P.x + 2, P.y + 3, { carry: false }); beam.pin = true; this.beam = beam;
     GAME.extraMist = .35;
     CINE.cam(P.x, P.y - 6, P.z, 99);
     await CINE.wait(1.5);
@@ -100,7 +100,7 @@ const STORY = {
     const P = PL.e;
     if (this.tut === "take" && how === "take") {
       // the whole beam pours into her at once — and she is a stone
-      if (this.beam) { const left = this.beam.w; this.beam.w = 0; P.tail = Math.min(6, P.tail + left); this.beam.pin = false; PL.setForm("stone"); }
+      if (this.beam) { const left = this.beam.w; this.beam.w = 0; this.beam.carry = true; P.tail = Math.min(6, P.tail + left); this.beam.pin = false; PL.setForm("stone"); }
       this.tut = "give"; P.state = "play";
       (async () => { GAME.cine = true; await CINE.wait(1.1); await CINE.say(T("dazed", "…………"), T("normal", "……这下轮到我重了。")); GAME.cine = false; UI.toast("把重量交给旁边的石灯笼——" + IN.glyph("give") + "  予", 6); })();
     } else if (this.tut === "give" && how === "give" && P.tail <= 3) {
@@ -120,7 +120,7 @@ const STORY = {
     await CINE.say(T("worried", "祠也……只剩一半了。"), T("count", "供品呢。"), T("count", "一、二、三。"), T("shout", "……三？！"), T("angry", "本座的九十九呢！"));
     await CINE.wait(.6);
     await CINE.say(T("thinking", "……昨晚的风。吹到山里去了。"), T("smug", "好。那就一个一个捡回来。"), T("grin", "顺便，把家也修了。"));
-    CINE.free(); GAME.extraMist = 0; GAME.noSave = false;
+    CINE.free(); GAME.extraMist = 0; GAME.noSave = false; GAME.flags.knowsLeaf = true;
     this.stage = "free"; UI.showHud(true); UI.countPop(GAME.count, null, true);
     AU.music("explore");
     UI.toast("九十九折峠", 3);

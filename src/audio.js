@@ -101,26 +101,22 @@ function makeNoise(sec, kind) {
   }
   return b;
 }
-// Decaying stereo noise with a lowpass that darkens over time. o: {pre, att, lp0, lp1, er}
-function makeIR(sec, o) {
-  const len = Math.floor(sec * SR), b = ctx.createBuffer(2, len, SR), pre = Math.floor((o.pre || 0) * SR), n = len - pre;
+// One channel of a decaying noise IR whose lowpass darkens over time. o: {pre, att, lp0, lp1, er}
+function irChan(b, sec, o, c) {
+  const len = b.length, pre = Math.floor((o.pre || 0) * SR), n = len - pre, d = b.getChannelData(c);
   const kEnv = Math.exp(-6.4 / (sec * 0.92 * SR)), kAtt = o.att ? Math.exp(-1 / (o.att * SR)) : 0;
-  for (let c = 0; c < 2; c++) {
-    const d = b.getChannelData(c);
-    let y1 = 0, y2 = 0, k = 0, env = 1, att = 1;
-    for (let i = 0; i < n; i++) {
-      if ((i & 63) === 0) k = Math.exp((-2 * Math.PI * o.lp0 * Math.pow(o.lp1 / o.lp0, i / n)) / SR);
-      const w = Math.random() * 2 - 1;
-      y1 = w + k * (y1 - w); y2 = y1 + k * (y2 - y1);
-      d[pre + i] = y2 * env * (1 - i / n) * (1 - att);
-      env *= kEnv; att *= kAtt;
-    }
-    for (let j = 0; j < (o.er || 0); j++) { // sparse early reflections (tree trunks, stones)
-      const p = pre + Math.floor(rnd(0.004, 0.075) * SR);
-      if (p < len) d[p] += rnd(-0.35, 0.35) * (1 - (p - pre) / (0.09 * SR));
-    }
+  let y1 = 0, y2 = 0, k = 0, env = 1, att = 1;
+  for (let i = 0; i < n; i++) {
+    if ((i & 63) === 0) k = Math.exp((-2 * Math.PI * o.lp0 * Math.pow(o.lp1 / o.lp0, i / n)) / SR);
+    const w = Math.random() * 2 - 1;
+    y1 = w + k * (y1 - w); y2 = y1 + k * (y2 - y1);
+    d[pre + i] = y2 * env * (1 - i / n) * (1 - att);
+    env *= kEnv; att *= kAtt;
   }
-  return b;
+  for (let j = 0; j < (o.er || 0); j++) { // sparse early reflections (tree trunks, stones)
+    const p = pre + Math.floor(rnd(0.004, 0.075) * SR);
+    if (p < len) d[p] += rnd(-0.35, 0.35) * (1 - (p - pre) / (0.09 * SR));
+  }
 }
 
 /* =====================================================================
@@ -160,7 +156,12 @@ function buildGraph() {
   chain(master, hush, waveLP, pauseLP, pauseG, comp, outG, ctx.destination);
   // Reverbs start empty (silent) and receive their generated IRs from the background queue,
   // keeping init() well under budget: room ≈ 2.8 s forest air, far ≈ 5.5 s dark, slow-blooming.
-  const cv = (sec, o) => { const c = ctx.createConvolver(); c.normalize = true; BQ.unshift(() => { c.buffer = makeIR(sec, o); }); return c; };
+  const cv = (sec, o) => {
+    const c = ctx.createConvolver(), b = ctx.createBuffer(2, Math.floor(sec * SR), SR);
+    c.normalize = true;
+    BQ.unshift(() => irChan(b, sec, o, 0), () => irChan(b, sec, o, 1), () => { c.buffer = b; });
+    return c;
+  };
   roomIn = G(); chain(roomIn, cv(2.8, { pre: 0.012, lp0: 9000, lp1: 2200, er: 14 }), G(0.7), master);
   farIn = G(); chain(farIn, cv(5.5, { pre: 0.07, att: 0.18, lp0: 3800, lp1: 380 }), G(0.85), master);
   mkBus("music", 0.16, 0); mkBus("amb", 0.08, 0); mkBus("sfx", 0.1, 0);
@@ -243,16 +244,20 @@ const SP0 = { g: 1, pan: 0, d: 0 };
    BAKERY — cached procedural buffers (plucks, bells, drums, loops)
    ===================================================================== */
 const BK = new Map();          // key → {b: AudioBuffer, r: playbackRate correction}
+let BSR = 44100;               // sample rate of the buffer currently being baked
 const BQ = [];                 // background bake queue (run in small slices by the scheduler)
-function bake(key, sec, ch, fn, loop) {
+// div > 1 bakes low-frequency material at SR/div (the source node resamples on playback).
+function bake(key, sec, ch, fn, loop, div = 1) {
   let e = BK.get(key);
   if (e) return e;
-  const len = Math.max(256, Math.floor(sec * SR)), b = ctx.createBuffer(ch, len, SR);
+  BSR = Math.max(8000, SR / div);
+  const len = Math.max(256, Math.floor(sec * BSR)), b = ctx.createBuffer(ch, len, BSR);
   e = { b, r: 1 };
   try { const r = fn(b, len); if (r > 0) e.r = r; } catch (err) { /* ignore */ }
-  const nf = loop ? 0 : Math.min(len >> 2, Math.floor(SR * 0.03)); // one-shots fade out; loops stay seamless
+  const nf = loop ? 0 : Math.min(len >> 2, Math.floor(BSR * 0.03)); // one-shots fade out; loops stay seamless
   for (let c = 0; c < ch; c++) { const d = b.getChannelData(c); for (let i = 0; i < nf; i++) d[len - 1 - i] *= i / nf; }
   BK.set(key, e);
+  BSR = SR;
   return e;
 }
 function bakeTick() {
@@ -262,11 +267,11 @@ function bakeTick() {
 // Sum of exponentially decaying sines via phasor recursion. parts: [f, amp, tau, attack, phase]
 function addPartials(d, parts, start = 0) {
   for (const p of parts) {
-    const f = p[0], tau = p[2], A = Math.max(1, (p[3] || 0.002) * SR);
-    if (!(f > 0) || f > SR * 0.45) continue;
-    const w = (2 * Math.PI * f) / SR, c = Math.cos(w), s = Math.sin(w), k = Math.exp(-1 / (tau * SR));
+    const f = p[0], tau = p[2], A = Math.max(1, (p[3] || 0.002) * BSR);
+    if (!(f > 0) || f > BSR * 0.45) continue;
+    const w = (2 * Math.PI * f) / BSR, c = Math.cos(w), s = Math.sin(w), k = Math.exp(-1 / (tau * BSR));
     let re = Math.cos(p[4] || 0), im = Math.sin(p[4] || 0), env = p[1];
-    const n = Math.min(d.length - start, Math.ceil(tau * SR * 7));
+    const n = Math.min(d.length - start, Math.ceil(tau * BSR * 6.5));
     for (let i = 0; i < n; i++) {
       const r2 = re * c - im * s; im = re * s + im * c; re = r2;
       d[start + i] += im * env * (i < A ? i / A : 1);
@@ -277,16 +282,16 @@ function addPartials(d, parts, start = 0) {
 }
 // Decaying sine whose pitch falls exponentially f0 → f1 (drums, thumps).
 function addChirp(d, f0, f1, tp, amp, tau, start = 0) {
-  const n = Math.min(d.length - start, Math.ceil(tau * SR * 7)), kd = Math.exp(-1 / (tau * SR)), kp = Math.exp(-1 / (tp * SR));
+  const n = Math.min(d.length - start, Math.ceil(tau * BSR * 7)), kd = Math.exp(-1 / (tau * BSR)), kp = Math.exp(-1 / (tp * BSR));
   let ph = 0, env = amp, df = f0 - f1;
   for (let i = 0; i < n; i++) {
-    ph += (2 * Math.PI * (f1 + df)) / SR; df *= kp;
+    ph += (2 * Math.PI * (f1 + df)) / BSR; df *= kp;
     d[start + i] += Math.sin(ph) * env * (i < 24 ? i / 24 : 1); env *= kd;
   }
 }
 // Decaying noise burst; lp = one-pole coefficient (0 = white), hp = differentiate.
 function addNoise(d, amp, tau, lp = 0, hp = false, start = 0) {
-  const n = Math.min(d.length - start, Math.ceil(tau * SR * 7)), kd = Math.exp(-1 / (tau * SR));
+  const n = Math.min(d.length - start, Math.ceil(tau * BSR * 7)), kd = Math.exp(-1 / (tau * BSR));
   let env = amp, y = 0, prev = 0;
   for (let i = 0; i < n; i++) {
     const w = Math.random() * 2 - 1;
@@ -333,7 +338,7 @@ function ksE(kind, m) {
   });
 }
 // Additive bells with beating pairs (stereo: slightly different beat per ear). parts: [ratio, amp, tau, beatHz]
-function bellE(key, sec, f0, parts, strike, ch = 2) {
+function bellE(key, sec, f0, parts, strike, ch = 2, div = 1) {
   return bake(key, sec, ch, (b) => {
     for (let c = 0; c < ch; c++) {
       const d = b.getChannelData(c), L = [];
@@ -345,13 +350,13 @@ function bellE(key, sec, f0, parts, strike, ch = 2) {
       addPartials(d, L);
       if (strike) strike(d);
     }
-  });
+  }, false, div);
 }
 const SND = {
   rin: () => bellE("rin", 4.2, 1174.7, [[1, 0.5, 0.95, 1.7], [2.71, 0.3, 0.5, 2.4], [5.15, 0.14, 0.28, 3.3], [8.3, 0.06, 0.14, 0]], (d) => addNoise(d, 0.06, 0.0015, 0, true)),
-  bell: () => bellE("bell", 10, 146.8, [[0.5, 0.32, 3.4, 0.6], [1, 0.42, 2.2, 1.1], [1.19, 0.2, 1.6, 0], [1.5, 0.18, 1.3, 0.8], [2, 0.2, 1.0, 0], [2.66, 0.12, 0.65, 1.4], [3.4, 0.07, 0.4, 0], [4.6, 0.04, 0.25, 0]],
-    (d) => { addChirp(d, 95, 60, 0.04, 0.3, 0.07); addNoise(d, 0.12, 0.012, 0.15); }),
-  gong: () => bellE("gong", 3.2, 73.4, [[1, 0.5, 1.0, 0.6], [1.48, 0.32, 0.75, 0.9], [2.09, 0.22, 0.5, 1.3], [2.76, 0.13, 0.32, 0], [3.9, 0.07, 0.2, 0]], (d) => addNoise(d, 0.1, 0.01, 0.2)),
+  bell: () => bellE("bell", 8, 146.8, [[0.5, 0.32, 3.4, 0.6], [1, 0.42, 2.2, 1.1], [1.19, 0.2, 1.6, 0], [1.5, 0.18, 1.3, 0.8], [2, 0.2, 1.0, 0], [2.66, 0.12, 0.65, 1.4], [3.4, 0.07, 0.4, 0], [4.6, 0.04, 0.25, 0]],
+    (d) => { addChirp(d, 95, 60, 0.04, 0.3, 0.07); addNoise(d, 0.12, 0.012, 0.3); }, 2, 4),
+  gong: () => bellE("gong", 3.2, 73.4, [[1, 0.5, 1.0, 0.6], [1.48, 0.32, 0.75, 0.9], [2.09, 0.22, 0.5, 1.3], [2.76, 0.13, 0.32, 0], [3.9, 0.07, 0.2, 0]], (d) => addNoise(d, 0.1, 0.01, 0.4), 2, 4),
   glass: () => bellE("glass", 2.2, 2349, [[1, 0.5, 0.45, 2.2], [2.32, 0.24, 0.25, 0], [4.1, 0.1, 0.12, 0], [5.8, 0.04, 0.07, 0]], (d) => addNoise(d, 0.05, 0.001, 0, true)),
   suzu: () => bellE("suzu", 0.35, 3100, [[1, 0.5, 0.03], [1.516, 0.35, 0.025], [2.48, 0.08, 0.012]], (d) => {
     addPartials(d, [[3112, 0.22, 0.028, 0.001], [4690, 0.16, 0.022, 0.001]], Math.floor(0.018 * SR)); // the pellet rattles twice
@@ -360,8 +365,8 @@ const SND = {
   kaneO: () => bellE("kaneO", 0.9, 1480, [[1, 0.35, 0.2], [1.54, 0.3, 0.15], [2.31, 0.24, 0.1], [2.79, 0.2, 0.08], [3.73, 0.12, 0.055], [4.4, 0.08, 0.04]], (d) => addNoise(d, 0.35, 0.0025, 0, true), 1),
   kaneD: () => bellE("kaneD", 0.25, 1480, [[1, 0.3, 0.045], [1.54, 0.28, 0.035], [2.31, 0.22, 0.025], [2.79, 0.18, 0.02], [3.73, 0.1, 0.015]], (d) => addNoise(d, 0.3, 0.002, 0, true), 1),
   shime: () => bake("shime", 0.45, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 560, 400, 0.012, 0.55, 0.06); addChirp(d, 900, 640, 0.01, 0.2, 0.035); addNoise(d, 0.45, 0.004, 0, true); addNoise(d, 0.15, 0.03, 0.3); }),
-  taiko: () => bake("taiko", 1.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 170, 104, 0.03, 0.75, 0.24); addChirp(d, 280, 170, 0.02, 0.2, 0.1); addNoise(d, 0.3, 0.01, 0.12); }),
-  odaiko: () => bake("odaiko", 2.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 105, 56, 0.05, 0.85, 0.5); addChirp(d, 165, 92, 0.04, 0.25, 0.22); addNoise(d, 0.35, 0.02, 0.06); addNoise(d, 0.06, 0.25, 0.02); }),
+  taiko: () => bake("taiko", 1.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 170, 104, 0.03, 0.75, 0.24); addChirp(d, 280, 170, 0.02, 0.2, 0.1); addNoise(d, 0.3, 0.01, 0.24); }, false, 2),
+  odaiko: () => bake("odaiko", 2.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 105, 56, 0.05, 0.85, 0.5); addChirp(d, 165, 92, 0.04, 0.25, 0.22); addNoise(d, 0.35, 0.02, 0.12); addNoise(d, 0.06, 0.25, 0.04); }, false, 2),
   knock: () => bellE("knock", 0.4, 520, [[1, 0.55, 0.05], [2.3, 0.3, 0.025], [4.1, 0.14, 0.012]], (d) => { addChirp(d, 190, 120, 0.02, 0.3, 0.04); addNoise(d, 0.25, 0.003, 0.4); }, 1),
   wood: () => bellE("wood", 0.5, 700, [[1, 0.5, 0.065], [2.71, 0.28, 0.03], [5.13, 0.1, 0.014]], (d) => addNoise(d, 0.25, 0.002, 0.5), 1),
   tick: () => bellE("tick", 0.15, 2200, [[1, 0.5, 0.012], [2.62, 0.3, 0.006]], (d) => addNoise(d, 0.3, 0.0012, 0, true), 1),
@@ -568,8 +573,8 @@ function airSweep(v, out, t, f0, f1, dur, lvl, peakAt = 0.6) {
 }
 SFX.give = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.25);
-  airSweep(v, out, t, 380, 3600, 0.75, 0.32, 0.65);
-  bufTo(v, "glass", t + 0.45, 0.75, 0.18, out);
+  airSweep(v, out, t, 380, 3600, 0.75, 0.5, 0.65);
+  bufTo(v, "glass", t + 0.45, 0.75, 0.26, out);
 });
 SFX.stone = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.22, 0.08);
@@ -579,19 +584,19 @@ SFX.stone = (o, sp, t) => play("sfx", (v) => {
 });
 SFX.unstone = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.2);
-  const nz = v.n("white", t, t + 0.8), bp = v.f("bandpass", 1800, 0.8), ng = v.g(0); grains(ng.gain, t, 12, 0.45, 0.25); chain(nz, bp, ng, out);
-  airSweep(v, out, t + 0.1, 500, 2800, 0.6, 0.22, 0.75);
-  bufTo(v, "glass", t + 0.55, 0.6, 0.12, out);
+  const nz = v.n("white", t, t + 0.8), bp = v.f("bandpass", 1800, 0.8), ng = v.g(0); grains(ng.gain, t, 12, 0.45, 0.4); chain(nz, bp, ng, out);
+  airSweep(v, out, t + 0.1, 500, 2800, 0.6, 0.33, 0.75);
+  bufTo(v, "glass", t + 0.55, 0.6, 0.16, out);
 });
 SFX.leaf = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.3);
-  airSweep(v, out, t, 600, 5200, 0.9, 0.3, 0.2);
-  for (const [dt, r] of [[0.08, 1], [0.16, 1.5], [0.27, 1.335]]) bufTo(v, "glass", t + dt, r, 0.1, out);
+  airSweep(v, out, t, 600, 5200, 0.9, 0.45, 0.2);
+  for (const [dt, r] of [[0.08, 1], [0.16, 1.5], [0.27, 1.335]]) bufTo(v, "glass", t + dt, r, 0.14, out);
 });
 SFX.unleaf = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.2);
-  airSweep(v, out, t, 4200, 450, 0.6, 0.25, 0.15);
-  bufTo(v, "knock", t + 0.42, 0.55, 0.22, out);
+  airSweep(v, out, t, 4200, 450, 0.6, 0.38, 0.15);
+  bufTo(v, "knock", t + 0.42, 0.55, 0.3, out);
 });
 SFX.deny = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.03);
@@ -648,14 +653,14 @@ SFX.blip = (o, sp, t) => { // dialogue voice blips
       bufTo(v, "knock", t, (220 / 520) * rnd(0.95, 1.05), 0.35, out);
       thump(v, out, t, 230, 205, 0.12, 0.05);
     } else if (vc === "old") {
-      noiseHit(v, out, "pink", t, "bandpass", 520 + (i % 5) * 30, 2.5, 0.3, 0.07);
-      thump(v, out, t, 165 + (i % 4) * 9, 150, 0.1, 0.07);
+      noiseHit(v, out, "pink", t, "bandpass", 520 + (i % 5) * 30, 2.5, 0.55, 0.07);
+      thump(v, out, t, 165 + (i % 4) * 9, 150, 0.2, 0.07);
     } else if (vc === "radio") {
-      noiseHit(v, out, "white", t, "bandpass", 2200, 1.5, 0.25, 0.018);
-      const x = v.o("square", 900 + (i % 3) * 140, t, t + 0.03), g = v.g(0); perc(g.gain, t, 0.001, 0.025, 0.015); chain(x, g, out);
+      noiseHit(v, out, "white", t, "bandpass", 2200, 1.5, 0.7, 0.018);
+      const x = v.o("square", 900 + (i % 3) * 140, t, t + 0.03), g = v.g(0); perc(g.gain, t, 0.001, 0.06, 0.015); chain(x, g, out);
     } else if (vc === "crow") {
       const x = v.o("sawtooth", 560 + (i % 4) * 30, t, t + 0.08), vca = v.g(0.55), nz = v.n("white", t, t + 0.08, 0.5), bp = v.f("bandpass", 1300, 2), g = v.g(0);
-      chain(nz, v.g(0.45), vca.gain); perc(g.gain, t, 0.004, 0.35, 0.05); chain(x, vca, bp, g, out);
+      chain(nz, v.g(0.45), vca.gain); perc(g.gain, t, 0.004, 0.8, 0.05); chain(x, vca, bp, g, out);
     } else { // tsuzura: bright, quick, a little squeaky
       const f = 650 + ((i * 37) % 11) * 28 + rnd(-15, 15);
       const a = v.o("triangle", f, t, t + 0.06), b = v.o("square", f * 1.003, t, t + 0.06), lp = v.f("lowpass", 3200, 0), g = v.g(0);
@@ -666,27 +671,27 @@ SFX.blip = (o, sp, t) => { // dialogue voice blips
 };
 SFX.ui_move = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.02);
-  noiseHit(v, out, "white", t, "highpass", 3500, 0, 0.06, 0.012);
-  bufTo(v, "tick", t, 0.72, 0.08, out);
+  noiseHit(v, out, "white", t, "highpass", 3500, 0, 0.09, 0.012);
+  bufTo(v, "tick", t, 0.72, 0.12, out);
 });
 function uiPair(m1, m2, wr) {
   return (o, sp, t) => play("sfx", (v) => {
     const out = v.out("sfx", sp, 1, 0.08);
-    bufTo(v, ksE("koto", m1), t, 1, 0.16, out); bufTo(v, ksE("koto", m2), t + 0.07, 1, 0.14, out);
-    bufTo(v, "wood", t, wr, 0.08, out);
+    bufTo(v, ksE("koto", m1), t, 1, 0.22, out); bufTo(v, ksE("koto", m2), t + 0.07, 1, 0.2, out);
+    bufTo(v, "wood", t, wr, 0.1, out);
   });
 }
 SFX.ui_ok = uiPair(74, 81, 1.2);
 SFX.ui_back = uiPair(69, 64, 0.9);
 SFX.ui_open = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.1);
-  airSweep(v, out, t, 1200, 4200, 0.2, 0.1, 0.5);
-  bufTo(v, harmE(79), t + 0.08, 1, 0.12, out);
+  airSweep(v, out, t, 1200, 4200, 0.2, 0.14, 0.5);
+  bufTo(v, harmE(79), t + 0.08, 1, 0.17, out);
 });
 SFX.ui_close = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.06);
-  airSweep(v, out, t, 4000, 1000, 0.18, 0.09, 0.4);
-  bufTo(v, "tick", t + 0.12, 0.6, 0.07, out);
+  airSweep(v, out, t, 4000, 1000, 0.18, 0.13, 0.4);
+  bufTo(v, "tick", t + 0.12, 0.6, 0.1, out);
 });
 SFX.splash = (o, sp, t) => {
   const z = u01(o.size, 0.5);
@@ -820,7 +825,7 @@ SFX.far_touch = (o, sp, t) => play("sfx", (v) => {
   const k = v.b(snd("taiko"), t + 0.05, 0.85); chain(k, v.f("lowpass", 380, 0), v.g(0.5), out);
 });
 SFX.far_pulse = (o, sp, t) => play("sfx", (v) => {
-  const out = v.out("far", sp, 0.35, 0.1, 1);
+  const out = v.out("far", sp, 0.25, 0.1, 1);
   chain(v.b(snd("odaiko"), t, 0.92), v.f("lowpass", 420, 0), v.g(0.6), out);
   chain(v.b(snd("rin"), t + 0.02, 0.5), v.f("lowpass", 1800, 0), v.g(0.35), out);
 });
@@ -870,30 +875,31 @@ function bedWant(name, lvl, dt) {
     b.srcs = [];
   }
 }
-function loopBake(key, sec, perSec, a0, a1) { // droplet patter loops
-  bake(key, sec, 2, (b, len) => {
-    for (let c = 0; c < 2; c++) {
-      const d = b.getChannelData(c), n = Math.floor(sec * perSec);
-      for (let i = 0; i < n; i++) {
-        const st = Math.floor(Math.random() * (len - SR * 0.04)), a = rnd(a0, a1) * (chance(0.15) ? 2 : 1);
-        addPartials(d, [[rnd(1800, 7000), a, rnd(0.0015, 0.005), 0.0003]], st);
-        addNoise(d, a * 0.6, 0.0008, 0, true, st);
-      }
-    }
-  }, true);
+// Seamless ambience loops, baked in background slices: one job per channel, registered when done.
+function loopJobs(key, sec, fill) {
+  const b = ctx.createBuffer(2, Math.floor(sec * SR), SR);
+  return [() => fill(b.getChannelData(0), b.length), () => fill(b.getChannelData(1), b.length), () => BK.set(key, { b, r: 1 })];
 }
-function bakeBabble() { // brook bubbles: Minnaert-like rising "bloops"
-  bake("babble", 6, 2, (b, len) => {
-    for (let c = 0; c < 2; c++) {
-      const d = b.getChannelData(c);
-      for (let i = 0; i < 84; i++) {
-        const st = Math.floor(Math.random() * (len - SR * 0.2)), f0 = rnd(250, 1100), dur = rnd(0.012, 0.045), k = rnd(8, 30);
-        const nn = Math.floor(dur * SR * 4), kd = Math.exp(-1 / (dur * SR));
-        let ph = 0, env = rnd(0.05, 0.18);
-        for (let j = 0; j < nn; j++) { ph += (2 * Math.PI * f0 * (1 + (k * j) / SR)) / SR; d[st + j] += Math.sin(ph) * env * Math.min(1, j / 30); env *= kd; }
-      }
+function droplets(perSec, a0, a1) { // rain patter: tiny resonant pings with a click
+  return (d, len) => {
+    for (let i = 0, n = Math.floor((len / SR) * perSec); i < n; i++) {
+      const st = Math.floor(Math.random() * (len - SR * 0.04)), a = rnd(a0, a1) * (chance(0.15) ? 2 : 1);
+      addPartials(d, [[rnd(1800, 7000), a, rnd(0.0015, 0.005), 0.0003]], st);
+      addNoise(d, a * 0.6, 0.0008, 0, true, st);
     }
-  }, true);
+  };
+}
+function babble(d, len) { // brook bubbles: Minnaert-like rising "bloops" (phasor chirps)
+  for (let i = 0; i < 64; i++) {
+    const st = Math.floor(Math.random() * (len - SR * 0.2)), f0 = rnd(250, 1100), dur = rnd(0.012, 0.045), k = rnd(8, 30);
+    const nn = Math.floor(dur * SR * 3.5), kd = Math.exp(-1 / (dur * SR));
+    let re = 1, im = 0, c = 1, s = 0, env = rnd(0.05, 0.18);
+    for (let j = 0; j < nn; j++) {
+      if ((j & 15) === 0) { const w = (2 * Math.PI * f0 * (1 + (k * j) / SR)) / SR; c = Math.cos(w); s = Math.sin(w); }
+      const r2 = re * c - im * s; im = re * s + im * c; re = r2;
+      d[st + j] += im * env * Math.min(1, j / 30); env *= kd;
+    }
+  }
 }
 function bakeCrackle() {
   bake("crackle", 4, 1, (b, len) => {
@@ -926,7 +932,7 @@ function buildAmb() {
   RN.body = BQ_("bandpass", 800, 0.6); RN.bg = G(0); chain(RN.body, RN.bg, ambIn);
   RN.dl = G(0); RN.dh = G(0); RN.dl.connect(ambIn); RN.dh.connect(ambIn);
   bed("rain", [["white", RN.hp, 1], ["pink", RN.body, 1], ["rainL", RN.dl, 1], ["rainH", RN.dh, 1]]);
-  BQ.push(() => loopBake("rainL", 3, 16, 0.05, 0.25), () => loopBake("rainH", 3, 90, 0.03, 0.16), bakeBabble, bakeCrackle);
+  BQ.push(...loopJobs("rainL", 3, droplets(16, 0.05, 0.25)), ...loopJobs("rainH", 3, droplets(90, 0.03, 0.16)), ...loopJobs("babble", 6, babble), bakeCrackle);
 }
 // Per-frame bed levels (cheap: change-detected targets only).
 function ambUpdate(dt) {
@@ -1485,7 +1491,7 @@ function festParams() {
   const a = FEST.a, nr = FEST.near, on = a > 0.001;
   const cut = Math.exp(lerp(Math.log(expMap(450, 2500, sstep(0, 1, a))), Math.log(19000), nr * nr));
   tgt(n.lp1.frequency, nyq(cut), 0.5); tgt(n.lp2.frequency, nyq(cut * 1.25), 0.5);
-  tgt(n.out.gain, on ? Math.pow(a, 1.2) * lerp(0.6, 0.85, nr) : 0, 0.6);
+  tgt(n.out.gain, on ? Math.pow(a, 1.2) * lerp(0.35, 0.85, nr) : 0, 0.6);
   tgt(n.dry.gain, lerp(0.25, 0.95, nr), 0.5); tgt(n.wet.gain, lerp(1, 0.45, nr), 0.5); tgt(n.chG.gain, nr * 0.7, 0.5);
   FEST.tune = 1.0035 + nr * 0.004; // a touch sharp: joyful, and wrong
   if (on && nr > 0.02 && !n.choir) choirStart(n);
@@ -1517,7 +1523,7 @@ function festStep(n, t, st, s16) {
   if (pos === 0) od = 1;
   else if (pos === 8 && bar & 1) od = 0.75;
   else if ((bar & 3) === 3 && (pos === 12 || pos === 14)) od = pos === 12 ? 0.7 : 0.5;
-  if (od) hit(tt, "odaiko", od * 0.55, n.odP, rnd(0.98, 1.02));
+  if (od) hit(tt, "odaiko", od * 0.45, n.odP, rnd(0.98, 1.02));
   const mn = FSTEP[st];
   if (mn) fifeNote(n, tt, mn[0], mn[1] * s16);
 }
@@ -1693,8 +1699,10 @@ function init() {
     for (const k in TRIM) VOL[k] = TRIM[k];
     buildGraph(); buildAmb();
     for (const k of ["shime", "kaneO", "kaneD", "odaiko", "suzu", "knock", "tick", "wood", "taiko", "rin", "glass", "gong"]) BQ.push(() => snd(k));
-    for (const m of [50, 52, 55, 57, 59, 62, 64, 67, 69, 71, 74, 76, 79, 81]) BQ.push(() => ksE("koto", m));
-    for (const m of [38, 45, 50, 57, 59, 62]) BQ.push(() => ksE("sham", m));
+    const yo = (a, b) => YO.filter((m) => m >= a && m <= b);
+    for (const m of yo(40, 95)) BQ.push(() => ksE("koto", m));
+    for (const m of yo(38, 71)) BQ.push(() => ksE("sham", m));
+    for (const m of yo(67, 98)) BQ.push(() => celE(m), () => harmE(m));
     BQ.push(() => snd("bell"));
     lastTick = ctx.currentTime;
     timer = setInterval(tick, TICK_MS);

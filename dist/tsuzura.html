@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
-<title>ツヅラ　遠囃子</title>
+<title>&#x30c4;&#x30c5;&#x30e9;&#x3000;&#x9060;&#x56c3;&#x5b50;</title>
 <meta name="theme-color" content="#0c0b10">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;900&family=Shippori+Mincho:wght@500;800&family=Yuji+Syuku&family=DotGothic16&family=Zhi+Mang+Xing&display=swap">
@@ -17,13 +17,13 @@ html,body{height:100%;margin:0;background:var(--ink);color:var(--paper);overflow
 </style>
 </head>
 <body>
-<div id="app"><canvas id="cv" aria-label="游戏画面"></canvas><div id="ui"></div></div>
+<div id="app"><canvas id="cv" aria-label="&#x6e38;&#x620f;&#x753b;&#x9762;"></canvas><div id="ui"></div></div>
 <script>
 "use strict";
 
 /* ==== src/core.js ==== */
 /* =====================================================================
-   CORE — math, deterministic randomness, noise, small helpers.
+   CORE \u2014 math, deterministic randomness, noise, small helpers.
    Everything else in the game is built on these; keep them pure.
    ===================================================================== */
 const TAU = Math.PI * 2;
@@ -79,7 +79,7 @@ function ridge(x, y, o = 4, s = 0) {
   for (let i = 0; i < o; i++) { t += a * (1 - Math.abs(vnoise(x * f, y * f, s + i * 31) * 2 - 1)); n += a; a *= .5; f *= 2.1; }
   return t / n;
 }
-// domain-warped fbm — the organic look used for moss, ground cover and mist
+// domain-warped fbm \u2014 the organic look used for moss, ground cover and mist
 function warp(x, y, o = 4, s = 0, k = 1.2) {
   const qx = fbm(x + 3.1, y + 7.7, 3, s + 5), qy = fbm(x - 5.3, y + 1.9, 3, s + 9);
   return fbm(x + qx * k * 4, y + qy * k * 4, o, s);
@@ -123,11 +123,11 @@ function ramp(base, n = 5, o = {}) {
 const later = []; // small timer list driven by the game loop: {t, fn}
 function after(sec, fn) { later.push({ t: sec, fn }); }
 function tickLater(dt) { for (let i = later.length - 1; i >= 0; i--) { const L = later[i]; L.t -= dt; if (L.t <= 0) { later.splice(i, 1); try { L.fn(); } catch (e) { console.error(e); } } } }
-const ZH_NUM = ["〇", "一", "二", "三", "四", "五", "六", "七", "八", "九"];
-// kanji numerals the way she counts them out loud: 九十九, 四十二, 十七
+const ZH_NUM = ["\u3007", "\u4e00", "\u4e8c", "\u4e09", "\u56db", "\u4e94", "\u516d", "\u4e03", "\u516b", "\u4e5d"];
+// kanji numerals the way she counts them out loud: \u4e5d\u5341\u4e5d, \u56db\u5341\u4e8c, \u5341\u4e03
 function kanjiNum(n) {
   n = n | 0; if (n < 10) return ZH_NUM[n];
-  if (n < 100) { const t = Math.floor(n / 10), o = n % 10; return (t > 1 ? ZH_NUM[t] : "") + "十" + (o ? ZH_NUM[o] : ""); }
+  if (n < 100) { const t = Math.floor(n / 10), o = n % 10; return (t > 1 ? ZH_NUM[t] : "") + "\u5341" + (o ? ZH_NUM[o] : ""); }
   return String(n);
 }
 function shuffle(a, r = Math.random) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
@@ -136,7 +136,7 @@ const QS = (() => { const o = {}; try { new URLSearchParams(location.search).for
 
 /* ==== src/input.js ==== */
 /* =====================================================================
-   INPUT — named actions with latched presses (a tap shorter than a
+   INPUT \u2014 named actions with latched presses (a tap shorter than a
    frame still counts), keyboard, gamepad, and a floating touch stick
    with DOM buttons. Last-used device drives the on-screen glyphs.
    ===================================================================== */
@@ -147,8 +147,8 @@ const IN = {
     run: ["ShiftLeft", "ShiftRight"],
     act: ["KeyE", "KeyF"],            // pick up / talk / deliver / use
     drop: ["KeyQ"],                    // set the top of the stack down (hold: unload everything)
-    take: ["KeyJ", "Digit1"],          // 取 — draw weight out of a thing into her tail
-    give: ["KeyK", "Digit2"],          // 予 — give the weight in her tail to a thing
+    take: ["KeyJ", "Digit1"],          // \u53d6 \u2014 draw weight out of a thing into her tail
+    give: ["KeyK", "Digit2"],          // \u4e88 \u2014 give the weight in her tail to a thing
     map: ["KeyM", "Tab"], pause: ["Escape", "KeyP"],
     ok: ["Enter", "Space", "KeyE", "KeyF"], cancel: ["Escape", "Backspace"],
     skip: ["Space", "Enter"],
@@ -248,14 +248,14 @@ const IN = {
   glyph(a) {
     const kb = { act: "E", drop: "Q", take: "J", give: "K", run: "Shift", map: "M", pause: "Esc", ok: "E", skip: "Space" };
     const pad = { act: "A", drop: "B", take: "X", give: "Y", run: "RB", map: "Select", pause: "Start", ok: "A", skip: "A" };
-    const tch = { act: "拾", drop: "放", take: "取", give: "予", run: "奔", map: "图", pause: "‖", ok: "▶", skip: "▶" };
+    const tch = { act: "\u62fe", drop: "\u653e", take: "\u53d6", give: "\u4e88", run: "\u5954", map: "\u56fe", pause: "\u2016", ok: "\u25b6", skip: "\u25b6" };
     return (this.device === "pad" ? pad : this.device === "touch" ? tch : kb)[a] || a;
   },
 };
 
 /* ==== src/gl.js ==== */
 /* =====================================================================
-   GL — thin WebGL2 helpers: programs with uniform setters, interleaved
+   GL \u2014 thin WebGL2 helpers: programs with uniform setters, interleaved
    meshes, per-instance buffers, textures, MRT framebuffers.
    ===================================================================== */
 const GL = {
@@ -408,7 +408,7 @@ const M4 = {
 
 /* ==== src/pixel.js ==== */
 /* =====================================================================
-   PIXEL — the procedural pixel-art kit. A sprite is painted into a
+   PIXEL \u2014 the procedural pixel-art kit. A sprite is painted into a
    buffer that carries, per pixel: colour, height (for normals), a
    material id, emission and "bulge" (how far the pixel stands toward
    the camera, used for per-pixel depth). Everything is then packed
@@ -439,7 +439,7 @@ class SB {
     this.c[k] = rgb[0]; this.c[k + 1] = rgb[1]; this.c[k + 2] = rgb[2]; this.c[k + 3] = 255;
     if (o.z != null) this.z[i] = o.z; if (o.m != null) this.m[i] = o.m; if (o.e != null) this.e[i] = o.e; if (o.b != null) this.b[i] = o.b;
   }
-  // only paint where the pixel is nearer (higher z) — lets overlapping clumps merge like real volume
+  // only paint where the pixel is nearer (higher z) \u2014 lets overlapping clumps merge like real volume
   pz(x, y, rgb, z, o = {}) { x |= 0; y |= 0; if (!this.in(x, y)) return false; const i = y * this.w + x; if (this.c[i * 4 + 3] && this.z[i] > z) return false; o.z = z; this.px(x, y, rgb, o); return true; }
   clear(x, y) { x |= 0; y |= 0; if (!this.in(x, y)) return; const i = y * this.w + x; this.c[i * 4 + 3] = 0; this.z[i] = 0; this.m[i] = 0; }
   mul(x, y, k) { x |= 0; y |= 0; if (!this.in(x, y)) return; const q = (y * this.w + x) * 4; if (!this.c[q + 3]) return; this.c[q] *= k[0] ?? k; this.c[q + 1] *= k[1] ?? k; this.c[q + 2] *= k[2] ?? k; }
@@ -511,7 +511,7 @@ const PX = {
     }
     if (inner) for (let i = 0; i < w * h; i++) if (mask[i]) { const q = i * 4; const c = [s.c[q], s.c[q + 1], s.c[q + 2]]; const [hh, ss, ll] = rgbToHsl(c[0], c[1], c[2]); const r = hslToRgb(hh + (o.hue ?? .03), Math.min(1, ss * 1.1), ll * k); s.c[q] = r[0]; s.c[q + 1] = r[1]; s.c[q + 2] = r[2]; }
   },
-  // darken pixels that have opaque, nearer (higher z) neighbours above them — cheap baked occlusion inside a sprite
+  // darken pixels that have opaque, nearer (higher z) neighbours above them \u2014 cheap baked occlusion inside a sprite
   ao(s, r = 3, k = .25) {
     const w = s.w, h = s.h, out = new Float32Array(w * h);
     for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -525,7 +525,7 @@ const PX = {
 };
 
 /* ---------------------------------------------------------------------
-   ATLAS — shelf packer into a pair of RGBA8 pages (albedo + normal).
+   ATLAS \u2014 shelf packer into a pair of RGBA8 pages (albedo + normal).
    rect: {x,y,w,h,u0,v0,u1,v1, ax, ay (anchor: base point in sprite px)}
    --------------------------------------------------------------------- */
 const ATLAS = {
@@ -561,7 +561,7 @@ const ATLAS = {
 };
 
 /* ---------------------------------------------------------------------
-   PALETTE — the art direction in numbers. Summer cedar mountains under
+   PALETTE \u2014 the art direction in numbers. Summer cedar mountains under
    a shin-hanga sky: blue-green shadows, honeyed light, indigo dusk.
    --------------------------------------------------------------------- */
 const PAL = {
@@ -607,7 +607,7 @@ const PAL = {
 
 /* ==== src/art_flora.js ==== */
 /* =====================================================================
-   ART · FLORA — cedar, the great camphor, maple, bamboo, undergrowth,
+   ART \u00b7 FLORA \u2014 cedar, the great camphor, maple, bamboo, undergrowth,
    grass. Foliage is built from leaf cells: small domes on a jittered
    grid, so silhouettes come out scalloped like hand-drawn clusters and
    the dynamic sun gives every cluster its own lit and shaded side.
@@ -655,7 +655,7 @@ const FLORA = {
       }
     }
   },
-  /* ---------------- cedar 杉: a slim spire of drooping tiers ---------------- */
+  /* ---------------- cedar \u6749: a slim spire of drooping tiers ---------------- */
   cedar(seed, H = 150, W = 46) {
     const R = RNG(seed * 13 + 1), w = W + 14, h = H + 4, s = new SB(w, h), cx = Math.round(w / 2 + R.range(-1, 1)), baseY = h - 2;
     const crownBot = Math.round(H * R.range(.56, .66)), top = 3;
@@ -684,7 +684,7 @@ const FLORA = {
     PX.normals(s, .8);
     return s;
   },
-  /* ---------------- the great camphor 楠 (御神木) ---------------- */
+  /* ---------------- the great camphor \u6960 (\u5fa1\u795e\u6728) ---------------- */
   camphor(seed = 7, W = 224, H = 200) {
     const R = RNG(seed), s = new SB(W, H), cx = W / 2, baseY = H - 3;
     const bark = PAL.barkGrey;
@@ -701,7 +701,7 @@ const FLORA = {
       const a = lerp(-1.15, 1.15, k / 6), x1 = cx + Math.sin(a) * R.range(45, 70), y1 = R.range(58, 80);
       PX.stroke(cx + Math.sin(a) * 6, 84, x1, y1, 5.5, 2, (x, y, t, sx) => s.pz(x, y, bark[clamp(Math.round((.38 - sx * .12) * 5), 0, 5)], 8 + (1 - Math.abs(sx)) * 3, { m: MAT.BARK, b: 4 }));
     }
-    // crown masses — cumulus of early-summer leaves, the uppermost still bright with new growth
+    // crown masses \u2014 cumulus of early-summer leaves, the uppermost still bright with new growth
     const masses = [];
     for (let i = 0; i < 40; i++) {
       const a = R.range(-Math.PI, 0), rr = Math.sqrt(R());
@@ -722,13 +722,13 @@ const FLORA = {
     PX.normals(s, .7);
     return s;
   },
-  // 紙垂: a strip of paper folded into a four-step zigzag
+  // \u7d19\u5782: a strip of paper folded into a four-step zigzag
   shide(s, x, y, z) {
     const seq = [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [2, 2], [3, 2], [1, 3], [2, 3], [3, 3], [3, 4], [4, 4], [2, 5], [3, 5], [4, 5]];
     for (const [dx, dy] of seq) s.pz(x + dx - 2, y + dy * 2, PAL.paper[dy % 2 ? 2 : 3], z, { m: MAT.PAPER, b: 10 });
     for (const [dx, dy] of seq) s.pz(x + dx - 2, y + dy * 2 + 1, PAL.paper[1], z - .2, { m: MAT.PAPER, b: 10 });
   },
-  /* ---------------- maple 楓: layered horizontal plates ---------------- */
+  /* ---------------- maple \u6953: layered horizontal plates ---------------- */
   maple(seed, red = false) {
     const R = RNG(seed * 7 + 3), W = 92, H = 98, s = new SB(W, H), cx = W / 2 + R.range(-3, 3), baseY = H - 2;
     const lean = R.range(-8, 8);
@@ -744,7 +744,7 @@ const FLORA = {
     PX.normals(s, .8);
     return s;
   },
-  /* ---------------- bamboo 孟宗竹 ---------------- */
+  /* ---------------- bamboo \u5b5f\u5b97\u7af9 ---------------- */
   bamboo(seed, H = 196) {
     const R = RNG(seed * 5 + 2), W = 54, s = new SB(W, H + 2), baseY = H, cx = W / 2 + R.range(-3, 3), old = R() < .3;
     const culm = old ? ramp("#9a9a58", 6, { lo: .5, hi: .4 }) : ramp("#6d9452", 6, { lo: .5, hi: .45, hueShift: .04 });
@@ -802,7 +802,7 @@ const FLORA = {
     PX.selout(s, { k: .72 }); PX.normals(s, 1);
     return s;
   },
-  sasa(seed) { // 熊笹 — broad blades with pale margins, held up and out
+  sasa(seed) { // \u718a\u7b39 \u2014 broad blades with pale margins, held up and out
     const R = RNG(seed * 11 + 5), W = 36, H = 30, s = new SB(W, H), cx = W / 2, by = H - 1;
     const n = R.int(9, 12), stems = [];
     for (let k = 0; k < n; k++) stems.push({ u: R.range(-1, 1), k });
@@ -820,7 +820,7 @@ const FLORA = {
     PX.selout(s, { k: .72 }); PX.normals(s, 1);
     return s;
   },
-  kudzu(seed) { // 葛 — trifoliate leaves smothering a bank; silver undersides flash; grape-purple spikes
+  kudzu(seed) { // \u845b \u2014 trifoliate leaves smothering a bank; silver undersides flash; grape-purple spikes
     const R = RNG(seed * 19 + 4), W = 64, H = 38, s = new SB(W, H), rr = PAL.kudzu, under = ramp("#a3b18c", 4, { lo: .35, hi: .3 });
     const leaflet = (x, y, a, L, z, flip) => PX.stroke(x, y, x + Math.cos(a) * L, y + Math.sin(a) * L * .78, L * .5, .5, (xx, yy, t, sx) => {
       const vein = Math.abs(sx) < .14 && t < .88; const col = flip ? under[clamp(Math.round((.62 - sx * .1 + (vein ? .2 : 0)) * 3), 0, 3)] : rr[clamp(Math.round((.46 + (vein ? .2 : 0) - sx * .12 - t * .05) * 5), 0, 5)];
@@ -834,7 +834,7 @@ const FLORA = {
     PX.selout(s, { k: .74 }); PX.normals(s, .9);
     return s;
   },
-  susuki(seed) { // 芒 — arching blades and the first silver plumes, combed by the wind
+  susuki(seed) { // \u8292 \u2014 arching blades and the first silver plumes, combed by the wind
     const R = RNG(seed * 23 + 8), W = 44, H = 54, s = new SB(W, H), cx = W / 2, by = H - 1;
     const blade = ramp("#7f8f4c", 5, { lo: .45, hi: .4 }), plume = ramp("#ddd2c2", 4, { lo: .3, hi: .2, hueShift: .02 });
     for (let k = 0; k < 22; k++) {
@@ -856,7 +856,7 @@ const FLORA = {
     PX.selout(s, { k: .84 }); PX.normals(s, .8);
     return s;
   },
-  lily(seed) { // 山百合 — heavy white trumpets with a golden band, crimson freckles
+  lily(seed) { // \u5c71\u767e\u5408 \u2014 heavy white trumpets with a golden band, crimson freckles
     const R = RNG(seed * 29 + 1), W = 24, H = 36, s = new SB(W, H), cx = W / 2 + R.range(-1, 1), by = H - 1;
     const top = R.int(10, 13);
     PX.stroke(cx, by, cx + R.range(-2, 2), top, .6, .6, (x, y) => s.pz(x, y, PAL.fern[2], 2, { m: MAT.LEAF }));
@@ -872,7 +872,7 @@ const FLORA = {
     PX.selout(s, { k: .82 }); PX.normals(s, .9);
     return s;
   },
-  hydrangea(seed) { // 紫陽花, past its best in August — blue going to dusty violet
+  hydrangea(seed) { // \u7d2b\u967d\u82b1, past its best in August \u2014 blue going to dusty violet
     const R = RNG(seed * 31 + 2), W = 36, H = 30, s = new SB(W, H);
     for (let k = 0; k < 8; k++) FLORA.clump(s, R.range(7, W - 7), R.range(11, H - 6), R.range(5, 7.5), R.range(4, 5.5), 2 + R() * 3, PAL.sasa, { seed: seed + k, base: 2.6, cell: 3.2, zk: .6 });
     const fl = [ramp("#6f86c4", 5, { lo: .4, hi: .35 }), ramp("#9a7fbf", 5, { lo: .4, hi: .35 }), ramp("#8d9fc9", 5, { lo: .4, hi: .3 })];
@@ -880,7 +880,7 @@ const FLORA = {
     PX.selout(s, { k: .74 }); PX.normals(s, 1);
     return s;
   },
-  dayflower(seed) { // 露草 — tiny blue flags in the wet grass
+  dayflower(seed) { // \u9732\u8349 \u2014 tiny blue flags in the wet grass
     const R = RNG(seed * 37 + 3), W = 16, H = 12, s = new SB(W, H);
     for (let k = 0; k < 5; k++) { const x = R.range(3, W - 3); PX.stroke(x, H - 1, x + R.range(-3, 3), R.range(3, H - 3), .5, .5, (xx, yy) => s.pz(xx, yy, PAL.fern[2 + (k & 1)], 1, { m: MAT.LEAF })); }
     for (let k = 0; k < 3; k++) { const x = R.range(3, W - 4) | 0, y = R.range(2, H - 6) | 0; s.pz(x, y, [58, 100, 196], 4, { m: MAT.PETAL, b: 2 }); s.pz(x + 1, y, [86, 132, 222], 4, { m: MAT.PETAL, b: 2 }); s.pz(x, y + 1, [242, 212, 90], 4, { m: MAT.PETAL, b: 2 }); }
@@ -912,8 +912,8 @@ const FLORA = {
 
 /* ==== src/art_props.js ==== */
 /* =====================================================================
-   ART · PROPS — rocks with chiselled facets, the pass shrine in every
-   state of ruin and repair, stone lanterns, jizō, torii, way-markers,
+   ART \u00b7 PROPS \u2014 rocks with chiselled facets, the pass shrine in every
+   state of ruin and repair, stone lanterns, jiz\u014d, torii, way-markers,
    building materials, the 99 offerings, the radio, the railway.
    ===================================================================== */
 const PROPS = {
@@ -947,7 +947,7 @@ const PROPS = {
     return s;
   },
   pebbles(seed) { const R = RNG(seed), s = new SB(18, 10); for (let k = 0; k < 6; k++) { const x = R.range(3, 15), y = R.range(3, 8), r = R.range(1.2, 2.2); PX.ell(x, y, r, r * .75, (xx, yy, u, v, d) => s.pz(xx, yy, PAL.stone[clamp(Math.round((.6 - v * .25) * 6), 0, 6)], (1 - d) * 2, { m: MAT.STONE })); } PX.normals(s, 1); return s; },
-  /* ---------------- the pass shrine 祠 — five states ---------------- */
+  /* ---------------- the pass shrine \u7960 \u2014 five states ---------------- */
   // stage: 0 wreck, 1 foundation, 2 frame, 3 roofed, 4 complete
   hokora(stage) {
     const W = 56, H = 64, s = new SB(W, H), cx = 28, by = H - 2;
@@ -960,7 +960,7 @@ const PROPS = {
       if (stage === 0) for (let y = by - 9; y <= by; y++) { const x = cx + 4 + ((y * 3) % 5) - 2; s.mul(x, y, .55); }
     }
     if (stage === 0) {
-      // the wreck: a slewed half-roof on the plinth, splintered boards, the back half simply… not here
+      // the wreck: a slewed half-roof on the plinth, splintered boards, the back half simply\u2026 not here
       for (let k = 0; k < 6; k++) { const x0 = cx - 15 + k * 5, a = (k % 2 ? .3 : -.2); PX.stroke(x0, by - 10, x0 + 9 * Math.cos(a), by - 12 - 4 * Math.sin(a) + (k % 3), 1.2, 1.2, (x, y, t) => s.pz(x, y, wood[clamp(2 + (k % 2), 0, 5)], 8 + t, { m: MAT.WOOD, b: 3 })); }
       PX.poly([[cx - 20, by - 18], [cx + 6, by - 30], [cx + 18, by - 20], [cx - 6, by - 10]], (x, y) => s.pz(x, y, ((x + y) % 4 === 0) ? PAL.barkCedar[1] : PAL.barkCedar[2 + ((y >> 1) & 1)], 12, { m: MAT.WOOD, b: 5 }));
       for (let x = cx - 20; x < cx + 18; x++) { const y = Math.round(lerp(by - 18, by - 30, (x - cx + 20) / 26)); if (x < cx + 6) s.pz(x, y, PAL.barkCedar[4], 13, { m: MAT.WOOD, b: 5 }); }
@@ -1002,7 +1002,7 @@ const PROPS = {
   },
   // the back half of the shrine, as it now hangs in the Far (rendered pale by the ghost pass)
   hokoraGhost() { const s = PROPS.hokora(4); return s; },
-  ishidoro(seed = 1, lit = false) { // stone lantern 石灯籠
+  ishidoro(seed = 1, lit = false) { // stone lantern \u77f3\u706f\u7c60
     const W = 20, H = 42, s = new SB(W, H), cx = 10, by = H - 1, st = PAL.stone;
     const tier = (y0, y1, hw0, hw1, z) => { for (let y = y0; y <= y1; y++) { const t = (y - y0) / Math.max(1, y1 - y0), hw = lerp(hw0, hw1, t); for (let x = Math.floor(cx - hw); x <= Math.ceil(cx + hw - 1); x++) { const sx = (x + .5 - cx) / hw; s.pz(x, y, st[clamp(Math.round((.55 - sx * .15 + (y === y0 ? .2 : 0) + (hash2(x, y, seed) - .5) * .15) * 6), 0, 6)], z + (1 - Math.abs(sx)) * 2, { m: MAT.STONE, b: 2 }); } } };
     tier(by - 4, by, 8, 9, 2); tier(by - 18, by - 5, 2.5, 3, 3); tier(by - 22, by - 19, 6, 7, 4);
@@ -1013,7 +1013,7 @@ const PROPS = {
     PX.selout(s, { k: .7 }); PX.normals(s, 1);
     return s;
   },
-  jizo(seed = 1) { // 地蔵 with a faded red bib
+  jizo(seed = 1) { // \u5730\u8535 with a faded red bib
     const W = 18, H = 26, s = new SB(W, H), cx = 9, by = H - 1, st = PAL.stoneWarm;
     PX.ell(cx, by - 2, 7, 2.6, (x, y, u, v) => s.pz(x, y, st[2], 1, { m: MAT.STONE }));
     PX.ell(cx, by - 9, 5.5, 8, (x, y, u, v, d) => s.pz(x, y, st[clamp(Math.round((.55 - u * .15 - v * .1) * 5), 0, 5)], Math.sqrt(1 - d * d) * 5, { m: MAT.STONE, b: 2 }));
@@ -1034,7 +1034,7 @@ const PROPS = {
     PX.selout(s, { k: .72 }); PX.normals(s, 1);
     return s;
   },
-  michishirube(seed = 1) { // 道標 — a stone post with carved characters
+  michishirube(seed = 1) { // \u9053\u6a19 \u2014 a stone post with carved characters
     const W = 12, H = 30, s = new SB(W, H), st = PAL.stoneWarm;
     for (let y = 2; y < H; y++) for (let x = 2; x < W - 2; x++) { const top = y < 4 && (x === 2 || x === W - 3); if (top) continue; s.px(x, y, st[clamp(Math.round((.55 - (x - 2) / (W - 4) * .25 + (y < 4 ? .2 : 0) + (hash2(x, y, seed) - .5) * .15) * 5), 0, 5)], { z: 3, m: MAT.STONE, b: 2 }); }
     for (let y = 7; y < H - 4; y += 3) for (let x = 4; x < W - 4; x++) if (hash2(x, y, seed) < .6) s.px(x, y, st[0], { z: 2.4, m: MAT.STONE, b: 2 });
@@ -1067,12 +1067,12 @@ const PROPS = {
     PX.selout(s, { k: .75 }); PX.normals(s, 1); return s;
   },
   flatstone(seed) { const s = PROPS.rock(seed + 300, 20, 9, { moss: .2 }); return s; },
-  holedstone() { // 穴あき石 — the god-body of the pass: a river stone with a hole worn through
+  holedstone() { // \u7a74\u3042\u304d\u77f3 \u2014 the god-body of the pass: a river stone with a hole worn through
     const W = 14, H = 13, s = new SB(W, H);
     PX.ell(7, 6.5, 5.6, 5.2, (x, y, u, v, d) => { const hole = hyp(u + .1, v + .05) < .32; if (hole) return; s.px(x, y, PAL.stone[clamp(Math.round((.62 - u * .15 - v * .2) * 6), 0, 6)], { z: Math.sqrt(1 - d * d) * 4, m: MAT.STONE, b: 2, e: 1 }); });
     PX.selout(s, { k: .7 }); PX.normals(s, 1); return s;
   },
-  basket(open = false) { // 葛籠 — a wicker trunk of plaited kudzu; later it walks
+  basket(open = false) { // \u845b\u7c60 \u2014 a wicker trunk of plaited kudzu; later it walks
     const W = 22, H = 20, s = new SB(W, H), wv = ramp("#a17a45", 5, { lo: .5, hi: .4 });
     for (let y = 5; y < H - 1; y++) for (let x = 2; x < W - 2; x++) { const weave = ((x >> 1) + (y >> 1)) % 2; const edge = x === 2 || x === W - 3 || y === 5 || y === H - 2;
       s.px(x, y, edge ? wv[1] : wv[clamp(Math.round((.5 + (weave ? .14 : -.08) - (x - 2) / (W - 4) * .15) * 4), 0, 4)], { z: 4, m: MAT.STRAW, b: 3 }); }
@@ -1117,7 +1117,7 @@ const PROPS = {
     for (const wx of [14, W - 14]) PX.ell(wx, H - 5, 5, 4, (x, y) => s.px(x, y, [30, 28, 30], { z: 4, m: MAT.METAL }));
     PX.selout(s, { k: .7 }); PX.normals(s, 1); return s;
   },
-  hut() { // the charcoal-burner's hut 炭焼き小屋: thatch over dark boards
+  hut() { // the charcoal-burner's hut \u70ad\u713c\u304d\u5c0f\u5c4b: thatch over dark boards
     const W = 96, H = 80, s = new SB(W, H), cx = 48, by = H - 2, th = ramp("#8a7442", 6, { lo: .5, hi: .4 });
     for (let y = by - 30; y <= by; y++) for (let x = cx - 34; x <= cx + 34; x++) { const plank = (x - cx + 64) % 6 === 0; const door = x > cx - 7 && x < cx + 7 && y > by - 24;
       s.px(x, y, door ? [26, 22, 22] : PAL.wood[clamp(Math.round((.32 + (plank ? -.15 : 0) + (hash2(x >> 1, y >> 3, 4) - .5) * .15) * 5), 0, 5)], { z: 8, m: MAT.WOOD, b: 2 }); }
@@ -1127,7 +1127,7 @@ const PROPS = {
     for (let y = by - 76; y < by - 70; y++) for (let x = cx - 8; x <= cx + 8; x++) s.pz(x, y, th[1], 20, { m: MAT.STRAW, b: 9 });
     PX.selout(s, { k: .72 }); PX.normals(s, 1); return s;
   },
-  kiln() { // 炭窯 — a clay dome, cold now
+  kiln() { // \u70ad\u7aaf \u2014 a clay dome, cold now
     const W = 60, H = 40, s = new SB(W, H), clay = ramp("#8a6a52", 6, { lo: .5, hi: .4 });
     PX.ell(30, 26, 26, 14, (x, y, u, v, d) => s.pz(x, y, clay[clamp(Math.round((.55 - v * .25 - u * .1 + (hash2(x >> 1, y >> 1, 3) - .5) * .15) * 5), 0, 5)], Math.sqrt(1 - d * d) * 12, { m: MAT.STONE, b: 6 }), { amp: .1, seed: 2 });
     PX.ell(30, 32, 5, 5, (x, y) => s.px(x, y, [24, 20, 20], { z: 12, m: MAT.ROCK }));
@@ -1140,7 +1140,7 @@ const PROPS = {
   },
 };
 
-/* the offerings — each a tiny drawing; names and the lines she says live in story.js */
+/* the offerings \u2014 each a tiny drawing; names and the lines she says live in story.js */
 const OFFER_ART = {
   coin: P => { for (const [x, y] of [[4, 4], [5, 4], [6, 4], [3, 5], [7, 5], [3, 6], [7, 6], [4, 7], [5, 7], [6, 7]]) P(x, y, "#b08a3c", MAT.METAL, 2); for (const [x, y] of [[4, 5], [6, 5], [4, 6], [6, 6]]) P(x, y, "#d8b45a", MAT.METAL, 2.4); P(5, 5, "#3a2e22", MAT.METAL); P(5, 6, "#3a2e22", MAT.METAL); },
   sandal: P => { for (let y = 2; y < 11; y++) for (let x = 4; x < 8; x++) P(x, y, (y + x) % 3 ? "#b89a5c" : "#9c7f48", MAT.STRAW, 1.5); P(5, 3, "#7a2c24", MAT.CLOTH, 2.5); P(6, 3, "#7a2c24", MAT.CLOTH, 2.5); P(5, 5, "#7a2c24", MAT.CLOTH, 2.5); },
@@ -1172,12 +1172,12 @@ const OFFER_ART = {
 
 /* ==== src/art_chars.js ==== */
 /* =====================================================================
-   ART · CHARACTERS — ツヅラ (Tsuzura), a marten yokai of the pass.
+   ART \u00b7 CHARACTERS \u2014 \u30c4\u30c5\u30e9 (Tsuzura), a marten yokai of the pass.
    Gold hair with dark-brown tips (a marten's winter coat), round ears,
    amber eyes, one small fang. Indigo kasuri kimono cut short for the
    road, sleeves tied back with a red tasuki, a little brass bell at the
-   obi, dark leg-wraps and straw sandals. A wooden back-frame (背負子)
-   whose poles stand above her head — the silhouette people remember.
+   obi, dark leg-wraps and straw sandals. A wooden back-frame (\u80cc\u8ca0\u5b50)
+   whose poles stand above her head \u2014 the silhouette people remember.
    Built from parts so every frame can be composed on the fly.
    ===================================================================== */
 const TZ = {
@@ -1210,7 +1210,7 @@ const TZ = {
 };
 
 /* ---------------------------------------------------------------------
-   BODY BUILDER — shapes, not stamps. Frame 32×46; feet rest on y = 43.
+   BODY BUILDER \u2014 shapes, not stamps. Frame 32\u00d746; feet rest on y = 43.
    Light is keyed from the upper left in the albedo (one step only);
    the renderer's dynamic light does the rest.
    --------------------------------------------------------------------- */
@@ -1280,7 +1280,7 @@ const TZA = {
     if (f === "side") sideLock(Math.round(cx + .5), 1);
     else { sideLock(Math.round(cx - 6), 1); sideLock(Math.round(cx + 5), -1); }
   },
-  // ---- the wooden back-frame 背負子: two poles and rungs. Drawn behind (front view) or over (back view)
+  // ---- the wooden back-frame \u80cc\u8ca0\u5b50: two poles and rungs. Drawn behind (front view) or over (back view)
   frame(s, cx, topY, botY, f, z) {
     const P = (x, y, ch) => TZ.P(s, x, y, ch, z, MAT.WOOD);
     if (f === "side") { const x0 = cx - 7; for (let y = topY; y <= botY; y++) { P(x0, y, "wD"); P(x0 + 1, y, "wd"); } for (let y = topY + 2; y < botY; y += 6) for (let x = x0 - 1; x <= x0 + 2; x++) P(x, y, "wL"); for (let x = x0 - 1; x <= x0 + 3; x++) P(x, botY, "wD"); return; }
@@ -1350,7 +1350,7 @@ const TZA = {
   finish(s) { PX.normals(s, .9); return s; },
 };
 /* ---------------------------------------------------------------------
-   TAIL — drawn per frame: a chain of fluffy discs from the small of her
+   TAIL \u2014 drawn per frame: a chain of fluffy discs from the small of her
    back, swaying; the last discs turn marten-brown.
    --------------------------------------------------------------------- */
 const TAIL = {
@@ -1376,7 +1376,7 @@ const TAIL = {
 };
 
 /* ---------------------------------------------------------------------
-   KAGO — the wicker trunk, awake: little legs, a lid that talks
+   KAGO \u2014 the wicker trunk, awake: little legs, a lid that talks
    --------------------------------------------------------------------- */
 const KAGO = {
   frame(t, o = {}) {
@@ -1397,7 +1397,7 @@ const KAGO = {
 };
 
 /* ---------------------------------------------------------------------
-   PORTRAITS — 96×96 busts for the dialogue window. Built like a cel:
+   PORTRAITS \u2014 96\u00d796 busts for the dialogue window. Built like a cel:
    flat tones in two or three steps, a warm dark line, hue-shifted
    shadow. Expressions swap eyes, brows, mouth; ears and tail act too.
    --------------------------------------------------------------------- */
@@ -1523,11 +1523,11 @@ const PORTRAIT = {
 
 /* ==== src/shaders.js ==== */
 /* =====================================================================
-   SHADERS — GLSL ES 3.00 for the deferred 2.5D pixel pipeline.
+   SHADERS \u2014 GLSL ES 3.00 for the deferred 2.5D pixel pipeline.
    World: X right (east), Y down-screen (south), Z up. The camera is a
-   45° oblique orthographic view: screen = (X, Y−Z); depth = Y+Z.
-   G-buffer: G0 albedo+material · G1 normal+emission · G2 nearness,
-   wetness, flags, occlusion · depth. Lighting is banded and dithered so
+   45\u00b0 oblique orthographic view: screen = (X, Y\u2212Z); depth = Y+Z.
+   G-buffer: G0 albedo+material \u00b7 G1 normal+emission \u00b7 G2 nearness,
+   wetness, flags, occlusion \u00b7 depth. Lighting is banded and dithered so
    it stays pixel art; shadows come from a real sun shadow map.
    ===================================================================== */
 const SH = {};
@@ -1549,7 +1549,7 @@ vec4 nearAt(vec2 xy){ vec2 uv=(xy-uNearR.xy)*uNearR.zw; if(uv.x<0.||uv.y<0.||uv.
 float hgtAt(vec2 xy){ return texture(uHgt,(xy-uHgtR.xy)*uHgtR.zw).r; }
 float lum(vec3 c){ return dot(c,vec3(.299,.587,.114)); }
 vec3 hsv2rgb(vec3 c){ vec3 p=abs(fract(c.xxx+vec3(1.,2./3.,1./3.))*6.-3.); return c.z*mix(vec3(1.),clamp(p-1.,0.,1.),c.y); }
-// camera-space sprite normal → world
+// camera-space sprite normal \u2192 world
 vec3 spriteN(vec3 n){ return normalize(vec3(n.x, (n.z-n.y)*.70710678, (n.z+n.y)*.70710678)); }
 float depthOf(float yz){ return -(yz-uCam.y-200.)/1200.; }   // NDC depth for a given Y+Z
 `;
@@ -1571,7 +1571,7 @@ vec3 pick(float r, vec3 a, vec3 b, vec3 c, float pa, float pb){ return r<pa?a:(r
 // ---- ground materials (ids match the world painter)
 // 1 grass  2 forest floor  3 rock  4 path  5 river bed  6 moss  7 stone paving (ishidatami)  8 gravel/sand  9 mud  10 rail ballast
 vec3 grassCol(vec2 P, vec2 W, float moist, out vec3 nb, out float mat){
-  // painted, not noisy: big meadow patches → clumps of a few pixels → sparse blade highlights and crevices
+  // painted, not noisy: big meadow patches \u2192 clumps of a few pixels \u2192 sparse blade highlights and crevices
   float big=fbm(W*.0055), mid=fbm(W*.022+3.), clump=vn(P*.2)*.6+vn(P*.47+5.)*.4, r=h12(P);
   vec3 d0=hx(2770482.), d1=hx(3430959.), m0=hx(4878898.), m1=hx(5997622.), l0=hx(8034882.), l1=hx(9677650.), dry=hx(8486985.), olive=hx(6977347.);
   float hue=smoothstep(.35,.75,big);
@@ -1618,7 +1618,7 @@ vec3 pathCol(vec2 P, vec2 W, out vec3 nb, out float mat){ // trodden earth of th
   nb=vec3((r-.5)*.3,0.,1.); mat=4.;
   return c;
 }
-vec3 pavingCol(vec2 P, vec2 W, out vec3 nb, out float mat){ // 石畳: irregular flat stones, moss in the joints
+vec3 pavingCol(vec2 P, vec2 W, out vec3 nb, out float mat){ // \u77f3\u7573: irregular flat stones, moss in the joints
   vec2 g=W/vec2(9.,6.5); vec2 id=floor(g+vec2(step(1.,mod(floor(g.y),2.))*.5,0.)); vec2 f=fract(g+vec2(step(1.,mod(floor(g.y),2.))*.5,0.));
   float jit=h12(id)*.3; float edge=min(min(f.x,1.-f.x)*9.,min(f.y,1.-f.y)*6.5);
   float stone=step(1.2+jit*2.,edge);
@@ -1841,7 +1841,7 @@ void main(){
   vec3 mistC=uMist.rgb*(.62+.38*vis);
   if(uShafts>0.){ float acc=0.; float j=bayer4(f);
     for(int k=0;k<12;k++){ float t=(float(k)+j)*6.; vec3 S=P+VCAM*t; float sv=shadowAt(S,vec3(0.,0.,1.)); acc+=sv*clamp(1.-(S.z-gz)/80.,0.,1.); }
-    col+=uSunCol*vec3(1.,.9,.72)*floor(acc/12.*6.+bayer4(f)*.8)/6.*uShafts*(.06+uMist.a*.3); }
+    col+=uSunCol*vec3(1.,.9,.72)*floor(acc/12.*5.+bayer4(f)*.7)/5.*uShafts*uMist.a*.22; }
   col=mix(col,mistC,clamp(mist,0.,.8));
   // ---- the Far: colour drains toward pale distance-blue
   float far=1.-near;
@@ -1987,13 +1987,13 @@ void main(){
 
 /* ==== src/render.js ==== */
 /* =====================================================================
-   RENDER — the deferred 2.5D pixel pipeline.
-   shadow map (sun) → G-buffer (terrain, scenery, grass, dynamic sprites)
-   → contact-shadow decals → lighting (banded sun, canopy flecks, cloud
-   shadows, lamps, mist and sun-shafts, the Far) → water (refraction,
-   reflections) → Far ghosts, particles, glows → bloom → composite.
+   RENDER \u2014 the deferred 2.5D pixel pipeline.
+   shadow map (sun) \u2192 G-buffer (terrain, scenery, grass, dynamic sprites)
+   \u2192 contact-shadow decals \u2192 lighting (banded sun, canopy flecks, cloud
+   shadows, lamps, mist and sun-shafts, the Far) \u2192 water (refraction,
+   reflections) \u2192 Far ghosts, particles, glows \u2192 bloom \u2192 composite.
    ===================================================================== */
-const CHUNK = 64;          // terrain cells per chunk side (4 px cells → 256 px)
+const CHUNK = 64;          // terrain cells per chunk side (4 px cells \u2192 256 px)
 const RD = {
   cv: null, P: {}, f: {}, scale: 3, W: 480, H: 270, scrW: 0, scrH: 0, t: 0,
   cam: { x: 0, y: 0, tx: 0, ty: 0, off: [0, 0], shake: 0, vp: new Float32Array(16), lvp: new Float32Array(16), zoom: 1 },
@@ -2036,7 +2036,7 @@ const RD = {
     // shadow map with an occluder-class colour target (1 = foliage)
     const SS = this.quality > .5 ? 2048 : 1024;
     this.sh = GL.fbo(SS, SS, [{}], "cmp");
-    // dynamic atlas for characters: 512² albedo + normal pages written from the CPU each frame
+    // dynamic atlas for characters: 512\u00b2 albedo + normal pages written from the CPU each frame
     this.dynAtlas = { w: 512, h: 512, alb: new Uint8Array(512 * 512 * 4), nrm: new Uint8Array(512 * 512 * 4), slots: [] };
     this.dynAtlas.tA = GL.tex(512, 512, this.dynAtlas.alb); this.dynAtlas.tN = GL.tex(512, 512, this.dynAtlas.nrm);
     addEventListener("resize", () => this.resize()); this.resize();
@@ -2166,11 +2166,11 @@ const RD = {
     D.dirty = true;
     return { x: sx, y: sy, w: s.w, h: s.h, u0: sx / D.w, v0: sy / D.h, u1: (sx + s.w) / D.w, v1: (sy + s.h) / D.h, ax, ay, sway: 0, shadow: 1 };
   },
-  renderOverlay(tex) {
+  renderOverlay(tex, thr = .55) {
     const gl = GL.gl, P = this.P, E = this.env, c = this.cam;
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     GL.bind(this.f.postN); P.copy.use().t("uTex", tex); GL.tri();
-    GL.bind(this.f.b1); P.bright.use().t("uTex", this.f.post.tex[0]).f("uTx", 1 / this.W, 1 / this.H).f("uThr", .55); GL.tri();
+    GL.bind(this.f.b1); P.bright.use().t("uTex", this.f.post.tex[0]).f("uTx", 1 / this.W, 1 / this.H).f("uThr", thr); GL.tri();
     for (let k = 0; k < 2; k++) { GL.bind(this.f.b2); P.blur.use().t("uTex", this.f.b1.tex[0]).f("uDir", 1 / this.f.b1.w, 0); GL.tri(); GL.bind(this.f.b1); P.blur.use().t("uTex", this.f.b2.tex[0]).f("uDir", 0, 1 / this.f.b1.h); GL.tri(); }
     GL.bind(null);
     P.comp.use().t("uLowT", this.f.post.tex[0]).t("uBloom", this.f.b1.tex[0]).f("uLowS", this.W, this.H).f("uOff", 0, 0).f("uScale", this.scale).f("uScr", this.scrW, this.scrH)
@@ -2189,7 +2189,7 @@ const RD = {
     m.fill(0); m[0] = 2 / W; m[5] = -2 / H; m[6] = -1 / 1200; m[9] = 2 / H; m[10] = -1 / 1200; m[12] = -sx * 2 / W; m[13] = sy * 2 / H; m[14] = (sy + 200) / 1200; m[15] = 1;
     c.vx0 = sx - W / 2; c.vx1 = sx + W / 2; c.vy0 = sy - H / 2; c.vy1 = sy + H / 2;
   },
-  // screen (CSS px) → world ground point
+  // screen (CSS px) \u2192 world ground point
   screenToWorld(px, py) {
     const dpr = this.scrW / innerWidth, c = this.cam;
     const lx = px * dpr / this.scale - this.W / 2 + c.off[0], ly = py * dpr / this.scale - this.H / 2 + c.off[1];
@@ -2253,7 +2253,7 @@ const RD = {
     Li.t("uG0", this.f.g.tex[0]).t("uG1", this.f.g.tex[1]).t("uG2", this.f.g.tex[2]).t("uDep", this.f.g.depth).t("uShadowM", this.sh.depth).t("uShadowC", this.sh.tex[0]).t("uAO", this.f.ao.tex[0])
       .v4a("uLP", LP).v4a("uLC", LC).i("uNL", this.lights.length).f("uFogC", ...E.fog, 1).f("uMist", ...E.mist).f("uCloud", E.cloud).f("uShafts", E.shafts).v("uFar", E.far).f("uRain", E.rain).f("uNight", E.night).f("uFarWave", this.farWave == null ? -1e4 : this.farWave);
     GL.tri();
-    // ---- copy lit → post, then water (reads depth; drawn into the depth-less view)
+    // ---- copy lit \u2192 post, then water (reads depth; drawn into the depth-less view)
     GL.bind(this.f.postN); P.copy.use().t("uTex", this.f.lit.tex[0]); GL.tri();
     const Wa = this.commonU(P.water.use()); Wa.t("uScene", this.f.lit.tex[0]).t("uDep", this.f.g.depth).v("uSkyTop", E.skyTop).v("uSkyHor", E.skyHor).f("uRain", E.rain);
     gl.disable(gl.DEPTH_TEST); // the water shader occludes itself against the depth texture
@@ -2284,7 +2284,7 @@ const RD = {
 const T4 = [1, 1, 1, 0];
 
 /* ---------------------------------------------------------------------
-   TIME OF DAY → light, sky and grade. Keys are hours; a summer day at
+   TIME OF DAY \u2192 light, sky and grade. Keys are hours; a summer day at
    altitude: long blue dawn, white noon, honey-gold hour, violet dusk,
    moonlit indigo night.
    --------------------------------------------------------------------- */
@@ -2329,7 +2329,7 @@ function todEnv(tod, w = {}) {
 
 /* ==== src/world.js ==== */
 /* =====================================================================
-   WORLD — 九十九折峠, the Pass of Ninety-Nine Bends. A saddle in a cedar
+   WORLD \u2014 \u4e5d\u5341\u4e5d\u6298\u5ce0, the Pass of Ninety-Nine Bends. A saddle in a cedar
    ridge; an old road of switchbacks falls south from her shrine to a
    valley with a pond and a railway that went Far. East, a stream drops
    over a fall; west, cedars climb to a ruined inner shrine; south-west,
@@ -2528,12 +2528,12 @@ const WORLD = {
     under(40, ["lily0", "lily1"], (x, y) => !WD.zones.bambooZone(x, y) && this.matAt(x, y) === 1 && hyp((x - LM.zone.cx) / LM.zone.rx, (y - LM.zone.cy) / LM.zone.ry) < .9, 30);
     under(60, ["dayfl0", "dayfl1"], (x, y) => this.matAt(x, y) === 1 && wet(x, y, 30), 8);
     under(30, ["mush0", "mush1"], (x, y) => WD.zones.cedarZone(x, y), 30);
-    // hydrangeas beside the shrine and the jizō
+    // hydrangeas beside the shrine and the jiz\u014d
     for (const [x, y] of [[sx - 70, sy + 50], [sx + 70, sy + 54], [sx - 30, sy + 78]]) add("hydr" + R.int(0, 1), x, y, { kind: "under" });
     // ---- landmarks on the road
     add("torii", sx, sy + 66, { kind: "torii", col: 0, sway: 0 });
     add("toro", sx - 34, sy + 40, { kind: "toro", col: 6 }); add("toro", sx + 34, sy + 40, { kind: "toro", col: 6 });
-    // jizō at every few bends, way-markers (丁石) between
+    // jiz\u014d at every few bends, way-markers (\u4e01\u77f3) between
     for (let i = 2; i < ROAD.length - 2; i++) { const [x, y] = ROAD[i]; const side = i % 2 ? 1 : -1; if (i % 3 === 0) { add("jizo", x + side * 20, y - 8, { kind: "jizo", col: 6 }); add("hydr0", x + side * 34, y - 4, { kind: "under" }); } else add("mich", x + side * 18, y - 6, { kind: "mich", col: 4 }); }
     // the inner shrine stair: lanterns either side, a big torii at the top
     for (let i = 0; i < STAIR.length - 1; i++) { const [x, y] = STAIR[i]; add("toro", x - 22, y, { kind: "toro", col: 6 }); add("toro", x + 22, y, { kind: "toro", col: 6 }); }
@@ -2561,7 +2561,7 @@ const WORLD = {
 };
 
 /* ---------------------------------------------------------------------
-   ART REGISTRY — generate every scenery sprite once into the atlas.
+   ART REGISTRY \u2014 generate every scenery sprite once into the atlas.
    --------------------------------------------------------------------- */
 const ARTREG = {
   build(progress) {
@@ -2601,7 +2601,7 @@ const ARTREG = {
 
 /* ==== src/audio.js ==== */
 /* =====================================================================
-   AUDIO — procedural WebAudio engine for 「ツヅラ —遠囃子—」
+   AUDIO \u2014 procedural WebAudio engine for \u300c\u30c4\u30c5\u30e9 \u2014\u9060\u56c3\u5b50\u2014\u300d
    ===================================================================== */
 // TSUZURA: The Far Festival. Pure WebAudio synthesis: no samples, no libs.
 // Defines exactly one global (AU). Every public method is a silent no-op
@@ -2609,7 +2609,7 @@ const ARTREG = {
 const AU = (() => {
 
 /* =====================================================================
-   CORE — state, math helpers, guarded AudioParam automation
+   CORE \u2014 state, math helpers, guarded AudioParam automation
    ===================================================================== */
 let ctx = null, ready = false, SR = 44100, timer = 0;
 const TICK_MS = 25;
@@ -2626,7 +2626,7 @@ const sstep = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t 
 const expMap = (a, b, t) => a * Math.pow(b / a, clamp(t, 0, 1));
 const nyq = (f) => clamp(f, 10, SR * 0.45);
 
-// 陽音階 (yo scale) on D — D E G A B — across octaves, plus diatonic shifting.
+// \u967d\u97f3\u968e (yo scale) on D \u2014 D E G A B \u2014 across octaves, plus diatonic shifting.
 const YO = [];
 for (let o = 26; o <= 98; o += 12) for (const s of [0, 2, 5, 7, 9]) YO.push(o + s);
 const yoIdx = (m) => { let i = 0; while (i < YO.length - 1 && YO[i + 1] <= m) i++; return i; };
@@ -2652,14 +2652,14 @@ function holdAt(p, t) { // freeze automation at t (cancel the future) before re-
   try { if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t); else p.cancelScheduledValues(t); } catch (e) { /* ignore */ }
   lastTgt.delete(p);
 }
-// percussive envelope: 0 → peak (linear, a) → exponential decay over d
+// percussive envelope: 0 \u2192 peak (linear, a) \u2192 exponential decay over d
 function perc(p, t, a, peak, d) {
   if (!(peak > 0)) return;
   p.setValueAtTime(0, t);
   p.linearRampToValueAtTime(peak, t + a);
   p.exponentialRampToValueAtTime(peak * 1e-4 + 1e-7, t + a + d);
 }
-// swell envelope: 0 → peak over a, hold, release (setTarget) over r
+// swell envelope: 0 \u2192 peak over a, hold, release (setTarget) over r
 function swell(p, t, a, peak, hold, r) {
   p.setValueAtTime(0, t);
   p.linearRampToValueAtTime(peak, t + a);
@@ -2681,7 +2681,7 @@ function grains(p, t, n, span, peak) {
 }
 
 /* =====================================================================
-   BUFFERS — pooled noise loops and generated impulse responses
+   BUFFERS \u2014 pooled noise loops and generated impulse responses
    ===================================================================== */
 const NZ = {};
 function makeNoise(sec, kind) {
@@ -2702,30 +2702,26 @@ function makeNoise(sec, kind) {
   }
   return b;
 }
-// Decaying stereo noise with a lowpass that darkens over time. o: {pre, att, lp0, lp1, er}
-function makeIR(sec, o) {
-  const len = Math.floor(sec * SR), b = ctx.createBuffer(2, len, SR), pre = Math.floor((o.pre || 0) * SR), n = len - pre;
+// One channel of a decaying noise IR whose lowpass darkens over time. o: {pre, att, lp0, lp1, er}
+function irChan(b, sec, o, c) {
+  const len = b.length, pre = Math.floor((o.pre || 0) * SR), n = len - pre, d = b.getChannelData(c);
   const kEnv = Math.exp(-6.4 / (sec * 0.92 * SR)), kAtt = o.att ? Math.exp(-1 / (o.att * SR)) : 0;
-  for (let c = 0; c < 2; c++) {
-    const d = b.getChannelData(c);
-    let y1 = 0, y2 = 0, k = 0, env = 1, att = 1;
-    for (let i = 0; i < n; i++) {
-      if ((i & 63) === 0) k = Math.exp((-2 * Math.PI * o.lp0 * Math.pow(o.lp1 / o.lp0, i / n)) / SR);
-      const w = Math.random() * 2 - 1;
-      y1 = w + k * (y1 - w); y2 = y1 + k * (y2 - y1);
-      d[pre + i] = y2 * env * (1 - i / n) * (1 - att);
-      env *= kEnv; att *= kAtt;
-    }
-    for (let j = 0; j < (o.er || 0); j++) { // sparse early reflections (tree trunks, stones)
-      const p = pre + Math.floor(rnd(0.004, 0.075) * SR);
-      if (p < len) d[p] += rnd(-0.35, 0.35) * (1 - (p - pre) / (0.09 * SR));
-    }
+  let y1 = 0, y2 = 0, k = 0, env = 1, att = 1;
+  for (let i = 0; i < n; i++) {
+    if ((i & 63) === 0) k = Math.exp((-2 * Math.PI * o.lp0 * Math.pow(o.lp1 / o.lp0, i / n)) / SR);
+    const w = Math.random() * 2 - 1;
+    y1 = w + k * (y1 - w); y2 = y1 + k * (y2 - y1);
+    d[pre + i] = y2 * env * (1 - i / n) * (1 - att);
+    env *= kEnv; att *= kAtt;
   }
-  return b;
+  for (let j = 0; j < (o.er || 0); j++) { // sparse early reflections (tree trunks, stones)
+    const p = pre + Math.floor(rnd(0.004, 0.075) * SR);
+    if (p < len) d[p] += rnd(-0.35, 0.35) * (1 - (p - pre) / (0.09 * SR));
+  }
 }
 
 /* =====================================================================
-   MIXER — buses → master → hush → filters → compressor → destination
+   MIXER \u2014 buses \u2192 master \u2192 hush \u2192 filters \u2192 compressor \u2192 destination
    ===================================================================== */
 const BUS = {};
 const VOL = { master: 0.85, music: 0.75, amb: 0.85, sfx: 0.85, voice: 0.75, far: 0.9 };
@@ -2757,11 +2753,16 @@ function buildGraph() {
   comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -15; comp.knee.value = 12; comp.ratio.value = 3;
   comp.attack.value = 0.006; comp.release.value = 0.28;
-  outG = G(0.55); // Chrome's compressor adds ~+3.6 dB makeup; trim it back (net ≈ −1.6 dB, clip needs > +20 dBFS in)
+  outG = G(0.55); // Chrome's compressor adds ~+3.6 dB makeup; trim it back (net \u2248 \u22121.6 dB, clip needs > +20 dBFS in)
   chain(master, hush, waveLP, pauseLP, pauseG, comp, outG, ctx.destination);
   // Reverbs start empty (silent) and receive their generated IRs from the background queue,
-  // keeping init() well under budget: room ≈ 2.8 s forest air, far ≈ 5.5 s dark, slow-blooming.
-  const cv = (sec, o) => { const c = ctx.createConvolver(); c.normalize = true; BQ.unshift(() => { c.buffer = makeIR(sec, o); }); return c; };
+  // keeping init() well under budget: room \u2248 2.8 s forest air, far \u2248 5.5 s dark, slow-blooming.
+  const cv = (sec, o) => {
+    const c = ctx.createConvolver(), b = ctx.createBuffer(2, Math.floor(sec * SR), SR);
+    c.normalize = true;
+    BQ.unshift(() => irChan(b, sec, o, 0), () => irChan(b, sec, o, 1), () => { c.buffer = b; });
+    return c;
+  };
   roomIn = G(); chain(roomIn, cv(2.8, { pre: 0.012, lp0: 9000, lp1: 2200, er: 14 }), G(0.7), master);
   farIn = G(); chain(farIn, cv(5.5, { pre: 0.07, att: 0.18, lp0: 3800, lp1: 380 }), G(0.85), master);
   mkBus("music", 0.16, 0); mkBus("amb", 0.08, 0); mkBus("sfx", 0.1, 0);
@@ -2769,7 +2770,7 @@ function buildGraph() {
 }
 
 /* =====================================================================
-   VOICES — short-lived node groups with pooled caps and auto-cleanup
+   VOICES \u2014 short-lived node groups with pooled caps and auto-cleanup
    ===================================================================== */
 const POOLS = { sfx: { n: 0, max: 48 }, bg: { n: 0, max: 80 } };
 let FLW = null, FIFEW = null; // PeriodicWaves (flute, shinobue)
@@ -2841,19 +2842,23 @@ function spatial(o) {
 const SP0 = { g: 1, pan: 0, d: 0 };
 
 /* =====================================================================
-   BAKERY — cached procedural buffers (plucks, bells, drums, loops)
+   BAKERY \u2014 cached procedural buffers (plucks, bells, drums, loops)
    ===================================================================== */
-const BK = new Map();          // key → {b: AudioBuffer, r: playbackRate correction}
+const BK = new Map();          // key \u2192 {b: AudioBuffer, r: playbackRate correction}
+let BSR = 44100;               // sample rate of the buffer currently being baked
 const BQ = [];                 // background bake queue (run in small slices by the scheduler)
-function bake(key, sec, ch, fn, loop) {
+// div > 1 bakes low-frequency material at SR/div (the source node resamples on playback).
+function bake(key, sec, ch, fn, loop, div = 1) {
   let e = BK.get(key);
   if (e) return e;
-  const len = Math.max(256, Math.floor(sec * SR)), b = ctx.createBuffer(ch, len, SR);
+  BSR = Math.max(8000, SR / div);
+  const len = Math.max(256, Math.floor(sec * BSR)), b = ctx.createBuffer(ch, len, BSR);
   e = { b, r: 1 };
   try { const r = fn(b, len); if (r > 0) e.r = r; } catch (err) { /* ignore */ }
-  const nf = loop ? 0 : Math.min(len >> 2, Math.floor(SR * 0.03)); // one-shots fade out; loops stay seamless
+  const nf = loop ? 0 : Math.min(len >> 2, Math.floor(BSR * 0.03)); // one-shots fade out; loops stay seamless
   for (let c = 0; c < ch; c++) { const d = b.getChannelData(c); for (let i = 0; i < nf; i++) d[len - 1 - i] *= i / nf; }
   BK.set(key, e);
+  BSR = SR;
   return e;
 }
 function bakeTick() {
@@ -2863,11 +2868,11 @@ function bakeTick() {
 // Sum of exponentially decaying sines via phasor recursion. parts: [f, amp, tau, attack, phase]
 function addPartials(d, parts, start = 0) {
   for (const p of parts) {
-    const f = p[0], tau = p[2], A = Math.max(1, (p[3] || 0.002) * SR);
-    if (!(f > 0) || f > SR * 0.45) continue;
-    const w = (2 * Math.PI * f) / SR, c = Math.cos(w), s = Math.sin(w), k = Math.exp(-1 / (tau * SR));
+    const f = p[0], tau = p[2], A = Math.max(1, (p[3] || 0.002) * BSR);
+    if (!(f > 0) || f > BSR * 0.45) continue;
+    const w = (2 * Math.PI * f) / BSR, c = Math.cos(w), s = Math.sin(w), k = Math.exp(-1 / (tau * BSR));
     let re = Math.cos(p[4] || 0), im = Math.sin(p[4] || 0), env = p[1];
-    const n = Math.min(d.length - start, Math.ceil(tau * SR * 7));
+    const n = Math.min(d.length - start, Math.ceil(tau * BSR * 6.5));
     for (let i = 0; i < n; i++) {
       const r2 = re * c - im * s; im = re * s + im * c; re = r2;
       d[start + i] += im * env * (i < A ? i / A : 1);
@@ -2876,18 +2881,18 @@ function addPartials(d, parts, start = 0) {
     }
   }
 }
-// Decaying sine whose pitch falls exponentially f0 → f1 (drums, thumps).
+// Decaying sine whose pitch falls exponentially f0 \u2192 f1 (drums, thumps).
 function addChirp(d, f0, f1, tp, amp, tau, start = 0) {
-  const n = Math.min(d.length - start, Math.ceil(tau * SR * 7)), kd = Math.exp(-1 / (tau * SR)), kp = Math.exp(-1 / (tp * SR));
+  const n = Math.min(d.length - start, Math.ceil(tau * BSR * 7)), kd = Math.exp(-1 / (tau * BSR)), kp = Math.exp(-1 / (tp * BSR));
   let ph = 0, env = amp, df = f0 - f1;
   for (let i = 0; i < n; i++) {
-    ph += (2 * Math.PI * (f1 + df)) / SR; df *= kp;
+    ph += (2 * Math.PI * (f1 + df)) / BSR; df *= kp;
     d[start + i] += Math.sin(ph) * env * (i < 24 ? i / 24 : 1); env *= kd;
   }
 }
 // Decaying noise burst; lp = one-pole coefficient (0 = white), hp = differentiate.
 function addNoise(d, amp, tau, lp = 0, hp = false, start = 0) {
-  const n = Math.min(d.length - start, Math.ceil(tau * SR * 7)), kd = Math.exp(-1 / (tau * SR));
+  const n = Math.min(d.length - start, Math.ceil(tau * BSR * 7)), kd = Math.exp(-1 / (tau * BSR));
   let env = amp, y = 0, prev = 0;
   for (let i = 0; i < n; i++) {
     const w = Math.random() * 2 - 1;
@@ -2899,7 +2904,7 @@ function addNoise(d, amp, tau, lp = 0, hp = false, start = 0) {
 }
 
 /* =====================================================================
-   INSTRUMENTS — Karplus–Strong strings, bells, drums, flute, pads
+   INSTRUMENTS \u2014 Karplus\u2013Strong strings, bells, drums, flute, pads
    ===================================================================== */
 // Plucked strings, baked per note: koto (long, soft tsume) and shamisen (bright, sawari buzz, bachi).
 const KS = {
@@ -2930,11 +2935,11 @@ function ksE(kind, m) {
     }
     if (kind === "sham") { addNoise(d, 0.35, 0.004, 0.5); addChirp(d, 240, 160, 0.02, 0.18, 0.035); }
     else addNoise(d, 0.08, 0.002, 0, true);
-    return (f * (N - s)) / SR; // playbackRate correction → exact pitch
+    return (f * (N - s)) / SR; // playbackRate correction \u2192 exact pitch
   });
 }
 // Additive bells with beating pairs (stereo: slightly different beat per ear). parts: [ratio, amp, tau, beatHz]
-function bellE(key, sec, f0, parts, strike, ch = 2) {
+function bellE(key, sec, f0, parts, strike, ch = 2, div = 1) {
   return bake(key, sec, ch, (b) => {
     for (let c = 0; c < ch; c++) {
       const d = b.getChannelData(c), L = [];
@@ -2946,13 +2951,13 @@ function bellE(key, sec, f0, parts, strike, ch = 2) {
       addPartials(d, L);
       if (strike) strike(d);
     }
-  });
+  }, false, div);
 }
 const SND = {
   rin: () => bellE("rin", 4.2, 1174.7, [[1, 0.5, 0.95, 1.7], [2.71, 0.3, 0.5, 2.4], [5.15, 0.14, 0.28, 3.3], [8.3, 0.06, 0.14, 0]], (d) => addNoise(d, 0.06, 0.0015, 0, true)),
-  bell: () => bellE("bell", 10, 146.8, [[0.5, 0.32, 3.4, 0.6], [1, 0.42, 2.2, 1.1], [1.19, 0.2, 1.6, 0], [1.5, 0.18, 1.3, 0.8], [2, 0.2, 1.0, 0], [2.66, 0.12, 0.65, 1.4], [3.4, 0.07, 0.4, 0], [4.6, 0.04, 0.25, 0]],
-    (d) => { addChirp(d, 95, 60, 0.04, 0.3, 0.07); addNoise(d, 0.12, 0.012, 0.15); }),
-  gong: () => bellE("gong", 3.2, 73.4, [[1, 0.5, 1.0, 0.6], [1.48, 0.32, 0.75, 0.9], [2.09, 0.22, 0.5, 1.3], [2.76, 0.13, 0.32, 0], [3.9, 0.07, 0.2, 0]], (d) => addNoise(d, 0.1, 0.01, 0.2)),
+  bell: () => bellE("bell", 8, 146.8, [[0.5, 0.32, 3.4, 0.6], [1, 0.42, 2.2, 1.1], [1.19, 0.2, 1.6, 0], [1.5, 0.18, 1.3, 0.8], [2, 0.2, 1.0, 0], [2.66, 0.12, 0.65, 1.4], [3.4, 0.07, 0.4, 0], [4.6, 0.04, 0.25, 0]],
+    (d) => { addChirp(d, 95, 60, 0.04, 0.3, 0.07); addNoise(d, 0.12, 0.012, 0.3); }, 2, 4),
+  gong: () => bellE("gong", 3.2, 73.4, [[1, 0.5, 1.0, 0.6], [1.48, 0.32, 0.75, 0.9], [2.09, 0.22, 0.5, 1.3], [2.76, 0.13, 0.32, 0], [3.9, 0.07, 0.2, 0]], (d) => addNoise(d, 0.1, 0.01, 0.4), 2, 4),
   glass: () => bellE("glass", 2.2, 2349, [[1, 0.5, 0.45, 2.2], [2.32, 0.24, 0.25, 0], [4.1, 0.1, 0.12, 0], [5.8, 0.04, 0.07, 0]], (d) => addNoise(d, 0.05, 0.001, 0, true)),
   suzu: () => bellE("suzu", 0.35, 3100, [[1, 0.5, 0.03], [1.516, 0.35, 0.025], [2.48, 0.08, 0.012]], (d) => {
     addPartials(d, [[3112, 0.22, 0.028, 0.001], [4690, 0.16, 0.022, 0.001]], Math.floor(0.018 * SR)); // the pellet rattles twice
@@ -2961,8 +2966,8 @@ const SND = {
   kaneO: () => bellE("kaneO", 0.9, 1480, [[1, 0.35, 0.2], [1.54, 0.3, 0.15], [2.31, 0.24, 0.1], [2.79, 0.2, 0.08], [3.73, 0.12, 0.055], [4.4, 0.08, 0.04]], (d) => addNoise(d, 0.35, 0.0025, 0, true), 1),
   kaneD: () => bellE("kaneD", 0.25, 1480, [[1, 0.3, 0.045], [1.54, 0.28, 0.035], [2.31, 0.22, 0.025], [2.79, 0.18, 0.02], [3.73, 0.1, 0.015]], (d) => addNoise(d, 0.3, 0.002, 0, true), 1),
   shime: () => bake("shime", 0.45, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 560, 400, 0.012, 0.55, 0.06); addChirp(d, 900, 640, 0.01, 0.2, 0.035); addNoise(d, 0.45, 0.004, 0, true); addNoise(d, 0.15, 0.03, 0.3); }),
-  taiko: () => bake("taiko", 1.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 170, 104, 0.03, 0.75, 0.24); addChirp(d, 280, 170, 0.02, 0.2, 0.1); addNoise(d, 0.3, 0.01, 0.12); }),
-  odaiko: () => bake("odaiko", 2.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 105, 56, 0.05, 0.85, 0.5); addChirp(d, 165, 92, 0.04, 0.25, 0.22); addNoise(d, 0.35, 0.02, 0.06); addNoise(d, 0.06, 0.25, 0.02); }),
+  taiko: () => bake("taiko", 1.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 170, 104, 0.03, 0.75, 0.24); addChirp(d, 280, 170, 0.02, 0.2, 0.1); addNoise(d, 0.3, 0.01, 0.24); }, false, 2),
+  odaiko: () => bake("odaiko", 2.6, 1, (b) => { const d = b.getChannelData(0); addChirp(d, 105, 56, 0.05, 0.85, 0.5); addChirp(d, 165, 92, 0.04, 0.25, 0.22); addNoise(d, 0.35, 0.02, 0.12); addNoise(d, 0.06, 0.25, 0.04); }, false, 2),
   knock: () => bellE("knock", 0.4, 520, [[1, 0.55, 0.05], [2.3, 0.3, 0.025], [4.1, 0.14, 0.012]], (d) => { addChirp(d, 190, 120, 0.02, 0.3, 0.04); addNoise(d, 0.25, 0.003, 0.4); }, 1),
   wood: () => bellE("wood", 0.5, 700, [[1, 0.5, 0.065], [2.71, 0.28, 0.03], [5.13, 0.1, 0.014]], (d) => addNoise(d, 0.25, 0.002, 0.5), 1),
   tick: () => bellE("tick", 0.15, 2200, [[1, 0.5, 0.012], [2.62, 0.3, 0.006]], (d) => addNoise(d, 0.3, 0.0012, 0, true), 1),
@@ -2996,7 +3001,7 @@ const koto = (t, m, d, vel, st, o) => pluck("koto", t, m, vel, st, o);
 const sham = (t, m, d, vel, st, o) => pluck("sham", t, m, vel, st, o);
 const cel = (t, m, d, vel, st) => hit(t, celE(m), vel * 0.5, st);
 const harm = (t, m, d, vel, st) => hit(t, harmE(m), vel * 0.55, st);
-// Breathy flute (shakuhachi/ryūteki-ish): scooped onset, chiff, delayed vibrato.
+// Breathy flute (shakuhachi/ry\u016bteki-ish): scooped onset, chiff, delayed vibrato.
 function flute(t, m, dur, vel, st, o = {}) {
   return play("bg", (v) => {
     const f = mtof(m), end = t + dur + 0.5, rel = t + Math.max(0.08, dur);
@@ -3059,7 +3064,7 @@ function heart(t, vel, st) {
 }
 
 /* =====================================================================
-   SFX — one-shot sound effects (AU.sfx)
+   SFX \u2014 one-shot sound effects (AU.sfx)
    ===================================================================== */
 const SFX = {};
 let stepN = 0;
@@ -3091,7 +3096,7 @@ SFX.step = (o, sp, t) => {
     if (mat === "wood") bufTo(v, "knock", t, rnd(0.7, 0.85) * (1 - 0.25 * w), lvl * 0.5, out);
     if (mat === "stone") bufTo(v, "tick", t, rnd(0.5, 0.7), lvl * 0.35, out);
     if (w > 0.2) thump(v, out, t, 85, 42, 0.3 * w, 0.12);
-    if (w < 0.5 && ++stepN % 2 === 0 && chance(0.8)) // her little brass bell (鈴), barely there
+    if (w < 0.5 && ++stepN % 2 === 0 && chance(0.8)) // her little brass bell (\u9234), barely there
       bufTo(v, "suzu", t + rnd(0.01, 0.04), rnd(0.96, 1.04), rnd(0.018, 0.035) * (1 - w), out);
   });
 };
@@ -3169,8 +3174,8 @@ function airSweep(v, out, t, f0, f1, dur, lvl, peakAt = 0.6) {
 }
 SFX.give = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.25);
-  airSweep(v, out, t, 380, 3600, 0.75, 0.32, 0.65);
-  bufTo(v, "glass", t + 0.45, 0.75, 0.18, out);
+  airSweep(v, out, t, 380, 3600, 0.75, 0.5, 0.65);
+  bufTo(v, "glass", t + 0.45, 0.75, 0.26, out);
 });
 SFX.stone = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.22, 0.08);
@@ -3180,19 +3185,19 @@ SFX.stone = (o, sp, t) => play("sfx", (v) => {
 });
 SFX.unstone = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.2);
-  const nz = v.n("white", t, t + 0.8), bp = v.f("bandpass", 1800, 0.8), ng = v.g(0); grains(ng.gain, t, 12, 0.45, 0.25); chain(nz, bp, ng, out);
-  airSweep(v, out, t + 0.1, 500, 2800, 0.6, 0.22, 0.75);
-  bufTo(v, "glass", t + 0.55, 0.6, 0.12, out);
+  const nz = v.n("white", t, t + 0.8), bp = v.f("bandpass", 1800, 0.8), ng = v.g(0); grains(ng.gain, t, 12, 0.45, 0.4); chain(nz, bp, ng, out);
+  airSweep(v, out, t + 0.1, 500, 2800, 0.6, 0.33, 0.75);
+  bufTo(v, "glass", t + 0.55, 0.6, 0.16, out);
 });
 SFX.leaf = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.3);
-  airSweep(v, out, t, 600, 5200, 0.9, 0.3, 0.2);
-  for (const [dt, r] of [[0.08, 1], [0.16, 1.5], [0.27, 1.335]]) bufTo(v, "glass", t + dt, r, 0.1, out);
+  airSweep(v, out, t, 600, 5200, 0.9, 0.45, 0.2);
+  for (const [dt, r] of [[0.08, 1], [0.16, 1.5], [0.27, 1.335]]) bufTo(v, "glass", t + dt, r, 0.14, out);
 });
 SFX.unleaf = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.2);
-  airSweep(v, out, t, 4200, 450, 0.6, 0.25, 0.15);
-  bufTo(v, "knock", t + 0.42, 0.55, 0.22, out);
+  airSweep(v, out, t, 4200, 450, 0.6, 0.38, 0.15);
+  bufTo(v, "knock", t + 0.42, 0.55, 0.3, out);
 });
 SFX.deny = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.03);
@@ -3206,7 +3211,7 @@ SFX.offering = (o, sp, t) => play("sfx", (v) => { // the rin: bright singing bow
   chain(lfo, lg, tr.gain); env.gain.setValueAtTime(0.12, t); env.gain.linearRampToValueAtTime(0, t + 2.3);
   chain(sh, tr, env, out);
 });
-const COUNT9 = [74, 76, 79, 81, 83, 86, 88, 91, 93]; // D5 … A6: nine steps, never a tenth
+const COUNT9 = [74, 76, 79, 81, 83, 86, 88, 91, 93]; // D5 \u2026 A6: nine steps, never a tenth
 SFX.count = (o, sp, t) => {
   const n = Math.max(0, Math.round(num(o.n, 1)));
   play("sfx", (v) => {
@@ -3249,14 +3254,14 @@ SFX.blip = (o, sp, t) => { // dialogue voice blips
       bufTo(v, "knock", t, (220 / 520) * rnd(0.95, 1.05), 0.35, out);
       thump(v, out, t, 230, 205, 0.12, 0.05);
     } else if (vc === "old") {
-      noiseHit(v, out, "pink", t, "bandpass", 520 + (i % 5) * 30, 2.5, 0.3, 0.07);
-      thump(v, out, t, 165 + (i % 4) * 9, 150, 0.1, 0.07);
+      noiseHit(v, out, "pink", t, "bandpass", 520 + (i % 5) * 30, 2.5, 0.55, 0.07);
+      thump(v, out, t, 165 + (i % 4) * 9, 150, 0.2, 0.07);
     } else if (vc === "radio") {
-      noiseHit(v, out, "white", t, "bandpass", 2200, 1.5, 0.25, 0.018);
-      const x = v.o("square", 900 + (i % 3) * 140, t, t + 0.03), g = v.g(0); perc(g.gain, t, 0.001, 0.025, 0.015); chain(x, g, out);
+      noiseHit(v, out, "white", t, "bandpass", 2200, 1.5, 0.7, 0.018);
+      const x = v.o("square", 900 + (i % 3) * 140, t, t + 0.03), g = v.g(0); perc(g.gain, t, 0.001, 0.06, 0.015); chain(x, g, out);
     } else if (vc === "crow") {
       const x = v.o("sawtooth", 560 + (i % 4) * 30, t, t + 0.08), vca = v.g(0.55), nz = v.n("white", t, t + 0.08, 0.5), bp = v.f("bandpass", 1300, 2), g = v.g(0);
-      chain(nz, v.g(0.45), vca.gain); perc(g.gain, t, 0.004, 0.35, 0.05); chain(x, vca, bp, g, out);
+      chain(nz, v.g(0.45), vca.gain); perc(g.gain, t, 0.004, 0.8, 0.05); chain(x, vca, bp, g, out);
     } else { // tsuzura: bright, quick, a little squeaky
       const f = 650 + ((i * 37) % 11) * 28 + rnd(-15, 15);
       const a = v.o("triangle", f, t, t + 0.06), b = v.o("square", f * 1.003, t, t + 0.06), lp = v.f("lowpass", 3200, 0), g = v.g(0);
@@ -3267,27 +3272,27 @@ SFX.blip = (o, sp, t) => { // dialogue voice blips
 };
 SFX.ui_move = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.02);
-  noiseHit(v, out, "white", t, "highpass", 3500, 0, 0.06, 0.012);
-  bufTo(v, "tick", t, 0.72, 0.08, out);
+  noiseHit(v, out, "white", t, "highpass", 3500, 0, 0.09, 0.012);
+  bufTo(v, "tick", t, 0.72, 0.12, out);
 });
 function uiPair(m1, m2, wr) {
   return (o, sp, t) => play("sfx", (v) => {
     const out = v.out("sfx", sp, 1, 0.08);
-    bufTo(v, ksE("koto", m1), t, 1, 0.16, out); bufTo(v, ksE("koto", m2), t + 0.07, 1, 0.14, out);
-    bufTo(v, "wood", t, wr, 0.08, out);
+    bufTo(v, ksE("koto", m1), t, 1, 0.22, out); bufTo(v, ksE("koto", m2), t + 0.07, 1, 0.2, out);
+    bufTo(v, "wood", t, wr, 0.1, out);
   });
 }
 SFX.ui_ok = uiPair(74, 81, 1.2);
 SFX.ui_back = uiPair(69, 64, 0.9);
 SFX.ui_open = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.1);
-  airSweep(v, out, t, 1200, 4200, 0.2, 0.1, 0.5);
-  bufTo(v, harmE(79), t + 0.08, 1, 0.12, out);
+  airSweep(v, out, t, 1200, 4200, 0.2, 0.14, 0.5);
+  bufTo(v, harmE(79), t + 0.08, 1, 0.17, out);
 });
 SFX.ui_close = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.06);
-  airSweep(v, out, t, 4000, 1000, 0.18, 0.09, 0.4);
-  bufTo(v, "tick", t + 0.12, 0.6, 0.07, out);
+  airSweep(v, out, t, 4000, 1000, 0.18, 0.13, 0.4);
+  bufTo(v, "tick", t + 0.12, 0.6, 0.1, out);
 });
 SFX.splash = (o, sp, t) => {
   const z = u01(o.size, 0.5);
@@ -3338,7 +3343,7 @@ function caw(v, out, t, n, base) { // crow: buzzy saw through beak formants, noi
   return tt - t;
 }
 SFX.crow = (o, sp, t) => play("sfx", (v) => caw(v, v.out("sfx", sp, 1, 0.25), t, rint(1, 3), rnd(480, 560)));
-SFX.deer = (o, sp, t) => play("sfx", (v) => { // sika deer: a high, lonely "pyuu—"
+SFX.deer = (o, sp, t) => play("sfx", (v) => { // sika deer: a high, lonely "pyuu\u2014"
   const out = v.out("sfx", sp, 1, 0.45), f = rnd(1900, 2200), g = v.g(0);
   for (const [k, a] of [[1, 1], [2, 0.08]]) {
     const x = v.o("sine", f * k * 0.86, t, t + 1.25), xg = v.g(a);
@@ -3421,7 +3426,7 @@ SFX.far_touch = (o, sp, t) => play("sfx", (v) => {
   const k = v.b(snd("taiko"), t + 0.05, 0.85); chain(k, v.f("lowpass", 380, 0), v.g(0.5), out);
 });
 SFX.far_pulse = (o, sp, t) => play("sfx", (v) => {
-  const out = v.out("far", sp, 0.35, 0.1, 1);
+  const out = v.out("far", sp, 0.25, 0.1, 1);
   chain(v.b(snd("odaiko"), t, 0.92), v.f("lowpass", 420, 0), v.g(0.6), out);
   chain(v.b(snd("rin"), t + 0.02, 0.5), v.f("lowpass", 1800, 0), v.g(0.35), out);
 });
@@ -3445,7 +3450,7 @@ SFX.heartbeat = (o, sp, t) => play("sfx", (v) => {
 });
 
 /* =====================================================================
-   AMBIENCE — breathing forest beds + scheduled creatures (update-driven)
+   AMBIENCE \u2014 breathing forest beds + scheduled creatures (update-driven)
    ===================================================================== */
 const AMB = { on: false, act: 1, wet: 0, gust: 0.6, nextGust: 0, nextLeaf: 0, nextWander: 0 };
 let ambIn, ambLP, ambG, ambWIn, ambWLP, ambWG;
@@ -3471,30 +3476,31 @@ function bedWant(name, lvl, dt) {
     b.srcs = [];
   }
 }
-function loopBake(key, sec, perSec, a0, a1) { // droplet patter loops
-  bake(key, sec, 2, (b, len) => {
-    for (let c = 0; c < 2; c++) {
-      const d = b.getChannelData(c), n = Math.floor(sec * perSec);
-      for (let i = 0; i < n; i++) {
-        const st = Math.floor(Math.random() * (len - SR * 0.04)), a = rnd(a0, a1) * (chance(0.15) ? 2 : 1);
-        addPartials(d, [[rnd(1800, 7000), a, rnd(0.0015, 0.005), 0.0003]], st);
-        addNoise(d, a * 0.6, 0.0008, 0, true, st);
-      }
-    }
-  }, true);
+// Seamless ambience loops, baked in background slices: one job per channel, registered when done.
+function loopJobs(key, sec, fill) {
+  const b = ctx.createBuffer(2, Math.floor(sec * SR), SR);
+  return [() => fill(b.getChannelData(0), b.length), () => fill(b.getChannelData(1), b.length), () => BK.set(key, { b, r: 1 })];
 }
-function bakeBabble() { // brook bubbles: Minnaert-like rising "bloops"
-  bake("babble", 6, 2, (b, len) => {
-    for (let c = 0; c < 2; c++) {
-      const d = b.getChannelData(c);
-      for (let i = 0; i < 84; i++) {
-        const st = Math.floor(Math.random() * (len - SR * 0.2)), f0 = rnd(250, 1100), dur = rnd(0.012, 0.045), k = rnd(8, 30);
-        const nn = Math.floor(dur * SR * 4), kd = Math.exp(-1 / (dur * SR));
-        let ph = 0, env = rnd(0.05, 0.18);
-        for (let j = 0; j < nn; j++) { ph += (2 * Math.PI * f0 * (1 + (k * j) / SR)) / SR; d[st + j] += Math.sin(ph) * env * Math.min(1, j / 30); env *= kd; }
-      }
+function droplets(perSec, a0, a1) { // rain patter: tiny resonant pings with a click
+  return (d, len) => {
+    for (let i = 0, n = Math.floor((len / SR) * perSec); i < n; i++) {
+      const st = Math.floor(Math.random() * (len - SR * 0.04)), a = rnd(a0, a1) * (chance(0.15) ? 2 : 1);
+      addPartials(d, [[rnd(1800, 7000), a, rnd(0.0015, 0.005), 0.0003]], st);
+      addNoise(d, a * 0.6, 0.0008, 0, true, st);
     }
-  }, true);
+  };
+}
+function babble(d, len) { // brook bubbles: Minnaert-like rising "bloops" (phasor chirps)
+  for (let i = 0; i < 64; i++) {
+    const st = Math.floor(Math.random() * (len - SR * 0.2)), f0 = rnd(250, 1100), dur = rnd(0.012, 0.045), k = rnd(8, 30);
+    const nn = Math.floor(dur * SR * 3.5), kd = Math.exp(-1 / (dur * SR));
+    let re = 1, im = 0, c = 1, s = 0, env = rnd(0.05, 0.18);
+    for (let j = 0; j < nn; j++) {
+      if ((j & 15) === 0) { const w = (2 * Math.PI * f0 * (1 + (k * j) / SR)) / SR; c = Math.cos(w); s = Math.sin(w); }
+      const r2 = re * c - im * s; im = re * s + im * c; re = r2;
+      d[st + j] += im * env * Math.min(1, j / 30); env *= kd;
+    }
+  }
 }
 function bakeCrackle() {
   bake("crackle", 4, 1, (b, len) => {
@@ -3527,7 +3533,7 @@ function buildAmb() {
   RN.body = BQ_("bandpass", 800, 0.6); RN.bg = G(0); chain(RN.body, RN.bg, ambIn);
   RN.dl = G(0); RN.dh = G(0); RN.dl.connect(ambIn); RN.dh.connect(ambIn);
   bed("rain", [["white", RN.hp, 1], ["pink", RN.body, 1], ["rainL", RN.dl, 1], ["rainH", RN.dh, 1]]);
-  BQ.push(() => loopBake("rainL", 3, 16, 0.05, 0.25), () => loopBake("rainH", 3, 90, 0.03, 0.16), bakeBabble, bakeCrackle);
+  BQ.push(...loopJobs("rainL", 3, droplets(16, 0.05, 0.25)), ...loopJobs("rainH", 3, droplets(90, 0.03, 0.16)), ...loopJobs("babble", 6, babble), bakeCrackle);
 }
 // Per-frame bed levels (cheap: change-detected targets only).
 function ambUpdate(dt) {
@@ -3612,7 +3618,7 @@ function ambTick(t, dt) {
   maybe("drip", AMB.wet * (0.4 + 2.6 * s.rain) * (b.forest + b.bamboo + 0.3) * act, dt, t, evDrip, 4);
   if (s.rain > 0.7) maybe("thunder", (s.rain - 0.7) * 0.07 * act, dt, t, (tt) => (SFX.thunder({ dist: rnd(0.6, 1), _bus: "ambx" }, { g: 1, pan: rnd(-0.7, 0.7), d: 0 }, tt), 8), 1);
 }
-function evMinmin(t) { // ミンミンゼミ: "miin-min-min-min-meee"
+function evMinmin(t) { // \u30df\u30f3\u30df\u30f3\u30bc\u30df: "miin-min-min-min-meee"
   const len = rnd(4, 7), f0 = rnd(3200, 3800);
   play("bg", (v) => {
     const out = ambOut(v, rnd(-0.9, 0.9), rnd(0.035, 0.07), 0.5, rnd(5000, 9000));
@@ -3632,7 +3638,7 @@ function evMinmin(t) { // ミンミンゼミ: "miin-min-min-min-meee"
   });
   return len;
 }
-function evHigurashi(t, chainN = 0) { // ヒグラシ: "kana-kana-kana…", falling and fading; others answer
+function evHigurashi(t, chainN = 0) { // \u30d2\u30b0\u30e9\u30b7: "kana-kana-kana\u2026", falling and fading; others answer
   const len = rnd(3, 5), f0 = rnd(4200, 5000), rate0 = rnd(7.5, 9.5);
   play("bg", (v) => {
     const out = ambOut(v, rnd(-0.95, 0.95), rnd(0.03, 0.055), 0.95, rnd(7000, 10000));
@@ -3653,7 +3659,7 @@ function evHigurashi(t, chainN = 0) { // ヒグラシ: "kana-kana-kana…", fall
   if (chainN < 3 && chance(0.6)) PEND.push({ t: t + len + rnd(-1.2, 1.5), fn: (tt) => { if (AMB.act > 0.1) evHigurashi(tt, chainN + 1); } });
   return len;
 }
-function evUguisu(t) { // ウグイス: "hoo—— hokekyo"
+function evUguisu(t) { // \u30a6\u30b0\u30a4\u30b9: "hoo\u2014\u2014 hokekyo"
   play("bg", (v) => {
     const out = ambOut(v, rnd(-0.8, 0.8), rnd(0.05, 0.085), 0.6), o = v.o("sine", 1100, t, t + 2.4), g = v.g(0);
     chain(o, g, out);
@@ -3668,7 +3674,7 @@ function evUguisu(t) { // ウグイス: "hoo—— hokekyo"
   });
   return 2.5;
 }
-function evTit(t) { // シジュウカラ: "tsupi-tsupi-tsupi"
+function evTit(t) { // \u30b7\u30b8\u30e5\u30a6\u30ab\u30e9: "tsupi-tsupi-tsupi"
   const n = rint(3, 6), per = rnd(0.2, 0.28), f1 = rnd(3800, 4400), f2 = rnd(5600, 6400);
   play("bg", (v) => {
     const out = ambOut(v, rnd(-0.9, 0.9), rnd(0.025, 0.05), 0.5, 9000), o = v.o("sine", f1, t, t + n * per + 0.2), g = v.g(0);
@@ -3690,7 +3696,7 @@ function evCrow(t) {
   play("bg", (v) => { d = caw(v, ambOut(v, rnd(-0.9, 0.9), rnd(0.05, 0.09), 0.7, 2600), t, rint(1, 3), rnd(470, 540)); });
   return d;
 }
-function evSuzumushi(t) { // スズムシ: "riiin" — a tiny bell trill
+function evSuzumushi(t) { // \u30b9\u30ba\u30e0\u30b7: "riiin" \u2014 a tiny bell trill
   const len = rnd(1, 2), f = rnd(4300, 4600);
   play("bg", (v) => {
     const out = ambOut(v, rnd(-1, 1), rnd(0.012, 0.028), 0.5, 8000), o = v.o("sine", f, t, t + len + 0.1), am = v.g(0.5), env = v.g(0);
@@ -3701,7 +3707,7 @@ function evSuzumushi(t) { // スズムシ: "riiin" — a tiny bell trill
   });
   return len;
 }
-function evKajika(t) { // カジカガエル: "fi-fi-fi-fiiii", bird-like over the water
+function evKajika(t) { // \u30ab\u30b8\u30ab\u30ac\u30a8\u30eb: "fi-fi-fi-fiiii", bird-like over the water
   const n = rint(4, 8), base = rnd(1800, 2100);
   let tt = t, per = rnd(0.16, 0.22);
   play("bg", (v) => {
@@ -3742,7 +3748,7 @@ function evCreak(t) { // trunks and culms creaking in strong wind
   });
   return dur;
 }
-function evFurin(t) { // shrine wind chime (風鈴)
+function evFurin(t) { // shrine wind chime (\u98a8\u9234)
   const n = rint(1, 3), r = pick([1, 1.122, 0.89]);
   play("bg", (v) => {
     const out = ambOut(v, rnd(-0.6, 0.6), rnd(0.05, 0.1), 0.5);
@@ -3760,7 +3766,7 @@ function evDrip(t) { // leaf drip patter
 }
 
 /* =====================================================================
-   MUSIC — lookahead sequencer, motif tools, generative pieces
+   MUSIC \u2014 lookahead sequencer, motif tools, generative pieces
    ===================================================================== */
 // Tsuzura's leitmotif, yo scale on D. [midi, beats]; 0 = rest; -1 = THE HOLE: the tenth
 // note of her count never sounds (she never reaches a hundred). Bar 2 is 5 beats as written.
@@ -3871,7 +3877,7 @@ const PIECES = {
     }
     return { ev, beats, bpm: 60 };
   },
-  explore(k) { // mostly silence; a short phrase every 25–70 s, coloured by the hour
+  explore(k) { // mostly silence; a short phrase every 25\u201370 s, coloured by the hour
     if (k % 2 === 0) return { ev: [], beats: k === 0 ? rnd(8, 22) : rnd(25, 70), bpm: 60 };
     const h = S.tod, ev = [], mode = h >= 5 && h < 11 ? 0 : h >= 11 && h < 16.5 ? 1 : h >= 16.5 && h < 19.5 ? 2 : 3;
     const notes = [].concat(...pick([[M1, M2], [M3, M4], [M1, M3, M4], [M1, CADENCE]]));
@@ -3910,7 +3916,7 @@ const PIECES = {
     if (chance(0.4)) ev.push({ b: 4, i: "odaiko", v: 0.18 });
     return { ev, beats: 8, bpm: 60 };
   },
-  wonder(k) { // a vista: pad swell, koto runs, the flute reaches — and this time resolves
+  wonder(k) { // a vista: pad swell, koto runs, the flute reaches \u2014 and this time resolves
     if (k > 0) return null;
     const ev = [], run = [62, 64, 67, 69, 71, 74, 76, 79];
     ev.push({ b: 0, i: "pad", ms: [50, 57, 64, 71], d: 22, v: 0.15, o: { att: 5, rel: 5, cut: 1300 } }, { b: 0, i: "rin", v: 0.12 });
@@ -4012,9 +4018,9 @@ function musicTick(t, ahead) {
 }
 
 /* =====================================================================
-   FAR FESTIVAL — generated 祭囃子, heard from impossibly far away
+   FAR FESTIVAL \u2014 generated \u796d\u56c3\u5b50, heard from impossibly far away
    ===================================================================== */
-// Shinobue melody in a minyō/ritsu colour on D (D F G A C). 16 bars of [midi, 16ths]; 0 = breath.
+// Shinobue melody in a miny\u014d/ritsu colour on D (D F G A C). 16 bars of [midi, 16ths]; 0 = breath.
 const FMEL = [
   [[86, 4], [84, 2], [81, 2], [84, 2], [86, 2], [81, 4]], [[79, 2], [81, 2], [84, 2], [81, 2], [79, 2], [77, 2], [74, 4]],
   [[77, 2], [79, 2], [81, 4], [84, 2], [81, 2], [79, 2], [81, 2]], [[86, 6], [84, 2], [81, 8]],
@@ -4029,7 +4035,7 @@ const FSTEP = new Array(256).fill(null);
 { let s = 0; for (const bar of FMEL) for (const [m, d] of bar) { if (s < 256) FSTEP[s] = [m, d]; s += d; } }
 const FSC = [74, 77, 79, 81, 84, 86, 89, 91, 93, 96];
 const fUp = (m) => FSC.find((x) => x > m) || m + 2;
-// 16-step drum patterns. Shime: テン テン ツク テン ツク テン テン ツク / テケ テン テケ テン…  Kane: チャン チキ …
+// 16-step drum patterns. Shime: \u30c6\u30f3 \u30c6\u30f3 \u30c4\u30af \u30c6\u30f3 \u30c4\u30af \u30c6\u30f3 \u30c6\u30f3 \u30c4\u30af / \u30c6\u30b1 \u30c6\u30f3 \u30c6\u30b1 \u30c6\u30f3\u2026  Kane: \u30c1\u30e3\u30f3 \u30c1\u30ad \u2026
 const SHIME_A = [0.9, 0, 0.7, 0, 0.6, 0.45, 0.8, 0, 0.6, 0.45, 0.75, 0, 0.85, 0, 0.6, 0.45];
 const SHIME_B = [0.85, 0.5, 0.8, 0, 0.6, 0.45, 0.8, 0, 0.9, 0, 0.8, 0, 0.6, 0.45, 0.6, 0.45];
 const KANE = [0.8, 0, 0.45, 0.35, 0.8, 0, 0.45, 0.35, 0.8, 0, 0.45, 0.35, 0.8, 0, 0.45, 0.35];
@@ -4040,7 +4046,7 @@ function festStart() {
   const k = (x) => (n.nodes.push(x), x);
   const osc = (type, f) => { const o = k(ctx.createOscillator()); o.type = type; o.frequency.value = f; o.start(t); return o; };
   n.src = k(G(0.9)); n.tap = k(G(1)); n.src.connect(n.tap); // dry mix; tap feeds the radio
-  // Far chain: slow pitch wow (±12 c) → [near: chorus] [sometimes: phasing] → steep lowpass → wind gusts → drifting pan
+  // Far chain: slow pitch wow (\u00b112 c) \u2192 [near: chorus] [sometimes: phasing] \u2192 steep lowpass \u2192 wind gusts \u2192 drifting pan
   n.wow = k(ctx.createDelay(0.2)); n.wow.delayTime.value = 0.03;
   chain(osc("sine", 0.13), k(G(0.0085)), n.wow.delayTime); chain(osc("sine", 0.047), k(G(0.004)), n.wow.delayTime);
   n.ch = k(ctx.createDelay(0.2)); n.ch.delayTime.value = 0.022; chain(osc("sine", 0.83), k(G(0.0026)), n.ch.delayTime);
@@ -4086,7 +4092,7 @@ function festParams() {
   const a = FEST.a, nr = FEST.near, on = a > 0.001;
   const cut = Math.exp(lerp(Math.log(expMap(450, 2500, sstep(0, 1, a))), Math.log(19000), nr * nr));
   tgt(n.lp1.frequency, nyq(cut), 0.5); tgt(n.lp2.frequency, nyq(cut * 1.25), 0.5);
-  tgt(n.out.gain, on ? Math.pow(a, 1.2) * lerp(0.6, 0.85, nr) : 0, 0.6);
+  tgt(n.out.gain, on ? Math.pow(a, 1.2) * lerp(0.35, 0.85, nr) : 0, 0.6);
   tgt(n.dry.gain, lerp(0.25, 0.95, nr), 0.5); tgt(n.wet.gain, lerp(1, 0.45, nr), 0.5); tgt(n.chG.gain, nr * 0.7, 0.5);
   FEST.tune = 1.0035 + nr * 0.004; // a touch sharp: joyful, and wrong
   if (on && nr > 0.02 && !n.choir) choirStart(n);
@@ -4118,7 +4124,7 @@ function festStep(n, t, st, s16) {
   if (pos === 0) od = 1;
   else if (pos === 8 && bar & 1) od = 0.75;
   else if ((bar & 3) === 3 && (pos === 12 || pos === 14)) od = pos === 12 ? 0.7 : 0.5;
-  if (od) hit(tt, "odaiko", od * 0.55, n.odP, rnd(0.98, 1.02));
+  if (od) hit(tt, "odaiko", od * 0.45, n.odP, rnd(0.98, 1.02));
   const mn = FSTEP[st];
   if (mn) fifeNote(n, tt, mn[0], mn[1] * s16);
 }
@@ -4149,7 +4155,7 @@ function festTick(t, ahead) {
 }
 
 /* =====================================================================
-   RADIO — a broken transistor radio by the shrine
+   RADIO \u2014 a broken transistor radio by the shrine
    ===================================================================== */
 const RADIO = { on: false, x: NaN, y: NaN, sig: 0.6, n: null };
 let SATCURVE = null;
@@ -4206,7 +4212,7 @@ function radioTick(t) {
 }
 
 /* =====================================================================
-   STINGERS — short musical cues in the same palette (AU.stinger)
+   STINGERS \u2014 short musical cues in the same palette (AU.stinger)
    ===================================================================== */
 let STR = null;
 function stingStrip() {
@@ -4226,7 +4232,7 @@ const STING = {
     [62, 69, 74, 76, 81].forEach((m, i) => koto(t + i * 0.09, m, 1, 0.5, s));
     flute(t + 0.5, 74, 0.45, 0.5, s); flute(t + 1.0, 81, 2.2, 0.55, s); hit(t + 1.0, "rin", 0.1, s);
   },
-  awaken(t, s) { // nine notes up — never the tenth
+  awaken(t, s) { // nine notes up \u2014 never the tenth
     [62, 64, 67, 69, 71, 74, 76, 79, 81].forEach((m, i) => koto(t + i * 0.05, m, 1, 0.3 + i * 0.03, s));
     hit(t + 0.5, "suzu", 0.12, s); cel(t + 0.55, 93, 1, 0.4, s);
   },
@@ -4250,7 +4256,7 @@ const STING = {
 };
 
 /* =====================================================================
-   SCHEDULER — one lookahead loop for music, festival, ambience, radio
+   SCHEDULER \u2014 one lookahead loop for music, festival, ambience, radio
    ===================================================================== */
 let lastTick = 0;
 function tick() {
@@ -4269,7 +4275,7 @@ function tick() {
 }
 
 /* =====================================================================
-   API — public surface; every method is a silent no-op until ready
+   API \u2014 public surface; every method is a silent no-op until ready
    ===================================================================== */
 const TRIM = { master: 0.85, music: 0.75, amb: 0.85, sfx: 0.85, voice: 0.75, far: 0.9 }; // internal mix
 function mkWave(h) {
@@ -4294,8 +4300,10 @@ function init() {
     for (const k in TRIM) VOL[k] = TRIM[k];
     buildGraph(); buildAmb();
     for (const k of ["shime", "kaneO", "kaneD", "odaiko", "suzu", "knock", "tick", "wood", "taiko", "rin", "glass", "gong"]) BQ.push(() => snd(k));
-    for (const m of [50, 52, 55, 57, 59, 62, 64, 67, 69, 71, 74, 76, 79, 81]) BQ.push(() => ksE("koto", m));
-    for (const m of [38, 45, 50, 57, 59, 62]) BQ.push(() => ksE("sham", m));
+    const yo = (a, b) => YO.filter((m) => m >= a && m <= b);
+    for (const m of yo(40, 95)) BQ.push(() => ksE("koto", m));
+    for (const m of yo(38, 71)) BQ.push(() => ksE("sham", m));
+    for (const m of yo(67, 98)) BQ.push(() => celE(m), () => harmE(m));
     BQ.push(() => snd("bell"));
     lastTick = ctx.currentTime;
     timer = setInterval(tick, TICK_MS);
@@ -4371,7 +4379,7 @@ return api;
 
 /* ==== src/fx.js ==== */
 /* =====================================================================
-   FX — pixel particles and the small life of the mountain: dust in the
+   FX \u2014 pixel particles and the small life of the mountain: dust in the
    sun, fireflies at night, cedar needles and maple seeds on the wind,
    dragonflies over water, spray at the fall, footstep puffs, the gold
    thread of borrowed weight, the pale motes of the Far.
@@ -4456,22 +4464,22 @@ const FX = {
 
 /* ==== src/entities.js ==== */
 /* =====================================================================
-   ENTITIES — the things she can touch: loose materials, the offerings,
+   ENTITIES \u2014 the things she can touch: loose materials, the offerings,
    the shrine site, the radio, stone lanterns that will hold weight, the
-   jizō, the charcoal-burner's note, the ghosts of what went Far, the
+   jiz\u014d, the charcoal-burner's note, the ghosts of what went Far, the
    crow and the deer, and later Kagomaru.
    ===================================================================== */
 const ITEM = {
-  // w: weight (貫) · hgt: height on the back-frame · build: what it counts toward at the shrine
-  beam:   { zh: "祠的横梁", rect: "log1", w: 6, hgt: 11, build: { pillar: 2 } },
-  log:    { zh: "杉木段", rect: "log0", w: 5, hgt: 11, build: { pillar: 2 } },
-  pole:   { zh: "竹竿", rect: "pole", w: 1, hgt: 6, build: { pillar: 1 } },
-  bark:   { zh: "杉树皮", rect: "bark", w: 1, hgt: 7, build: { roof: 1 } },
-  vine:   { zh: "葛藤", rect: "vine", w: 1, hgt: 8, build: { rope: 1 } },
-  flat:   { zh: "平石", rect: "flatstone", w: 4, hgt: 9, build: { base: 1 } },
-  holed:  { zh: "穴石——御神体", rect: "holed", w: 2, hgt: 10, build: { god: 1 } },
-  basket: { zh: "葛笼", rect: "basket", w: 1, hgt: 16 },
-  radio:  { zh: "铁匣子", rect: "radio", w: 1, hgt: 12 },
+  // w: weight (\u8cab) \u00b7 hgt: height on the back-frame \u00b7 build: what it counts toward at the shrine
+  beam:   { zh: "\u7960\u7684\u6a2a\u6881", rect: "log1", w: 6, hgt: 11, build: { pillar: 2 } },
+  log:    { zh: "\u6749\u6728\u6bb5", rect: "log0", w: 5, hgt: 11, build: { pillar: 2 } },
+  pole:   { zh: "\u7af9\u7aff", rect: "pole", w: 1, hgt: 6, build: { pillar: 1 } },
+  bark:   { zh: "\u6749\u6811\u76ae", rect: "bark", w: 1, hgt: 7, build: { roof: 1 } },
+  vine:   { zh: "\u845b\u85e4", rect: "vine", w: 1, hgt: 8, build: { rope: 1 } },
+  flat:   { zh: "\u5e73\u77f3", rect: "flatstone", w: 4, hgt: 9, build: { base: 1 } },
+  holed:  { zh: "\u7a74\u77f3\u2014\u2014\u5fa1\u795e\u4f53", rect: "holed", w: 2, hgt: 10, build: { god: 1 } },
+  basket: { zh: "\u845b\u7b3c", rect: "basket", w: 1, hgt: 16 },
+  radio:  { zh: "\u94c1\u5323\u5b50", rect: "radio", w: 1, hgt: 12 },
 };
 const EN = {
   list: [], nid: 1,
@@ -4527,7 +4535,7 @@ const SITE = {
   e: null, stage: 0,
   needs: [ { base: 1 }, { pillar: 4 }, { roof: 3 }, { rope: 1, god: 1 } ],
   have: { base: 0, pillar: 0, roof: 0, rope: 0, god: 0 },
-  label: { base: "礎石", pillar: "柱", roof: "屋根", rope: "注连绳", god: "御神体" },
+  label: { base: "\u790e\u77f3", pillar: "\u67f1", roof: "\u5c4b\u6839", rope: "\u6ce8\u8fde\u7ef3", god: "\u5fa1\u795e\u4f53" },
   init() {
     const [x, y] = LM.shrine;
     this.e = EN.add({ type: "site", x, y: y - 8, z: WD.shrineZ, solid: 15 });
@@ -4627,10 +4635,10 @@ const KAGOMARU = {
 
 /* ==== src/player.js ==== */
 /* =====================================================================
-   PLAYER — ツヅラ. Walking is the game: slope, ground, water, load and
+   PLAYER \u2014 \u30c4\u30c5\u30e9. Walking is the game: slope, ground, water, load and
    the Far all bend her speed. The back-frame carries a stack that sways
    with every bump and turn and sheds its top when she pushes her luck.
-   Her one borrowed nature is weight (重): J draws weight out of a thing
+   Her one borrowed nature is weight (\u91cd): J draws weight out of a thing
    into her tail, K gives it back to something. Six in the tail and she
    is a stone; none of her own and she is a leaf on the wind.
    ===================================================================== */
@@ -4652,8 +4660,8 @@ const PL = {
     e.blink -= dt; if (e.blink < -.12) e.blink = 2 + Math.random() * 3;
     if (e.exprT > 0) { e.exprT -= dt; if (e.exprT <= 0) e.expr = null; }
     if (e.emoteT > 0) { e.emoteT -= dt; if (e.emoteT <= 0) e.emote = null; }
-    const ctl = GAME.canControl() && e.state === "play";
-    let [ax, ay, am] = ctl ? IN.axis() : [0, 0, 0];
+    const ctl = GAME.canControl() && (e.state === "play" || e.state === "pinned");
+    let [ax, ay, am] = ctl && e.state === "play" ? IN.axis() : [0, 0, 0];
     if (e.form === "stone") { if (am > .2 && Math.random() < dt * 8) { e.wobble = .25; } ax = ay = am = 0; }
     this.actions(dt, ctl);
     this.move(dt, ax, ay, am);
@@ -4767,7 +4775,7 @@ const PL = {
     const top = e.stack[e.stack.length - 1];
     const windF = RD.env.wind[0] * RD.env.wind[2] * (H / 40) * (top.w === 0 ? 3 : 1) * (.5 + .5 * Math.sin(GAME.t * .7));
     const stiff = 9 + e.tail * 4 + (am < .1 ? 6 : 0);
-    e.omega += (-lat * .022 * (1 + H / 36) + windF * .9) * 1;
+    e.omega += -lat * .0065 * (1 + H / 36) + windF * .9 * dt * 2;
     e.omega += (-stiff * e.theta - 2.6 * e.omega) * dt;
     e.theta += e.omega * dt;
     const tmax = clamp(.52 - H / 150, .2, .52) + e.tail * .03;
@@ -4801,13 +4809,13 @@ const PL = {
     const wt = this.target(30, this.weightTargets());
     // offerings are scooped up as she passes
     if (off && hyp(off.x - e.x, off.y - e.y) < 12) GAME.collectOffering(off);
-    if (e.form === "stone") { this.prompts.push(["give", "予", "把重量交出去"]); if (wt) wt.hl = 1; }
+    if (e.form === "stone") { this.prompts.push(["give", "\u4e88", "\u628a\u91cd\u91cf\u4ea4\u51fa\u53bb"]); if (wt) wt.hl = 1; }
     // act: deliver to the shrine > talk/use > pick up
-    if (site && e.stack.length && SITE.accepts(e.stack[e.stack.length - 1].kind)) { this.prompts.push(["act", "献", "放进祠里"]); site.hl = 1; if (IN.hit.act) { IN.consume("act"); GAME.deliver(); } }
-    else if (inter) { inter.hl = 1; this.prompts.push(["act", inter.verb || "看", inter.label || ""]); if (IN.hit.act) { IN.consume("act"); inter.interact(); } }
+    if (site && e.stack.length && SITE.accepts(e.stack[e.stack.length - 1].kind)) { this.prompts.push(["act", "\u732e", "\u653e\u8fdb\u7960\u91cc"]); site.hl = 1; if (IN.hit.act) { IN.consume("act"); GAME.deliver(); } }
+    else if (inter) { inter.hl = 1; this.prompts.push(["act", inter.verb || "\u770b", inter.label || ""]); if (IN.hit.act) { IN.consume("act"); inter.interact(); } }
     else if (pick && e.form === "normal") {
       pick.hl = 1; const K = ITEM[pick.kind]; const okW = this.stackW() + pick.w <= this.CAP, okH = this.stackH() + K.hgt <= this.HMAX;
-      this.prompts.push(["act", "背", K.zh + (pick.w === 0 ? "（无重）" : "")]);
+      this.prompts.push(["act", "\u80cc", K.zh + (pick.w === 0 ? "\uff08\u65e0\u91cd\uff09" : "")]);
       if (IN.hit.act) { IN.consume("act");
         if (!okW) { STORY.bark("tooHeavy", pick); AU.sfx("deny"); }
         else if (!okH) { STORY.bark("tooTall"); AU.sfx("deny"); }
@@ -4817,18 +4825,18 @@ const PL = {
     // drop the top item (hold to unload everything); next to Kagomaru it goes into the trunk instead
     if (e.stack.length && e.form === "normal") {
       const kg = KAGOMARU.e && hyp(KAGOMARU.e.x - e.x, KAGOMARU.e.y - e.y) < 30 ? KAGOMARU.e : null;
-      this.prompts.push(["drop", "卸", kg ? "交给籠丸" : "放下"]);
+      this.prompts.push(["drop", "\u5378", kg ? "\u4ea4\u7ed9\u7c60\u4e38" : "\u653e\u4e0b"]);
       if (IN.hit.drop) { IN.consume("drop"); const it = e.stack.pop();
         if (kg && KAGOMARU.cap() + it.w <= 4) { KAGOMARU.items.push(it); kg.open = 1; AU.sfx("place"); }
         else { const fx = e.face === "side" ? (e.flip ? -12 : 12) : 0, fy = e.face === "front" ? 10 : e.face === "back" ? -10 : 4; mkItem(it.kind, e.x + fx, e.y + fy, { w: it.w }); AU.sfx("drop", { size: clamp(it.w / 6, .1, 1) }); } }
     } else if (KAGOMARU.items.length && KAGOMARU.e && hyp(KAGOMARU.e.x - e.x, KAGOMARU.e.y - e.y) < 30 && IN.hit.drop) {
       IN.consume("drop"); const it = KAGOMARU.items.pop(); e.stack.push(it); KAGOMARU.e.open = 1; AU.sfx("pickup", { size: .3 });
     }
-    // 取 take weight: from the thing in front of her, or failing that from the heaviest thing on her back
+    // \u53d6 take weight: from the thing in front of her, or failing that from the heaviest thing on her back
     if (GAME.flags.knowsWeight || GAME.tutorial) {
-      if (wt && (wt.w > 0)) { wt.hl = 1; this.prompts.push(["take", "取", "重 " + wt.w]); }
-      else if (e.stack.length && e.stack.some(s => s.w > 0)) this.prompts.push(["take", "取", "背上的重量"]);
-      if (wt && e.tail > 0) this.prompts.push(["give", "予", "交给它"]);
+      if (e.tail < 6) { if (wt && (wt.w > 0)) { wt.hl = 1; this.prompts.push(["take", "\u53d6", "\u91cd " + wt.w]); }
+        else if (e.stack.length && e.stack.some(s => s.w > 0)) this.prompts.push(["take", "\u53d6", "\u80cc\u4e0a\u7684\u91cd\u91cf"]); }
+      if (wt && e.tail > 0 && e.form !== "stone") this.prompts.push(["give", "\u4e88", "\u4ea4\u7ed9\u5b83"]);
       if (IN.hit.take) { IN.consume("take"); this.take(wt); }
       if (IN.hit.give) { IN.consume("give"); this.give(wt); }
     }
@@ -4860,7 +4868,7 @@ const PL = {
     if (t.type === "lantern") RD.cam.shake = 1;
   },
   setForm(f) {
-    const e = this.e, was = e.form; e.form = f;
+    const e = this.e, was = e.form; if (was === f) return; e.form = f;
     if (f === "stone") { AU.sfx("stone"); RD.cam.shake = 3; FX.burst("dust", e.x, e.y, e.z, 14, { life: .7, c: [.6, .58, .55], speed: .8, up: .4, drag: 3, a: .8 }); STORY.bark("stone"); }
     if (f === "leaf") { AU.sfx("leaf"); FX.burst("leaf", e.x, e.y, e.z + 10, 10, { life: 2, c: [.5, .66, .3], speed: .6, up: .6, g: 20 }); STORY.bark("leaf"); }
     if (f === "normal" && was === "stone") { AU.sfx("unstone"); FX.burst("dust", e.x, e.y, e.z, 8, { life: .5, c: [.6, .58, .55], speed: .6, up: .3, drag: 3, a: .7 }); }
@@ -4900,6 +4908,11 @@ const PL = {
     }
     // the light she gives off when she holds weight, and the glow of a pale night
     if (e.tail > 0) RD.light(e.x + (e.flip ? 8 : -8), e.y, e.z + 12, 18 + e.tail * 6, .5 * e.tail / 6 + .2, .32 * e.tail / 6 + .1, .08);
+    if (e.form === "leaf") { // a big maple leaf held overhead like a parasol
+      const lx = e.x, lz = e.z + e.hop + 46, sw = Math.sin(GAME.t * 2.4) * 1.2, L = [[0, 0], [-1, 0], [1, 0], [-2, 1], [2, 1], [-3, 1], [3, 1], [-4, 2], [4, 2], [-2, 2], [2, 2], [0, 1], [0, 2], [-1, 1], [1, 1], [-3, 2], [3, 2], [0, -1], [-1, -1], [1, -1], [0, -2]];
+      for (const [dx, dz] of L) RD.part(lx + dx + sw, e.y + 1, lz - dz, 1, dz > 1 ? .36 : .48, dz > 1 ? .52 : .66, dz > 1 ? .22 : .3, 1);
+      for (let k = 0; k < 6; k++) RD.part(lx + Math.round(sw * (1 - k / 6)), e.y + 1, lz - 3 - k, 1, .4, .32, .2, 1);
+    }
     if (e.emote) UI.emote(e);
   },
   EXPR: { smug: { eyes: "smug", mouth: "fang" }, grin: { eyes: "happy", mouth: "fang" }, surprised: { eyes: "open", mouth: "o" }, sad: { eyes: "half", mouth: "idle" }, angry: { eyes: "half", mouth: "open" }, shout: { eyes: "closed", mouth: "open" }, soft: { eyes: "half", mouth: "smile" }, thinking: { eyes: "half", mouth: "idle" }, worried: { eyes: "open", mouth: "idle" }, count: { eyes: "open", mouth: "o" } },
@@ -4913,7 +4926,7 @@ const PL = {
 
 /* ==== src/systems.js ==== */
 /* =====================================================================
-   SYSTEMS — what the walking does to the world, and the game's state.
+   SYSTEMS \u2014 what the walking does to the world, and the game's state.
    NEARMAP: every step wears a trail and gives a little nearness back
    to pale ground; a rebuilt shrine pushes a ring of it outward.
    GAME: time, weather, offerings, delivery, Far contact, saving.
@@ -5026,7 +5039,7 @@ const GAME = {
 
 /* ==== src/ui.js ==== */
 /* =====================================================================
-   UI — DOM over the canvas. Dialogue (portrait, name in brush, text that
+   UI \u2014 DOM over the canvas. Dialogue (portrait, name in brush, text that
    types itself with her voice), cinematic subtitles, barks that float
    over her head, the offering count written vertically, the weight in
    her tail, the load on her back, prompts, the shrine card, title.
@@ -5036,7 +5049,13 @@ const UI = {
   css: `
 #ui{font-family:"Noto Serif SC","Shippori Mincho","Songti SC",serif;--ink:#0d0c12;--paper:#efe6d2;--paper2:#cfc3aa;--dim:#8f8674;--ver:#c8432f;--gold:#e8b04a;--ind:#2c3c6b}
 #ui *{box-sizing:border-box}
-.fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s}
+.fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .6s;z-index:4}
+#sub,#tcard{z-index:6}
+#dlg{z-index:7}
+#barks{position:absolute;inset:0;pointer-events:none;z-index:3}
+#title{z-index:2}
+#pause{z-index:8}
+#loading{z-index:9}
 /* dialogue */
 #dlg{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:min(900px,94vw);min-height:148px;padding:18px 26px 20px 196px;
   background:linear-gradient(180deg,rgba(14,13,20,.92),rgba(10,9,15,.95));border-top:1px solid rgba(239,230,210,.38);border-bottom:1px solid rgba(239,230,210,.38);
@@ -5141,10 +5160,10 @@ const UI = {
     const st = document.createElement("style"); st.textContent = this.css; document.head.appendChild(st);
     const ui = document.getElementById("ui");
     ui.innerHTML = `
-<div id="hud" style="opacity:0"><div id="count"><b>三</b><small>供物</small></div></div>
-<div id="gauges" style="opacity:0"><div class="g"><em>重</em><div class="pips" id="pips"></div></div><div class="g"><em>負</em><div class="bar" id="load"><i></i></div><span id="loadT"></span></div><div class="g"><em>息</em><div class="bar" id="stam"><i></i></div></div></div>
+<div id="hud" style="opacity:0"><div id="count"><b>\u4e09</b><small>\u4f9b\u7269</small></div></div>
+<div id="gauges" style="opacity:0"><div class="g"><em>\u91cd</em><div class="pips" id="pips"></div></div><div class="g"><em>\u8ca0</em><div class="bar" id="load"><i></i></div><span id="loadT"></span></div><div class="g"><em>\u606f</em><div class="bar" id="stam"><i></i></div></div></div>
 <div id="prm"></div>
-<div id="site"><h3>祠<small>再建</small></h3><ul id="siteL"></ul><div class="st" id="siteS"></div></div>
+<div id="site"><h3>\u7960<small>\u518d\u5efa</small></h3><ul id="siteL"></ul><div class="st" id="siteS"></div></div>
 <div id="note"><h4 id="noteH"></h4><div id="noteT"></div></div>
 <div id="barks"></div>
 <div id="sub"></div>
@@ -5160,7 +5179,7 @@ const UI = {
   },
   blocking() { return !!this.dlg || this.blockN > 0; },
   /* ---------- dialogue ---------- */
-  WHO: { tsuzura: { name: "葛笼", sub: "ツヅラ", voice: "tsuzura" }, radio: { name: "铁匣子", sub: "", voice: "radio", cls: "radio" }, kago: { name: "籠丸", sub: "カゴマル", voice: "kago" }, narr: { name: "", sub: "", voice: null } },
+  WHO: { tsuzura: { name: "\u845b\u7b3c", sub: "\u30c4\u30c5\u30e9", voice: "tsuzura" }, radio: { name: "\u94c1\u5323\u5b50", sub: "", voice: "radio", cls: "radio" }, kago: { name: "\u7c60\u4e38", sub: "\u30ab\u30b4\u30de\u30eb", voice: "kago" }, narr: { name: "", sub: "", voice: null } },
   say(lines) {
     return new Promise(res => {
       const D = this.dlg = { lines, i: 0, ch: 0, t: 0, res, done: false };
@@ -5189,8 +5208,8 @@ const UI = {
       const speed = L.slow ? 16 : 34;
       while (D.t > 1 / speed && D.ch < txt.length) {
         const c = txt[D.ch]; D.t -= 1 / speed; D.ch++;
-        if ("，、".includes(c)) D.t -= .09; else if ("。！？…—".includes(c)) D.t -= .2;
-        if (W.voice && c.trim() && !"，。、！？…—「」（）".includes(c) && D.ch % 2 === 1) AU.sfx("blip", { voice: W.voice, i: D.ch });
+        if ("\uff0c\u3001".includes(c)) D.t -= .09; else if ("\u3002\uff01\uff1f\u2026\u2014".includes(c)) D.t -= .2;
+        if (W.voice && c.trim() && !"\uff0c\u3002\u3001\uff01\uff1f\u2026\u2014\u300c\u300d\uff08\uff09".includes(c) && D.ch % 2 === 1) AU.sfx("blip", { voice: W.voice, i: D.ch });
       }
       this.el.txt.textContent = txt.slice(0, D.ch);
       if (D.ch >= txt.length) { D.done = true; this.el.dlg.classList.add("done"); }
@@ -5229,7 +5248,7 @@ const UI = {
   showHud(on) { this.el.hud.style.opacity = on ? 1 : 0; this.el.gauges.style.opacity = on ? 1 : 0; this.hudOn = on; },
   countPop(n, art, first) {
     const c = this.el.count; c.querySelector("b").textContent = kanjiNum(n); c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
-    if (!first) this.bark(kanjiNum(n) + "。", { dur: 1.4 });
+    if (!first) this.bark(kanjiNum(n) + "\u3002", { dur: 1.4 });
   },
   note(title, text, dur = 6) { this.el.noteH.textContent = title; this.el.noteT.textContent = text; this.el.note.classList.add("on"); clearTimeout(this.noteTO); this.noteTO = setTimeout(() => this.el.note.classList.remove("on"), dur * 1000); },
   siteCard(force) {
@@ -5237,9 +5256,9 @@ const UI = {
     const on = (near || force) && SITE.stage < 4;
     this.el.site.classList.toggle("on", !!on);
     if (!on) return;
-    const n = SITE.cur(), names = { base: "平石（礎石）", pillar: "柱 · 杉木或竹竿", roof: "杉树皮", rope: "葛藤（注连绳）", god: "御神体 · 穴石" };
+    const n = SITE.cur(), names = { base: "\u5e73\u77f3\uff08\u790e\u77f3\uff09", pillar: "\u67f1 \u00b7 \u6749\u6728\u6216\u7af9\u7aff", roof: "\u6749\u6811\u76ae", rope: "\u845b\u85e4\uff08\u6ce8\u8fde\u7ef3\uff09", god: "\u5fa1\u795e\u4f53 \u00b7 \u7a74\u77f3" };
     this.el.siteL.innerHTML = Object.keys(n).map(k => `<li class="${SITE.have[k] >= n[k] ? "ok" : ""}"><span>${names[k]}</span><span>${SITE.have[k]}/${n[k]}</span></li>`).join("");
-    this.el.siteS.textContent = ["其一 · 礎", "其二 · 柱", "其三 · 屋根", "其四 · 御神体"][SITE.stage] || "";
+    this.el.siteS.textContent = ["\u5176\u4e00 \u00b7 \u790e", "\u5176\u4e8c \u00b7 \u67f1", "\u5176\u4e09 \u00b7 \u5c4b\u6839", "\u5176\u56db \u00b7 \u5fa1\u795e\u4f53"][SITE.stage] || "";
   },
   prompts(list) {
     const k = JSON.stringify(list); if (k === this.lastPrm) return; this.lastPrm = k;
@@ -5261,7 +5280,7 @@ const UI = {
   },
   touchUI() {
     const t = document.createElement("div"); t.id = "touch";
-    t.innerHTML = [["take", "取"], ["act", "拾"], ["give", "予"], ["drop", "卸"], ["run", "奔"], ["pause", "‖"]].map(([a, l]) => `<button data-a="${a}">${l}</button>`).join("");
+    t.innerHTML = [["take", "\u53d6"], ["act", "\u62fe"], ["give", "\u4e88"], ["drop", "\u5378"], ["run", "\u5954"], ["pause", "\u2016"]].map(([a, l]) => `<button data-a="${a}">${l}</button>`).join("");
     document.getElementById("ui").appendChild(t);
     t.querySelectorAll("button").forEach(b => { const a = b.dataset.a; b.addEventListener("pointerdown", e => { e.preventDefault(); IN.tbtn(a, true); if (a === "act") IN.tbtn("ok", true); }); b.addEventListener("pointerup", () => { IN.tbtn(a, false); IN.tbtn("ok", false); }); b.addEventListener("pointercancel", () => IN.tbtn(a, false)); });
   },
@@ -5269,7 +5288,7 @@ const UI = {
 
 /* ==== src/story.js ==== */
 /* =====================================================================
-   STORY — the prologue (a dusk of counting, a night of music, the Far
+   STORY \u2014 the prologue (a dusk of counting, a night of music, the Far
    arriving), the waking (a beam, a stone, a lantern), and the first day
    of rebuilding. Every line is hers or the radio's; the narration only
    speaks twice.
@@ -5301,22 +5320,22 @@ const STORY = {
     AU.music("prologue", { fade: 4 });
     await UI.fade(0, 3.2);
     await CINE.wait(1.2);
-    await CINE.say(T("count", "……九十六。九十七。"), T("thinking", "九十八。"));
+    await CINE.say(T("count", "\u2026\u2026\u4e5d\u5341\u516d\u3002\u4e5d\u5341\u4e03\u3002"), T("thinking", "\u4e5d\u5341\u516b\u3002"));
     P.face = "back"; await CINE.wait(.7); P.face = "side"; P.flip = true; await CINE.wait(.5);
     PROLOGUE.cap = true; AU.sfx("offering"); P.face = "front";
-    await CINE.say(T("surprised", "——九十九。"), T("smug", "好。今天也是九十九。"));
+    await CINE.say(T("surprised", "\u2014\u2014\u4e5d\u5341\u4e5d\u3002"), T("smug", "\u597d\u3002\u4eca\u5929\u4e5f\u662f\u4e5d\u5341\u4e5d\u3002"));
     PROLOGUE.crow = mkCrow(sx + 2, sy + 66, WD.shrineZ + 50); AU.sfx("wings", { x: sx, y: sy + 60 });
     await CINE.wait(1.1);
     P.expr = "smug"; P.exprT = 99;
-    await CINE.say(T("smug", "吾乃九十九折峠之主，葛笼是也！"));
+    await CINE.say(T("smug", "\u543e\u4e43\u4e5d\u5341\u4e5d\u6298\u5ce0\u4e4b\u4e3b\uff0c\u845b\u7b3c\u662f\u4e5f\uff01"));
     await CINE.wait(1.3);
-    await CINE.say(T("normal", "……这种时候，你应该鼓掌。"));
+    await CINE.say(T("normal", "\u2026\u2026\u8fd9\u79cd\u65f6\u5019\uff0c\u4f60\u5e94\u8be5\u9f13\u638c\u3002"));
     PROLOGUE.crow.state = "fly"; PROLOGUE.crow.vx = 70; PROLOGUE.crow.vy = -20; PROLOGUE.crow.vz = 60; AU.sfx("crow", { x: sx, y: sy + 60 }); AU.sfx("wings", { x: sx, y: sy + 60 });
     await CINE.wait(.8);
-    await CINE.say(T("angry", "没礼貌。一枚瓶盖都没供过的家伙。"));
+    await CINE.say(T("angry", "\u6ca1\u793c\u8c8c\u3002\u4e00\u679a\u74f6\u76d6\u90fd\u6ca1\u4f9b\u8fc7\u7684\u5bb6\u4f19\u3002"));
     // she looks down the old road
     P.face = "front"; CINE.cam(ROAD[3][0] + 60, ROAD[3][1], null, 1.2); await CINE.wait(2.6);
-    await CINE.say(T("soft", "上一个走这条路的人，是三年前的夏天。"), T("soft", "留下这个瓶盖，许愿说想变瘦。"), T("grin", "……这个愿望有点难。本座还在考虑。"));
+    await CINE.say(T("soft", "\u4e0a\u4e00\u4e2a\u8d70\u8fd9\u6761\u8def\u7684\u4eba\uff0c\u662f\u4e09\u5e74\u524d\u7684\u590f\u5929\u3002"), T("soft", "\u7559\u4e0b\u8fd9\u4e2a\u74f6\u76d6\uff0c\u8bb8\u613f\u8bf4\u60f3\u53d8\u7626\u3002"), T("grin", "\u2026\u2026\u8fd9\u4e2a\u613f\u671b\u6709\u70b9\u96be\u3002\u672c\u5ea7\u8fd8\u5728\u8003\u8651\u3002"));
     CINE.cam(sx, sy + 6, WD.shrineZ, 1.4);
     // dusk falls into night
     await CINE.wait(1.2); AU.music("none", { fade: 6 });
@@ -5325,12 +5344,12 @@ const STORY = {
     P.expr = "normal"; await CINE.wait(1.2);
     PROLOGUE.radioOn = true; AU.radio(true, { x: sx - 14, y: sy + 2, signal: .2 });
     await CINE.wait(1.6);
-    await CINE.say(T("surprised", "……嗯？"), R_("……沙……沙沙……"), T("thinking", "你不是四十年前就坏了吗。"));
+    await CINE.say(T("surprised", "\u2026\u2026\u55ef\uff1f"), R_("\u2026\u2026\u6c99\u2026\u2026\u6c99\u6c99\u2026\u2026"), T("thinking", "\u4f60\u4e0d\u662f\u56db\u5341\u5e74\u524d\u5c31\u574f\u4e86\u5417\u3002"));
     AU.festival(.25, { near: 0 }); AU.radio(true, { x: sx - 14, y: sy + 2, signal: .8 });
     await CINE.wait(3);
-    await CINE.say(T("thinking", "……祭囃子？"), T("soft", "今天十六号。送魂的晚上。"), T("soft", "山下在跳盆舞吧。"));
+    await CINE.say(T("thinking", "\u2026\u2026\u796d\u56c3\u5b50\uff1f"), T("soft", "\u4eca\u5929\u5341\u516d\u53f7\u3002\u9001\u9b42\u7684\u665a\u4e0a\u3002"), T("soft", "\u5c71\u4e0b\u5728\u8df3\u76c6\u821e\u5427\u3002"));
     AU.festival(.55, { near: .2 }); await CINE.wait(2.5);
-    await CINE.say(T("worried", "……不对。"), T("worried", "声音不是从山下来的。"), T("surprised", "是从四面八方。"));
+    await CINE.say(T("worried", "\u2026\u2026\u4e0d\u5bf9\u3002"), T("worried", "\u58f0\u97f3\u4e0d\u662f\u4ece\u5c71\u4e0b\u6765\u7684\u3002"), T("surprised", "\u662f\u4ece\u56db\u9762\u516b\u65b9\u3002"));
     // the climb, then the view from the crown of the great camphor
     await UI.fade(1, 1.2);
     AU.radio(false);
@@ -5342,10 +5361,10 @@ const STORY = {
     await PROLOGUE.wave();
     await CINE.wait(1.5);
     AU.festival(0, { near: 0 });
-    await UI.sub("那一夜，所有的东西，都离得远了一点。", { mid: true, dur: 5.5 });
+    await UI.sub("\u90a3\u4e00\u591c\uff0c\u6240\u6709\u7684\u4e1c\u897f\uff0c\u90fd\u79bb\u5f97\u8fdc\u4e86\u4e00\u70b9\u3002", { mid: true, dur: 5.5 });
     await CINE.wait(.8);
     AU.stinger("title_hit");
-    await UI.titleCard("ツヅラ", "遠 囃 子", 4.2);
+    await UI.titleCard("\u30c4\u30c5\u30e9", "\u9060 \u56c3 \u5b50", 4.2);
     await CINE.wait(.6);
     PROLOGUE.teardown();
     await this.wake();
@@ -5356,27 +5375,27 @@ const STORY = {
     const [sx, sy] = LM.shrine; GAME.tod = 6.35; GAME.todLock = false;
     const P = PL.init(sx + 26, sy + 28); P.state = "pinned"; P.face = "front"; P.expr = "dazed"; P.exprT = 99;
     WORLDSETUP.afterFar();
-    const beam = mkItem("beam", P.x + 2, P.y + 3, { carry: true }); beam.pin = true; this.beam = beam;
+    const beam = mkItem("beam", P.x + 2, P.y + 3, { carry: false }); beam.pin = true; this.beam = beam;
     GAME.extraMist = .35;
     CINE.cam(P.x, P.y - 6, P.z, 99);
     await CINE.wait(1.5);
     AU.music("none"); await UI.fade(0, 4);
-    await CINE.say(T("dazed", "……"), T("dazed", "……重。"), T("angry", "好重。哪个混账把柱子扔在本座身上了。"));
+    await CINE.say(T("dazed", "\u2026\u2026"), T("dazed", "\u2026\u2026\u91cd\u3002"), T("angry", "\u597d\u91cd\u3002\u54ea\u4e2a\u6df7\u8d26\u628a\u67f1\u5b50\u6254\u5728\u672c\u5ea7\u8eab\u4e0a\u4e86\u3002"));
     GAME.cine = false; GAME.tutorial = true; GAME.flags.knowsWeight = true; this.tut = "take";
-    UI.toast("把压在身上的重量拿过来——" + IN.glyph("take") + "  取", 6);
+    UI.toast("\u628a\u538b\u5728\u8eab\u4e0a\u7684\u91cd\u91cf\u62ff\u8fc7\u6765\u2014\u2014" + IN.glyph("take") + "  \u53d6", 6);
   },
   tutorialWeight(how, t) {
     const P = PL.e;
     if (this.tut === "take" && how === "take") {
-      // the whole beam pours into her at once — and she is a stone
-      if (this.beam) { const left = this.beam.w; this.beam.w = 0; P.tail = Math.min(6, P.tail + left); this.beam.pin = false; PL.setForm("stone"); }
+      // the whole beam pours into her at once \u2014 and she is a stone
+      if (this.beam) { const left = this.beam.w; this.beam.w = 0; this.beam.carry = true; P.tail = Math.min(6, P.tail + left); this.beam.pin = false; PL.setForm("stone"); }
       this.tut = "give"; P.state = "play";
-      (async () => { GAME.cine = true; await CINE.wait(1.1); await CINE.say(T("dazed", "…………"), T("normal", "……这下轮到我重了。")); GAME.cine = false; UI.toast("把重量交给旁边的石灯笼——" + IN.glyph("give") + "  予", 6); })();
+      (async () => { GAME.cine = true; await CINE.wait(1.1); await CINE.say(T("dazed", "\u2026\u2026\u2026\u2026"), T("normal", "\u2026\u2026\u8fd9\u4e0b\u8f6e\u5230\u6211\u91cd\u4e86\u3002")); GAME.cine = false; UI.toast("\u628a\u91cd\u91cf\u4ea4\u7ed9\u65c1\u8fb9\u7684\u77f3\u706f\u7b3c\u2014\u2014" + IN.glyph("give") + "  \u4e88", 6); })();
     } else if (this.tut === "give" && how === "give" && P.tail <= 3) {
       this.tut = null; GAME.tutorial = false;
       (async () => {
         GAME.cine = true; await CINE.wait(.5);
-        await CINE.say(T("smug", "哼。灯笼本来就该稳重一点。"), T("thinking", "这根梁……轻得像纸一样了。"), T("grin", "还能用。修祠的时候当柱子。"));
+        await CINE.say(T("smug", "\u54fc\u3002\u706f\u7b3c\u672c\u6765\u5c31\u8be5\u7a33\u91cd\u4e00\u70b9\u3002"), T("thinking", "\u8fd9\u6839\u6881\u2026\u2026\u8f7b\u5f97\u50cf\u7eb8\u4e00\u6837\u4e86\u3002"), T("grin", "\u8fd8\u80fd\u7528\u3002\u4fee\u7960\u7684\u65f6\u5019\u5f53\u67f1\u5b50\u3002"));
         await this.firstLook(); GAME.cine = false;
       })();
     }
@@ -5384,15 +5403,15 @@ const STORY = {
   async firstLook() {
     const [sx, sy] = LM.shrine; const P = PL.e;
     CINE.cam(sx, sy - 70, null, 1.2); await CINE.wait(2.4);
-    await CINE.say(T("surprised", "……大楠？"), T("worried", "颜色不对。像是隔着一层雾，又像是画上去的。"));
+    await CINE.say(T("surprised", "\u2026\u2026\u5927\u6960\uff1f"), T("worried", "\u989c\u8272\u4e0d\u5bf9\u3002\u50cf\u662f\u9694\u7740\u4e00\u5c42\u96fe\uff0c\u53c8\u50cf\u662f\u753b\u4e0a\u53bb\u7684\u3002"));
     CINE.cam(sx, sy, WD.shrineZ, 1.6); await CINE.wait(1.8);
-    await CINE.say(T("worried", "祠也……只剩一半了。"), T("count", "供品呢。"), T("count", "一、二、三。"), T("shout", "……三？！"), T("angry", "本座的九十九呢！"));
+    await CINE.say(T("worried", "\u7960\u4e5f\u2026\u2026\u53ea\u5269\u4e00\u534a\u4e86\u3002"), T("count", "\u4f9b\u54c1\u5462\u3002"), T("count", "\u4e00\u3001\u4e8c\u3001\u4e09\u3002"), T("shout", "\u2026\u2026\u4e09\uff1f\uff01"), T("angry", "\u672c\u5ea7\u7684\u4e5d\u5341\u4e5d\u5462\uff01"));
     await CINE.wait(.6);
-    await CINE.say(T("thinking", "……昨晚的风。吹到山里去了。"), T("smug", "好。那就一个一个捡回来。"), T("grin", "顺便，把家也修了。"));
-    CINE.free(); GAME.extraMist = 0; GAME.noSave = false;
+    await CINE.say(T("thinking", "\u2026\u2026\u6628\u665a\u7684\u98ce\u3002\u5439\u5230\u5c71\u91cc\u53bb\u4e86\u3002"), T("smug", "\u597d\u3002\u90a3\u5c31\u4e00\u4e2a\u4e00\u4e2a\u6361\u56de\u6765\u3002"), T("grin", "\u987a\u4fbf\uff0c\u628a\u5bb6\u4e5f\u4fee\u4e86\u3002"));
+    CINE.free(); GAME.extraMist = 0; GAME.noSave = false; GAME.flags.knowsLeaf = true;
     this.stage = "free"; UI.showHud(true); UI.countPop(GAME.count, null, true);
     AU.music("explore");
-    UI.toast("九十九折峠", 3);
+    UI.toast("\u4e5d\u5341\u4e5d\u6298\u5ce0", 3);
     GAME.save();
   },
   /* ================= the free day ================= */
@@ -5403,36 +5422,36 @@ const STORY = {
     const at = (n, x, y, r) => { if (!this.areas[n] && hyp(P.x - x, P.y - y) < r) { this.areas[n] = true; GAME.flags["area_" + n] = true; return true; } return false; };
     if (GAME.flags["area_hut"]) this.areas.hut = true;
     if (at("camphor", LM.shrine[0], LM.shrine[1] - 60, 30)) this.bark2("camphorNear");
-    if (at("hut", LM.hut[0], LM.hut[1] + 20, 70)) this.line([T("normal", "烧炭的老爷爷的小屋。"), T("soft", "门没锁。他从来不锁门。")]);
-    if (at("tunnel", LM.tunnel[0] - 30, LM.tunnel[1] + 30, 110)) this.line([T("thinking", "铁的蛇。"), T("angry", "三十年前它钻进山里以后，就再没人走九十九折了。"), T("soft", "……现在它也停下了。")]);
-    if (at("inner", STAIR[2][0], STAIR[2][1], 60)) this.line([T("surprised", "奥之院……连奥之院也去远了。"), T("thinking", "那边的神，脾气比我还坏。"), T("grin", "现在大概更生气了。")]);
+    if (at("hut", LM.hut[0], LM.hut[1] + 20, 70)) this.line([T("normal", "\u70e7\u70ad\u7684\u8001\u7237\u7237\u7684\u5c0f\u5c4b\u3002"), T("soft", "\u95e8\u6ca1\u9501\u3002\u4ed6\u4ece\u6765\u4e0d\u9501\u95e8\u3002")]);
+    if (at("tunnel", LM.tunnel[0] - 30, LM.tunnel[1] + 30, 110)) this.line([T("thinking", "\u94c1\u7684\u86c7\u3002"), T("angry", "\u4e09\u5341\u5e74\u524d\u5b83\u94bb\u8fdb\u5c71\u91cc\u4ee5\u540e\uff0c\u5c31\u518d\u6ca1\u4eba\u8d70\u4e5d\u5341\u4e5d\u6298\u4e86\u3002"), T("soft", "\u2026\u2026\u73b0\u5728\u5b83\u4e5f\u505c\u4e0b\u4e86\u3002")]);
+    if (at("inner", STAIR[2][0], STAIR[2][1], 60)) this.line([T("surprised", "\u5965\u4e4b\u9662\u2026\u2026\u8fde\u5965\u4e4b\u9662\u4e5f\u53bb\u8fdc\u4e86\u3002"), T("thinking", "\u90a3\u8fb9\u7684\u795e\uff0c\u813e\u6c14\u6bd4\u6211\u8fd8\u574f\u3002"), T("grin", "\u73b0\u5728\u5927\u6982\u66f4\u751f\u6c14\u4e86\u3002")]);
     if (at("pond", LM.pond[0], LM.pond[1] - 70, 90)) this.bark2("pond");
     if (at("fall", LM.pool[0], LM.pool[1], 90)) this.bark2("fall");
-    if (at("bridge", 1300, 1680, 70)) this.line([T("surprised", "独木桥——"), T("worried", "……摸不到。")]);
+    if (at("bridge", 1300, 1680, 70)) this.line([T("surprised", "\u72ec\u6728\u6865\u2014\u2014"), T("worried", "\u2026\u2026\u6478\u4e0d\u5230\u3002")]);
     if (at("lookout", LM.lookout[0], LM.lookout[1] + 10, 46)) VISTA.lookoutShot();
     // the basket comes home and wakes
     if (!GAME.flags.kagoAwake && P.stack.some(s => s.kind === "basket") && hyp(P.x - LM.shrine[0], P.y - LM.shrine[1]) < 70) this.kagoWake();
   },
   line(lines) { (async () => { GAME.cine = true; await UI.say(lines); GAME.cine = false; })(); },
   BARKS: {
-    shed: ["哇——！", "掉了掉了！", "……刚才那个不算。", "跑太快了。", "堆得太高，风一吹就晃。"],
-    tooHeavy: ["背不动。……先把它的重量拿过来？", "太重了。先用尾巴把重量吸走。"],
-    tooTall: ["再堆就要倒了。"],
-    noTake: ["这附近没有能拿的重量。"],
-    noGive: ["没有能接住重量的东西。"],
-    emptyTail: ["尾巴里空空的。"],
-    full: ["它已经装不下了。"],
-    stone: ["…………", "动、动不了……"],
-    leaf: ["轻飘飘的……", "哇，风！"],
-    cliff: ["太高了，爬不上去。", "绕路吧。路是给人走的。"],
-    climbLoad: ["背着这么多爬不上去。"],
-    deep: ["水太深。……要是身子再重一点，就能在河底走过去。"],
-    farAgain: ["又是这里。", "路还在，就是走不过去。", "祭囃子……在那边。"],
-    delivered: ["放好了。", "嗯，像个样子了。", "再来几根。"],
-    radioPick: ["……你也要跟我走？"],
-    camphorNear: ["走过去，没有变近。", "明明就在眼前。"],
-    pond: ["池子还在。青蛙也在。"],
-    fall: ["瀑布的声音……还是近的。"],
+    shed: ["\u54c7\u2014\u2014\uff01", "\u6389\u4e86\u6389\u4e86\uff01", "\u2026\u2026\u521a\u624d\u90a3\u4e2a\u4e0d\u7b97\u3002", "\u8dd1\u592a\u5feb\u4e86\u3002", "\u5806\u5f97\u592a\u9ad8\uff0c\u98ce\u4e00\u5439\u5c31\u6643\u3002"],
+    tooHeavy: ["\u80cc\u4e0d\u52a8\u3002\u2026\u2026\u5148\u628a\u5b83\u7684\u91cd\u91cf\u62ff\u8fc7\u6765\uff1f", "\u592a\u91cd\u4e86\u3002\u5148\u7528\u5c3e\u5df4\u628a\u91cd\u91cf\u5438\u8d70\u3002"],
+    tooTall: ["\u518d\u5806\u5c31\u8981\u5012\u4e86\u3002"],
+    noTake: ["\u8fd9\u9644\u8fd1\u6ca1\u6709\u80fd\u62ff\u7684\u91cd\u91cf\u3002"],
+    noGive: ["\u6ca1\u6709\u80fd\u63a5\u4f4f\u91cd\u91cf\u7684\u4e1c\u897f\u3002"],
+    emptyTail: ["\u5c3e\u5df4\u91cc\u7a7a\u7a7a\u7684\u3002"],
+    full: ["\u5b83\u5df2\u7ecf\u88c5\u4e0d\u4e0b\u4e86\u3002"],
+    stone: ["\u2026\u2026\u2026\u2026", "\u52a8\u3001\u52a8\u4e0d\u4e86\u2026\u2026"],
+    leaf: ["\u8f7b\u98d8\u98d8\u7684\u2026\u2026", "\u54c7\uff0c\u98ce\uff01"],
+    cliff: ["\u592a\u9ad8\u4e86\uff0c\u722c\u4e0d\u4e0a\u53bb\u3002", "\u7ed5\u8def\u5427\u3002\u8def\u662f\u7ed9\u4eba\u8d70\u7684\u3002"],
+    climbLoad: ["\u80cc\u7740\u8fd9\u4e48\u591a\u722c\u4e0d\u4e0a\u53bb\u3002"],
+    deep: ["\u6c34\u592a\u6df1\u3002\u2026\u2026\u8981\u662f\u8eab\u5b50\u518d\u91cd\u4e00\u70b9\uff0c\u5c31\u80fd\u5728\u6cb3\u5e95\u8d70\u8fc7\u53bb\u3002"],
+    farAgain: ["\u53c8\u662f\u8fd9\u91cc\u3002", "\u8def\u8fd8\u5728\uff0c\u5c31\u662f\u8d70\u4e0d\u8fc7\u53bb\u3002", "\u796d\u56c3\u5b50\u2026\u2026\u5728\u90a3\u8fb9\u3002"],
+    delivered: ["\u653e\u597d\u4e86\u3002", "\u55ef\uff0c\u50cf\u4e2a\u6837\u5b50\u4e86\u3002", "\u518d\u6765\u51e0\u6839\u3002"],
+    radioPick: ["\u2026\u2026\u4f60\u4e5f\u8981\u8ddf\u6211\u8d70\uff1f"],
+    camphorNear: ["\u8d70\u8fc7\u53bb\uff0c\u6ca1\u6709\u53d8\u8fd1\u3002", "\u660e\u660e\u5c31\u5728\u773c\u524d\u3002"],
+    pond: ["\u6c60\u5b50\u8fd8\u5728\u3002\u9752\u86d9\u4e5f\u5728\u3002"],
+    fall: ["\u7011\u5e03\u7684\u58f0\u97f3\u2026\u2026\u8fd8\u662f\u8fd1\u7684\u3002"],
   },
   bark(name, arg) {
     if ((this.barkCD[name] || 0) > 0) return; const L = this.BARKS[name]; if (!L) return;
@@ -5443,9 +5462,9 @@ const STORY = {
   bark2(name) { const L = this.BARKS[name]; if (!L) return; L.forEach((t, i) => after(i * 2.4, () => UI.bark(t))); },
   /* ---------- one-off events ---------- */
   event(name) {
-    if (name === "farTouch") this.line([T("worried", "……？"), T("worried", "明明看得见对面的树。"), T("thinking", "走了好久，它一点都没有变近。"), T("soft", "……和大楠一样。")]);
-    if (name === "basket") this.line([T("surprised", "葛笼。"), T("normal", "好结实。编的人很用心。"), T("smug", "……和本座同名。"), T("grin", "那就是本座的家臣了。走，回家。")]);
-    if (name === "holed") this.line([T("grin", "找到了！御神体！"), T("worried", "……掉进潭里这种事，可不能让别人知道。")]);
+    if (name === "farTouch") this.line([T("worried", "\u2026\u2026\uff1f"), T("worried", "\u660e\u660e\u770b\u5f97\u89c1\u5bf9\u9762\u7684\u6811\u3002"), T("thinking", "\u8d70\u4e86\u597d\u4e45\uff0c\u5b83\u4e00\u70b9\u90fd\u6ca1\u6709\u53d8\u8fd1\u3002"), T("soft", "\u2026\u2026\u548c\u5927\u6960\u4e00\u6837\u3002")]);
+    if (name === "basket") this.line([T("surprised", "\u845b\u7b3c\u3002"), T("normal", "\u597d\u7ed3\u5b9e\u3002\u7f16\u7684\u4eba\u5f88\u7528\u5fc3\u3002"), T("smug", "\u2026\u2026\u548c\u672c\u5ea7\u540c\u540d\u3002"), T("grin", "\u90a3\u5c31\u662f\u672c\u5ea7\u7684\u5bb6\u81e3\u4e86\u3002\u8d70\uff0c\u56de\u5bb6\u3002")]);
+    if (name === "holed") this.line([T("grin", "\u627e\u5230\u4e86\uff01\u5fa1\u795e\u4f53\uff01"), T("worried", "\u2026\u2026\u6389\u8fdb\u6f6d\u91cc\u8fd9\u79cd\u4e8b\uff0c\u53ef\u4e0d\u80fd\u8ba9\u522b\u4eba\u77e5\u9053\u3002")]);
   },
   async kagoWake() {
     GAME.flags.kagoAwake = true; GAME.cine = true; const P = PL.e;
@@ -5453,72 +5472,72 @@ const STORY = {
     const bx = P.x + 18, by = P.y + 8; const tmp = mkItem("basket", bx, by, { carry: false });
     AU.sfx("place"); await CINE.wait(1);
     AU.sfx("awaken"); for (let k = 0; k < 3; k++) { tmp.vz = 60; await CINE.wait(.45); }
-    await CINE.say(T("surprised", "……嗯？"));
+    await CINE.say(T("surprised", "\u2026\u2026\u55ef\uff1f"));
     tmp.dead = true; tmp.gone = true; KAGOMARU.wake(bx, by); KAGOMARU.e.open = 1;
     FX.burst("glint", bx, by, P.z + 10, 16, { life: 1, c: [1, .9, .6], speed: .8, up: 1, add: true, drag: 2 });
     await CINE.wait(.8);
-    await UI.say([T("surprised", "你——"), T("grin", "醒了？"), K_("咔哒。咔哒。"), T("soft", "被人用了几十年，又被本座背了一路。"), T("soft", "你也到年纪了。"),
-      T("smug", "从今天起，你叫籠丸。本座的家臣，第一号。"), K_("咔哒。"), T("normal", "……第一号也是唯一一号。不许骄傲。")]);
-    UI.toast("籠丸会跟着你。站在它旁边按 " + IN.glyph("drop") + "，可以把东西放进去。", 5);
+    await UI.say([T("surprised", "\u4f60\u2014\u2014"), T("grin", "\u9192\u4e86\uff1f"), K_("\u5494\u54d2\u3002\u5494\u54d2\u3002"), T("soft", "\u88ab\u4eba\u7528\u4e86\u51e0\u5341\u5e74\uff0c\u53c8\u88ab\u672c\u5ea7\u80cc\u4e86\u4e00\u8def\u3002"), T("soft", "\u4f60\u4e5f\u5230\u5e74\u7eaa\u4e86\u3002"),
+      T("smug", "\u4ece\u4eca\u5929\u8d77\uff0c\u4f60\u53eb\u7c60\u4e38\u3002\u672c\u5ea7\u7684\u5bb6\u81e3\uff0c\u7b2c\u4e00\u53f7\u3002"), K_("\u5494\u54d2\u3002"), T("normal", "\u2026\u2026\u7b2c\u4e00\u53f7\u4e5f\u662f\u552f\u4e00\u4e00\u53f7\u3002\u4e0d\u8bb8\u9a84\u50b2\u3002")]);
+    UI.toast("\u7c60\u4e38\u4f1a\u8ddf\u7740\u4f60\u3002\u7ad9\u5728\u5b83\u65c1\u8fb9\u6309 " + IN.glyph("drop") + "\uff0c\u53ef\u4ee5\u628a\u4e1c\u897f\u653e\u8fdb\u53bb\u3002", 5);
     GAME.cine = false; GAME.save();
   },
   /* ---------- the radio ---------- */
   radio() {
     const n = this.radioN++; AU.radio(true, { x: LM.shrine[0] - 14, y: LM.shrine[1] + 2, signal: .9 });
     const F = [
-      [R_("……沙……沙沙……"), T("thinking", "还在响。……你到底收的是哪个台？")],
-      [R_("……本台消息……昨夜二十三时起……各地相继出现……所谓『远化』现象……"), T("thinking", "……远化？")],
-      [R_("……请市民不要靠近变色区域……也请不要……呼唤……已经走远的家人……"), T("sad", "……")],
-      [R_("……军方否认……此事与『隔』计划……有任何关联……"), T("thinking", GAME.flags.readDiary ? "『隔』。烧炭爷爷的孙女，也说过这个字。" : "『隔』……？")],
-      [R_("……听得见吗……这里是……第七……我们还在……还在这里……"), T("worried", "……喂？"), T("shout", "喂！"), R_("……沙沙……")],
+      [R_("\u2026\u2026\u6c99\u2026\u2026\u6c99\u6c99\u2026\u2026"), T("thinking", "\u8fd8\u5728\u54cd\u3002\u2026\u2026\u4f60\u5230\u5e95\u6536\u7684\u662f\u54ea\u4e2a\u53f0\uff1f")],
+      [R_("\u2026\u2026\u672c\u53f0\u6d88\u606f\u2026\u2026\u6628\u591c\u4e8c\u5341\u4e09\u65f6\u8d77\u2026\u2026\u5404\u5730\u76f8\u7ee7\u51fa\u73b0\u2026\u2026\u6240\u8c13\u300e\u8fdc\u5316\u300f\u73b0\u8c61\u2026\u2026"), T("thinking", "\u2026\u2026\u8fdc\u5316\uff1f")],
+      [R_("\u2026\u2026\u8bf7\u5e02\u6c11\u4e0d\u8981\u9760\u8fd1\u53d8\u8272\u533a\u57df\u2026\u2026\u4e5f\u8bf7\u4e0d\u8981\u2026\u2026\u547c\u5524\u2026\u2026\u5df2\u7ecf\u8d70\u8fdc\u7684\u5bb6\u4eba\u2026\u2026"), T("sad", "\u2026\u2026")],
+      [R_("\u2026\u2026\u519b\u65b9\u5426\u8ba4\u2026\u2026\u6b64\u4e8b\u4e0e\u300e\u9694\u300f\u8ba1\u5212\u2026\u2026\u6709\u4efb\u4f55\u5173\u8054\u2026\u2026"), T("thinking", GAME.flags.readDiary ? "\u300e\u9694\u300f\u3002\u70e7\u70ad\u7237\u7237\u7684\u5b59\u5973\uff0c\u4e5f\u8bf4\u8fc7\u8fd9\u4e2a\u5b57\u3002" : "\u300e\u9694\u300f\u2026\u2026\uff1f")],
+      [R_("\u2026\u2026\u542c\u5f97\u89c1\u5417\u2026\u2026\u8fd9\u91cc\u662f\u2026\u2026\u7b2c\u4e03\u2026\u2026\u6211\u4eec\u8fd8\u5728\u2026\u2026\u8fd8\u5728\u8fd9\u91cc\u2026\u2026"), T("worried", "\u2026\u2026\u5582\uff1f"), T("shout", "\u5582\uff01"), R_("\u2026\u2026\u6c99\u6c99\u2026\u2026")],
     ];
-    const lines = F[n] || [T("normal", "又只剩祭囃子了。")];
+    const lines = F[n] || [T("normal", "\u53c8\u53ea\u5269\u796d\u56c3\u5b50\u4e86\u3002")];
     this.line(lines);
     after(12, () => AU.radio(false));
   },
   diary() {
     GAME.flags.readDiary = true;
-    this.line([N_("八月十二日。晴。出了一窑好炭。"), N_("八月十四日。孙女来信，说城里在建一个叫『隔』的东西。建成了，打仗就打不到咱们这边。"), N_("她说是好事。只是往后见面，要提前申请。"),
-      N_("见自己的爷爷，申请什么。"), N_("八月十五日。明天上峠，给貂大人送柿子。"), T("sad", "……柿子。"), T("soft", "每年都是他自己吃掉一半。"), T("sad", "十六号，他没有来。")]);
+    this.line([N_("\u516b\u6708\u5341\u4e8c\u65e5\u3002\u6674\u3002\u51fa\u4e86\u4e00\u7a91\u597d\u70ad\u3002"), N_("\u516b\u6708\u5341\u56db\u65e5\u3002\u5b59\u5973\u6765\u4fe1\uff0c\u8bf4\u57ce\u91cc\u5728\u5efa\u4e00\u4e2a\u53eb\u300e\u9694\u300f\u7684\u4e1c\u897f\u3002\u5efa\u6210\u4e86\uff0c\u6253\u4ed7\u5c31\u6253\u4e0d\u5230\u54b1\u4eec\u8fd9\u8fb9\u3002"), N_("\u5979\u8bf4\u662f\u597d\u4e8b\u3002\u53ea\u662f\u5f80\u540e\u89c1\u9762\uff0c\u8981\u63d0\u524d\u7533\u8bf7\u3002"),
+      N_("\u89c1\u81ea\u5df1\u7684\u7237\u7237\uff0c\u7533\u8bf7\u4ec0\u4e48\u3002"), N_("\u516b\u6708\u5341\u4e94\u65e5\u3002\u660e\u5929\u4e0a\u5ce0\uff0c\u7ed9\u8c82\u5927\u4eba\u9001\u67ff\u5b50\u3002"), T("sad", "\u2026\u2026\u67ff\u5b50\u3002"), T("soft", "\u6bcf\u5e74\u90fd\u662f\u4ed6\u81ea\u5df1\u5403\u6389\u4e00\u534a\u3002"), T("sad", "\u5341\u516d\u53f7\uff0c\u4ed6\u6ca1\u6709\u6765\u3002")]);
   },
-  jizo() { const L = [["地藏，借你的肩膀歇一下。"], ["……还是不说话。好习惯。"], ["替我看着路。"]]; const t = L[(this.jz = (this.jz || 0) + 1) % L.length]; UI.bark(t[0]); GAME.save(); UI.toast("记下了。", 1.4); PL.e.stamina = 1; },
+  jizo() { const L = [["\u5730\u85cf\uff0c\u501f\u4f60\u7684\u80a9\u8180\u6b47\u4e00\u4e0b\u3002"], ["\u2026\u2026\u8fd8\u662f\u4e0d\u8bf4\u8bdd\u3002\u597d\u4e60\u60ef\u3002"], ["\u66ff\u6211\u770b\u7740\u8def\u3002"]]; const t = L[(this.jz = (this.jz || 0) + 1) % L.length]; UI.bark(t[0]); GAME.save(); UI.toast("\u8bb0\u4e0b\u4e86\u3002", 1.4); PL.e.stamina = 1; },
   /* ---------- offerings: who left them ---------- */
   OFFER: {
-    coin: ["五円硬币", "五円，“御缘”。想和谁结缘的人，总是给五円。"],
-    sandal: ["旧草鞋", "走坏的草鞋。挑夫把它挂在这里，换一个平安翻山。"],
-    crane: ["纸鹤", "折的人手很笨，脖子歪了。……所以记得特别清楚。"],
-    marble: ["弹珠", "一个小鬼拿它换了“明天别下雨”。第二天下了。我到现在还欠他一个晴天。"],
-    top: ["陀螺", "转得最久的那个孩子，后来去了城里。"],
-    comb: ["木梳", "出嫁那天，新娘走九十九折下山，把旧梳子留在这里。"],
-    harmonica: ["口琴", "一个兵吹着它上山，又吹着它下山，打仗去了。"],
-    bell: ["铃铛", "……和我身上这个是一对。另一个，是谁的来着。"],
-    letter: ["没寄出的信", "收信人的名字被雨泡掉了。"],
-    doll: ["人偶", "供它的人说：替我女儿生病吧。女儿后来好了。人偶的脸，有点发白。"],
-    button: ["第二颗纽扣", "学生制服的第二颗。听说这一颗特别值钱。"],
-    ribbon: ["发带", "“希望下次见面，他认得出我。”"],
-    pipe: ["烟斗", "烧炭的老爷爷每年春天来抽一斗，说是供给本座的。烟都是他自己抽了。"],
-    cap: ["瓶盖", "三年前那个夏天的。最新的一个。"],
-    fan: ["扇子", "盆舞的时候用的。扇面上的金箔，掉得差不多了。"],
-    candle: ["蜡烛", "没点过。供它的人说，等回来再点。"],
-    omamori: ["别家的御守", "拿别人家的护身符来拜本座。胆子不小。"],
-    sake: ["酒壶", "空的。……不是本座喝的。是风。"],
-    pinwheel: ["风车", "山顶风大，它转了好几年，有一天自己停了。"],
-    glasses: ["眼镜", "“希望能看清楚一点。”看清楚什么，他没说。"],
-    tin: ["糖果罐", "里面的糖……被老鼠吃了。是老鼠。"],
-    soldier: ["锡兵", "一个男孩说：替爸爸站岗。"],
-    photo: ["全家福", "中间那个人的脸，被拇指摸得最白。"],
-    persimmon: ["柿蒂", "柿子本身，本座替神明尝过了。"],
-    inkstone: ["砚台", "落榜的书生留下的，说再也不写了。第二年他回来，又借走了。"],
-    key: ["钥匙", "“等我回来开门。”门在哪儿，他没说。"],
+    coin: ["\u4e94\u5186\u786c\u5e01", "\u4e94\u5186\uff0c\u201c\u5fa1\u7f18\u201d\u3002\u60f3\u548c\u8c01\u7ed3\u7f18\u7684\u4eba\uff0c\u603b\u662f\u7ed9\u4e94\u5186\u3002"],
+    sandal: ["\u65e7\u8349\u978b", "\u8d70\u574f\u7684\u8349\u978b\u3002\u6311\u592b\u628a\u5b83\u6302\u5728\u8fd9\u91cc\uff0c\u6362\u4e00\u4e2a\u5e73\u5b89\u7ffb\u5c71\u3002"],
+    crane: ["\u7eb8\u9e64", "\u6298\u7684\u4eba\u624b\u5f88\u7b28\uff0c\u8116\u5b50\u6b6a\u4e86\u3002\u2026\u2026\u6240\u4ee5\u8bb0\u5f97\u7279\u522b\u6e05\u695a\u3002"],
+    marble: ["\u5f39\u73e0", "\u4e00\u4e2a\u5c0f\u9b3c\u62ff\u5b83\u6362\u4e86\u201c\u660e\u5929\u522b\u4e0b\u96e8\u201d\u3002\u7b2c\u4e8c\u5929\u4e0b\u4e86\u3002\u6211\u5230\u73b0\u5728\u8fd8\u6b20\u4ed6\u4e00\u4e2a\u6674\u5929\u3002"],
+    top: ["\u9640\u87ba", "\u8f6c\u5f97\u6700\u4e45\u7684\u90a3\u4e2a\u5b69\u5b50\uff0c\u540e\u6765\u53bb\u4e86\u57ce\u91cc\u3002"],
+    comb: ["\u6728\u68b3", "\u51fa\u5ac1\u90a3\u5929\uff0c\u65b0\u5a18\u8d70\u4e5d\u5341\u4e5d\u6298\u4e0b\u5c71\uff0c\u628a\u65e7\u68b3\u5b50\u7559\u5728\u8fd9\u91cc\u3002"],
+    harmonica: ["\u53e3\u7434", "\u4e00\u4e2a\u5175\u5439\u7740\u5b83\u4e0a\u5c71\uff0c\u53c8\u5439\u7740\u5b83\u4e0b\u5c71\uff0c\u6253\u4ed7\u53bb\u4e86\u3002"],
+    bell: ["\u94c3\u94db", "\u2026\u2026\u548c\u6211\u8eab\u4e0a\u8fd9\u4e2a\u662f\u4e00\u5bf9\u3002\u53e6\u4e00\u4e2a\uff0c\u662f\u8c01\u7684\u6765\u7740\u3002"],
+    letter: ["\u6ca1\u5bc4\u51fa\u7684\u4fe1", "\u6536\u4fe1\u4eba\u7684\u540d\u5b57\u88ab\u96e8\u6ce1\u6389\u4e86\u3002"],
+    doll: ["\u4eba\u5076", "\u4f9b\u5b83\u7684\u4eba\u8bf4\uff1a\u66ff\u6211\u5973\u513f\u751f\u75c5\u5427\u3002\u5973\u513f\u540e\u6765\u597d\u4e86\u3002\u4eba\u5076\u7684\u8138\uff0c\u6709\u70b9\u53d1\u767d\u3002"],
+    button: ["\u7b2c\u4e8c\u9897\u7ebd\u6263", "\u5b66\u751f\u5236\u670d\u7684\u7b2c\u4e8c\u9897\u3002\u542c\u8bf4\u8fd9\u4e00\u9897\u7279\u522b\u503c\u94b1\u3002"],
+    ribbon: ["\u53d1\u5e26", "\u201c\u5e0c\u671b\u4e0b\u6b21\u89c1\u9762\uff0c\u4ed6\u8ba4\u5f97\u51fa\u6211\u3002\u201d"],
+    pipe: ["\u70df\u6597", "\u70e7\u70ad\u7684\u8001\u7237\u7237\u6bcf\u5e74\u6625\u5929\u6765\u62bd\u4e00\u6597\uff0c\u8bf4\u662f\u4f9b\u7ed9\u672c\u5ea7\u7684\u3002\u70df\u90fd\u662f\u4ed6\u81ea\u5df1\u62bd\u4e86\u3002"],
+    cap: ["\u74f6\u76d6", "\u4e09\u5e74\u524d\u90a3\u4e2a\u590f\u5929\u7684\u3002\u6700\u65b0\u7684\u4e00\u4e2a\u3002"],
+    fan: ["\u6247\u5b50", "\u76c6\u821e\u7684\u65f6\u5019\u7528\u7684\u3002\u6247\u9762\u4e0a\u7684\u91d1\u7b94\uff0c\u6389\u5f97\u5dee\u4e0d\u591a\u4e86\u3002"],
+    candle: ["\u8721\u70db", "\u6ca1\u70b9\u8fc7\u3002\u4f9b\u5b83\u7684\u4eba\u8bf4\uff0c\u7b49\u56de\u6765\u518d\u70b9\u3002"],
+    omamori: ["\u522b\u5bb6\u7684\u5fa1\u5b88", "\u62ff\u522b\u4eba\u5bb6\u7684\u62a4\u8eab\u7b26\u6765\u62dc\u672c\u5ea7\u3002\u80c6\u5b50\u4e0d\u5c0f\u3002"],
+    sake: ["\u9152\u58f6", "\u7a7a\u7684\u3002\u2026\u2026\u4e0d\u662f\u672c\u5ea7\u559d\u7684\u3002\u662f\u98ce\u3002"],
+    pinwheel: ["\u98ce\u8f66", "\u5c71\u9876\u98ce\u5927\uff0c\u5b83\u8f6c\u4e86\u597d\u51e0\u5e74\uff0c\u6709\u4e00\u5929\u81ea\u5df1\u505c\u4e86\u3002"],
+    glasses: ["\u773c\u955c", "\u201c\u5e0c\u671b\u80fd\u770b\u6e05\u695a\u4e00\u70b9\u3002\u201d\u770b\u6e05\u695a\u4ec0\u4e48\uff0c\u4ed6\u6ca1\u8bf4\u3002"],
+    tin: ["\u7cd6\u679c\u7f50", "\u91cc\u9762\u7684\u7cd6\u2026\u2026\u88ab\u8001\u9f20\u5403\u4e86\u3002\u662f\u8001\u9f20\u3002"],
+    soldier: ["\u9521\u5175", "\u4e00\u4e2a\u7537\u5b69\u8bf4\uff1a\u66ff\u7238\u7238\u7ad9\u5c97\u3002"],
+    photo: ["\u5168\u5bb6\u798f", "\u4e2d\u95f4\u90a3\u4e2a\u4eba\u7684\u8138\uff0c\u88ab\u62c7\u6307\u6478\u5f97\u6700\u767d\u3002"],
+    persimmon: ["\u67ff\u8482", "\u67ff\u5b50\u672c\u8eab\uff0c\u672c\u5ea7\u66ff\u795e\u660e\u5c1d\u8fc7\u4e86\u3002"],
+    inkstone: ["\u781a\u53f0", "\u843d\u699c\u7684\u4e66\u751f\u7559\u4e0b\u7684\uff0c\u8bf4\u518d\u4e5f\u4e0d\u5199\u4e86\u3002\u7b2c\u4e8c\u5e74\u4ed6\u56de\u6765\uff0c\u53c8\u501f\u8d70\u4e86\u3002"],
+    key: ["\u94a5\u5319", "\u201c\u7b49\u6211\u56de\u6765\u5f00\u95e8\u3002\u201d\u95e8\u5728\u54ea\u513f\uff0c\u4ed6\u6ca1\u8bf4\u3002"],
   },
   offering(art) { const o = this.OFFER[art]; if (o) UI.note(o[0], o[1], 7); },
   /* ---------- the shrine, stage by stage ---------- */
   onStage(st) {
     AU.sfx("build_done"); AU.stinger("build"); RD.cam.shake = 2;
     FX.burst("glint", SITE.e.x, SITE.e.y, SITE.e.z + 20, 24, { life: 1.2, c: [1, .9, .6], speed: 1, up: 1.2, add: true, drag: 2 });
-    if (st === 1) this.line([T("grin", "基础打好了。"), T("normal", "接下来是柱子。")]);
-    if (st === 2) this.line([T("smug", "有骨头了。"), T("thinking", "屋顶……杉树皮。倒下的杉木旁边应该有。")]);
-    if (st === 3) this.line([T("soft", "屋顶有了。今晚可以睡在里面。"), T("thinking", "还差注连绳……和御神体。")]);
+    if (st === 1) this.line([T("grin", "\u57fa\u7840\u6253\u597d\u4e86\u3002"), T("normal", "\u63a5\u4e0b\u6765\u662f\u67f1\u5b50\u3002")]);
+    if (st === 2) this.line([T("smug", "\u6709\u9aa8\u5934\u4e86\u3002"), T("thinking", "\u5c4b\u9876\u2026\u2026\u6749\u6811\u76ae\u3002\u5012\u4e0b\u7684\u6749\u6728\u65c1\u8fb9\u5e94\u8be5\u6709\u3002")]);
+    if (st === 3) this.line([T("soft", "\u5c4b\u9876\u6709\u4e86\u3002\u4eca\u665a\u53ef\u4ee5\u7761\u5728\u91cc\u9762\u3002"), T("thinking", "\u8fd8\u5dee\u6ce8\u8fde\u7ef3\u2026\u2026\u548c\u5fa1\u795e\u4f53\u3002")]);
     if (st === 4) this.ending();
   },
   async ending() {
@@ -5528,21 +5547,21 @@ const STORY = {
     AU.stinger("complete"); NEARMAP.startWave(sx, sy, 420, 1);
     for (const g of GHOSTS.list) if (g.tag === "camphor") g.par = .7;
     await CINE.wait(3.2);
-    await CINE.say(T("soft", "……回来了一点。"), T("soft", "就一点点。"));
+    await CINE.say(T("soft", "\u2026\u2026\u56de\u6765\u4e86\u4e00\u70b9\u3002"), T("soft", "\u5c31\u4e00\u70b9\u70b9\u3002"));
     if (GAME.tod > 6 && GAME.tod < 19.5) await PROLOGUE.timelapse(GAME.tod, 20.4, 6);
     await CINE.wait(1);
-    await CINE.say(T("count", "今天捡回来的供品……"), T("count", "……" + kanjiNum(GAME.count) + "。"), T("smug", "离九十九还远。"));
+    await CINE.say(T("count", "\u4eca\u5929\u6361\u56de\u6765\u7684\u4f9b\u54c1\u2026\u2026"), T("count", "\u2026\u2026" + kanjiNum(GAME.count) + "\u3002"), T("smug", "\u79bb\u4e5d\u5341\u4e5d\u8fd8\u8fdc\u3002"));
     ENDING.lanterns = true; CINE.cam(ROAD[13][0], ROAD[13][1], null, .5);
     await CINE.wait(5);
-    await CINE.say(T("surprised", "……灯。"), T("surprised", "有人在爬九十九折。"), T("soft", "三年来，第一次。"));
+    await CINE.say(T("surprised", "\u2026\u2026\u706f\u3002"), T("surprised", "\u6709\u4eba\u5728\u722c\u4e5d\u5341\u4e5d\u6298\u3002"), T("soft", "\u4e09\u5e74\u6765\uff0c\u7b2c\u4e00\u6b21\u3002"));
     await CINE.wait(1.5);
-    await UI.titleCard("第一章　九十九折の宿", "つ づ く", 5);
+    await UI.titleCard("\u7b2c\u4e00\u7ae0\u3000\u4e5d\u5341\u4e5d\u6298\u306e\u5bbf", "\u3064 \u3065 \u304f", 5);
     CINE.free(); await CINE.box(false); GAME.cine = false; GAME.flags.ended = true; GAME.save();
   },
 };
 
 /* ---------------------------------------------------------------------
-   PROLOGUE staging — the intact pass before the Far, the wave itself.
+   PROLOGUE staging \u2014 the intact pass before the Far, the wave itself.
    --------------------------------------------------------------------- */
 const PROLOGUE = {
   on: false, cap: false, radioOn: false, wavePos: -1, offs: [],
@@ -5590,7 +5609,7 @@ const ENDING = { lanterns: false, t: 0,
       RD.light(x, y, z, 50, .9, .55, .25); RD.glow(1, x, y, z, 14, 14, .9, .5, .2, .9); RD.part(x, y, z, 2, 1, .8, .4, 1, true); } } };
 
 /* ---------------------------------------------------------------------
-   WORLDSETUP — populate the pass after the Far: loose materials, the
+   WORLDSETUP \u2014 populate the pass after the Far: loose materials, the
    offerings, ghosts, lanterns, notes, animals.
    --------------------------------------------------------------------- */
 const WORLDSETUP = {
@@ -5600,7 +5619,7 @@ const WORLDSETUP = {
     SITE.init();
     this.lanterns = [mkLantern(sx - 34, sy + 40), mkLantern(sx + 34, sy + 40)];
     // the radio among what is left of the offerings
-    mkInteract("radio", sx - 14, sy + 2, { verb: "听", label: "铁匣子", interact: () => STORY.radio(), draw() { RD.sprite({ x: this.x, y: this.y, z: this.z, r: ATLAS.rects.radio, tint: this.hl ? [1.15, 1.12, 1.05, 0] : T4 }); } });
+    mkInteract("radio", sx - 14, sy + 2, { verb: "\u542c", label: "\u94c1\u5323\u5b50", interact: () => STORY.radio(), draw() { RD.sprite({ x: this.x, y: this.y, z: this.z, r: ATLAS.rects.radio, tint: this.hl ? [1.15, 1.12, 1.05, 0] : T4 }); } });
     // ghosts of what went Far
     GHOSTS.add("camphor", sx + 4, sy - 70, { par: .86, range: 560, tag: "camphor" });
     GHOSTS.add("hokora4", sx + 6, sy - 26, { par: .9, range: 300, tag: "hokora", z: WD.shrineZ });
@@ -5609,9 +5628,9 @@ const WORLDSETUP = {
     GHOSTS.add("hut", LM.inner[0], LM.inner[1] - 10, { par: .88, range: 520, z: WORLD.heightAt(LM.inner[0], LM.inner[1]) + 40 });
     GHOSTS.add("toriiBig", 1150, 400, { par: .85, range: 300 });
     for (const g of GHOSTS.list) if (g.tag === "camphor" || g.tag === "hokora") g.hidden = true;
-    // jizō along the road keep her place
-    for (const p of WD.props) if (p.kind === "jizo") mkInteract("jizo", p.x, p.y, { verb: "拜", label: "地藏", interact: () => STORY.jizo(), solid: 0 });
-    mkInteract("note", LM.hut[0] + 6, LM.hut[1] + 14, { verb: "读", label: "炭焼き日誌", interact: () => STORY.diary() });
+    // jiz\u014d along the road keep her place
+    for (const p of WD.props) if (p.kind === "jizo") mkInteract("jizo", p.x, p.y, { verb: "\u62dc", label: "\u5730\u85cf", interact: () => STORY.jizo(), solid: 0 });
+    mkInteract("note", LM.hut[0] + 6, LM.hut[1] + 14, { verb: "\u8bfb", label: "\u70ad\u713c\u304d\u65e5\u8a8c", interact: () => STORY.diary() });
     mkCrow(sx + 150, sy + 120, WORLD.heightAt(sx + 150, sy + 120) + 40);
     for (let i = 0; i < 4; i++) mkDeer(1900 + i * 40, 1420 + (i % 2) * 30);
   },
@@ -5647,7 +5666,7 @@ const WORLDSETUP = {
 
 /* ==== src/vista.js ==== */
 /* =====================================================================
-   VISTA — the side-view shots: the title, the treetop on the night of
+   VISTA \u2014 the side-view shots: the title, the treetop on the night of
    the Far (the plain, its lights, a procession of lanterns walking up
    into the sky, the pale wave), and the meadow lookout afterwards.
    Painted per frame into a low-res canvas, then graded and bloomed by
@@ -5659,79 +5678,230 @@ const VISTA = {
     this.cv = document.createElement("canvas"); this.g = this.cv.getContext("2d");
     const R = RNG(42);
     this.stars = []; for (let i = 0; i < 260; i++) this.stars.push([R(), Math.pow(R(), 1.6) * .62, R(), R() < .1 ? 2 : 1]);
-    this.city = []; for (let i = 0; i < 2600; i++) { const cx = R.gauss() * .22 + .52 + (R() < .3 ? R.range(-.3, .3) : 0), d = Math.pow(R(), .6); this.city.push([cx, d, R(), R() < .08 ? 2 : 1, R()]); }
+    this.city = [];
+    const districts = [[.5, .25, .09, 420], [.66, .4, .06, 220], [.34, .5, .07, 200], [.2, .2, .04, 90], [.8, .15, .05, 110], [.58, .7, .05, 120]];
+    for (const [cx0, d0, sp, n] of districts) for (let i = 0; i < n; i++) this.city.push([cx0 + R.gauss() * sp, clamp(d0 + R.gauss() * sp * 1.6, 0, 1), R(), R() < .06 ? 2 : 1, R()]);
+    for (let r = 0; r < 5; r++) { const x0 = R(), y0 = R() * .8, a = R.range(-.5, .5); for (let i = 0; i < 40; i++) this.city.push([x0 + i * .012 * Math.cos(a), clamp(y0 + i * .012 * Math.sin(a) * 2, 0, 1), R(), 1, .9]); }
     this.lan = []; for (let i = 0; i < 90; i++) this.lan.push([i / 90, R()]);
     const ridge = (seed, n, amp, base) => { const out = []; for (let i = 0; i <= n; i++) out.push(base - (fbm(i / n * 3.2, seed, 4, seed) - .5) * amp - Math.sin(i / n * Math.PI) * amp * .3); return out; };
-    this.hills = [ridge(1, 240, .16, .52), ridge(2, 240, .12, .6), ridge(3, 240, .2, .74)];
+    this.hills = [ridge(1, 240, .14, .4), ridge(2, 240, .1, .74), ridge(3, 240, .2, .8)];
   },
   size() { const W = RD.W, H = RD.H; if (this.cv.width !== W || this.cv.height !== H) { this.cv.width = W; this.cv.height = H; if (this.tex) GL.gl.deleteTexture(this.tex); this.tex = GL.canvasTex(this.cv); } return [W, H]; },
   px(x, y, c) { this.g.fillStyle = c; this.g.fillRect(x | 0, y | 0, 1, 1); },
-  // night: 0 = day, 1 = night; far: progress of the pale wave 0..1 (−1 none)
+  // paint a static layer once into its own canvas
+  layer(key, W, H, fn) {
+    const k = key + W + "x" + H; this.cache = this.cache || {}; if (this.cache[k]) return this.cache[k];
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const prev = this.g; this.g = cv.getContext("2d"); fn(this.g, W, H); this.g = prev; this.cache[k] = cv; return cv;
+  },
+  // the wave is a ring on the ground plane centred under the procession; a screen row y below
+  // the horizon sees ground at depth Z = f / (y \u2212 horizon), so the ring creeps, widens, then rushes in
+  waveGeo(W, H) { const py = H * .47, f = H - py, Z0 = 24; return { py, f, Z0, X0: W * .1 * Z0 / f, r: this.wave >= 1 ? 1e9 : 22.4 * clamp(this.wave / .9, 0, 1) }; },
+  isFar(x, y, W, G) { if (this.wave < 0) return false; if (this.wave >= 1) return true; const Z = G.f / Math.max(.5, y - G.py), X = (x - W / 2) * Z / G.f; return hyp(X - G.X0, Z - G.Z0) < G.r; },
+  // night: 0 = day, 1 = night; wave: progress of the pale front 0..1 (\u22121 none)
   draw(dt) {
-    this.t += dt; const [W, H] = this.size(), g = this.g, t = this.t, night = this.night ?? 1, far = this.wave;
-    const sky = night > .5 ? [[11, 15, 38], [27, 33, 70], [58, 44, 78], [104, 62, 70]] : [[96, 140, 196], [148, 184, 214], [206, 214, 214], [226, 214, 196]];
-    // sky
-    for (let y = 0; y < H; y++) { const k = y / (H * .62); const i = clamp(Math.floor(k * 3), 0, 2), f = clamp(k * 3 - i, 0, 1); const a = sky[i], b = sky[i + 1]; const d = (((y * 7) % 4) / 4 - .5) * .06;
-      g.fillStyle = rgbHex(mixRGB(a, b, clamp(f + d, 0, 1))); g.fillRect(0, y, W, 1); }
-    // stars & the Bon moon
-    if (night > .5) {
-      for (const [sx, sy, ph, s] of this.stars) { const tw = .55 + .45 * Math.sin(t * (1 + ph * 3) + ph * 40); if (tw < .3) continue; g.fillStyle = `rgba(230,236,255,${tw})`; g.fillRect(sx * W | 0, sy * H | 0, s, s); }
-      const mx = W * .22, my = H * .2, mr = Math.max(7, H * .045);
-      for (let r = mr * 3.2; r > mr; r -= 1) { g.fillStyle = `rgba(200,210,255,${.018})`; g.beginPath(); g.arc(mx, my, r, 0, TAU); g.fill(); }
-      for (let y = -mr; y <= mr; y++) for (let x = -mr; x <= mr; x++) { const d = hyp(x, y) / mr; if (d > 1) continue; const sh = hash2(x + 9 | 0, y + 9 | 0, 3) < .12 || (fbm(x * .3 + 5, y * .3, 2, 4) > .62); this.px(mx + x, my + y, sh ? "#d4d6e2" : d > .9 ? "#e8e6dc" : "#f4f1e4"); }
-    } else {
-      // day: a few flat clouds
-      for (let k = 0; k < 6; k++) { const cx = ((k * .23 + t * .004) % 1.2 - .1) * W, cy = H * (.12 + (k % 3) * .07), w = W * (.12 + (k % 2) * .08); for (let y = 0; y < 6; y++) { g.fillStyle = y < 2 ? "#f2f2ee" : y < 4 ? "#e4e6e6" : "#cfd6dc"; g.fillRect(cx - w / 2 + y * 2, cy + y, w - y * 4, 1); } }
-    }
-    // the far range
-    const farC = night > .5 ? [44, 50, 86] : [150, 168, 196];
-    this.ridge(this.hills[0], farC, H * .02);
-    // the plain and the city
-    const py = H * .62;
-    for (let y = Math.floor(py); y < H; y++) { const k = (y - py) / (H - py); g.fillStyle = rgbHex(night > .5 ? mixRGB([24, 22, 40], [12, 12, 22], k) : mixRGB([170, 180, 176], [120, 140, 120], k)); g.fillRect(0, y, W, 1); }
-    // the river catching the moon
-    for (let x = 0; x < W; x++) { const y = py + H * .05 + Math.sin(x / W * 7 + 1) * H * .015 + x / W * H * .06; this.px(x, y, night > .5 ? (x % 3 === 0 ? "#8a94c8" : "#4a5288") : "#d8e2e6"); }
-    for (const [cx, d, ph, s, warm] of this.city) {
-      const x = cx * W, y = py + 2 + d * (H - py) * .7; if (y > H * .9) continue;
-      const wx = (x / W - .5), dist = hyp(wx * 1.2, (y - py) / (H - py) * .7);
-      const gone = far >= 0 && dist < far * 1.3;
-      if (night > .5) { const tw = .7 + .3 * Math.sin(t * 2 + ph * 30); g.fillStyle = gone ? `rgba(170,190,240,${.35 * tw})` : warm < .7 ? `rgba(255,200,120,${tw})` : `rgba(255,236,200,${tw})`; g.fillRect(x | 0, y | 0, s, 1); }
-      else if (ph < .45) { g.fillStyle = gone || far >= 0 ? "#a8b6d4" : (warm < .5 ? "#7a6a5a" : "#5a5a62"); g.fillRect(x | 0, (y - 2) | 0, s + 1, 2 + (ph * 4 | 0)); }
-    }
-    // the procession: lanterns walking up out of the plain into the sky
-    if (this.procession) {
-      for (const [p0, ph] of this.lan) {
-        const p = (p0 + t * .018) % 1; const x = W * (.6 + Math.sin(p * 3 + ph) * .02 - p * .18), y = py - p * H * .58 - Math.sin(p * Math.PI) * H * .05;
-        const a = clamp(p * 6, 0, 1) * clamp((1 - p) * 3, 0, 1) * (.75 + .25 * Math.sin(t * 6 + ph * 20));
-        g.fillStyle = `rgba(255,${120 + ph * 60 | 0},70,${a})`; g.fillRect(x | 0, y | 0, 1, 2); if (ph < .3) { g.fillStyle = `rgba(255,210,150,${a * .6})`; g.fillRect(x | 0, (y - 1) | 0, 1, 1); }
+    this.t += dt; const [W, H] = this.size(), g = this.g, t = this.t, night = (this.night ?? 1) > .5, far = this.wave, py = H * .47;
+    g.drawImage(this.layer("sky" + night, W, H, (c) => this.paintSky(c, W, H, night)), 0, 0);
+    if (night) { for (const [sx, sy, ph, sz] of this.stars) { const tw = .55 + .45 * Math.sin(t * (1 + ph * 3) + ph * 40); if (tw < .35) continue; g.globalAlpha = tw; g.fillStyle = "#e6ecff"; g.fillRect(sx * W | 0, sy * H | 0, sz, sz); } g.globalAlpha = 1; }
+    else { for (let k = 0; k < 5; k++) { const cx = ((k * .27 + t * .004) % 1.2 - .1) * W, cy = H * (.08 + (k % 3) * .06), w = W * (.1 + (k % 2) * .07); g.globalAlpha = .45; g.fillStyle = "#f4f6f8"; g.fillRect(cx - w / 2 | 0, cy | 0, w | 0, 1); g.globalAlpha = .25; g.fillRect(cx - w / 3 | 0, cy + 1 | 0, w * .7 | 0, 1); g.fillRect(cx - w * .2 | 0, cy - 1 | 0, w * .35 | 0, 1); } g.globalAlpha = 1; }  // high cirrus drifting
+    g.drawImage(this.layer("plain" + night, W, H, (c) => this.paintPlain(c, W, H, night)), 0, 0);
+    // the city: lights by night, roofs by day; whatever the wave has passed keeps shining \u2014 distance-blue, and still
+    const G = this.waveGeo(W, H), buckets = night ? ["#ffc878", "#ffe8c8", "#a9bdf0"] : ["#6a5a4c", "#4e4e58", "#7f90b8"];
+    for (let bi = 0; bi < 3; bi++) {
+      g.fillStyle = buckets[bi];
+      for (let i = bi === 2 ? 0 : bi; i < this.city.length; i += bi === 2 ? 1 : 2) {
+        const [cx, d, ph, sz] = this.city[i]; const x = cx * W, y = py + 2 + d * d * (H - py) * .55; if (y > H * .8) continue;
+        const gone = this.isFar(x, y, W, G); if ((bi === 2) !== gone) continue;
+        if (night) { if (!gone && Math.sin(t * 2 + ph * 30) < -.6) continue; g.globalAlpha = gone ? .8 : 1; g.fillRect(x | 0, y | 0, sz, 1); }
+        else if (ph < .45) g.fillRect(x | 0, (y - 2) | 0, sz + 1, 2 + (ph * 4 | 0));
       }
     }
-    // the pale wave: a band of distance-blue racing over the plain toward us
-    if (far >= 0) {
-      const fy = py + (H - py) * clamp(far, 0, 1);
-      for (let y = Math.floor(py); y < Math.min(H, fy); y++) for (let x = 0; x < W; x += 1) { const k = (fy - y) / 30; if (hash2(x, y, (t * 8) | 0) < .14 + clamp(k, 0, .5)) { g.fillStyle = `rgba(190,206,240,${.18 + clamp(k * .1, 0, .3)})`; g.fillRect(x, y, 1, 1); } }
-      for (let x = 0; x < W; x++) if (hash2(x, (t * 10) | 0, 4) < .5) this.px(x, fy + Math.sin(x * .2 + t * 6) * 1.5, "rgba(230,238,255,.8)");
+    g.globalAlpha = 1;
+    // the procession: lanterns walking up out of the plain into the sky
+    if (this.procession) for (const [p0, ph] of this.lan) {
+      const p = (p0 + t * .018) % 1; const x = W * (.6 + Math.sin(p * 3 + ph) * .02 - p * .2), y = py + 6 - p * H * .46 - Math.sin(p * Math.PI) * H * .05;
+      g.globalAlpha = clamp(p * 6, 0, 1) * clamp((1 - p) * 3, 0, 1) * (.75 + .25 * Math.sin(t * 6 + ph * 20));
+      g.fillStyle = ph < .5 ? "#ff8a46" : "#ffb070"; g.fillRect(x | 0, y | 0, 1, 2); if (ph < .3) { g.fillStyle = "#ffe0b0"; g.fillRect(x | 0, (y - 1) | 0, 1, 1); }
     }
-    // near hills and foreground
-    this.ridge(this.hills[1], night > .5 ? [20, 22, 38] : [92, 112, 96], H * .06);
-    if (this.mode === "lookout") this.susuki(W, H, night); else this.branches(W, H, night);
+    g.globalAlpha = 1;
+    // the pale wave: a ring of distance spreading over the plain from the foot of the procession \u2014
+    // a bright front, a glow just behind it, and behind that everything merely, quietly, far
+    if (far >= 0) {
+      const tint = night ? "#8094d0" : "#c2d0ee", glow = night ? "#c4d2ff" : "#eef2ff", edge = "#f2f6ff";
+      if (far >= 1) { g.globalAlpha = night ? .2 : .24; g.fillStyle = tint; g.fillRect(0, Math.ceil(py), W, H); }
+      else if (G.r > .05) {
+        let pl = -1, pr = -1; const pulse = .78 + .18 * Math.sin(t * 9);
+        for (let y = Math.ceil(py) + 1; y < H; y++) {
+          const Z = G.f / (y - py), dz = Z - G.Z0;
+          if (Math.abs(dz) >= G.r) {
+            if (pl >= 0) { // the near edge: close the front, and let pale motes lift off it
+              g.globalAlpha = pulse; g.fillStyle = edge; g.fillRect(pl | 0, y - 1, Math.max(1, (pr - pl) | 0), 1);
+              g.fillStyle = glow; for (let x = pl | 0; x < pr; x += 2) { const h = hash2(x, t * 14 | 0, 3); if (h < .22) { g.globalAlpha = .7 - h * 2; g.fillRect(x, y - 2 - (h * 18 | 0), 1, 1); } }
+              pl = -1;
+            }
+            if (dz < 0) break; continue;
+          }
+          const half = Math.sqrt(G.r * G.r - dz * dz), s = G.f / Z, xl = W / 2 + (G.X0 - half) * s, xr = W / 2 + (G.X0 + half) * s;
+          g.fillStyle = tint; g.globalAlpha = .16 + ((y + (t * 10 | 0)) % 7 === 0 ? .06 : 0); g.fillRect(xl | 0, y, ((xr - xl) | 0) + 1, 1);
+          g.fillStyle = glow; g.globalAlpha = .26; const ri = G.r - 1.4;
+          if (ri > 0 && Math.abs(dz) < ri) { const hi = Math.sqrt(ri * ri - dz * dz), il = W / 2 + (G.X0 - hi) * s, ir = W / 2 + (G.X0 + hi) * s; g.fillRect(xl | 0, y, Math.max(1, (il - xl) | 0), 1); g.fillRect(ir | 0, y, Math.max(1, (xr - ir) | 0), 1); }
+          else g.fillRect(xl | 0, y, ((xr - xl) | 0) + 1, 1);
+          g.fillStyle = edge; g.globalAlpha = pulse;
+          if (pl < 0) g.fillRect(xl | 0, y, ((xr - xl) | 0) + 1, 1);
+          else { g.fillRect(Math.min(pl, xl) | 0, y, Math.max(1, Math.abs(xl - pl) | 0), 1); g.fillRect(Math.min(pr, xr) | 0, y, Math.max(1, Math.abs(xr - pr) | 0), 1); }
+          pl = xl; pr = xr;
+        }
+      }
+      g.globalAlpha = 1;
+    }
+    g.drawImage(this.layer("near" + night, W, H, (c) => this.treeline(c, this.hills[1], night ? [16, 18, 32] : [84, 104, 88], night ? "#2c3456" : "#a8bc9c", H * .06, W, H)), 0, 0);
+    const sway = Math.round(Math.sin(t * 1.1) * 1);
+    if (this.mode === "lookout") g.drawImage(this.layer("susuki" + night, W, H, (c) => this.susuki(W, H, night ? 1 : 0)), sway, 0);
+    else g.drawImage(this.layer("branch" + night, W, H, (c) => this.branches(W, H, night ? 1 : 0)), sway, 0);
   },
-  ridge(pts, c, off) { const g = this.g, W = this.cv.width, H = this.cv.height; g.fillStyle = rgbHex(c); for (let x = 0; x < W; x++) { const y = pts[Math.floor(x / W * (pts.length - 1))] * H + off; g.fillRect(x, y | 0, 1, H - y); } },
+  paintSky(g, W, H, night) {
+    const sky = night ? [[11, 15, 38], [27, 33, 70], [58, 44, 78], [104, 62, 70]] : [[96, 140, 196], [148, 184, 214], [206, 214, 214], [226, 214, 196]];
+    for (let y = 0; y < H; y++) { const k = y / (H * .62); const i = clamp(Math.floor(k * 3), 0, 2), f = clamp(k * 3 - i, 0, 1); const a = sky[i], b = sky[i + 1]; const d = (((y * 7) % 4) / 4 - .5) * .06; g.fillStyle = rgbHex(mixRGB(a, b, clamp(f + d, 0, 1))); g.fillRect(0, y, W, 1); }
+    if (night) { // the Bon moon is full
+      const mx = W * .22, my = H * .2, mr = Math.max(7, H * .045);
+      for (let r = mr * 3.2; r > mr; r -= 1) { g.fillStyle = "rgba(200,210,255,.018)"; g.beginPath(); g.arc(mx, my, r, 0, TAU); g.fill(); }
+      for (let y = -mr; y <= mr; y++) for (let x = -mr; x <= mr; x++) { const d = hyp(x, y) / mr; if (d > 1) continue; const sh = hash2(x + 9 | 0, y + 9 | 0, 3) < .12 || (fbm(x * .3 + 5, y * .3, 2, 4) > .62); g.fillStyle = sh ? "#d4d6e2" : d > .9 ? "#e8e6dc" : "#f4f1e4"; g.fillRect(mx + x | 0, my + y | 0, 1, 1); }
+    }
+    if (!night) { const R = RNG(5); this.cumulus(g, W * .74, H * .42, W * .14, H * .34, R); this.cumulus(g, W * .3, H * .43, W * .08, H * .17, R); this.cumulus(g, W * .05, H * .43, W * .05, H * .1, R); }
+    this.ridgeTo(g, this.hills[0], night ? [44, 50, 86] : [150, 168, 196], H * .02, W, H);
+  },
+  cumulus(g, cx, by, w, h, R) { // a summer thunderhead behind the mountains: stacked billows, sunlit upper-left, blue shadows, a flat dark base
+    const B = []; for (let r = 0; r < 8; r++) { const t = r / 7, rw = w * (1 - t * .6) * (.8 + R() * .3), yy = by - t * h * .82, n = 3 + (rw / 9 | 0); for (let i = 0; i < n; i++) B.push([cx + (R() - .5) * rw * 1.4 + t * w * .15, yy - R() * h * .08, rw / n * (1 + R() * .7) + 3]); }
+    const pal = [[168, 180, 208], [196, 206, 226], [228, 232, 240], [250, 250, 246]];
+    for (let y = (by - h * 1.1) | 0; y <= by; y++) for (let x = (cx - w * 1.2) | 0; x < cx + w * 1.3; x++) {
+      let best = -1, nx = 0, ny = 0; for (const [bx, b2, br] of B) { const dx = x - bx, dy = y - b2, d = 1 - hyp(dx, dy) / br; if (d > best) { best = d; nx = dx / br; ny = dy / br; } }
+      if (best < 0) continue;
+      const v = clamp(-(nx + ny) * .62 + .48, 0, 1) * (.45 + .55 * clamp((by - y) / (h * .22), 0, 1)) + (best < .12 ? .1 : 0) + ((((x + y) & 1) ? .03 : -.03));
+      g.fillStyle = rgbHex(pal[clamp(Math.floor(v * 4), 0, 3)]); g.fillRect(x, y, 1, 1);
+    }
+  },
+  paintPlain(g, W, H, night) { // the plain in true perspective: Obon-season rice, levees, irrigation channels and ponds holding the sky, a river under the moon
+    const py = H * .47, f = H - py, y0 = Math.floor(py), id = g.createImageData(W, H - y0), D = id.data, N = night;
+    const riverX = Z => -3 - 3.5 * Math.sin(Z * .35), mx = W * .22;
+    for (let y = y0; y < H; y++) {
+      const k = (y - py) / (H - py), Z = f / Math.max(.4, y - py), zA = f / Math.max(.4, y + 1 - py);
+      const base = N ? mixRGB([24, 22, 40], [12, 12, 22], k) : mixRGB([150, 168, 150], [92, 120, 70], k);
+      const sky = N ? mixRGB([50, 48, 88], [32, 36, 70], k) : mixRGB([214, 222, 228], [176, 200, 224], k);
+      const rice = N ? mixRGB([30, 32, 54], [20, 24, 38], k) : mixRGB([128, 160, 110], [86, 132, 56], k);
+      const fadeR = clamp((16 - Z) / 9, 0, 1), fadeC = clamp((34 - Z) / 16, 0, 1), haze = N ? 0 : (1 - k) * (1 - k) * .55;
+      const levRow = Math.floor(Z / 1.4) !== Math.floor(zA / 1.4), rx = W / 2 + riverX(Z) * f / Z, rw = Math.max(.6, .45 * f / Z);
+      for (let x = 0; x < W; x++) {
+        const X = (x - W / 2) * Z / f, X1 = (x + 1 - W / 2) * Z / f, cx = Math.floor(X / 2), cz = Math.floor(Z / 1.4), h = hash2(cx, cz, 17);
+        let c = mixRGB(base, rice, fadeC * (.6 + h * .4));                                                     // rice, each field its own green
+        if (!N && fadeC > 0 && hash2(x, y >> 1, 4) < .12) c = mixRGB(c, [150, 186, 96], .35 * fadeC);
+        if (h < .06) c = mixRGB(base, sky, .7 * fadeC);                                                        // a pond
+        else if (h > .93) c = mixRGB(base, N ? [8, 8, 16] : [52, 78, 50], fadeC);                              // a copse, a farmyard
+        const levCol = Math.floor(X / 2) !== Math.floor(X1 / 2);
+        if (levCol || levRow) {                                                                                // a levee; on some, a channel of water
+          const wet = levCol ? hash2(Math.floor(X1 / 2), 0, 23) < .45 : hash2(0, Math.floor(Z / 1.4), 29) < .35;
+          c = mixRGB(c, wet ? mixRGB(sky, base, .25) : mixRGB(base, [0, 0, 0], .2), .85 * fadeR);
+        }
+        const dr = Math.abs(x - rx);
+        if (dr < rw) c = dr > rw - 1 && rw > 1.5 ? mixRGB(base, sky, .4) : mixRGB(sky, N ? [70, 78, 130] : [232, 238, 244], .35);
+        const wetHere = dr < rw || h < .06;
+        if (N && Math.abs(x - mx) < 5 + k * 6) { const m = 1 - Math.abs(x - mx) / (6 + k * 6); if (wetHere && hash2(x, y, 9) < .45 * m) c = [196, 204, 236]; else c = mixRGB(c, [70, 76, 110], .25 * m); }   // the moon's glitter path; a sheen on the rice
+        if (haze) c = mixRGB(c, [206, 214, 218], haze);
+        const i = ((y - y0) * W + x) * 4; D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = 255;
+      }
+    }
+    g.putImageData(id, 0, y0);
+  },
+  treeline(g, pts, c, rim, off, W, H) { // the forest of the pass below us: cedar spires and round broadleaf crowns, rimmed by the moon
+    const top = new Float32Array(W), base = x => pts[Math.floor(clamp(x, 0, W - 1) / W * (pts.length - 1))] * H + off;
+    for (let x = 0; x < W; x++) top[x] = base(x);
+    const R = RNG(77); let x = -6;
+    while (x < W + 6) {
+      const cedar = R() < .55, w = cedar ? 5 + R() * 5 : 9 + R() * 9, h = cedar ? 7 + R() * 9 : 4 + R() * 6;
+      for (let i = 0; i < w; i++) { const X = Math.round(x + i); if (X < 0 || X >= W) continue; const u = (i + .5) / w * 2 - 1, prof = cedar ? (1 - Math.abs(u)) * h + (i % 2) * .7 : Math.sqrt(Math.max(0, 1 - u * u)) * h + (hash2(X, 3, 4) - .5) * 1.4; top[X] = Math.min(top[X], base(X) - prof); }
+      x += w * (cedar ? .55 + R() * .2 : .7);
+    }
+    g.fillStyle = "#8a96c8"; for (let y = 0; y < 18; y++) { g.globalAlpha = .011 * (18 - y); for (let x = 0; x < W; x += 2) g.fillRect(x, (base(x) | 0) - 3 - y, 2, 1); } g.globalAlpha = 1;   // a breath of mist lying on the forest
+    g.fillStyle = rgbHex(c); for (let x = 0; x < W; x++) g.fillRect(x, top[x] | 0, 1, H);
+    g.fillStyle = rim; for (let x = 1; x < W; x++) if (top[x] < top[x - 1] - .4 || hash2(x, 7, 2) < .35) g.fillRect(x, top[x] | 0, 1, 1);
+  },
+  ridgeTo(g, pts, c, off, W, H) { g.fillStyle = rgbHex(c); for (let x = 0; x < W; x++) { const y = pts[Math.floor(x / W * (pts.length - 1))] * H + off; g.fillRect(x, y | 0, 1, H - y); } },
   branches(W, H, night) { // the crown of the great camphor framing the view; her silhouette on a limb
-    const g = this.g, R = RNG(8), dk = night > .5 ? "#07080e" : "#22301e", mid = night > .5 ? "#0e1120" : "#3a4a30";
-    for (let k = 0; k < 70; k++) { const top = k < 40; const x = top ? R() * W : (k % 2 ? R() * W * .2 : W - R() * W * .2), y = top ? R() * H * .16 : H * .3 + R() * H * .7, r = 6 + R() * 14;
-      for (let yy = -r; yy <= r; yy++) for (let xx = -r; xx <= r; xx++) { const d = hyp(xx, yy) / r - (hash2(x + xx | 0, y + yy | 0, 5) - .5) * .25; if (d > 1) continue; const sw = Math.sin(this.t * 1.1 + x * .02) * (top ? 1 : .5); this.px(x + xx + sw, y + yy, d > .8 || yy > r * .3 ? dk : mid); } }
-    // the limb she stands on
-    g.fillStyle = dk; for (let x = W * .48; x < W; x++) { const y = H * .86 - (x - W * .48) * .12; g.fillRect(x | 0, y | 0, 1, 5 + (x - W * .48) * .04); }
-    this.tsuzuraBack(W * .72 | 0, H * .82 - (W * .72 - W * .48) * .12 | 0, dk);
+    const N = night > .5, g = this.g, R = RNG(8), M = new Uint8Array(W * H);
+    const C = N ? { dk: "#05060b", mid: "#0a0d18", lit: "#141a2e", rim: "#2a3354", glint: "#3a4874", bark: "#090a11", barkRim: "#262c44" }
+      : { dk: "#1a2416", mid: "#26341f", lit: "#34472a", rim: "#4f6638", glint: "#6c8448", bark: "#2a241c", barkRim: "#5a4a36" };
+    const set = (x, y, v) => { x |= 0; y |= 0; if (x >= 0 && y >= 0 && x < W && y < H) M[y * W + x] = v; };
+    const at = (x, y) => (x < 0 || y < 0 || x >= W || y >= H) ? 0 : M[y * W + x];
+    const brush = (x, y, r) => { for (let j = -Math.ceil(r); j <= r; j++) for (let i = -Math.ceil(r); i <= r; i++) if (i * i + j * j <= r * r + .5) set(x + i, y + j, 2); };
+    const limb = (pts, w0, w1) => { const L = pts.length - 1; for (let i = 0; i < L; i++) { const [ax, ay] = pts[i], [bx, by] = pts[i + 1], n = Math.max(1, Math.ceil(hyp(bx - ax, by - ay))); for (let k = 0; k <= n; k++) brush(lerp(ax, bx, k / n), lerp(ay, by, k / n), Math.max(.4, lerp(w0, w1, (i + k / n) / L) / 2)); } };
+    const mass = (cx, cy, r) => { // a leaf mass: overlapping lobes with a softly scalloped edge and a chink of sky here and there
+      const n = 7 + (r * .8 | 0), sd = R() * 99 | 0;
+      for (let k = 0; k < n; k++) {
+        const a = R() * TAU, d = Math.sqrt(R()) * r, lx = cx + Math.cos(a) * d, ly = cy + Math.sin(a) * d * .65, lr = 2.5 + R() * r * .38;
+        for (let yy = -lr - 2; yy <= lr + 2; yy++) for (let xx = -lr - 2; xx <= lr + 2; xx++) {
+          const X = lx + xx, Y = ly + yy, q = hyp(xx, yy * 1.15) / lr + (vnoise(X * .45, Y * .45, sd) - .5) * .55;
+          if (q > 1 || (q > .5 && hash2(X >> 1, Y >> 1, sd + 7) < .05)) continue;
+          set(X, Y, 1);
+        }
+      }
+    };
+    // wood: a bough from the unseen trunk on the right, twigs off it, a thinner one on the left, the limb she stands on
+    const bough = [[W + 8, H * .3], [W * .86, H * .22], [W * .7, H * .1], [W * .52, -6]];
+    limb(bough, 10, 3);
+    limb([[W * .86, H * .22], [W * .93, H * .42], [W * .9, H * .55]], 4, 1.5);
+    limb([[W * .7, H * .1], [W * .62, H * .2], [W * .58, H * .23]], 3, 1);
+    limb([[-6, H * .42], [W * .05, H * .3], [W * .1, H * .14], [W * .08, -6]], 6, 2);
+    limb([[W * .55, H * .66], [W * .7, H * .67], [W * .86, H * .72], [W + 8, H * .84]], 5, 15);
+    for (let k = 0; k < 24; k++) { const x = R() * W; if (x > W * .12 && x < W * .34) continue; mass(x, -8 + R() * H * .08, 11 + R() * 13); }  // the canopy overhead
+    for (let k = 0; k < 7; k++) mass(W * (.62 + R() * .3), H * (.08 + R() * .14), 8 + R() * 9);                                              // hanging from the bough
+    for (let k = 0; k < 14; k++) mass(W - R() * W * .15, H * .12 + R() * H * .55, 8 + R() * 10);                                           // the right edge
+    for (let k = 0; k < 5; k++) mass(R() * W * .09, H * .14 + R() * H * .3, 7 + R() * 7);                                                   // a little on the left
+    mass(W * .6, H * .21, 7); mass(W * .9, H * .55, 6);                                                                                      // where the twigs end
+    // the silhouette frays into single leaves
+    for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) if (!M[y * W + x] && ((at(x + 1, y) === 1) + (at(x - 1, y) === 1) + (at(x, y + 1) === 1) + (at(x, y - 1) === 1)) > 0 && hash2(x, y, 21) < .16) M[y * W + x] = 3;
+    // shade by the moon (upper-left): rim where the sky is right there, then lit, then the dark inside
+    const id = g.createImageData(W, H), D = id.data, P = {}; for (const k in C) P[k] = hexRGB(C[k]);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+      const v = M[y * W + x]; if (!v) continue; let c;
+      if (v === 2) c = at(x, y - 1) === 0 || at(x - 1, y - 1) === 0 ? P.barkRim : (hash2(x >> 2, y, 41) < .12 ? P.mid : P.bark);
+      else {
+        let o = 0; while (o < 4 && at(x - o - 1, y - o - 1)) o++;
+        c = o === 0 ? P.rim : o === 1 ? P.lit : o <= 3 ? P.mid : P.dk;
+        if (o >= 1 && o <= 2 && hash2(x >> 1, y, 31) < .12) c = P.glint;   // a glossy camphor leaf catching the moon
+        if (!at(x + 1, y + 1)) c = P.dk;
+      }
+      const i = (y * W + x) * 4; D[i] = c[0]; D[i + 1] = c[1]; D[i + 2] = c[2]; D[i + 3] = 255;
+    }
+    g.putImageData(id, 0, 0);
+    this.tsuzuraBack(W * .7 | 0, H * .67 - 2 | 0, C.dk, N ? "#3a4670" : null);
   },
-  susuki(W, H, night) { const g = this.g; for (let k = 0; k < 160; k++) { const x = hash1(k) * W, h = H * (.12 + hash1(k + 9) * .18), sw = Math.sin(this.t * 1.4 + k) * 2; for (let i = 0; i < h; i++) { const t = i / h; this.px(x + sw * t * t + t * 4 * (k % 2 ? 1 : -1), H - i, night > .5 ? "#141626" : (t > .75 ? "#d8d0c0" : "#5a6a46")); } }
-    g.fillStyle = night > .5 ? "#0d0e18" : "#4a4e46"; g.beginPath(); g.ellipse(W * .64, H * 1.02, W * .2, H * .16, 0, 0, TAU); g.fill();
-    this.tsuzuraBack(W * .64 | 0, H * .88 | 0, night > .5 ? "#0b0c16" : "#2a2a30"); },
-  tsuzuraBack(x, y, c) { // a small silhouette from behind: round ears, the frame's poles, the tail
+  susuki(W, H, night) { // the lookout: a knoll in a sea of pampas grass, plumes leaning off downwind
+    const N = night > .5, R = RNG(31);
+    const C = N ? { stalk: "#0c0d18", blade: "#0a0b14", plume: "#363e5e", lit: "#7a86b4", tip: "#aab4dc", knoll: "#0b0c16", rim: "#262c48" }
+      : { stalk: "#56603e", blade: "#4a5a36", plume: "#b4a484", lit: "#e2d8c0", tip: "#f6f0e0", knoll: "#3e4a32", rim: "#6a7a50" };
+    const kx = W * .64, ky = H * .86, kw = W * .22;
+    for (let x = kx - kw; x < kx + kw; x++) {
+      const u = (x - kx) / kw, top = ky + u * u * H * .1 + (hash2(x | 0, 1, 3) - .5) * 1.2;
+      this.g.fillStyle = C.knoll; this.g.fillRect(x | 0, top | 0, 1, H);
+      if (hash2(x | 0, 5, 1) < .35) this.g.fillRect(x | 0, (top - 1 - hash2(x | 0, 6, 1) * 2) | 0, 1, 3);
+      else if (u < .1 || hash2(x | 0, 2, 3) < .3) { this.g.fillStyle = C.rim; this.g.fillRect(x | 0, top | 0, 1, 1); }
+    }
+    for (const [n, y0, y1, h0, h1] of [[110, .72, .8, .06, .1], [80, .8, .92, .1, .17], [44, .96, 1.06, .2, .3]]) {
+      for (let k = 0; k < n; k++) {
+        const bx = R() * W, by = H * (y0 + R() * (y1 - y0)), h = H * (h0 + R() * (h1 - h0)), lean = .2 + R() * .25;
+        if (Math.abs(bx + h * lean * .6 - kx) < 18 && by > ky - 6) continue;           // leave her standing in the open
+        for (let j = 0; j < 3; j++) { const sd = R() < .5 ? -1 : 1, L = h * (.3 + R() * .3); for (let i = 0; i < L; i++) { const t = i / L; this.px(bx + sd * t * t * L * .6, by - t * L * (1 - t * .55), C.blade); } }
+        let x = bx, y = by; for (let i = 0; i < h; i++) { const t = i / h; x = bx + t * t * h * lean; y = by - i; this.px(x, y, C.stalk); }
+        const pl = 4 + R() * 5 + h * .04;
+        for (let sd = 0; sd < 3; sd++) for (let i = 0; i < pl; i++) { const t = i / pl; this.px(x + i * .9 + sd * .5, y - 1 + sd + t * t * pl * .7 + Math.sin(t * 3 + sd) * .5, t > .78 ? C.tip : sd === 0 ? C.lit : C.plume); }
+      }
+    }
+    this.tsuzuraBack(kx | 0, ky + 1 | 0, N ? "#06070d" : "#22242c", N ? "#3a4670" : null);
+  },
+  tsuzuraBack(x, y, c, rim) { // a small silhouette from behind: round ears, the frame's poles, the tail; backlit by the moon
     const pts = ["...k.......k...", "..kkk.kkk.kkk..", "...kkkkkkkkk...", "...kkkkkkkkk...", "..kkkkkkkkkkk..", "..kkkkkkkkkkk..", "...kkkkkkkkk...", "....kkkkkkk....", "...kkkkkkkkk...", "...kkkkkkkkkk..", "...kkkkkkkkkkkk", "....kkkkkkkkkkk", "....kkkk.kkk.kk", "....kk....kk...", "....kk....kk..."];
-    for (let j = 0; j < pts.length; j++) for (let i = 0; i < pts[j].length; i++) if (pts[j][i] === "k") this.px(x + i - 7, y + j - pts.length, c);
-    for (let j = 0; j < 22; j++) { this.px(x - 5, y - 15 - j * .5 - 4, c); this.px(x + 5, y - 15 - j * .5 - 4, c); }
+    const S = new Set(), key = (i, j) => (i | 0) * 4096 + (j | 0);
+    for (let j = 0; j < pts.length; j++) for (let i = 0; i < pts[j].length; i++) if (pts[j][i] === "k") S.add(key(x + i - 7, y + j - pts.length));
+    for (let j = 0; j < 22; j++) { S.add(key(x - 5, y - 15 - j * .5 - 4)); S.add(key(x + 5, y - 15 - j * .5 - 4)); }
+    for (const k of S) { const i = Math.floor(k / 4096), j = k - i * 4096; this.px(i, j, rim && j < y - 3 && (!S.has(key(i - 1, j)) || !S.has(key(i, j - 1))) ? rim : c); }
   },
   /* ---------- shots ---------- */
   async prologueShot() {
@@ -5740,30 +5910,30 @@ const VISTA = {
     await CINE.wait(1.6);
     this.procession = true; AU.festival(.7, { near: .3 });
     await CINE.wait(3.2);
-    await CINE.say(T("surprised", "……灯，在往天上走。"));
+    await CINE.say(T("surprised", "\u2026\u2026\u706f\uff0c\u5728\u5f80\u5929\u4e0a\u8d70\u3002"));
     await CINE.wait(1.2);
     AU.music("tension", { fade: 3 });
     const t0 = GAME.t; this.wave = 0;
     await CINE.until(() => { this.wave = clamp((GAME.t - t0) / 7, 0, 1) * .9; AU.festival(.7 + this.wave * .3, { near: .3 + this.wave * .6 }); return this.wave >= .9; });
-    await CINE.say(T("shout", "喂——！"), T("shout", "那边的人——"));
+    await CINE.say(T("shout", "\u5582\u2014\u2014\uff01"), T("shout", "\u90a3\u8fb9\u7684\u4eba\u2014\u2014"));
     await UI.fade(1, .5, "#dfe6f6");
     this.on = false;
   },
   async lookoutShot() {
     if (GAME.cine) return; GAME.cine = true;
-    await UI.fade(1, .8); this.on = true; this.mode = "lookout"; this.night = GAME.tod > 19.3 || GAME.tod < 5 ? 1 : 0; this.wave = 1; this.procession = this.night > .5; this.t = 0;
+    await UI.fade(1, .8); UI.showHud(false); this.on = true; this.mode = "lookout"; this.night = GAME.tod > 19.3 || GAME.tod < 5 ? 1 : 0; this.wave = 1; this.procession = this.night > .5; this.t = 0;
     await UI.fade(0, 1.2); AU.stinger("discover");
     await CINE.wait(2);
-    if (this.night > .5) await CINE.say(T("soft", "……那些灯。"), T("soft", "一盏也没有少。"), T("thinking", "全都变成了远山的颜色。"));
-    else await CINE.say(T("surprised", "……城还在。"), T("thinking", "屋顶、烟囱、河上的桥，一样都没少。"), T("soft", "就是全都变成了远山的颜色。"));
-    await UI.fade(1, .8); this.on = false; await UI.fade(0, .8);
+    if (this.night > .5) await CINE.say(T("soft", "\u2026\u2026\u90a3\u4e9b\u706f\u3002"), T("soft", "\u4e00\u76cf\u4e5f\u6ca1\u6709\u5c11\u3002"), T("thinking", "\u5168\u90fd\u53d8\u6210\u4e86\u8fdc\u5c71\u7684\u989c\u8272\u3002"));
+    else await CINE.say(T("surprised", "\u2026\u2026\u57ce\u8fd8\u5728\u3002"), T("thinking", "\u5c4b\u9876\u3001\u70df\u56f1\u3001\u6cb3\u4e0a\u7684\u6865\uff0c\u4e00\u6837\u90fd\u6ca1\u5c11\u3002"), T("soft", "\u5c31\u662f\u5168\u90fd\u53d8\u6210\u4e86\u8fdc\u5c71\u7684\u989c\u8272\u3002"));
+    await UI.fade(1, .8); this.on = false; UI.showHud(true); await UI.fade(0, .8);
     GAME.cine = false;
   },
 };
 
 /* ==== src/main.js ==== */
 /* =====================================================================
-   MAIN — boot (generate the art, raise the mountain), the title, the
+   MAIN \u2014 boot (generate the art, raise the mountain), the title, the
    frame loop, the camera, pause.
    ===================================================================== */
 if (typeof AU === "undefined") window.AU = new Proxy({}, { get: (o, k) => k === "ready" ? false : () => {} });
@@ -5771,16 +5941,16 @@ const APP = {
   cam: { x: 0, y: 0 }, paused: false, started: false,
   async boot() {
     UI.init();
-    const ld = document.createElement("div"); ld.id = "loading"; ld.innerHTML = `<div class="k">ツヅラ</div><div class="b"><i></i></div><div class="t">九十九折峠</div>`; document.getElementById("ui").appendChild(ld);
+    const ld = document.createElement("div"); ld.id = "loading"; ld.innerHTML = `<div class="k">\u30c4\u30c5\u30e9</div><div class="b"><i></i></div><div class="t">\u4e5d\u5341\u4e5d\u6298\u5ce0</div>`; document.getElementById("ui").appendChild(ld);
     const bar = ld.querySelector("i"), step = (k, msg) => new Promise(r => { bar.style.width = (k * 100) + "%"; if (msg) ld.querySelector(".t").textContent = msg; setTimeout(r, 30); });
     const cv = document.getElementById("cv");
     IN.init(cv); IN.onDevice = () => RD.resize();
-    if (!RD.init(cv)) { ld.querySelector(".t").textContent = "这台设备不支持 WebGL2。"; return; }
-    await step(.08, "削竹 · 编笼");
+    if (!RD.init(cv)) { ld.querySelector(".t").textContent = "\u8fd9\u53f0\u8bbe\u5907\u4e0d\u652f\u6301 WebGL2\u3002"; return; }
+    await step(.08, "\u524a\u7af9 \u00b7 \u7f16\u7b3c");
     ARTREG.build(k => {});
-    await step(.5, "起山 · 引水");
+    await step(.5, "\u8d77\u5c71 \u00b7 \u5f15\u6c34");
     WORLD.build(); WORLD.buildGrid();
-    await step(.8, "点灯");
+    await step(.8, "\u70b9\u706f");
     RD.buildWorld(WD); VISTA.init();
     WORLDSETUP.base();
     await step(1, "");
@@ -5795,8 +5965,8 @@ const APP = {
     GAME.state = "title"; VISTA.on = true; VISTA.mode = "title"; VISTA.night = 1; VISTA.wave = -1; VISTA.procession = false;
     const hasSave = !!GAME.load();
     const t = document.createElement("div"); t.id = "title";
-    t.innerHTML = `<div class="tt"><h1>ツヅラ</h1><div><h2>遠囃子</h2><div class="seal">九十<br>九折</div></div></div>
-      <nav><button id="bNew">从头开始</button>${hasSave ? `<button id="bCont">继续旅途</button>` : ""}</nav><div class="hint">WASD 移动 · E 拾/调查 · J 取 · K 予 · Q 卸 · Shift 奔</div>`;
+    t.innerHTML = `<div class="tt"><h1>\u30c4\u30c5\u30e9</h1><div><h2>\u9060\u56c3\u5b50</h2><div class="seal">\u4e5d\u5341<br>\u4e5d\u6298</div></div></div>
+      <nav><button id="bNew">\u4ece\u5934\u5f00\u59cb</button>${hasSave ? `<button id="bCont">\u7ee7\u7eed\u65c5\u9014</button>` : ""}</nav><div class="hint">WASD \u79fb\u52a8 \u00b7 E \u62fe/\u8c03\u67e5 \u00b7 J \u53d6 \u00b7 K \u4e88 \u00b7 Q \u5378 \u00b7 Shift \u5954</div>`;
     document.getElementById("ui").appendChild(t);
     const btns = [...t.querySelectorAll("button")]; let sel = hasSave ? 1 : 0; const mark = () => btns.forEach((b, i) => b.classList.toggle("sel", i === sel)); mark();
     const go = which => { if (this.started) return; this.started = true; AU.init(); AU.resume(); AU.sfx("ui_ok"); t.style.opacity = 0; setTimeout(() => t.remove(), 1200); this.start(which); };
@@ -5808,7 +5978,7 @@ const APP = {
   async start(which) {
     this.titleKeys = null;
     if (which === "cont") { const s = GAME.load(); if (s) { await UI.fade(1, 1); VISTA.on = false; WORLDSETUP.afterFar(); GAME.applySave(s); GAME.state = "play"; STORY.stage = "free"; GAME.noSave = false; UI.showHud(true); UI.countPop(GAME.count, null, true); AU.music("explore", { fade: 4 }); this.snapCam(); await UI.fade(0, 1.6); return; } }
-    if (which === "free") { VISTA.on = false; WORLDSETUP.afterFar(); const [sx, sy] = LM.shrine; PL.init(+(QS.x || sx + 20), +(QS.y || sy + 40)); GAME.state = "play"; STORY.stage = "free"; GAME.flags.knowsWeight = true; GAME.tod = +(QS.t || 9); UI.showHud(true); UI.countPop(GAME.count, null, true); this.snapCam(); UI.fade(0, .3); return; }
+    if (which === "free") { VISTA.on = false; WORLDSETUP.afterFar(); const [sx, sy] = LM.shrine; PL.init(+(QS.x || sx + 20), +(QS.y || sy + 40)); GAME.state = "play"; STORY.stage = "free"; GAME.flags.knowsWeight = true; GAME.flags.knowsLeaf = true; GAME.tod = +(QS.t || 9); UI.showHud(true); UI.countPop(GAME.count, null, true); this.snapCam(); UI.fade(0, .3); return; }
     if (which === "wake") { VISTA.on = false; GAME.state = "play"; GAME.tod = 6.3; STORY.wake().then(() => {}); this.snapCam(); return; }
     try { localStorage.removeItem("tsuzura.save.v1"); } catch (e) { }
     await UI.fade(1, 1.4); VISTA.on = false; AU.music("none", { fade: 1 });
@@ -5836,7 +6006,7 @@ const APP = {
     RD.t = GAME.t;
     RD.box = damp(RD.box, GAME.boxT || 0, 4, dt);
     const env = RD.env = GAME.env();
-    if (VISTA.on || GAME.state === "title") { if (run) VISTA.draw(dt); GL.canvasSub(VISTA.tex, VISTA.cv, true); RD.renderOverlay(VISTA.tex); UI.update(dt); this.audio(dt, true); return; }
+    if (VISTA.on || GAME.state === "title") { if (run) VISTA.draw(dt); GL.canvasSub(VISTA.tex, VISTA.cv, true); RD.renderOverlay(VISTA.tex, VISTA.night > .5 ? .55 : .86); UI.update(dt); this.audio(dt, true); return; }
     if (GAME.state !== "play" || !PL.e) { RD.renderOverlay(VISTA.tex || ATLAS.tAlb); return; }
     if (run) {
       STORY.update(dt); PL.update(dt); EN.update(dt); FX.update(dt); FX.ambient(dt, env); NEARMAP.update(dt);
@@ -5875,11 +6045,11 @@ const APP = {
     this.paused = !this.paused; AU.sfx(this.paused ? "ui_open" : "ui_close");
     if (this.paused) {
       const p = document.createElement("div"); p.id = "pause";
-      p.innerHTML = `<div class="pn"><h3>小憩</h3><p><kbd>WASD</kbd> 走 · <kbd>Shift</kbd> 奔跑 · <kbd>E</kbd> 背起 / 调查 / 献给祠</p><p><kbd>Q</kbd> 放下最上面的东西 · <kbd>J</kbd> 取：把重量吸进尾巴 · <kbd>K</kbd> 予：把重量交给别的东西</p>
-        <p>尾巴里装满六份重量，会变成石头。背得太高、跑得太快，背上的东西会掉。</p><p>第 ${GAME.day} 日 · ${String(Math.floor(GAME.tod)).padStart(2, "0")}:${String(Math.floor((GAME.tod % 1) * 60)).padStart(2, "0")} · 供物 ${kanjiNum(GAME.count)}</p>
-        <button id="pRes">继续</button><button id="pSave">记下</button></div>`;
+      p.innerHTML = `<div class="pn"><h3>\u5c0f\u61a9</h3><p><kbd>WASD</kbd> \u8d70 \u00b7 <kbd>Shift</kbd> \u5954\u8dd1 \u00b7 <kbd>E</kbd> \u80cc\u8d77 / \u8c03\u67e5 / \u732e\u7ed9\u7960</p><p><kbd>Q</kbd> \u653e\u4e0b\u6700\u4e0a\u9762\u7684\u4e1c\u897f \u00b7 <kbd>J</kbd> \u53d6\uff1a\u628a\u91cd\u91cf\u5438\u8fdb\u5c3e\u5df4 \u00b7 <kbd>K</kbd> \u4e88\uff1a\u628a\u91cd\u91cf\u4ea4\u7ed9\u522b\u7684\u4e1c\u897f</p>
+        <p>\u5c3e\u5df4\u91cc\u88c5\u6ee1\u516d\u4efd\u91cd\u91cf\uff0c\u4f1a\u53d8\u6210\u77f3\u5934\u3002\u80cc\u5f97\u592a\u9ad8\u3001\u8dd1\u5f97\u592a\u5feb\uff0c\u80cc\u4e0a\u7684\u4e1c\u897f\u4f1a\u6389\u3002</p><p>\u7b2c ${GAME.day} \u65e5 \u00b7 ${String(Math.floor(GAME.tod)).padStart(2, "0")}:${String(Math.floor((GAME.tod % 1) * 60)).padStart(2, "0")} \u00b7 \u4f9b\u7269 ${kanjiNum(GAME.count)}</p>
+        <button id="pRes">\u7ee7\u7eed</button><button id="pSave">\u8bb0\u4e0b</button></div>`;
       document.getElementById("ui").appendChild(p);
-      p.querySelector("#pRes").onclick = () => this.togglePause(); p.querySelector("#pSave").onclick = () => { GAME.save(); UI.toast("记下了。"); };
+      p.querySelector("#pRes").onclick = () => this.togglePause(); p.querySelector("#pSave").onclick = () => { GAME.save(); UI.toast("\u8bb0\u4e0b\u4e86\u3002"); };
     } else { const p = document.getElementById("pause"); p && p.remove(); }
   },
 };

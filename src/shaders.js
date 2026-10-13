@@ -318,7 +318,7 @@ void main(){
   vec3 mistC=uMist.rgb*(.62+.38*vis);
   if(uShafts>0.){ float acc=0.; float j=bayer4(f);
     for(int k=0;k<12;k++){ float t=(float(k)+j)*6.; vec3 S=P+VCAM*t; float sv=shadowAt(S,vec3(0.,0.,1.)); acc+=sv*clamp(1.-(S.z-gz)/80.,0.,1.); }
-    col+=uSunCol*vec3(1.,.9,.72)*floor(acc/12.*6.+bayer4(f)*.8)/6.*uShafts*(.06+uMist.a*.3); }
+    col+=uSunCol*vec3(1.,.9,.72)*floor(acc/12.*5.+bayer4(f)*.7)/5.*uShafts*uMist.a*.22; }
   col=mix(col,mistC,clamp(mist,0.,.8));
   // ---- the Far: colour drains toward pale distance-blue
   float far=1.-near;

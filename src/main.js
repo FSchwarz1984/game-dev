@@ -45,7 +45,7 @@ const APP = {
   async start(which) {
     this.titleKeys = null;
     if (which === "cont") { const s = GAME.load(); if (s) { await UI.fade(1, 1); VISTA.on = false; WORLDSETUP.afterFar(); GAME.applySave(s); GAME.state = "play"; STORY.stage = "free"; GAME.noSave = false; UI.showHud(true); UI.countPop(GAME.count, null, true); AU.music("explore", { fade: 4 }); this.snapCam(); await UI.fade(0, 1.6); return; } }
-    if (which === "free") { VISTA.on = false; WORLDSETUP.afterFar(); const [sx, sy] = LM.shrine; PL.init(+(QS.x || sx + 20), +(QS.y || sy + 40)); GAME.state = "play"; STORY.stage = "free"; GAME.flags.knowsWeight = true; GAME.tod = +(QS.t || 9); UI.showHud(true); UI.countPop(GAME.count, null, true); this.snapCam(); UI.fade(0, .3); return; }
+    if (which === "free") { VISTA.on = false; WORLDSETUP.afterFar(); const [sx, sy] = LM.shrine; PL.init(+(QS.x || sx + 20), +(QS.y || sy + 40)); GAME.state = "play"; STORY.stage = "free"; GAME.flags.knowsWeight = true; GAME.flags.knowsLeaf = true; GAME.tod = +(QS.t || 9); UI.showHud(true); UI.countPop(GAME.count, null, true); this.snapCam(); UI.fade(0, .3); return; }
     if (which === "wake") { VISTA.on = false; GAME.state = "play"; GAME.tod = 6.3; STORY.wake().then(() => {}); this.snapCam(); return; }
     try { localStorage.removeItem("tsuzura.save.v1"); } catch (e) { }
     await UI.fade(1, 1.4); VISTA.on = false; AU.music("none", { fade: 1 });
@@ -73,7 +73,7 @@ const APP = {
     RD.t = GAME.t;
     RD.box = damp(RD.box, GAME.boxT || 0, 4, dt);
     const env = RD.env = GAME.env();
-    if (VISTA.on || GAME.state === "title") { if (run) VISTA.draw(dt); GL.canvasSub(VISTA.tex, VISTA.cv, true); RD.renderOverlay(VISTA.tex); UI.update(dt); this.audio(dt, true); return; }
+    if (VISTA.on || GAME.state === "title") { if (run) VISTA.draw(dt); GL.canvasSub(VISTA.tex, VISTA.cv, true); RD.renderOverlay(VISTA.tex, VISTA.night > .5 ? .55 : .86); UI.update(dt); this.audio(dt, true); return; }
     if (GAME.state !== "play" || !PL.e) { RD.renderOverlay(VISTA.tex || ATLAS.tAlb); return; }
     if (run) {
       STORY.update(dt); PL.update(dt); EN.update(dt); FX.update(dt); FX.ambient(dt, env); NEARMAP.update(dt);

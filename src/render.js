@@ -179,11 +179,11 @@ const RD = {
     D.dirty = true;
     return { x: sx, y: sy, w: s.w, h: s.h, u0: sx / D.w, v0: sy / D.h, u1: (sx + s.w) / D.w, v1: (sy + s.h) / D.h, ax, ay, sway: 0, shadow: 1 };
   },
-  renderOverlay(tex) {
+  renderOverlay(tex, thr = .55) {
     const gl = GL.gl, P = this.P, E = this.env, c = this.cam;
     gl.disable(gl.DEPTH_TEST); gl.disable(gl.BLEND);
     GL.bind(this.f.postN); P.copy.use().t("uTex", tex); GL.tri();
-    GL.bind(this.f.b1); P.bright.use().t("uTex", this.f.post.tex[0]).f("uTx", 1 / this.W, 1 / this.H).f("uThr", .55); GL.tri();
+    GL.bind(this.f.b1); P.bright.use().t("uTex", this.f.post.tex[0]).f("uTx", 1 / this.W, 1 / this.H).f("uThr", thr); GL.tri();
     for (let k = 0; k < 2; k++) { GL.bind(this.f.b2); P.blur.use().t("uTex", this.f.b1.tex[0]).f("uDir", 1 / this.f.b1.w, 0); GL.tri(); GL.bind(this.f.b1); P.blur.use().t("uTex", this.f.b2.tex[0]).f("uDir", 0, 1 / this.f.b1.h); GL.tri(); }
     GL.bind(null);
     P.comp.use().t("uLowT", this.f.post.tex[0]).t("uBloom", this.f.b1.tex[0]).f("uLowS", this.W, this.H).f("uOff", 0, 0).f("uScale", this.scale).f("uScr", this.scrW, this.scrH)
