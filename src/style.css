@@ -1,0 +1,5 @@
+:root{ --ink:#0c0b10; --paper:#efe6d2; --dim:#8c8473; color-scheme:dark; }
+html,body{height:100%;margin:0;background:var(--ink);color:var(--paper);overflow:hidden;overscroll-behavior:none}
+#app{position:fixed;inset:0;background:var(--ink)}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block}
+#ui{position:absolute;inset:0;pointer-events:none}
