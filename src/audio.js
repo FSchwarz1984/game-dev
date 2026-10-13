@@ -476,7 +476,7 @@ const MAT = { // [filter Hz, Q, decay s, level, filter type]
 const bufTo = (v, key, t, rate, lvl, out) => { const s = v.b(typeof key === "string" ? snd(key) : key, t, rate), g = v.g(lvl); chain(s, g, out); return s; };
 function thump(v, out, t, f0, f1, lvl, d) {
   const x = v.o("sine", f0, t, t + d + 0.1), g = v.g(0);
-  x.frequency.exponentialRampToValueAtTime(f1, t + d * 0.8); perc(g.gain, t, 0.004, lvl, d); chain(x, g, out);
+  x.frequency.setValueAtTime(f0, t); x.frequency.exponentialRampToValueAtTime(f1, t + d * 0.8); perc(g.gain, t, 0.004, lvl, d); chain(x, g, out);
 }
 function noiseHit(v, out, kind, t, type, f, q, lvl, d) {
   const nz = v.n(kind, t, t + d + 0.08), fl = v.f(type, f, q), g = v.g(0);
@@ -567,7 +567,7 @@ SFX.take = (o, sp, t) => play("sfx", (v) => { // a muted gong pulled inward
 });
 function airSweep(v, out, t, f0, f1, dur, lvl, peakAt = 0.6) {
   const nz = v.n("pink", t, t + dur + 0.1), bp = v.f("bandpass", f0, 1.3), g = v.g(0);
-  bp.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.8);
+  bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.8);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + dur * peakAt); g.gain.linearRampToValueAtTime(0, t + dur);
   chain(nz, bp, g, out);
 }
@@ -1186,7 +1186,7 @@ function line(ev, inst, b0, notes, o = {}) {
     else if (m0 > 0 && !(o.drop && chance(o.drop))) {
       const m = (o.ds ? dshift(m0, o.ds) : m0) + (o.tr || 0);
       const e = { b, i: inst, m, d: d * (o.leg || 0.92), v: (o.v || 0.6) * rnd(0.9, 1.05) };
-      if (o.bend && d0 >= 1 && chance(o.bend)) e.o = { bend: 2 };
+      if (o.bend && d0 >= 1 && chance(o.bend)) e.o = { bend: dshift(m, 1) - m }; // press up to the next yo note
       ev.push(e);
       if (o.grace && d0 >= 1 && b - b0 >= 0.25 && chance(o.grace)) ev.push({ b: b - 0.13, i: inst, m: dshift(m, 1), d: 0.12, v: e.v * 0.55 });
     }
@@ -1691,7 +1691,7 @@ function init() {
     const C = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
     if (!C) return false;
     try { ctx = new C({ latencyHint: "interactive" }); } catch (e) { ctx = new C(); }
-    SR = ctx.sampleRate;
+    SR = ctx.sampleRate; BSR = SR;
     NZ.white = makeNoise(2, "white"); NZ.pink = makeNoise(2, "pink"); NZ.brown = makeNoise(2, "brown");
     FLW = mkWave([1, 0.22, 0.09, 0.04, 0.015]); FIFEW = mkWave([1, 0.32, 0.16, 0.08, 0.04, 0.02]);
     SATCURVE = new Float32Array(1024);

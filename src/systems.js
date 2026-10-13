@@ -82,6 +82,7 @@ const GAME = {
     if (!this.flags.knowsWeight) this.flags.knowsWeight = true;
   },
   onFarTouch(t) {
+    if (this.t - (this.farSfxT || -9) > 2.2) { this.farSfxT = this.t; AU.sfx("far_touch", { x: PL.e.x, y: PL.e.y }); }
     if (t > .9 && !this.flags.farTouched) { this.flags.farTouched = true; STORY.event("farTouch"); }
     else if (t > 2.4 && Math.random() < .004) STORY.bark("farAgain");
   },

@@ -3077,7 +3077,7 @@ const MAT = { // [filter Hz, Q, decay s, level, filter type]
 const bufTo = (v, key, t, rate, lvl, out) => { const s = v.b(typeof key === "string" ? snd(key) : key, t, rate), g = v.g(lvl); chain(s, g, out); return s; };
 function thump(v, out, t, f0, f1, lvl, d) {
   const x = v.o("sine", f0, t, t + d + 0.1), g = v.g(0);
-  x.frequency.exponentialRampToValueAtTime(f1, t + d * 0.8); perc(g.gain, t, 0.004, lvl, d); chain(x, g, out);
+  x.frequency.setValueAtTime(f0, t); x.frequency.exponentialRampToValueAtTime(f1, t + d * 0.8); perc(g.gain, t, 0.004, lvl, d); chain(x, g, out);
 }
 function noiseHit(v, out, kind, t, type, f, q, lvl, d) {
   const nz = v.n(kind, t, t + d + 0.08), fl = v.f(type, f, q), g = v.g(0);
@@ -3168,7 +3168,7 @@ SFX.take = (o, sp, t) => play("sfx", (v) => { // a muted gong pulled inward
 });
 function airSweep(v, out, t, f0, f1, dur, lvl, peakAt = 0.6) {
   const nz = v.n("pink", t, t + dur + 0.1), bp = v.f("bandpass", f0, 1.3), g = v.g(0);
-  bp.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.8);
+  bp.frequency.setValueAtTime(f0, t); bp.frequency.exponentialRampToValueAtTime(f1, t + dur * 0.8);
   g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(lvl, t + dur * peakAt); g.gain.linearRampToValueAtTime(0, t + dur);
   chain(nz, bp, g, out);
 }
@@ -3787,7 +3787,7 @@ function line(ev, inst, b0, notes, o = {}) {
     else if (m0 > 0 && !(o.drop && chance(o.drop))) {
       const m = (o.ds ? dshift(m0, o.ds) : m0) + (o.tr || 0);
       const e = { b, i: inst, m, d: d * (o.leg || 0.92), v: (o.v || 0.6) * rnd(0.9, 1.05) };
-      if (o.bend && d0 >= 1 && chance(o.bend)) e.o = { bend: 2 };
+      if (o.bend && d0 >= 1 && chance(o.bend)) e.o = { bend: dshift(m, 1) - m }; // press up to the next yo note
       ev.push(e);
       if (o.grace && d0 >= 1 && b - b0 >= 0.25 && chance(o.grace)) ev.push({ b: b - 0.13, i: inst, m: dshift(m, 1), d: 0.12, v: e.v * 0.55 });
     }
@@ -4292,7 +4292,7 @@ function init() {
     const C = typeof window !== "undefined" && (window.AudioContext || window.webkitAudioContext);
     if (!C) return false;
     try { ctx = new C({ latencyHint: "interactive" }); } catch (e) { ctx = new C(); }
-    SR = ctx.sampleRate;
+    SR = ctx.sampleRate; BSR = SR;
     NZ.white = makeNoise(2, "white"); NZ.pink = makeNoise(2, "pink"); NZ.brown = makeNoise(2, "brown");
     FLW = mkWave([1, 0.22, 0.09, 0.04, 0.015]); FIFEW = mkWave([1, 0.32, 0.16, 0.08, 0.04, 0.02]);
     SATCURVE = new Float32Array(1024);
@@ -5008,6 +5008,7 @@ const GAME = {
     if (!this.flags.knowsWeight) this.flags.knowsWeight = true;
   },
   onFarTouch(t) {
+    if (this.t - (this.farSfxT || -9) > 2.2) { this.farSfxT = this.t; AU.sfx("far_touch", { x: PL.e.x, y: PL.e.y }); }
     if (t > .9 && !this.flags.farTouched) { this.flags.farTouched = true; STORY.event("farTouch"); }
     else if (t > 2.4 && Math.random() < .004) STORY.bark("farAgain");
   },
@@ -5248,7 +5249,7 @@ const UI = {
   showHud(on) { this.el.hud.style.opacity = on ? 1 : 0; this.el.gauges.style.opacity = on ? 1 : 0; this.hudOn = on; },
   countPop(n, art, first) {
     const c = this.el.count; c.querySelector("b").textContent = kanjiNum(n); c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
-    if (!first) this.bark(kanjiNum(n) + "\u3002", { dur: 1.4 });
+    if (!first) { this.bark(kanjiNum(n) + "\u3002", { dur: 1.4 }); AU.sfx("count", { n }); }
   },
   note(title, text, dur = 6) { this.el.noteH.textContent = title; this.el.noteT.textContent = text; this.el.note.classList.add("on"); clearTimeout(this.noteTO); this.noteTO = setTimeout(() => this.el.note.classList.remove("on"), dur * 1000); },
   siteCard(force) {
@@ -5379,7 +5380,7 @@ const STORY = {
     GAME.extraMist = .35;
     CINE.cam(P.x, P.y - 6, P.z, 99);
     await CINE.wait(1.5);
-    AU.music("none"); await UI.fade(0, 4);
+    AU.music("none"); AU.sfx("heartbeat"); after(1.1, () => AU.sfx("heartbeat")); await UI.fade(0, 4);
     await CINE.say(T("dazed", "\u2026\u2026"), T("dazed", "\u2026\u2026\u91cd\u3002"), T("angry", "\u597d\u91cd\u3002\u54ea\u4e2a\u6df7\u8d26\u628a\u67f1\u5b50\u6254\u5728\u672c\u5ea7\u8eab\u4e0a\u4e86\u3002"));
     GAME.cine = false; GAME.tutorial = true; GAME.flags.knowsWeight = true; this.tut = "take";
     UI.toast("\u628a\u538b\u5728\u8eab\u4e0a\u7684\u91cd\u91cf\u62ff\u8fc7\u6765\u2014\u2014" + IN.glyph("take") + "  \u53d6", 6);
@@ -5594,7 +5595,7 @@ const PROLOGUE = {
       // the front: a curtain of pale motes and scattered offerings
       for (let i = 0; i < 18; i++) FX.spawn("farmote", sx + (Math.random() - .5) * 520, this.wavePos + (Math.random() - .5) * 10, WORLD.heightAt(sx, this.wavePos) + Math.random() * 60, { life: 1.6, c: [.82, .88, 1], a: .9, vz: 30 + Math.random() * 40, vy: -40, add: true, fade: .6 });
       if (this.wavePos < sy + 20) for (const o of this.offs) if (!o.gone && Math.random() < .06) { o.gone = true; FX.spawn("leaf", o.x, o.y, WD.shrineZ + 10, { life: 3, c: [.95, .85, .6], vx: (Math.random() - .5) * 200, vy: -80 - Math.random() * 100, vz: 120, g: 120, size: 2, fade: .5 }); }
-      if (this.wavePos < sy && SITE.stage === 4) { SITE.stage = 0; for (const g of GHOSTS.list) if (g.tag === "hokora" || g.tag === "camphor") g.hidden = false; AU.sfx("thud"); RD.cam.shake = 6; PL.e.state = "pinned"; }
+      if (this.wavePos < sy && SITE.stage === 4) { SITE.stage = 0; for (const g of GHOSTS.list) if (g.tag === "hokora" || g.tag === "camphor") g.hidden = false; AU.sfx("fall", { size: 1 }); AU.sfx("bell_big"); RD.cam.shake = 6; PL.e.state = "pinned"; }
       RD.farWave = this.wavePos;
       return k >= 1;
     });

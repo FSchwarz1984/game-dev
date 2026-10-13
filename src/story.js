@@ -91,7 +91,7 @@ const STORY = {
     GAME.extraMist = .35;
     CINE.cam(P.x, P.y - 6, P.z, 99);
     await CINE.wait(1.5);
-    AU.music("none"); await UI.fade(0, 4);
+    AU.music("none"); AU.sfx("heartbeat"); after(1.1, () => AU.sfx("heartbeat")); await UI.fade(0, 4);
     await CINE.say(T("dazed", "……"), T("dazed", "……重。"), T("angry", "好重。哪个混账把柱子扔在本座身上了。"));
     GAME.cine = false; GAME.tutorial = true; GAME.flags.knowsWeight = true; this.tut = "take";
     UI.toast("把压在身上的重量拿过来——" + IN.glyph("take") + "  取", 6);
@@ -306,7 +306,7 @@ const PROLOGUE = {
       // the front: a curtain of pale motes and scattered offerings
       for (let i = 0; i < 18; i++) FX.spawn("farmote", sx + (Math.random() - .5) * 520, this.wavePos + (Math.random() - .5) * 10, WORLD.heightAt(sx, this.wavePos) + Math.random() * 60, { life: 1.6, c: [.82, .88, 1], a: .9, vz: 30 + Math.random() * 40, vy: -40, add: true, fade: .6 });
       if (this.wavePos < sy + 20) for (const o of this.offs) if (!o.gone && Math.random() < .06) { o.gone = true; FX.spawn("leaf", o.x, o.y, WD.shrineZ + 10, { life: 3, c: [.95, .85, .6], vx: (Math.random() - .5) * 200, vy: -80 - Math.random() * 100, vz: 120, g: 120, size: 2, fade: .5 }); }
-      if (this.wavePos < sy && SITE.stage === 4) { SITE.stage = 0; for (const g of GHOSTS.list) if (g.tag === "hokora" || g.tag === "camphor") g.hidden = false; AU.sfx("thud"); RD.cam.shake = 6; PL.e.state = "pinned"; }
+      if (this.wavePos < sy && SITE.stage === 4) { SITE.stage = 0; for (const g of GHOSTS.list) if (g.tag === "hokora" || g.tag === "camphor") g.hidden = false; AU.sfx("fall", { size: 1 }); AU.sfx("bell_big"); RD.cam.shake = 6; PL.e.state = "pinned"; }
       RD.farWave = this.wavePos;
       return k >= 1;
     });

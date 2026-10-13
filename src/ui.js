@@ -209,7 +209,7 @@ const UI = {
   showHud(on) { this.el.hud.style.opacity = on ? 1 : 0; this.el.gauges.style.opacity = on ? 1 : 0; this.hudOn = on; },
   countPop(n, art, first) {
     const c = this.el.count; c.querySelector("b").textContent = kanjiNum(n); c.classList.remove("pop"); void c.offsetWidth; c.classList.add("pop");
-    if (!first) this.bark(kanjiNum(n) + "。", { dur: 1.4 });
+    if (!first) { this.bark(kanjiNum(n) + "。", { dur: 1.4 }); AU.sfx("count", { n }); }
   },
   note(title, text, dur = 6) { this.el.noteH.textContent = title; this.el.noteT.textContent = text; this.el.note.classList.add("on"); clearTimeout(this.noteTO); this.noteTO = setTimeout(() => this.el.note.classList.remove("on"), dur * 1000); },
   siteCard(force) {
