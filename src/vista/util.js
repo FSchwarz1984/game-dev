@@ -112,7 +112,7 @@ export function glowSprite(r, rgb, steps = 6, power = 1.6) {
     let a = Math.pow(clamp(1 - d, 0, 1), power);
     a = Math.round(a * steps) / steps;
     if (a <= 0) continue;
-    U[y * n + x] = pack(scale3(rgb, a), 255);
+    U[y * n + x] = pack(rgb, Math.round(a * 255));
   }
   g.putImageData(id, 0, 0);
   glowCache.set(key, c);
@@ -156,8 +156,9 @@ export class IndexLayer {
         const a = src[i - 1], b = src[i + 1], c = src[i - w], d = src[i + w];
         if (a === v || b === v || c === v || d === v) continue;
         // most common neighbour (ties: left/right first: horizontal runs read cleaner)
-        let best = a, bn = 0;
-        for (const q of [a, b, c, d]) { const n = (q === a) + (q === b) + (q === c) + (q === d); if (n > bn) { bn = n; best = q; } }
+        let best = a, bn = (a === b) + (a === c) + (a === d);
+        const nb = (b === c) + (b === d); if (nb > bn) { bn = nb; best = b; }
+        const nc = (c === d); if (nc > bn) { bn = nc; best = c; }
         if (best && iMat(best) === iMat(v)) this.idx[i] = best;
       }
     }

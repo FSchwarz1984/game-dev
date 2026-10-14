@@ -96,7 +96,8 @@ export function shade(mat, i, env, hazeCol) {
   } else if (mat.rim) {
     const sky = scale3(skyAt(env, .35, .5), 1 / 255);
     const base = mul3(mat.albedo, add3(scale3(env.amb, .6), scale3(env.sun, .15)));
-    c = mix3(base, add3(mul3(sky, [1.05, 1.1, 1.2]), scale3(env.sun, .25 * (1 - env.night))), (mat.rimK ?? .55) * (s + 1) / 8);
+    const rimCol = add3(scale3(mul3(sky, [1.05, 1.1, 1.2]), 1 - (mat.warmRim ?? 0) * (1 - env.night) * .6), scale3(env.sun, (.25 + (mat.warmRim ?? 0) * .5) * (1 - env.night)));
+    c = mix3(base, rimCol, (mat.rimK ?? .55) * (s + 1) / 8);
   } else {
     const direct = SUNLV[s], skyv = SKYLV[k];
     const light = add3(add3(scale3(env.amb, skyv * (mat.ambK ?? 1)), scale3(env.sun, direct * (mat.sunK ?? 1))), scale3(env.bounce, (1 - skyv) * .6));
@@ -131,13 +132,12 @@ export function palette(mats, env, opts = {}) {
 // distance. Input and output 0..255 (graded colour).
 export function farTransform(env) {
   const n = env.night;
-  const tint = mix3([206, 214, 226], [104, 118, 150], n);   // the distance colour (day: pale sky; night: moonlit haze)
-  const keep = lerp(.32, .26, n);                           // how much of the original structure survives
+  const tint = mix3([196, 204, 220], [70, 80, 110], n);     // the colour of distance (night: moonlit haze)
+  const keep = lerp(0.5, 0.58, n);                          // how much of the original structure survives
   return c => {
     const l = lum(c);
-    const grey = [l * .88, l * .95, l * 1.12];
-    const d = mix3(grey, c, .18);
-    return mix3(tint, add3(scale3(d, 1), scale3(tint, .25)), keep);
+    const d = mix3([l * 0.9, l * 0.96, l * 1.12], c, 0.12);  // nearly grey
+    return mix3(tint, add3(scale3(d, 1.15), scale3(tint, 0.3)), keep);
   };
 }
 

@@ -131,69 +131,60 @@ export const PX = {
 };
 
 /* ---------------------------------------------------------------------
-   Foliage — sphere-lit sub-clumps with leaf cells.
-   blobs: [{x, y, r, z}] in sprite px; z = how far the blob's centre
-   stands toward the viewer (bigger = in front). Each pixel takes the
-   blob whose sphere surface is nearest the viewer, lit from LIGHT, then
-   broken into leaf cells (a hashed jittered grid of tiny domes) whose
-   borders read as the gaps between leaves.
-   o: {ramp, cell (px), mat, seed, lightK, ao (darkening where a blob
-   is overlapped), rim (bright top-left rim), bulgeK, tone (offset),
-   holes (0..1 chance of sky gaps near the edge), under (dark underside
-   amount), only (fn(x,y) => bool)}
+   Foliage masses. A mass is one clump of leaves lit as a single form
+   (an ellipsoid, optionally drooping at the ends); leaf cells (a hashed
+   jittered grid of small domes) only add texture, cracks between leaves
+   and a scalloped, leaf-shaped silhouette. Lighting the mass rather than
+   every little blob is what separates painted foliage from a pile of
+   lit balls (the "voxel-ball trees" the owner rejected).
+   m: {x, y, rx, ry, z, droop (ends hang by droop*ry*u^2), tilt}
+   o: {ramp, cell, seed, mat, tone, under (shade the lower part), rim,
+       spread (dither), bulgeK, light, cellK (texture strength), only}
    --------------------------------------------------------------------- */
-export function foliage(s, blobs, o = {}) {
-  const rr = o.ramp, n = rr.length, cell = o.cell || 3.2, seed = o.seed || 1, mat = o.mat ?? MAT.LEAF;
-  const L = o.light || LIGHT, bulgeK = o.bulgeK ?? 1, tone = o.tone || 0, under = o.under ?? 0.18;
-  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
-  for (const b of blobs) { x0 = Math.min(x0, b.x - b.r - 2); x1 = Math.max(x1, b.x + b.r + 2); y0 = Math.min(y0, b.y - b.r - 2); y1 = Math.max(y1, b.y + b.r + 2); }
-  x0 = Math.max(0, Math.floor(x0)); y0 = Math.max(0, Math.floor(y0)); x1 = Math.min(s.w - 1, Math.ceil(x1)); y1 = Math.min(s.h - 1, Math.ceil(y1));
-  // bucket blobs on a coarse grid so each pixel only tests nearby blobs
-  const G = 16, gw = Math.ceil((x1 - x0 + 1) / G) + 1, gh = Math.ceil((y1 - y0 + 1) / G) + 1, grid = Array.from({ length: gw * gh }, () => []);
-  blobs.forEach((b, bi) => {
-    const gx0 = Math.max(0, Math.floor((b.x - b.r - x0) / G)), gx1 = Math.min(gw - 1, Math.floor((b.x + b.r - x0) / G));
-    const gy0 = Math.max(0, Math.floor((b.y - b.r - y0) / G)), gy1 = Math.min(gh - 1, Math.floor((b.y + b.r - y0) / G));
-    for (let gy = gy0; gy <= gy1; gy++) for (let gx = gx0; gx <= gx1; gx++) grid[gy * gw + gx].push(bi);
-  });
+export function mass(s, m, o = {}) {
+  const rr = o.ramp, n = rr.length, cell = o.cell || 3.2, seed = (o.seed || 1) * 7 + (m.seed || 0), mat = o.mat ?? MAT.LEAF;
+  const L = o.light || LIGHT, tone = (o.tone || 0) + (m.tone || 0), under = o.under ?? 0.35, cellK = o.cellK ?? 0.38, bulgeK = o.bulgeK ?? 1;
+  const droop = m.droop || 0, tilt = m.tilt || 0, ct = Math.cos(tilt), st = Math.sin(tilt);
+  const x0 = Math.max(0, Math.floor(m.x - m.rx - cell * 2)), x1 = Math.min(s.w - 1, Math.ceil(m.x + m.rx + cell * 2));
+  const y0 = Math.max(0, Math.floor(m.y - m.ry - cell * 2)), y1 = Math.min(s.h - 1, Math.ceil(m.y + m.ry + Math.abs(droop) * m.ry + cell * 2));
   if (!s.N) s.N = new Float32Array(s.w * s.h * 3);
+  const local = (px, py) => { const dx = px - m.x, dy = py - m.y; const ux = (dx * ct + dy * st) / m.rx; let vy = (-dx * st + dy * ct); vy = (vy - droop * m.ry * ux * ux) / m.ry; return [ux, vy]; };
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     if (o.only && !o.only(x, y)) continue;
-    const list = grid[Math.floor((y - y0) / G) * gw + Math.floor((x - x0) / G)];
-    let best = -1, bz = -1e9, second = -1e9, bdx = 0, bdy = 0, bh = 0;
-    for (const bi of list) {
-      const b = blobs[bi]; const dx = (x + 0.5 - b.x) / b.r, dy = (y + 0.5 - b.y) / b.r; const d2 = dx * dx + dy * dy;
-      // ragged rim: leaf-sized bites out of the silhouette
-      const edge = 1 - (hash2(Math.floor((x + 0.5) / cell * 1.3), Math.floor((y + 0.5) / cell * 1.3), seed + bi) < 0.45 ? 0.11 : 0);
-      if (d2 > edge * edge) continue;
-      const hgt = Math.sqrt(Math.max(0, 1 - d2)); const zz = b.z + hgt * b.r;
-      if (zz > bz) { second = bz; bz = zz; best = bi; bdx = dx; bdy = dy; bh = hgt; } else if (zz > second) second = zz;
-    }
-    if (best < 0) continue;
-    const b = blobs[best];
-    // leaf cell: jittered grid cell nearest to the pixel
-    const gx = (x + 0.5) / cell, gy = (y + 0.5) / (cell * 0.85); const cx = Math.floor(gx), cy = Math.floor(gy);
-    let c1 = 1e9, c2 = 1e9, cid = 0;
+    // nearest leaf cell
+    const gx = (x + 0.5) / cell, gy = (y + 0.5) / (cell * 0.82), cx = Math.floor(gx), cy = Math.floor(gy);
+    let c1 = 1e9, c2 = 1e9, ccx = 0, ccy = 0, cid = 0;
     for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
-      const qx = cx + i, qy = cy + j; const jx = qx + 0.15 + hash2(qx, qy, seed * 7) * 0.7, jy = qy + 0.15 + hash2(qx, qy, seed * 7 + 1) * 0.7;
+      const qx = cx + i, qy = cy + j; const h = hash2(qx, qy, seed);
+      const jx = qx + 0.18 + h * 0.64, jy = qy + 0.18 + hash2(qx, qy, seed + 1) * 0.64;
       const d = (gx - jx) * (gx - jx) + (gy - jy) * (gy - jy);
-      if (d < c1) { c2 = c1; c1 = d; cid = hashi32(qx, qy, seed); } else if (d < c2) c2 = d;
+      if (d < c1) { c2 = c1; c1 = d; ccx = jx * cell; ccy = jy * cell * 0.82; cid = h; } else if (d < c2) c2 = d;
     }
-    const cellH = Math.sqrt(Math.max(0, 1 - c1 * 1.4));
-    const crack = Math.sqrt(c2) - Math.sqrt(c1) < 0.16;
-    // normal: blob sphere tilted by the leaf cell dome
-    let nx = bdx + (gx - (cx + 0.5)) * 0.25, ny = -bdy + 0.1 - (gy - (cy + 0.5)) * 0.25, nz = bh + 0.35 + cellH * 0.3;
+    const [u, v] = local(x + 0.5, y + 0.5); const r2 = u * u + v * v;
+    const [cu, cv] = local(ccx, ccy); const rc2 = cu * cu + cv * cv;
+    // silhouette: interior pixels, plus the leaf-shaped cells whose centre lies inside
+    if (r2 > 1) { if (rc2 > 0.98 || c1 > 0.28) continue; }
+    else if (r2 > 0.8 && rc2 > 1.06) continue;
+    const dome = Math.sqrt(Math.max(0, 1 - Math.min(1, r2)));
+    const cellH = Math.sqrt(Math.max(0, 1 - c1 * 2.2));
+    // normal: the mass ellipsoid (blended toward a shared group form, so a crown lobe reads as one volume), tilted by the leaf cell
+    let nx = u * 0.9, ny = -v * 0.9 + 0.12, nz = dome + 0.25;
+    if (o.group) { const G = o.group, gu = (x + 0.5 - G.x) / G.rx, gv = (y + 0.5 - G.y) / G.ry, gd = Math.sqrt(Math.max(0, 1 - Math.min(1, gu * gu + gv * gv))), k = G.k ?? 0.6;
+      nx = nx * (1 - k) + gu * 0.9 * k; ny = ny * (1 - k) + (-gv * 0.9 + 0.12) * k; nz = nz * (1 - k) + (gd + 0.25) * k; }
+    const lx = (x + 0.5 - ccx) / cell, ly = (y + 0.5 - ccy) / cell; nx += lx * cellK; ny -= ly * cellK; nz += cellH * cellK * 0.6;
     const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
-    let lit = nx * L[0] + ny * L[1] + nz * L[2];
-    let t = 0.5 + lit * 0.62 + tone + ((cid & 255) / 255 - 0.5) * 0.16;
-    t -= Math.max(0, bdy) * under;                  // undersides of blobs fall into shade
-    if (second > -1e8 && bz - second < b.r * 0.35) t -= 0.12; // where blobs overlap: occluded crease
-    if (crack) t -= 0.17;
-    if (o.ao && bh < 0.35) t -= (0.35 - bh) * o.ao;
-    const k = PX.ri(clamp(t, 0, 1), n, x, y, 0.55);
-    s.px(x, y, rr[k], { z: bz, b: (b.z + bh * b.r) * bulgeK, m: mat, n: [nx, ny, nz] });
+    const lit = nx * L[0] + ny * L[1] + nz * L[2];
+    let t = (o.base ?? 0.36) + lit * (o.litK ?? 0.5) + tone + (cid - 0.5) * 0.12;
+    if (v > 0.25) t -= (v - 0.25) * under;           // the underside falls into shade
+    if (Math.sqrt(c2) - Math.sqrt(c1) < 0.13) t -= 0.13; // gaps between leaves
+    if (o.rim && r2 > 0.55 && v < -0.2 && u < 0.3) t += o.rim; // sun on the upper rim
+    const k = PX.ri(clamp(t, 0, 1), n, x, y, o.spread ?? 0.35);
+    const z = (m.z || 0) + dome * Math.min(m.rx, m.ry) * (o.zk ?? 0.8) + cellH * 0.8;
+    s.pz(x, y, rr[k], z, { m: mat, b: z * bulgeK, n: [nx, ny, nz] });
   }
 }
-function hashi32(x, y, s) { return Math.floor(hash2(x, y, s) * 4294967295) >>> 0; }
+/** compatibility: a list of round blobs becomes masses */
+export function foliage(s, blobs, o = {}) { for (const b of blobs) mass(s, { x: b.x, y: b.y, rx: b.r, ry: b.r * 0.92, z: b.z }, o); }
 
 /** cluster of blobs on a dome — convenience for crowns and bushes */
 export function domeBlobs(cx, cy, rx, ry, count, rMin, rMax, seed, o = {}) {

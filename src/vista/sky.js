@@ -1,31 +1,25 @@
 // Sky: a banded gradient with dithered seams (painted per time of day), a star field, and cloud
 // puffs (each its own small indexed sprite, so the deck can drift and part).
 
-import { clamp, lerp, smooth, rng, hash2, bayer, mix3, pack, makeCanvas, ctx2d, IndexLayer, I, TAU } from './util.js';
+import { clamp, lerp, smooth, rng, hash2, bayer, mix3, pack, makeCanvas, ctx2d, IndexLayer, I, TAU, fbm } from './util.js';
 import { skyAt, palette } from './tod.js';
 
 // Paint the sky gradient for one time of day. Rows: elevation e = (yh - y) / S; bands every ~5 px
 // with a 2-px ordered-dither seam between them.
 export function paintSky(w, h, yh, S, env, extra) {
+  // a clean gradient: per-row colour quantised to fine steps (no dither speckle), the warm west
+  // side blended in per column band
   const c = makeCanvas(w, h), g = ctx2d(c), id = g.createImageData(w, h), U = new Uint32Array(id.data.buffer);
-  const NB = Math.max(12, Math.round(S / 5)), NU = 10;
-  const cache = new Map();
+  const NU = 24, q = v => Math.round(v / 2) * 2;
   for (let y = 0; y < h; y++) {
     const e = (yh - y) / S;
-    for (let x = 0; x < w; x++) {
-      const d = bayer(x, y) - 0.5;
-      const eb = Math.floor(clamp(e, -0.2, 1.2) * NB + 0.5 + d * 0.42);
-      const ub = Math.floor((x / w) * NU + 0.5 + d * 0.8);
-      const key = eb * 64 + ub;
-      let v = cache.get(key);
-      if (v === undefined) {
-        let col = skyAt(env, eb / NB, ub / NU);
-        if (extra) col = extra(col, eb / NB, ub / NU);
-        v = pack(col);
-        cache.set(key, v);
-      }
-      U[y * w + x] = v;
+    const row = [];
+    for (let k = 0; k <= NU; k++) {
+      let col = skyAt(env, e, k / NU);
+      if (extra) col = extra(col, e, k / NU);
+      row.push(pack([q(col[0]), q(col[1]), q(col[2])]));
     }
+    for (let x = 0; x < w; x++) U[y * w + x] = row[Math.round((x / (w - 1)) * NU)];
   }
   g.putImageData(id, 0, 0);
   return c;
@@ -79,74 +73,86 @@ export function drawTwinklers(g, stars, t, alpha, ox = 0, oy = 0, horizonFade, m
 
 // ---------------------------------------------------------------- clouds
 
-// cloud materials: lit by the sun (sun bits) from the low west, by the sky from above (sky bits)
+// cloud materials: lit by the low sun from the west and from below (sun bits), by the sky (sky bits)
 export const CLOUD_MATS = [];
-CLOUD_MATS[1] = { albedo: [0.86, 0.84, 0.86], ambK: 1.25, sunK: 0.95 };          // body
-CLOUD_MATS[2] = { albedo: [0.92, 0.86, 0.84], ambK: 1.35, sunK: 1.15 };          // sunlit / underlit rim
-CLOUD_MATS[3] = { albedo: [0.7, 0.72, 0.8], ambK: 1.05, sunK: 0.6 };             // shadowed core
+CLOUD_MATS[1] = { albedo: [0.82, 0.8, 0.84], ambK: 1.2, sunK: 0.9 };          // body
+CLOUD_MATS[2] = { albedo: [0.95, 0.88, 0.84], ambK: 1.3, sunK: 1.25 };        // lit rim
+CLOUD_MATS[3] = { albedo: [0.62, 0.64, 0.74], ambK: 1.0, sunK: 0.55 };        // thick, shaded core
 
-// One puff: overlapping lobes on a flattish base, shaded as a soft volume. Light from lx (+1 =
-// from the right) and from below (ly < 0: lit underside, how clouds above a lit plain look).
-export function makePuff(R, wPx, hPx, lx = 1, ly = -0.35) {
-  const pad = 2, w = Math.ceil(wPx) + pad * 2, h = Math.ceil(hPx) + pad * 2;
-  const L = new IndexLayer(w, h);
-  const lobes = [], n = 3 + Math.floor(wPx / 7);
-  for (let i = 0; i < n; i++) {
-    const u = (i + 0.5) / n, r = hPx * (0.35 + 0.4 * Math.sin(u * Math.PI)) * (0.75 + R() * 0.45);
-    lobes.push([pad + u * wPx, pad + hPx - r * 0.9 - R() * hPx * 0.1, r]);
-  }
-  for (let i = 0; i < Math.floor(n / 2); i++) { // a second tier on top
-    const u = 0.25 + R() * 0.5, r = hPx * (0.3 + R() * 0.25);
-    lobes.push([pad + u * wPx, pad + hPx * 0.45 - R() * hPx * 0.2, r]);
-  }
-  const base = pad + hPx;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    let best = -1, nx = 0, ny = 0;
-    for (const [bx, by, br] of lobes) {
-      const dx = x + 0.5 - bx, dy = (y + 0.5 - by) * 1.15, d = 1 - Math.hypot(dx, dy) / br;
-      if (d > best) { best = d; nx = dx / br; ny = dy / br; }
-    }
-    if (best < 0 || y + 0.5 > base + 0.6) continue;
-    if (best < 0.08 && hash2(x, y, 7) < 0.5) continue; // a frayed edge, not a hard disc
-    const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
-    const ld = clamp(nx * lx * 0.8 - ny * ly * 1.2 + nz * 0.25, -1, 1);  // light from side/below
-    const up = clamp(-ny * 0.9 + 0.4, 0, 1);                               // sky light on the tops
-    const flat = smooth(base - 2.5, base, y + 0.5);                        // the flat base, darker
-    let mat = 1, sun = Math.round(clamp(ld * 0.5 + 0.5, 0, 1) * 7), sky = Math.round(up * 3);
-    if (best < 0.22 && ld > 0.25) mat = 2;
-    if (best > 0.55 && ld < 0.1) mat = 3;
-    if (flat > 0.5) { sun = Math.max(0, sun - 2); sky = Math.max(0, sky - 1); }
-    L.idx[y * w + x] = I(mat, sun, sky, 0);
-  }
-  L.despeckle(() => true);
-  return L;
+export function cloudPalette(env, opts) {
+  return palette(CLOUD_MATS, env, opts || {});
 }
 
-export function cloudPalette(env, extraHaze) {
-  return palette(CLOUD_MATS, env, extraHaze ? { haze: extraHaze } : {});
-}
-
-// Build a deck of puffs on a ceiling plane: rows recede toward the horizon (smaller, flatter, closer
-// together). Each puff carries its ceiling position (X, Z) so it can part around a point.
-export function makeDeck(seed, { w, yh, f, height, zNear, zFar, cover = 0.55, xSpread = 1.4 }) {
-  const R = rng(seed), puffs = [];
-  let Z = zNear;
-  while (Z < zFar) {
-    const yRow = yh - f * height / Z;
-    const scale = f / Z;                                    // px per unit at this depth
-    const half = (w * 0.5 * xSpread) / scale;               // lateral extent visible (units)
-    let X = -half + R() * 0.6;
-    while (X < half) {
-      const wu = 0.55 + R() * 0.9;                          // width in units
-      if (R() < cover) {
-        const wPx = Math.max(6, wu * scale), hPx = Math.max(3, wPx * (0.22 + R() * 0.14) * (0.55 + 0.45 * smooth(zFar, zNear, Z)));
-        if (wPx < 160) puffs.push({ X: X + wu / 2, Z, wPx, hPx, layer: makePuff(R, wPx, hPx), seed: R() });
+/**
+ * A deck of clouds on a ceiling at height Hc above the camera, seen in perspective: banks of
+ * stratocumulus, big overhead, small and flat toward the horizon. The density is computed once;
+ * the deck is re-rendered (indices -> palette) only when the hole or the time of day changes.
+ */
+export class CloudDeck {
+  constructor({ w, h, cx, yh, f, Hc, seed, cover = 0.5, bottom }) {
+    this.o = { w, h, cx, yh, f, Hc, seed };
+    const yb = bottom ?? yh - 10;
+    const D = new Float32Array(w * h), PX = new Float32Array(w * h), PZ = new Float32Array(w * h);
+    for (let y = 0; y < Math.min(h, yb); y++) {
+      const Z = f * Hc / Math.max(1, yh - y);
+      const fade = smooth(yb, yb - 26, y);         // thin out toward the horizon
+      for (let x = 0; x < w; x++) {
+        const X = (x + 0.5 - cx) * Z / f;
+        // banks elongated across the view; detail octaves dropped with distance (no speckle)
+        const oct = Z < 14 ? 4 : Z < 30 ? 3 : 2;
+        let n = fbm(X * 0.16 + 11, Z * 0.34, oct, seed);
+        n += 0.22 * (vnoiseLite(X * 0.05, Z * 0.09, seed + 7) - 0.5);
+        const i = y * w + x;
+        D[i] = (n - (1 - cover) * 0.72 - 0.22) * 4 * fade;
+        PX[i] = X; PZ[i] = Z;
       }
-      X += wu * (0.75 + R() * 0.6);
     }
-    Z *= 1.16 + R() * 0.08;
+    this.D = D; this.PX = PX; this.PZ = PZ; this.yb = yb;
+    this.layer = new IndexLayer(w, h);
+    this.key = null;
+    this.canvas = makeCanvas(w, h);
+    this.g = ctx2d(this.canvas);
   }
-  // far to near so near puffs overlap far ones
-  puffs.sort((a, b) => b.Z - a.Z);
-  return puffs;
+  // hole: {X, Z, r} in the deck plane (r = 0: closed). light: [lx, ly] screen direction toward the light
+  render(hole, key, pal, light = [0.8, 0.6]) {
+    const k = key + '|' + (hole ? hole.r.toFixed(2) : '0');
+    if (k === this.key) return this.canvas;
+    this.key = k;
+    const { w, h } = this.o, D = this.D, idx = this.layer.idx;
+    idx.fill(0);
+    const val = new Float32Array(w * this.yb);
+    for (let i = 0; i < val.length; i++) {
+      let d = D[i];
+      if (hole && hole.r > 0) {
+        const dx = this.PX[i] - hole.X, dz = (this.PZ[i] - hole.Z) * 0.8, q = Math.hypot(dx, dz) / hole.r;
+        d -= smooth(1.25, 0.55, q) * 1.6;
+        d += smooth(0.9, 1.35, q) * smooth(1.9, 1.35, q) * 0.25 * Math.min(1, hole.r / 3); // clouds bunch up at the hole's rim
+      }
+      val[i] = d;
+    }
+    const [lx, ly] = light;
+    for (let y = 1; y < this.yb - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x, d = val[i];
+      if (d <= 0) continue;
+      const gx = val[i + 1] - val[i - 1], gy = val[i + w] - val[i - w], gl = Math.hypot(gx, gy) || 1;
+      const nx = -gx / gl, ny = -gy / gl;                       // outward
+      const lam = nx * lx + ny * ly;                            // facing the light
+      const edge = d < 0.18;
+      const thick = clamp(d / 1.6, 0, 1);
+      let mat = 1, sun = clamp(Math.round((lam * 0.5 + 0.5) * 6 * (1 - thick * 0.35)), 0, 7);
+      if (edge && lam > 0.15) { mat = 2; sun = 7; }
+      else if (thick > 0.62 && lam < 0.2) mat = 3;
+      const sky = clamp(Math.round((1 - thick) * 2 + (ny < 0 ? 1 : 0)), 0, 3);
+      idx[i] = I(mat, sun, sky, 0);
+    }
+    this.layer.used = null;
+    this.layer.despeckle(() => true);
+    const U = this.layer.pixels(pal);
+    if (!this.img) this.img = this.g.createImageData(w, h);
+    new Uint32Array(this.img.data.buffer).set(U);
+    this.g.putImageData(this.img, 0, 0);
+    return this.canvas;
+  }
 }
+
+function vnoiseLite(x, y, s) { return fbm(x, y, 2, s); }

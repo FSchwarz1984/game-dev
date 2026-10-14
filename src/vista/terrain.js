@@ -28,10 +28,11 @@ export function march(o) {
     let lim = ceiling ? 0 : h;          // first unwritten row (ground: rows above lim are free; ceiling: rows below)
     let pZ = z0, pX = dir * z0, py = ceiling ? -1e9 : 1e9;
     let Z = z0;
+    const gaps = o.gapsFor ? o.gapsFor(dir) : o.gaps;
     while (Z < z1) {
-      if (o.gaps) { // flat stretches of plain: jump them (rows are filled analytically by the caller's fill)
+      if (gaps) { // flat stretches of plain: jump them (rows are filled analytically by the caller's fill)
         let jumped = false;
-        for (const [za, zb] of o.gaps) if (Z > za && Z < zb) {
+        for (const [za, zb] of gaps) if (Z > za && Z < zb) {
           const yA = yh + f * camY / Z, yB = yh + f * camY / zb; // plain rows from here to the gap's far end
           const top = Math.max(0, Math.ceil(yB - 0.5));
           for (let y = Math.min(lim - 1, Math.floor(yA)); y >= top; y--) {

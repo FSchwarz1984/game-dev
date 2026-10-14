@@ -116,7 +116,7 @@ export class Terrain {
     const poly = o.raw ? polyM.map(p => [p[0] * PPM, p[1] * PPM]) : this.ragged(polyM, o.amp ?? 0.6, o.scale ?? 2.5, o.seed ?? 11, o.fine ?? 0.2);
     this.fill(poly, i => {
       if (o.only && !o.only.includes(this.top[i])) return;
-      if (o.top != null) this.top[i] = o.top; if (o.pa != null) this.pa[i] = o.pa; if (o.pb != null) this.pb[i] = o.pb;
+      if (o.top != null) this.top[i] = o.top; if (o.pa != null) this.pa[i] = o.pa; if (o.pb != null) this.pb[i] = o.pb; if (o.wall != null) this.wallK[i] = o.wall;
     });
   }
   /** ellipse helper → polygon (metres) */
@@ -222,6 +222,7 @@ export class Terrain {
       const X = x + this.ox; let prev = null, footAO = 0, lip = -1;
       for (let y = 0; y < H; y++) {
         const Y = y + this.oy, i = y * W + x, zq = Z[i], zi = Math.round(zq / ZS);
+        if (this.top[i] === TM.NONE) { prev = null; lip = -1; continue; }
         const row = Y - zi - rowMin;
         // ---- the face below the previous top (height dropped going south)
         if (prev !== null && prev > zi) {
@@ -357,7 +358,7 @@ export class Terrain {
         const j = (cy + y) * W + cx + x, k = (y * CH + x) * 4;
         if (this.sz[j] !== -32768) {
           any = true;
-          t0[k] = this.alb[j * 4]; t0[k + 1] = this.alb[j * 4 + 1]; t0[k + 2] = this.alb[j * 4 + 2]; t0[k + 3] = this.sm[j] | ((this.sf[j] & FLAG.WALL) ? 0 : 0);
+          t0[k] = this.alb[j * 4]; t0[k + 1] = this.alb[j * 4 + 1]; t0[k + 2] = this.alb[j * 4 + 2]; t0[k + 3] = (this.sm[j] & 31) | ((this.sf[j] & FLAG.BLADE) ? 32 : 0) | ((this.sf[j] & FLAG.WET) ? 128 : 0);
           t1[k] = this.nrm[j * 2] + 128; t1[k + 1] = this.nrm[j * 2 + 1] + 128; const zz = this.sz[j] + 16384; t1[k + 2] = zz & 255; t1[k + 3] = (zz >> 8) & 255;
         }
         if (this.wsz && this.wsz[j] !== -32768) {

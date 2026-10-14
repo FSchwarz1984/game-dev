@@ -38,9 +38,11 @@ PAL = Palette({
     # dango (eat), lantern paper is a separate prop
     'D': ('#f3d9df', 'food', 1), 'f': ('#9bc46a', 'food', 0), 'F': ('#e6a1b4', 'food', 0),
 }, outlines={
-    'white': '#3b3150', 'indigo': '#141228', 'red': '#3e1424', 'hair': '#140f20', 'skin': '#6a3438',
-    'eye': '#2a2444', 'wood': '#2c1a14', 'wicker': '#33220f', 'food': '#4a2a34',
-}, default_outline='#1a1428', bevel={'hair': 0.7, 'white': 1.0, 'indigo': 0.9, 'skin': 1.1, 'wicker': 0.8, 'wood': 0.6})
+    # five line colours: cool near-black (hair, indigo, eyes), soft violet on white cloth and straw,
+    # deep red on red cloth, warm brown on skin, dark brown on the wooden frame and wicker
+    'hair': '#16122a', 'indigo': '#16122a', 'eye': '#16122a', 'white': '#3b3150',
+    'red': '#3e1424', 'food': '#3e1424', 'skin': '#6a3438', 'wood': '#2f1e12', 'wicker': '#2f1e12',
+}, default_outline='#16122a', bevel={'hair': 0.7, 'white': 1.0, 'indigo': 0.9, 'skin': 1.1, 'wicker': 0.8, 'wood': 0.6})
 
 FW, FH = 48, 64          # frame size
 MX, MY = 11, 23          # model space origin inside the frame
@@ -638,7 +640,9 @@ def _front(load, dy=0, face='open', arm_l=None, arm_r=None, legs=(0, 0), skirt=(
     return layers
 
 
-def _side(load, dy=0, face='open', arm=None, legs='stand', hair=0, head_dy=None, over_head=(), far_arm=None):
+def _side(load, dy=0, face='open', arm=None, legs='stand', hair=0, head_dy=None, over_head=(), far_arm=None, arm_over=None):
+    """arm: the near sleeve under the head; arm_over: a near arm drawn over the head instead
+    (raised to the hat, hand at the mouth)."""
     hd = dy if head_dy is None else head_dy
     face_l = S_FACE.get(face)
     return [
@@ -648,9 +652,10 @@ def _side(load, dy=0, face='open', arm=None, legs='stand', hair=0, head_dy=None,
         at(S_LEGS[legs], 0, 0),
         at(S_SKIRT, 0, 0),
         at(S_TORSO, 0, dy),
-        arm or at(S_ARM, 0, dy),
+        None if arm_over else (arm or at(S_ARM, 0, dy)),
         at(S_STRAP, 0, dy) if load else None,
         at(S_HEAD, 0, hd), at(face_l, 0, hd) if face_l else None,
+        arm_over,
         *over_head,
     ]
 
@@ -945,7 +950,7 @@ def reach_up(view, load):
     if view == 'side':
         seq = [(S_ARM_UP_HALF, 0, (20, 11)), (S_ARM_UP, 0, (16, 1)), (S_ARM_UP, -1, (16, 0)), (S_ARM_UP, 0, (16, 1))]
         for arm, dy, hand in seq:
-            out.append(Frame(_side(load, dy, 'open', at(arm, 0, dy), 'stand'), _anchors(view, load, dy, (hand[0], hand[1] + dy))))
+            out.append(Frame(_side(load, dy, 'open', legs='stand', arm_over=at(arm, 0, dy)), _anchors(view, load, dy, (hand[0], hand[1] + dy))))
     elif view == 'back':
         return reach_up_back(load)
     return out
@@ -957,7 +962,11 @@ def eat(view, load):
     if view == 'side':
         seq = [(S_ARM_CHEST, 'open', (18, 22)), (S_ARM_MOUTH, 'open_mouth', (19, 15)), (S_ARM_MOUTH, 'chew', (19, 15)), (S_ARM_CHEST, 'chew', (18, 22))]
         for arm, face, hand in seq:
-            out.append(Frame(_side(load, 0, face, at(arm, 0, 0), 'stand'), _anchors(view, load, 0, hand)))
+            if arm is S_ARM_MOUTH:
+                ly = _side(load, 0, face, legs='stand', arm_over=at(arm, 0, 0))
+            else:
+                ly = _side(load, 0, face, at(arm, 0, 0), 'stand')
+            out.append(Frame(ly, _anchors(view, load, 0, hand)))
     elif view == 'front':
         seq = [(F_ARM_L_CHEST, 'open', (11, 23)), (F_ARM_L_MOUTH, 'open_mouth', (12, 15)), (F_ARM_L_MOUTH, 'chew', (12, 15)), (F_ARM_L_CHEST, 'chew', (11, 23))]
         for arm, face, hand in seq:
@@ -1201,8 +1210,8 @@ def bow(view, load):
     """Deep bow: lean in, hold low, come back up (5 frames)."""
     out = []
     if view == 'side':
-        steps = [(0.25, 3, 1, 0.12, 'open'), (0.55, 6, 3, 0.28, 'blink'), (0.75, 8, 5, 0.4, 'blink'),
-                 (0.75, 8, 5, 0.4, 'blink'), (0.4, 5, 2, 0.2, 'open')]
+        steps = [(0.25, 3, 1, 0.12, 'open'), (0.5, 6, 3, 0.26, 'blink'), (0.62, 7, 5, 0.36, 'blink'),
+                 (0.62, 7, 5, 0.36, 'blink'), (0.38, 5, 2, 0.2, 'open')]
         for k, hx, hy, tilt, face in steps:
             ly = _bow_side(load, k, hx, hy, tilt, face)
             a = _anchors(view, load, 0)
@@ -1218,9 +1227,12 @@ def bow(view, load):
             ly = _back(load, body, head_dy=head)
             out.append(Frame(ly, _anchors(view, load, body)))
     elif view == 'front':
-        steps = [(1, 2, 'open'), (2, 4, 'blink'), (3, 6, 'blink'), (3, 6, 'blink'), (1, 3, 'open')]
-        for body, head, face in steps:
+        steps = [(1, 2, 'open', False), (2, 3, 'blink', True), (3, 4, 'blink', True), (3, 4, 'blink', True), (1, 2, 'open', False)]
+        for body, head, face, dish in steps:
             ly = _front(load, body, face, head_dy=head, arm_l=at(F_ARM_L_CHEST, 0, body), arm_r=at(F_ARM_R_CHEST, 0, body))
+            if dish:
+                ly = [i for i in ly if not (i is not None and (i[0] is F_HEAD or i[0] in F_FACE.values()))]
+                ly.append(at(F_HEAD_BOW, 0, head - 2))
             out.append(Frame(ly, _anchors(view, load, body)))
     return out
 
@@ -1353,24 +1365,25 @@ oWWwwwwwwwwvvvVo.
 ooooooooooooooooo
 ''', col=5, z=3)
 
-B_SIT_LEGS = [L(30, '''
-..oiinno..onnnNo..
-...owWvo..owvvo...
-...onnno..onnno...
-...oNnNo..oNnNo...
+# Lower legs hanging from the branch, seen from behind: no thighs (they point away), so the legs
+# are short; the swinging leg rises a pixel as it swings forward (away from the camera).
+B_SIT_LEGS = [L(29, '''
+...oiinno.onnnNo..
+...owWWvo.owvvvo..
+...onnnno.onnnNo..
 ...ooooo..ooooo...
-''', col=4, z=2), L(30, '''
-..oiinno..onnnNo..
-...owWvo...owvvo..
-...onnno...onnno..
-...oNnNo...oNnNo..
-...ooooo...ooooo..
-''', col=4, z=2), L(30, '''
-..oiinno..onnnNo..
-...owWvo..owvvo...
-..onnno...onnno...
-..oNnNo...oNnNo...
-..ooooo...ooooo...
+''', col=4, z=2), L(29, '''
+...oiinno.onnnNo..
+...owWWvo.owvvvo..
+...onnnno.onnnNo..
+...ooooo..oNnnNo..
+..........ooooo...
+''', col=4, z=2), L(29, '''
+...oiinno.onnnNo..
+...owWWvo.owvvvo..
+...onnnno.onnnNo..
+...oNnnNo.ooooo...
+...ooooo..........
 ''', col=4, z=2)]
 
 
@@ -1450,7 +1463,7 @@ def sit_branch(view, load):
 # Asleep on her back with the hat over her face, then sitting up (no load). Head to the left,
 # feet to the right (this is a side-view animation: mirror for the other direction).
 
-ASLEEP = [L(29, '''
+ASLEEP = [L(27, '''
 ............o..............................
 ..........ooWoo............................
 ........ooWWwrvoo..........................
@@ -1463,7 +1476,7 @@ okKKKkkKKoozzzo..owwwoiiiwdrdniiwvvvvvownno
 .ooKKkkKoowwwwwoowWwwwonnnnddnnnnnvvVoowno.
 ...oooooowwwwwwwwwwwwwoozsoooonnnnooooooo..
 .......oooooooooooooooo.oo....ooooo........
-''', col=-10, z=4), L(29, '''
+''', col=-8, z=4), L(27, '''
 ............o..............................
 ..........ooWoo............................
 ........ooWWwrvoo..........................
@@ -1476,7 +1489,7 @@ okKKKkkKKoozzzo..owwwoiiiwdrdniiwvvvvvownno
 .ooKKkkKoowwwwwoowWwwwonnnnddnnnnnvvVoowno.
 ...oooooowwwwwwwwwwwwwoozsoooonnnnooooooo..
 .......oooooooooooooooo.oo....ooooo........
-''', col=-10, z=4)]
+''', col=-8, z=4)]
 
 # Propped on her elbows: the hat still tipped over her eyes.
 SITUP_PROP = L(22, '''
@@ -1590,6 +1603,167 @@ def shoulder(view, load):
     return out
 
 
+
+
+
+# Front bow, deep frames: the head tips toward the camera, so the hat shows its top as a broad
+# dish (apex near the middle, the red band running to her left) and the face disappears under it.
+F_HEAD_BOW = L(5, '''
+.......ooooooooooooo.......
+....oooWWWWwwwwwwvvvooo....
+..ooWWWWwwwwwwwwwwvvvvvoo..
+.oWWWwwwwwwwwrwwwwwvvvvvvo.
+oWWWwwwwwwwwrRwwwwwwvvvvvvo
+oWWwwwwwwwwwoRrwwwwwwvvvvVo
+oWwwwwwwwwwwwrRrwwwwwvvvvVo
+.oWwwwwwwwwwwwrRrwwwwvvvVo.
+..ooWwwwwwwwwwwwrRrwvvvoo..
+....ooonnnnnnnnnnnnnooo....
+......oKKkkkkkkkkkKKo......
+.......oKKkKKKkKKKKo.......
+........oooooooooo.........
+''', z=8.5)
+
+
+# =============================================================================================
+# From the first brief: release (放: both arms flung out), hurt, look up, lift and carry overhead.
+
+# Front head tipped back: the hat's indigo underside opens up like the illustration; she looks up.
+F_HEAD_UP = L(1, '''
+.......ooooooooooooo.......
+....oooWWwwwwwwwwwvvooo....
+..ooWWwwnnnnnnnnnnnvvvvoo..
+.oWWwnnnNNNNNNNNNNNnnvvvvo.
+oWwnnNNNnnnnnnnnnnNNNnnvvo.
+oWnnNnnnnnnnnnnnnnnnNnnnvo.
+onnNnnnoKKKKKKKKKoonnNnnvo.
+.onnnnoKkkkjkkkjkkKonnnno..
+..ooooKkkkkkkkkkkkkKoooo...
+....oKkjksEEsssEEskKkKo....
+....oKkjkseesssseskKkKo....
+....oKkjkbsssssssbkKkKo....
+....oKkjkzsssZssszkKkKo....
+....oKkjkozssssszokKkKo....
+....oKkWwKoooooooKwvkKo....
+....oKkrrKKo...oKKrdkKo....
+....oKokko.......oKKoKo....
+.....o.oo.........oo.o.....
+''', z=8)
+
+F_ARM_L_UP = B_ARM_L_UP
+F_ARM_R_UP = B_ARM_R_UP
+F_ARM_L_OUT = B_ARM_L_UP_HALF
+F_ARM_R_OUT = B_ARM_R_UP_HALF
+
+
+def release(view, load):
+    """Fling both arms out (3 frames: gather, fling, hold)."""
+    out = []
+    if view == 'front':
+        seq = [(at(F_ARM_L_CHEST, 0, 1), at(F_ARM_R_CHEST, 0, 1), 1, 'blink'),
+               (at(F_ARM_L_OUT, 0, -1), at(F_ARM_R_OUT, 0, -1), -1, 'open'),
+               (at(F_ARM_L_OUT, 0, 0), at(F_ARM_R_OUT, 0, 0), 0, 'open')]
+        for al, ar, dy, face in seq:
+            ly = _front(load, dy, face, arm_l=None, arm_r=None)
+            ly = [i for i in ly if not (i is not None and i[0] in (F_ARM_L, F_ARM_R))] + [al, ar]
+            out.append(Frame(ly, _anchors(view, load, dy, (13, 22 + dy))))
+    elif view == 'side':
+        seq = [(at(S_ARM_CHEST, 0, 1), 1, 'blink', False), (at(S_ARM_UP_HALF, 0, -1), -1, 'open', True), (at(S_ARM_UP_HALF, 0, 0), 0, 'open', True)]
+        for arm, dy, face, over in seq:
+            ly = _side(load, dy, face, arm_over=arm) if over else _side(load, dy, face, arm)
+            out.append(Frame(ly, _anchors(view, load, dy, (20, 11 + dy))))
+    else:
+        seq = [(at(B_ARM_L, 1, 1), at(B_ARM_R, -1, 1), 1), (at(B_ARM_L_UP_HALF, 0, -1), at(B_ARM_R_UP_HALF, 0, -1), -1),
+               (at(B_ARM_L_UP_HALF, 0, 0), at(B_ARM_R_UP_HALF, 0, 0), 0)]
+        for al, ar, dy in seq:
+            out.append(Frame(_back_top(load, dy, arm_l=al, arm_r=ar), _anchors(view, load, dy, (13, 22 + dy))))
+    return out
+
+
+def hurt(view, load):
+    """Flinch: knocked back a pixel, eyes squeezed, arms up; then recover (2 frames)."""
+    out = []
+    for i, (dx, dy) in enumerate([(-1, 1), (0, 0)]):
+        if view == 'front':
+            ly = _front(load, dy, 'strain' if i == 0 else 'blink', arm_l=at(F_ARM_L_CHEST, 0, dy), arm_r=at(F_ARM_R_CHEST, 0, dy))
+        elif view == 'side':
+            ly = _side(load, dy, 'strain' if i == 0 else 'blink', at(S_ARM_CHEST, 0, dy))
+        else:
+            ly = _back(load, dy, arm_l=at(B_ARM_L, 1, dy), arm_r=at(B_ARM_R, -1, dy))
+        # knock the whole upper body back (toward screen-left in the side view)
+        ly = [(l, x + (dx if l not in (F_LEG_L, F_LEG_R, B_LEG_L, B_LEG_R) and l not in S_LEGS.values() else 0), y)
+              if l is not None else None for l, x, y in [j if j is not None else (None, 0, 0) for j in ly]]
+        out.append(Frame(ly, _anchors(view, load, dy)))
+    return out
+
+
+def look_up(view, load):
+    """Tips her head back to look up (cutscenes): 2 breathing frames."""
+    out = []
+    for i, dy in enumerate([0, 1]):
+        if view == 'front':
+            ly = _front(load, dy, 'open')
+            ly = [j for j in ly if not (j is not None and (j[0] is F_HEAD or j[0] in F_FACE.values()))]
+            ly.append(at(F_HEAD_UP, 0, dy))
+        elif view == 'side':
+            head = shear_v(S_HEAD, -0.22, 13)
+            ly = _side(load, dy, None, head_dy=dy)
+            ly = [(head, 1, dy) if (j is not None and j[0] is S_HEAD) else j for j in ly]
+        else:
+            ly = _back(load, dy, head_dy=dy + 1)
+        out.append(Frame(ly, _anchors(view, load, dy)))
+    return out
+
+
+def lift(view, load):
+    """Lift something overhead: crouch and grab, bring it up, hold it high (3 frames)."""
+    out = []
+    if view == 'front':
+        seq = [('crouch', at(F_ARM_L_BEAM, 0, 3), at(F_ARM_R_BEAM, 0, 3), 3, (13, 30)),
+               ('stand', at(F_ARM_L_CHEST, 0, 0), at(F_ARM_R_CHEST, 0, 0), 0, (13, 22)),
+               ('stand', at(F_ARM_L_UP, 0, 0), at(F_ARM_R_UP, 0, 0), 0, (13, -2))]
+        for legs, al, ar, dy, hand in seq:
+            ly = _front(load, dy, 'strain' if legs == 'crouch' else 'open', skirt=(0, min(dy, 2)))
+            if legs == 'crouch':
+                ly = [(F_LEG_L_CROUCH, 0, 0) if (j is not None and j[0] is F_LEG_L) else (F_LEG_R_CROUCH, 0, 0) if (j is not None and j[0] is F_LEG_R) else j for j in ly]
+            ly = [j for j in ly if not (j is not None and j[0] in (F_ARM_L, F_ARM_R))] + [al, ar]
+            out.append(Frame(ly, _anchors(view, load, dy, hand)))
+    elif view == 'side':
+        seq = [('crouch', at(S_ARM_BEAM, 0, 3), 3, (22, 27), False), ('stand', at(S_ARM_CHEST, 0, 0), 0, (18, 22), False),
+               ('stand', at(S_ARM_UP, 0, 0), 0, (16, 1), True)]
+        for legs, arm, dy, hand, over in seq:
+            if legs == 'crouch':
+                ly = [at(S_HAIR, 0, dy), at(S_LOAD, 0, dy) if load else None, at(S_LEGS['crouch']), at(S_SKIRT_CROUCH),
+                      at(S_TORSO, 0, dy), arm, at(S_STRAP, 0, dy) if load else None, at(S_HEAD, 0, dy), at(S_FACE['strain'], 0, dy)]
+            else:
+                ly = _side(load, dy, 'open', arm_over=arm) if over else _side(load, dy, 'open', arm)
+            out.append(Frame(ly, _anchors(view, load, dy, hand)))
+    else:
+        seq = [(at(B_ARM_L, 1, 2), at(B_ARM_R, -1, 2), 2, (13, 30)), (at(B_ARM_L_UP_HALF, 0, 0), at(B_ARM_R_UP_HALF, 0, 0), 0, (13, 10)),
+               (at(B_ARM_L_UP, 0, 0), at(B_ARM_R_UP, 0, 0), 0, (13, -2))]
+        for al, ar, dy, hand in seq:
+            out.append(Frame(_back_top(load, dy, arm_l=al, arm_r=ar, skirt=(0, min(dy, 1))), _anchors(view, load, dy, hand)))
+    return out
+
+
+def carry_overhead(view, load):
+    """Walk with something held overhead (6 frames; the object is a prop at 'hand')."""
+    out = []
+    for i, dy in enumerate(WALK_BOB):
+        if view == 'front':
+            ly = _front(load, dy, 'open', legs=WALK_FRONT_LEGS[i], sash=i % 3 == 2)
+            ly = [j for j in ly if not (j is not None and j[0] in (F_ARM_L, F_ARM_R))] + [at(F_ARM_L_UP, 0, dy), at(F_ARM_R_UP, 0, dy)]
+            hand = (13, -2 + dy)
+        elif view == 'side':
+            ly = _side(load, dy, 'open', legs=WALK_SIDE_LEGS[i], hair=i % 3 != 0, arm_over=at(S_ARM_UP, 0, dy))
+            hand = (16, 1 + dy)
+        else:
+            ly = _back_top(load, dy, arm_l=at(B_ARM_L_UP, 0, dy), arm_r=at(B_ARM_R_UP, 0, dy), legs=WALK_FRONT_LEGS[i])
+            hand = (13, -2 + dy)
+        out.append(Frame(ly, _anchors(view, load, dy, hand)))
+    return out
+
+
 # =============================================================================================
 # Sheet description for tools/art/build.py
 
@@ -1618,6 +1792,11 @@ ANIMS = {
     'asleep':     (asleep,     (S,),      1.5, True,  ('plain',)),
     'sitUp':      (sit_up,     (S,),      4,   False, ('plain',)),
     'sit':        (sit,        (S,),      3,   True,  ('plain',)),
+    'release':    (release,        (F, S, B), 8, False, ('load', 'plain')),
+    'hurt':       (hurt,           (F, S, B), 6, False, ('load', 'plain')),
+    'lookUp':     (look_up,        (F, S, B), 2, True,  ('load', 'plain')),
+    'lift':       (lift,           (F, S, B), 5, False, ('load', 'plain')),
+    'carryOverhead': (carry_overhead, (F, S, B), 9, True, ('load', 'plain')),
 }
 
 SHEETS = {'load': True, 'plain': False}   # sheet name -> draw the back-frame load
