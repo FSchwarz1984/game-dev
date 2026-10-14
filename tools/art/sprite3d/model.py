@@ -70,10 +70,13 @@ class Model:
     # --- posing
     def bones(self, pose: dict):
         rot = {k: v for k, v in pose.items() if k in self.sk.parent and k != 'root'}
-        root = pose.get('root', (0, 0, 0, 0, 0, 0))
-        x, y, z, yaw, pitch, roll = (list(root) + [0] * 6)[:6]
-        R = G.euler(pitch, yaw, roll)
-        rootm = G.M4(R, (x, y, z))
+        if 'root_m' in pose:
+            rootm = np.asarray(pose['root_m'], float)
+        else:
+            root = pose.get('root', (0, 0, 0, 0, 0, 0))
+            x, y, z, yaw, pitch, roll = (list(root) + [0] * 6)[:6]
+            R = G.euler(pitch, yaw, roll)
+            rootm = G.M4(R, (x, y, z))
         if 'pelvis_y' in pose:
             off = dict(self.sk.offset)
             self.sk.offset['pelvis'] = np.array([0, pose['pelvis_y'], 0], float)
@@ -142,6 +145,18 @@ class Model:
             result.append(bw)
         return result
 
+    def head_phase(self, yaw, variant=None):
+        """Screen position (u, v) of the head joint in the rest pose for this view: the reference
+        sub-pixel phase every frame's head is snapped to."""
+        bw = self.simulate([FrameSpec(self.rest_pose(), {'variant': variant})], loop=False)[0]
+        cam = G.camera() @ G.M4(G.Ry(yaw))
+        c = math.cos(math.radians(G.PITCH))
+        hp = cam @ bw['head'] @ np.array([0, 0, 0, 1.0])
+        return (hp[0], -hp[1] / c)
+
+    def rest_pose(self):
+        return {}
+
     # --- rendering
     def render_frame(self, bw: dict, yaw: float, ctx: dict, snap_head=None):
         FW, FH = self.FRAME
@@ -161,7 +176,7 @@ class Model:
             off = inv @ np.array([du, -dv * c, 0.0])
             for b in self.head_bones_all(bw):
                 m = bw[b].copy(); m[:3, 3] += off; bw[b] = m
-        shapes = self.shapes(dict(ctx, bones=bw))
+        shapes = self.shapes(dict(ctx, bones=bw, yaw=yaw))
         part_ids, group_ids = {}, {}
         prims = G.assemble(shapes, bw, cam, self.pal.ids, part_ids, group_ids)
         x0 = -PVX - 0.5

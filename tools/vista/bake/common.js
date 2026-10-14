@@ -51,6 +51,17 @@ export function idImage(ids, w, h, extra = null) {
   return { w, h, data: out };
 }
 
+/** Floats as signed 16-bit fixed point (two bytes, little endian): q = round(v * scale) + 32768, so
+ *  zero is exact (the cloud deck's faded rows must stay empty). */
+export function fixedS16(src, scale) {
+  const out = new Uint8Array(src.length * 2);
+  for (let i = 0; i < src.length; i++) {
+    const q = Math.round(clamp(src[i] * scale + 32768, 0, 65535));
+    out[i * 2] = q & 255; out[i * 2 + 1] = q >> 8;
+  }
+  return out;
+}
+
 /** Floats as 16-bit fixed point (two bytes, little endian) over [lo, hi]. */
 export function fixed16(src, lo, hi) {
   const out = new Uint8Array(src.length * 2), k = 65535 / (hi - lo);

@@ -2,10 +2,13 @@
 
 importer="image"
 type="Image"
+uid="uid://dxtmiolm5751j"
+path="res://.godot/imported/logic.png-01fc23fc7d238438142f9ebc54b09c8f.image"
 
 [deps]
 
 source_file="res://world/regions/home_saddle/logic.png"
+dest_files=["res://.godot/imported/logic.png-01fc23fc7d238438142f9ebc54b09c8f.image"]
 
 [params]
 

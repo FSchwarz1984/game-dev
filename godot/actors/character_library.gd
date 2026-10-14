@@ -1,18 +1,30 @@
 class_name CharacterLibrary
 ## Sprite frames for the characters, built once from actors/characters.json (the layout of the
-## sheets in art/sprites/, converted from src/art/characters.data.js by tools/godot/sync_assets.py).
-## The sheets are PLACEHOLDERS until the new sprites arrive; a new set only needs a new JSON in the
-## same shape. Each frame is an AtlasTexture over a CanvasTexture (albedo + normal map), so 2D
-## lights shade the characters per pixel.
-## Animation names in the SpriteFrames: "<anim>_<view>", view = front | side | back. Side frames are
-## drawn facing right; facing left mirrors them (flip_h) when the animation allows it.
+## sheets in art/sprites/, written by tools/art/sprite3d/build.py and copied by
+## tools/godot/sync_assets.py; docs/knowledge/20-sprites.md). Each frame is an AtlasTexture over a
+## CanvasTexture (albedo + normal map), so 2D lights shade the characters per pixel.
+## Animation names in the SpriteFrames: "<anim>_<view>". Views: the eight directions front,
+## front_right, right, back_right, back, back_left, left, front_left (locomotion has all eight;
+## scripted animations have the ones their scenes need). Left and right are drawn separately (the
+## designs are asymmetric), never mirrored. The legacy "side" view (drawn facing right, mirrored for
+## left) is still understood for old layouts.
 
 const LAYOUT_PATH := "res://actors/characters.json"
+## For a wanted view, the views to try in order. Diagonals fall back to their side view first
+## (the walk reads by its legs, which the side view shows), then to front/back.
 const VIEW_FALLBACK := {
-	"front": ["front", "side", "back"],
-	"back": ["back", "side", "front"],
-	"side": ["side", "front", "back"],
+	"front": ["front", "front_right", "front_left", "side", "right", "left", "back"],
+	"back": ["back", "back_right", "back_left", "side", "right", "left", "front"],
+	"right": ["right", "side", "front_right", "back_right", "front", "back", "left"],
+	"left": ["left", "side", "front_left", "back_left", "front", "back", "right"],
+	"front_right": ["front_right", "right", "front", "side", "back_right", "front_left", "back"],
+	"front_left": ["front_left", "left", "front", "side", "back_left", "front_right", "back"],
+	"back_right": ["back_right", "right", "back", "side", "front_right", "back_left", "front"],
+	"back_left": ["back_left", "left", "back", "side", "front_left", "back_right", "front"],
+	"side": ["side", "right", "left", "front", "back"],
 }
+const LEFTISH := ["left", "front_left", "back_left"]
+const RIGHTISH := ["right", "front_right", "back_right", "side"]
 
 static var _layout: Dictionary = {}
 static var _frames: Dictionary = {}   # "<char>/<sheet>" -> SpriteFrames
@@ -97,6 +109,15 @@ static func view_for(id: String, sheet: String, anim: String, want: String) -> S
 		if views.has(v):
 			return v
 	return ""
+
+
+## True when showing `got` for a wanted view `want` needs a horizontal flip: only for the legacy
+## "side" view (drawn facing right) or a right-facing fallback, and only when the animation allows
+## mirroring (the new layouts draw both sides and say mirrorLeft = false).
+static func mirrored(id: String, anim: String, want: String, got: String) -> bool:
+	if not LEFTISH.has(want) or not RIGHTISH.has(got):
+		return false
+	return bool(anim_meta(id, anim).get("mirrorLeft", got == "side"))
 
 
 static func has_anim(id: String, sheet: String, anim: String) -> bool:

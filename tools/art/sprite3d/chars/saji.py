@@ -41,9 +41,9 @@ class Saji(Model):
             'hip_w': 1.35, 'hip_d': 0.6, 'thigh': 5.6, 'shin': 5.2, 'ankle': 1.2,
             'ao': 2.2, 'shadow_k': 8.0, 'line_gap': 1.6,
             'cycles': {
-                'walk': {'stride': 6.4, 'lift': 1.6, 'bob': Hu.bob_walk, 'arm': 20.0, 'arm_out': 9.0, 'elbow': 16.0,
+                'walk': {'stride': 10.0, 'lift': 1.8, 'bob': Hu.bob_walk, 'arm': 20.0, 'arm_out': 9.0, 'elbow': 16.0,
                          'elbow_swing': 10.0, 'lean': 3.0, 'lean2': 1.0, 'twist': 4.0, 'toe_off': 22.0, 'heel': 8.0},
-                'run': {'stride': 8.6, 'lift': 3.0, 'bob': Hu.bob_run, 'arm': 34.0, 'arm_out': 12.0, 'elbow': 62.0,
+                'run': {'stride': 13.0, 'lift': 3.2, 'bob': Hu.bob_run, 'arm': 34.0, 'arm_out': 12.0, 'elbow': 62.0,
                         'elbow_swing': 18.0, 'lean': 9.0, 'lean2': 3.0, 'twist': 6.0, 'toe_off': 30.0, 'heel': 4.0,
                         'stance': 0.38},
             },
@@ -170,3 +170,19 @@ class Saji(Model):
 
     def anchors(self, ctx):
         return {'hand': ('handL', (0, -0.6, 0)), 'head': ('head', (0, 11.0, 0)), 'seat': ('pelvis', (0, -0.6, -0.6))}
+
+
+# =============================================================================================
+# Sheet description (tools/art/sprite3d/build.py)
+
+import anims as A  # noqa: E402
+
+D8, D4 = ('front', 'front_right', 'right', 'back_right', 'back', 'back_left', 'left', 'front_left'), ('front', 'right', 'back', 'left')
+SHEETS = {'main': None}
+_ALL = tuple(SHEETS)
+_M = Saji()
+ANIMS = {
+    'idle': A.idle_spec(6, D8, _ALL),
+    'walk': A.with_speed(A.loco_spec('walk', 8, 12, D8, _ALL, wind=0.10), _M),
+    'run': dict(A.with_speed(A.loco_spec('run', 8, 15, D8, _ALL, wind=0.22), _M), **{'from': 2.9}),
+}

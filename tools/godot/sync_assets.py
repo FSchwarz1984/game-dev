@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # Copies the shared art into the Godot project (Godot only loads files under godot/):
 #   python3 -I tools/godot/sync_assets.py
-# - assets/sprites/*.png -> godot/art/sprites/ (albedo + normal sheets; PLACEHOLDERS until the new
-#   sprites arrive) and the layout in src/art/characters.data.js -> godot/actors/characters.json.
+# - assets/sprites/*.png -> godot/art/sprites/ (albedo + normal sheets from tools/art/sprite3d/build.py)
+#   and their layout assets/sprites/characters.json -> godot/actors/characters.json (the old
+#   src/art/characters.data.js is only read when that file is missing). Sheets that the layout no
+#   longer names are removed from godot/art/sprites (with their .import files).
 # - Dialogue portraits: assets/portraits/pixel/<who>*.png when the pixel portraits exist
 #   (docs/knowledge/13-pixel-portraits.md); otherwise a crude placeholder cut from
 #   assets/portraits/<who>_bust.webp (internal checking only, never shipped as art).
@@ -23,12 +25,24 @@ def sprites():
     out = os.path.join(GD, "art", "sprites")
     os.makedirs(out, exist_ok=True)
     src = os.path.join(ROOT, "assets", "sprites")
-    for f in sorted(os.listdir(src)):
-        if f.endswith(".png"):
-            shutil.copyfile(os.path.join(src, f), os.path.join(out, f))
-    js = open(os.path.join(ROOT, "src", "art", "characters.data.js"), encoding="utf-8").read()
-    start = js.index("export const CHARACTER_DATA = ") + len("export const CHARACTER_DATA = ")
-    data = json.loads(js[start:js.rindex("}") + 1])
+    layout = os.path.join(src, "characters.json")
+    if os.path.isfile(layout):
+        data = json.load(open(layout, encoding="utf-8"))
+    else:
+        js = open(os.path.join(ROOT, "src", "art", "characters.data.js"), encoding="utf-8").read()
+        start = js.index("export const CHARACTER_DATA = ") + len("export const CHARACTER_DATA = ")
+        data = json.loads(js[start:js.rindex("}") + 1])
+    wanted = set()
+    for c in data.values():
+        for sd in c.get("sheets", {}).values():
+            wanted |= {sd["file"] + ".png", sd["file"] + "_n.png"}
+    for f in sorted(wanted):
+        shutil.copyfile(os.path.join(src, f), os.path.join(out, f))
+    for f in sorted(os.listdir(out)):
+        base = f[:-len(".import")] if f.endswith(".import") else f
+        if base.endswith(".png") and base not in wanted:
+            os.remove(os.path.join(out, f))
+            print("removed stale", f)
     with open(os.path.join(GD, "actors", "characters.json"), "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, separators=(",", ":"))
     print("sprites:", len(os.listdir(out)), "files; characters:", ", ".join(data))

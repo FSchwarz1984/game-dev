@@ -118,7 +118,7 @@ class Shape:
     k: float = 0.0
     bands: list = field(default_factory=list)   # (axis, lo, hi, mat[, amp, count, phase])
     occluder: bool = False
-    cut: tuple | None = None                     # (nx, ny, nz, d) in the shape frame: keeps n.q <= d
+    cut: tuple | None = None                     # (nx, ny, nz, d) in the BONE frame: keeps n.p <= d
 
     def bound(self):
         """Bounding sphere (centre in the shape frame, radius)."""
@@ -218,9 +218,12 @@ def assemble(shapes, bones_world, cam, mat_ids, part_ids, group_ids):
             axis, lo, hi, m = bb[0], bb[1], bb[2], bb[3]
             r[35 + i * 7: 42 + i * 7] = [axis, lo, hi, mat_ids[m], bb[4], bb[5], bb[6]]
         if sh.cut is not None:
+            # the plane is given in the bone frame; the renderer wants it in the shape frame
             n = np.asarray(sh.cut[:3], float)
             ln = np.linalg.norm(n)
-            r[64:67] = n / ln
-            r[67] = sh.cut[3] / ln
+            n, d = n / ln, sh.cut[3] / ln
+            R, t = sh.xf[:3, :3], sh.xf[:3, 3]
+            r[64:67] = R.T @ n
+            r[67] = d - float(n @ t)
         rows.append(r)
     return np.array(rows, np.float32)

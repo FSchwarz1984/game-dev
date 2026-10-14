@@ -25,7 +25,7 @@ import { paintBuildings, roadLanterns } from '../../../src/vista/buildings.js';
 import { paintCanopy, paintCanopyGen, FOLIAGE_MATS } from '../../../src/vista/foliage.js';
 import { Wave } from '../../../src/vista/wave.js';
 import { buildSkyShoreGen, skyShorePalette } from './skyshore.js';
-import { IdSpace, lutRows, idImage, fixed16, rows, todOfRow, TOD_ROWS, TOD0, TOD_STEP, r2, r3 } from './common.js';
+import { IdSpace, lutRows, idImage, fixed16, fixedS16, rows, todOfRow, TOD_ROWS, TOD0, TOD_STEP, r2, r3 } from './common.js';
 
 const REF_W = 480, REF_H = 270;
 const P = { far: 0.1, canopy: 1, front: 2.4 };
@@ -250,7 +250,7 @@ export function bakeSouth(o = {}) {
   const arrival = wave.arr;                                  // 0..254 bucket (w * 250), 255 never
   const zmap = fixed16(ground.Z, 0, 1024);                   // ground depth (for mote and lantern occlusion)
   const deckRows = deck.yb;                                  // rows 0 .. yb-1 carry density
-  const deckD = fixed16(rows(deck.D, Wc, 0, deckRows), -6, 6);
+  const deckD = fixedS16(rows(deck.D, Wc, 0, deckRows), 8192);   // the density lies in about [-2.4, 1.7]
 
   // the wave's pixels by arrival bucket (for the motes): 1 of 3 ground pixels, as (x, y) u16 pairs
   const buckets = new Uint32Array(256);
@@ -267,7 +267,7 @@ export function bakeSouth(o = {}) {
       Hcl, deckRows, deckYa: deck.ya, Xc, Zc, waveR: Math.hypot(Xc, Zc) - 0.05,
       classes: classes.map(c => ({ H: c.H, yh: c.yh, D: c.D, padTop: c.padTop, S: r3(c.S), Hs: r3(c.Hs), Fn: c.Fn, T: c.T.map(r2), hole: c.hole, hazeEdgeY: c.hazeEdgeY, shoreH: c.shoreH, y0: c.y0, fade: c.fade })),
       oyC, CH, CHc, nearH, headDraws, anchors, tod0: TOD0, todStep: TOD_STEP, todRows: TOD_ROWS,
-      deckFixed: [-6, 6], zFixed: [0, 1024], counts: { lights: lights.length, stars: stars.length, paddyStars: paddyStars.length },
+      deckScale: 8192, zFixed: [0, 1024], counts: { lights: lights.length, stars: stars.length, paddyStars: paddyStars.length },
       river: RIVER, riverLanterns: river.map(v => [r3(v.u0), r3(v.ph), r3(v.side)]),
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,

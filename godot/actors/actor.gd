@@ -3,17 +3,24 @@ extends Node2D
 ## A character on stage: an AnimatedSprite2D driven by an explicit animation state machine.
 ##
 ## States (each decides the animation):
-##   LOCOMOTION  the default: walk while moving, else heavyIdle while heavy, else idle. Evaluated
-##               every frame, so it always matches what she is doing now.
-##   SCRIPTED    a scene walks her (Director.move): the walk loop until idle().
+##   LOCOMOTION  the default: run or walk while moving (run above the character's run speed), else
+##               idle. Evaluated every frame, so it always matches what she is doing now.
+##   SCRIPTED    a scene walks her (Director.move): the walk (or run) loop until idle().
 ##   ONE_SHOT    a scripted animation (take, give, bow...): plays once, holds its last frame a beat,
 ##               then returns to LOCOMOTION by itself.
 ##   HOLD        a looping animation held for a while (Director.play with loop and hold), then
 ##               LOCOMOTION by itself.
-##   POSE        a held pose (asleep, sit...) until release(), or until the scene ends.
+##   POSE        a held pose (asleep, pinned...) until release(), or until the scene ends.
 ## Every scripted state has an exit (time, idle()/release(), and end_scene() which the director
 ## calls when its last scene ends), so nothing a scene leaves behind outlives the scene. This is
 ## the fix for R-4: sprites that did not switch back after scripted actions.
+##
+## Directions: `face` is the four-way facing the game logic uses (front, back, left, right); `dir`
+## is the eight-way sprite direction (Proj.DIR8) taken from the motion, with hysteresis. Setting
+## `face` from outside (a scene, the spawn) also turns `dir`. Left and right are drawn separately
+## (asymmetric designs); a frame is only mirrored for legacy layouts (CharacterLibrary.mirrored).
+## Walk and run play at the speed she actually moves (speed_scale = speed / the cycle's nominal
+## speed, clamped), so the feet do not skate when her speed changes.
 ##
 ## Positions: x, z metres (node position = ground point, which y-sorts); the sprite is lifted by
 ## 20 * (h + lift + hover) px. For her, x/z read and write the field's PlayerBody.
@@ -24,18 +31,22 @@ enum State { LOCOMOTION, SCRIPTED, ONE_SHOT, HOLD, POSE }
 
 const STATE_NAMES := ["locomotion", "scripted", "one_shot", "hold", "pose"]
 const ALIAS := {
-	"tsuzumi": {"heavy": "heavyIdle", "sleep": "asleep", "unshoulder": "shoulder", "sit": "sitBranch", "stand": "idle"},
-	"saji": {"bell": "bellStand", "talk": "sitTalk", "point": "pointStand"},
+	"tsuzumi": {"sleep": "asleep", "stand": "standUp", "sit": "sitEdge", "hang": "hangLantern"},
+	"saji": {},
 }
-const PLAIN_ONLY := ["strain", "asleep", "sitUp", "sit"]
-const VIEW := {"front": "front", "back": "back", "left": "side", "right": "side"}
+const LOCO := ["idle", "walk", "run"]
 const HOLD_LAST := 0.25   # seconds a one-shot holds its last frame
+const RUN_HYST := 0.85    # back to the walk below this share of the run speed
+const SPEED_SCALE := Vector2(0.55, 1.7)   # clamp of walk/run playback against her real speed
 
 var id := ""
 var state: State = State.LOCOMOTION
 var face := "front"
+var dir := "front"
 var variant := ""
 var moving := false
+var running := false
+var speed := 0.0                # measured ground speed, m/s (smoothed)
 var heavy := false
 var h := 0.0
 var lift := 0.0
@@ -52,6 +63,7 @@ var _last := Vector2.INF
 var _last_frame := -1
 var _ring_t := 0.0
 var _sound_rings: Array = []    # [{"t": age, "r": max radius m}]
+var _face_seen := "front"     # the face `dir` last agreed with (an outside change turns `dir`)
 var _sprite_holder: Node2D
 var sprite: AnimatedSprite2D
 var light: PointLight2D
@@ -122,16 +134,15 @@ func _resolve(anim: String) -> String:
 	return ALIAS.get(id, {}).get(anim, anim)
 
 
+## The sheet to draw an animation from: her current variant (load / frame / plain) when it has the
+## animation, else the first sheet that does (scripted poses such as asleep exist only on plain).
 func _sheet_for(anim: String) -> String:
-	if id != "tsuzumi":
-		return variant
-	if PLAIN_ONLY.has(anim):
-		return "plain"
 	var s := "plain" if variant == "none" else variant
-	if not CharacterLibrary.has_anim(id, s, anim):
-		for alt in ["plain", "load", "frame"]:
-			if CharacterLibrary.has_anim(id, alt, anim):
-				return alt
+	if CharacterLibrary.has_anim(id, s, anim):
+		return s
+	for alt in ["plain", "frame", "load", "main"]:
+		if CharacterLibrary.has_anim(id, alt, anim):
+			return alt
 	return s
 
 
@@ -158,7 +169,8 @@ func play(anim: String, opts: Dictionary = {}) -> float:
 		_dur = hold
 		return 0.0
 	state = State.ONE_SHOT
-	_dur = CharacterLibrary.duration(id, _sheet_for(a), a, VIEW[face])
+	_sync_dir()
+	_dur = CharacterLibrary.duration(id, _sheet_for(a), a, dir)
 	_apply(true)
 	return _dur
 
@@ -188,23 +200,37 @@ func end_scene() -> void:
 
 func set_face(f: String) -> void:
 	face = f
+	_sync_dir()
+
+
+## `face` changed from outside (a scene, the spawn): the sprite turns with it.
+func _sync_dir() -> void:
+	if face != _face_seen:
+		dir = face
+		_face_seen = face
 
 
 # ------------------------------------------------------------------ per frame
 
 func tick(dt: float) -> void:
+	_sync_dir()
 	var p := Vector2(x, z)
 	var delta := p - _last if _last != Vector2.INF else Vector2.ZERO
 	_last = p
 	var self_moved := delta.length() > 1e-4
+	var inst := delta.length() / maxf(dt, 1e-4) if self_moved else 0.0
+	speed = lerpf(speed, inst, clampf(dt * 12.0, 0.0, 1.0)) if self_moved else 0.0
 	if body != null:
 		moving = body.moving and self_moved or state == State.SCRIPTED and self_moved
 		if body.moving and state == State.LOCOMOTION:
 			face = Proj.face_of(body.fx, body.fz, face)
+			dir = Proj.dir8_of(body.fx, body.fz, dir)
 	else:
 		moving = self_moved
 	if self_moved and (state == State.SCRIPTED or (state == State.LOCOMOTION and body == null)):
 		face = Proj.face_of(delta.x, delta.y, face)
+		dir = Proj.dir8_of(delta.x, delta.y, dir)
+	_face_seen = face
 	match state:
 		State.ONE_SHOT:
 			_t += dt
@@ -224,35 +250,64 @@ func tick(dt: float) -> void:
 	queue_redraw()
 
 
-## Chooses the SpriteFrames animation for the state and facing; restarts it when it changes.
+## Walk or run, from her measured speed (with hysteresis) and the character's run speed.
+func _gait() -> String:
+	var run_sheet := _sheet_for("run")
+	if not CharacterLibrary.has_anim(id, run_sheet, "run"):
+		running = false
+		return "walk"
+	var from := float(CharacterLibrary.anim_meta(id, "run").get("from", INF))
+	running = speed >= from * (RUN_HYST if running else 1.0)
+	return "run" if running else "walk"
+
+
+## Chooses the SpriteFrames animation for the state and direction; restarts it when it changes.
 func _apply(restart: bool) -> void:
 	var anim := ""
 	match state:
 		State.LOCOMOTION:
-			anim = "walk" if moving else ("heavyIdle" if heavy else "idle")
+			if moving:
+				anim = _gait()
+			else:
+				running = false
+				# no drawn heavy pose (pending body decision): the body look carries it (squash etc.)
+				anim = "heavyIdle" if heavy and CharacterLibrary.has_anim(id, _sheet_for("heavyIdle"), "heavyIdle") else "idle"
 		State.SCRIPTED:
-			anim = "walk"
+			anim = _gait() if moving else "walk"
 		_:
 			anim = _one
 	var sheet := _sheet_for(anim)
-	var v := CharacterLibrary.view_for(id, sheet, anim, VIEW[face])
+	var v := CharacterLibrary.view_for(id, sheet, anim, dir)
 	if v == "":
 		anim = "idle"
 		sheet = _sheet_for(anim)
-		v = CharacterLibrary.view_for(id, sheet, anim, VIEW[face])
+		v = CharacterLibrary.view_for(id, sheet, anim, dir)
 	var frames := CharacterLibrary.frames(id, sheet)
 	if sprite.sprite_frames != frames:
 		sprite.sprite_frames = frames
 	var n := "%s_%s" % [anim, v]
 	if n != anim_name or restart:
+		# walk <-> run and turning keep the cycle's phase, so the feet do not jump
+		var keep := anim_name != "" and (anim == "walk" or anim == "run") and not restart \
+			and (anim_name.begins_with("walk_") or anim_name.begins_with("run_"))
+		var ph := 0.0
+		if keep and sprite.sprite_frames != null and sprite.sprite_frames.has_animation(anim_name):
+			ph = float(sprite.frame) / maxf(1.0, float(sprite.sprite_frames.get_frame_count(anim_name)))
 		anim_name = n
 		if frames.has_animation(n):
 			sprite.play(n)
+			if keep:
+				sprite.frame = int(floor(ph * frames.get_frame_count(n))) % maxi(1, frames.get_frame_count(n))
 			_last_frame = -1
 	var meta := CharacterLibrary.anim_meta(id, anim)
-	sprite.flip_h = face == "left" and v == "side" and bool(meta.get("mirrorLeft", true))
-	# footfalls on the walk's contact frames
-	if anim == "walk" and moving:
+	sprite.flip_h = CharacterLibrary.mirrored(id, anim, dir, v)
+	var nominal := float(meta.get("speed", 0.0))
+	if (anim == "walk" or anim == "run") and nominal > 0.0 and speed > 0.05:
+		sprite.speed_scale = clampf(speed / nominal, SPEED_SCALE.x, SPEED_SCALE.y)
+	else:
+		sprite.speed_scale = 1.0
+	# footfalls on the contact frames of the walk and the run
+	if (anim == "walk" or anim == "run") and moving:
 		var f := sprite.frame
 		var count := frames.get_frame_count(n) if frames.has_animation(n) else 0
 		if f != _last_frame and count > 0 and (f == 0 or f == count / 2):

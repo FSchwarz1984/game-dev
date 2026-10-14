@@ -53,3 +53,32 @@ def idle(model, frames=12, blink=(9,), extra=None):
         ctx = {'expr': 'blink' if i in blink else 'open'}
         out.append(FrameSpec(pose, ctx, wind=(0.04 * math.sin(2 * math.pi * ph + 0.7), 0, -0.05 + gust)))
     return out
+
+
+# ---------------------------------------------------------------------------------------------
+# Registry helpers. An animation spec: make(model, view) -> [FrameSpec], fps, loop, views, sheets,
+# and for locomotion its nominal ground speed in m/s (the engine scales playback to the real
+# speed so the feet do not skate).
+
+PPM = 20.0
+
+
+def loco_spec(kind, frames, fps, views, sheets, wind):
+    def make(m, view, kind=kind, frames=frames, wind=wind):
+        return cycle(m, kind, frames, wind=wind)
+    spec = {'make': make, 'fps': fps, 'loop': True, 'views': views, 'sheets': sheets, 'kind': kind}
+    return spec
+
+
+def with_speed(spec, model):
+    """Fill in the nominal speed (m/s) of a walk/run spec from the model's stride."""
+    C = model.P['cycles'][spec['kind']]
+    frames = 8
+    spec['speed'] = round(2 * C['stride'] * spec['fps'] / frames / PPM, 3)
+    return spec
+
+
+def idle_spec(fps, views, sheets, frames=12):
+    def make(m, view, frames=frames):
+        return idle(m, frames)
+    return {'make': make, 'fps': fps, 'loop': True, 'views': views, 'sheets': sheets}
