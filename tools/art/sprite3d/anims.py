@@ -32,8 +32,9 @@ def cycle(model, kind, frames, extra=None, wind=0.0):
 
 
 def idle(model, frames=12, blink=(9,), extra=None):
-    """Slow breathing: the chest and shoulders rise one pixel for a third of the cycle, the arms
-    follow a frame later; hair, ribbons and hems stir in a light, irregular breeze."""
+    """Slow breathing: on the in-breath the whole upper body (chest, shoulders, head, hat) rises
+    one pixel for a third of the cycle, the arms settle out a frame later; hair, ribbons and hems
+    stir in a light, irregular breeze. The legs and feet never move."""
     P = model.P
     base = model.rest_pose()
     out = []
@@ -41,8 +42,8 @@ def idle(model, frames=12, blink=(9,), extra=None):
         ph = i / frames
         pose = dict(base)
         breath = 1 if 0.30 <= ph < 0.70 else 0
-        pose['spine'] = (base.get('spine', (0, 0, 0))[0] - 1.2 * breath, 0, 0)
-        pose['chest'] = (base.get('chest', (0, 0, 0))[0] + 2.4 * breath, 0, 0)
+        if breath:
+            pose['offset_spine'] = (0.0, 1.0, 0.0)
         lag = 1 if 0.38 <= ph < 0.78 else 0
         for s, sx in (('L', 1), ('R', -1)):
             u = base.get('uarm' + s, (0, 0, 0))

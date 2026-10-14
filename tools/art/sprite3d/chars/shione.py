@@ -32,7 +32,7 @@ C = {
 
 class Shione(Model):
     NAME = 'shione'
-    FRAME = (56, 56)
+    FRAME = (56, 60)
     PIVOT = (28, 52)
 
     def props(self):
@@ -58,6 +58,8 @@ class Shione(Model):
         return St.Palette([
             St.Mat('hair', ['#73647c', '#a08ea1', '#c6b3c1', '#e3d3da'], '#3b3150', [0.30, 0.50, 0.76], line=1),
             St.Mat('hairhi', ['#a08ea1', '#c6b3c1', '#e3d3da', '#f6eef2'], '#3b3150', [0.30, 0.50, 0.70], line=1),
+            St.Mat('hairln', ['#5a4e62', '#73647c', '#a08ea1', '#c6b3c1'], '#3b3150', [0.30, 0.50, 0.76], line=1),
+            St.Mat('plumln', ['#1e121c', '#2a1a27', '#3f2a3b', '#563b50'], '#2a0f1a', [0.30, 0.50, 0.80], line=0),
             St.Mat('horn', ['#3f1520', '#56202d', '#86313f'], '#2a0f1a', [0.45, 0.70], prio=3.0),
             St.Mat('white', ['#a093a9', '#cdbfcc', '#ede5e3', '#fcf9f6'], '#3b3150', [0.32, 0.52, 0.80], line=1),
             St.Mat('plum', ['#2a1a27', '#3f2a3b', '#563b50', '#73526b'], '#2a0f1a', [0.30, 0.50, 0.80], line=0),
@@ -101,14 +103,14 @@ class Shione(Model):
               ell('head', (3.6, 2.7, 3.1), 'skin', at=(0, 2.6, 1.2), part='face', group='face', k=1.4)]
         hair = dict(group='hair', k=0.8)
         S += [ell('head', (5.05, 5.15, 4.85), 'hair', at=(0, 5.3, -0.3), cut=(0, -1.0, 0.32, -4.3), part='hair',
-                  bands=[(1, 2.0, 2.8, 'hairhi')], **hair)]
+                  bands=[(4, 0, 6, 'hairln', 0, 0, 0, 50), (1, 2.0, 2.8, 'hairhi')], **hair)]
         # blunt fringe with longer strands at its sides
         S += [ell('head', (4.5, 2.1, 1.5), 'hair', at=(0, 7.4, 3.3), cut=(0, -1.0, 0, -5.8), part='bangs',
                   bands=[(1, 1.0, 1.7, 'hairhi')], **hair)]
         for sx in (1, -1):
             S += [rcone('head', (sx * 3.9, 7.4, 2.6), (sx * 4.1, 2.6, 2.4), 0.95, 0.55, 'hair', part='bangs', **hair)]
         # her left: hair falls loose behind the shoulder; her right is gathered into the ponytail
-        S += [rcone('head', (4.4, 6.2, -0.8), (4.6, 0.4, -1.2), 1.45, 1.05, 'hair', part='lockL', **hair),
+        S += [rcone('head', (4.4, 6.2, -0.8), (4.7, 1.8, -1.0), 1.35, 0.85, 'hair', part='lockL', **hair),
               ell('head', (4.9, 4.4, 3.1), 'hair', at=(0, 4.0, -2.3), part='hair', **hair)]
         # the horn on her right, above the temple: a crescent curving up and back
         S += [rcone('head', (-3.9, 7.6, 1.2), (-4.6, 9.4, 0.6), 0.75, 0.5, 'horn', part='horn'),
@@ -124,11 +126,11 @@ class Shione(Model):
         for j in range(6):
             bands = []
             if j == 0:
-                bands = [(1, -1.4, 0.2, 'red')]
+                bands = [(1, -1.8, 0.2, 'red')]
             if j == 4:
-                bands = [(1, -2.9, -1.9, 'red')]
+                bands = [(1, -2.9, -1.5, 'red')]
             S += [rcone(f'tail{j}', (0, 0, 0), (0, -2.8, 0), rr[j], rr[j + 1], 'hair', part='tail', group='tail', k=0.6,
-                        bands=bands)]
+                        bands=[(4, 0, 22, 'hairln', 0, 0, 0, 120)] + bands)]
         # the loose ends flare a little under the lower tie
         S += [ell('tail5', (1.8, 1.9, 1.3), 'hair', at=(0, -2.2, 0), part='tail', group='tail', k=0.6)]
         return S
@@ -162,7 +164,7 @@ class Shione(Model):
         hk = dict(part='hakama', group='hakama', k=0.0)
         for cut in ((-1, -0.05 / L, 0, -0.75), (1, -0.05 / L, 0, -0.75), (0, 0, 1, 0.3)):
             S += [skirt('hem0', hz, hem_r, 3.1, 'plum', sx=1.0, sz=0.8, wave=(0.35, 7, 0.2), flare=(0.28, 13, 0.0),
-                        round_=0.4, at=(0, -hz, 0), cut=cut, **hk)]
+                        round_=0.4, at=(0, -hz, 0), cut=cut, bands=[(4, 0, 6, 'plumln', 0, 0, 0, 30)], **hk)]
         S += [skirt('hem0', hz - 0.2, hem_r - 1.0, 2.7, 'pink', sx=1.0, sz=0.82, wave=(0.2, 5, 0.0), round_=0.3,
                     at=(0, -hz - 0.1, 0), part='inner')]
         # legs (hidden by the hakama, but they shape the hem) and boots

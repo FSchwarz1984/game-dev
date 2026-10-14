@@ -17,7 +17,7 @@ import math
 import numpy as np
 
 import geom as G
-from geom import ell, halfell, rcone, box, cone, cyl, skirt
+from geom import ell, halfell, rcone, box, cone, cyl, skirt, torus
 import style as St
 from model import Model, ChainSpec
 import face as Face
@@ -31,8 +31,8 @@ C = {
 
 class Saji(Model):
     NAME = 'saji'
-    FRAME = (48, 48)
-    PIVOT = (24, 44)
+    FRAME = (56, 56)
+    PIVOT = (28, 50)
 
     def props(self):
         return {
@@ -57,6 +57,9 @@ class Saji(Model):
         return St.Palette([
             St.Mat('hair', ['#691a2b', '#9b2434', '#cf3439', '#f0533f'], '#36101c', [0.30, 0.48, 0.74], line=1),
             St.Mat('hairhi', ['#9b2434', '#cf3439', '#f0533f', '#ff8a62'], '#36101c', [0.30, 0.48, 0.66], line=1),
+            St.Mat('hairln', ['#4a1220', '#691a2b', '#9b2434', '#cf3439'], '#36101c', [0.30, 0.48, 0.74], line=1),
+            St.Mat('ahoge', ['#691a2b', '#9b2434', '#cf3439', '#f0533f'], '#36101c', [0.30, 0.48, 0.74], prio=3.0, line=1),
+            St.Mat('skirtln', ['#4a1220', '#691a2b', '#9b2434', '#cf3439'], '#36101c', [0.32, 0.50, 0.80], line=1),
             St.Mat('skirt', ['#691a2b', '#9b2434', '#cf3439', '#f0533f'], '#36101c', [0.32, 0.50, 0.80], line=1),
             St.Mat('teal', ['#163b42', '#215a5d', '#2f7d7a', '#4fa8a0'], '#13282c', [0.30, 0.50, 0.80], prio=1.6, line=1),
             St.Mat('mint', ['#94c0a6', '#c2dfc4', '#e3f1dc'], '#13282c', [0.45, 0.76], line=0),
@@ -88,7 +91,10 @@ class Saji(Model):
         # cap: the hairline is high at the forehead, at the temples beside the eyes, low at the nape;
         # the alice band crosses it ahead of the crown, the highlight ring sits on its upper slope
         S += [ell('head', (4.95, 4.95, 4.75), 'hair', at=(0, 5.1, -0.3), cut=(0, -1.0, 0.36, -4.0), part='hair',
-                  bands=[(1, 2.2, 2.9, 'hairhi'), (2, 1.6, 2.6, 'teal')], **hair)]
+                  bands=[(4, 0, 6, 'hairln', 0, 0, 0, 55), (1, 2.2, 2.9, 'hairhi')], **hair)]
+        # the alice band: an arc over the head from ear to ear, just behind the fringe
+        S += [torus('head', 4.62, 0.5, 'teal', at=(0, 5.2, 1.5), R=G.Rx(90 - 14), cut=(0, -1, 0, -7.4),
+                    part='band')]
         # fringe: a slab over the forehead whose lower edge is cut into locks, with a parted gap
         S += [ell('head', (4.2, 1.4, 1.3), 'hair', at=(0, 7.5, 3.5), part='bangs', bands=[(1, 0.7, 1.4, 'hairhi')], **hair)]
         for i, (x, y, r) in enumerate(((-3.4, 5.8, 0.85), (-1.7, 5.6, 0.95), (0.8, 6.1, 0.75), (2.5, 5.7, 0.9), (3.9, 6.0, 0.7))):
@@ -98,14 +104,15 @@ class Saji(Model):
             S += [rcone('head', (sx * 4.6, 6.8, -1.2), (sx * 4.8, 2.3, -0.4), 1.3, 0.9, 'hair', part=nm, **hair),
                   rcone('head', (sx * 4.75, 2.7, -0.6), (sx * 5.6, 1.6, -1.0), 0.85, 0.35, 'hair', part=nm, **hair)]
         # back of the bob with flicks at the nape
-        S += [ell('head', (4.8, 3.4, 2.8), 'hair', at=(0, 3.4, -2.5), part='hair', **hair),
+        S += [ell('head', (4.8, 3.4, 2.8), 'hair', at=(0, 3.4, -2.5), part='hair',
+                  bands=[(4, 0, 9, 'hairln', 0, 0, 0, 50)], **hair),
               rcone('head', (3.3, 2.4, -2.8), (5.0, 1.1, -2.2), 1.1, 0.45, 'hair', part='nape', **hair),
               rcone('head', (-3.3, 2.4, -2.8), (-5.0, 1.1, -2.2), 1.1, 0.45, 'hair', part='nape', **hair),
               rcone('head', (0.0, 2.0, -3.6), (0.4, 0.7, -3.9), 1.1, 0.45, 'hair', part='nape', **hair)]
-        # ahoge: a curl rising from her right side of the crown and bending back over
-        S += [rcone('head', (-1.2, 9.4, 1.2), (-1.9, 10.9, 1.0), 0.42, 0.3, 'hair', part='ahoge'),
-              rcone('head', (-1.9, 10.9, 1.0), (-1.0, 11.6, 0.8), 0.3, 0.26, 'hair', part='ahoge'),
-              rcone('head', (-1.0, 11.6, 0.8), (-0.3, 11.0, 0.7), 0.26, 0.22, 'hair', part='ahoge')]
+        # ahoge: a hook of hair rising from her right side of the crown and curling over (a '?')
+        S += [rcone('head', (-0.8, 9.2, 1.0), (-1.1, 11.4, 0.9), 0.55, 0.42, 'ahoge', part='ahoge'),
+              rcone('head', (-1.1, 11.4, 0.9), (-2.3, 12.2, 0.8), 0.42, 0.36, 'ahoge', part='ahoge'),
+              rcone('head', (-2.3, 12.2, 0.8), (-2.8, 11.3, 0.7), 0.36, 0.3, 'ahoge', part='ahoge')]
         return S
 
     def shapes(self, ctx):
@@ -136,7 +143,7 @@ class Saji(Model):
         hem = bw.get('hem0')
         S += [skirt('hem0', 3.25, 5.8, 2.6, 'skirt', sx=1.0, sz=0.82, wave=(0.32, 5, 0.4), flare=(0.30, 9, 0.0),
                     round_=0.35, at=(0, -3.25, 0), part='skirt',
-                    bands=[(1, -2.65, -2.0, 'white', 0.32, 5, 0.4)])]
+                    bands=[(4, 0, 7, 'skirtln', 0, 0, 0, 40), (1, -2.65, -2.0, 'white', 0.32, 5, 0.4)])]
         # legs
         for s, sx in (('L', 1), ('R', -1)):
             S += [rcone('thigh' + s, (0, 0, 0), (0, -5.6, 0), 1.35, 1.1, 'skin', part='leg' + s),

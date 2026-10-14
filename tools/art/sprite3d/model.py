@@ -78,9 +78,13 @@ class Model:
             x, y, z, yaw, pitch, roll = (list(root) + [0] * 6)[:6]
             R = G.euler(pitch, yaw, roll)
             rootm = G.M4(R, (x, y, z))
-        if 'pelvis_y' in pose:
+        offs = {k[7:]: v for k, v in pose.items() if k.startswith('offset_')}
+        if 'pelvis_y' in pose or offs:
             off = dict(self.sk.offset)
-            self.sk.offset['pelvis'] = np.array([0, pose['pelvis_y'], 0], float)
+            if 'pelvis_y' in pose:
+                self.sk.offset['pelvis'] = np.array([0, pose['pelvis_y'], 0], float)
+            for b, d in offs.items():
+                self.sk.offset[b] = self.sk.offset[b] + np.asarray(d, float)
             bw = self.sk.world(rot, rootm)
             self.sk.offset.update(off)
         else:
@@ -187,13 +191,15 @@ class Model:
         zs, rs = prims[:, 32], prims[:, 33]
         buf = render(prims, FW * S, FH * S, x0, y0, 1.0 / S, c / S, float((zs + rs).max() + 1),
                      float((zs - rs).min() - 1), self.pal.L.astype(np.float32), ao_dist=self.P.get('ao', 2.4),
-                     shadow_k=self.P.get('shadow_k', 8.0))
+                     shadow_k=self.P.get('shadow_k', 8.0), block=S)
         px = St.stylize(buf, S, self.pal, cover=self.P.get('cover', 0.5))
         px['part_names'] = {v: k for k, v in part_ids.items()}
         self.post(px, ctx)
         St.clean_tones(px, self.pal)
         St.merge_islands(px, self.pal, max_size=self.P.get('island', 2), skip=self.P.get('island_skip', ()))
         St.separation_lines(px, self.pal, gap=self.P.get('line_gap', 1.6))
+        if self.P.get('rim', True):
+            St.rim(px, self.pal)
         St.outline(px, self.pal)
         img = St.to_rgba(px, self.pal)
         feats = self.project(self.features(ctx), bw, cam, c)
@@ -202,11 +208,19 @@ class Model:
         nrm[..., 3] = np.where(img[..., 3] > 0, 255, 0)
         nrm[img[..., 3] == 0, :3] = (128, 128, 255)
         anchors = {}
-        for name, (bone, p) in self.anchors(ctx).items():
+        an = dict(self.anchors(ctx))
+        # every frame reports where each foot touches the ground plane (the sole under the ankle):
+        # billboards and shadows use them; the cell's pivot pixel stays fixed per character
+        ankle = self.P.get('ankle', 1.2)
+        an.setdefault('footL', ('footL', (0, -ankle, 0.45)))
+        an.setdefault('footR', ('footR', (0, -ankle, 0.45)))
+        for name, (bone, p) in an.items():
             if bone not in bw:
                 continue
             q = cam @ bw[bone] @ np.array([p[0], p[1], p[2], 1.0])
-            anchors[name] = [round(q[0], 1), round(-q[1] / c, 1)]
+            # px relative to her ground point = the pivot pixel's top-left corner (the node origin in
+            # the engine); x right, y down. Her centre line runs at x = +0.5 (the pivot column's middle).
+            anchors[name] = [round(q[0] + 0.5, 1), round(-q[1] / c, 1)]
         return img, nrm, anchors, px
 
     def head_bones_all(self, bw):

@@ -1,0 +1,148 @@
+"""Where the trees, bamboo, shrubs, ferns and boulders stand (generic kinds; the assembly maps
+them onto the asset catalog). Poisson-disc sampling per zone with slope, path and pad rules,
+clumped by noise so woods have glades and edges have stragglers."""
+from __future__ import annotations
+
+import numpy as np
+
+from . import geom, noise
+
+
+def poisson(rng, bounds, r, accept, k=24, max_pts=20000):
+    """Bridson's Poisson-disc sampler over a rectangle; accept(x, z) -> bool filters candidates."""
+    x0, z0, x1, z1 = bounds
+    cs = r / np.sqrt(2.0)
+    gw = int(np.ceil((x1 - x0) / cs)) + 1
+    gh = int(np.ceil((z1 - z0) / cs)) + 1
+    grid = -np.ones((gh, gw), np.int64)
+    pts = []
+    active = []
+    for _ in range(200):
+        p = np.array([rng.uniform(x0, x1), rng.uniform(z0, z1)])
+        if accept(p[0], p[1]):
+            break
+    else:
+        return np.zeros((0, 2))
+    pts.append(p)
+    active.append(0)
+    grid[int((p[1] - z0) / cs), int((p[0] - x0) / cs)] = 0
+    while active and len(pts) < max_pts:
+        i = active[rng.integers(len(active))]
+        base = pts[i]
+        found = False
+        for _ in range(k):
+            a = rng.uniform(0, 2 * np.pi)
+            rr = rng.uniform(r, 2 * r)
+            q = base + rr * np.array([np.cos(a), np.sin(a)])
+            if not (x0 <= q[0] < x1 and z0 <= q[1] < z1):
+                continue
+            gi, gj = int((q[1] - z0) / cs), int((q[0] - x0) / cs)
+            ok = True
+            for jj in range(max(0, gi - 2), min(gh, gi + 3)):
+                for ii in range(max(0, gj - 2), min(gw, gj + 3)):
+                    t = grid[jj, ii]
+                    if t >= 0 and np.hypot(*(pts[t] - q)) < r:
+                        ok = False
+                        break
+                if not ok:
+                    break
+            if ok and accept(q[0], q[1]):
+                pts.append(q)
+                active.append(len(pts) - 1)
+                grid[gi, gj] = len(pts) - 1
+                found = True
+                break
+        if not found:
+            active.remove(i)
+    return np.array(pts)
+
+
+def place(L, ctx, rng):
+    """ctx: callables height(x, z), slope_deg(x, z), path_dist(x, z), pad_dist(x, z),
+    water_dist(x, z), in_zone(name, x, z). Returns a list of dicts {kind, x, z, rot, scale, variant}."""
+    out = []
+    b = L["bounds"]
+    M = L["markers"]
+
+    def keep_clear(x, z, clear=2.2):
+        return ctx["path_dist"](x, z) > clear and ctx["pad_dist"](x, z) > 1.5 and ctx["water_dist"](x, z) > 1.2
+
+    def far_from_markers(x, z, r):
+        for k in ("camphor", "hut", "shrine", "graves", "lookout", "dosojin", "spring", "kiln", "persimmon", "woodpile"):
+            m = M[k]
+            rr = 15.0 if k == "camphor" else r
+            if np.hypot(x - m[0], z - m[1]) < rr:
+                return False
+        return True
+
+    # the great camphor and the named trees
+    out.append({"kind": "camphor", "x": M["camphor"][0], "z": M["camphor"][1], "rot": 0.4, "scale": 1.0, "variant": 0})
+    out.append({"kind": "persimmon", "x": M["persimmon"][0], "z": M["persimmon"][1], "rot": 1.1, "scale": 1.0, "variant": 0})
+    out.append({"kind": "choppable", "x": M["choppable_tree"][0], "z": M["choppable_tree"][1], "rot": 2.0, "scale": 1.0, "variant": 0})
+
+    # cedars: the far side of the gully and the north-west woods, with glades
+    def cedar_ok(x, z):
+        if not ctx["in_zone"]("cedar", x, z):
+            return False
+        if ctx["slope_deg"](x, z) > 38 or not keep_clear(x, z, 2.5):
+            return False
+        return noise.fbm(np.array(x / 18.0), np.array(z / 18.0), 3, 5) > 0.36
+    for p in poisson(rng, (b[0], b[1], b[2], -38.0), 3.4, cedar_ok):
+        out.append({"kind": "cedar", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.2)), "variant": int(rng.integers(0, 8))})
+
+    # broadleaf trees on the slopes around the home, sparser, never on the saddle's crown
+    def broad_ok(x, z):
+        if ctx["in_zone"]("cedar", x, z) or ctx["in_zone"]("bamboo", x, z) or ctx["in_zone"]("home", x, z):
+            return False
+        if ctx["slope_deg"](x, z) > 34 or not keep_clear(x, z, 2.6) or not far_from_markers(x, z, 7.0):
+            return False
+        n = noise.fbm(np.array(x / 22.0), np.array(z / 22.0), 3, 9)
+        return n > 0.5 and ctx["height"](x, z) > -26.0
+    for p in poisson(rng, (b[0], -36.0, b[2], 104.0), 6.5, broad_ok):
+        kind = "maple" if rng.uniform() < 0.3 else ("beech" if rng.uniform() < 0.5 else "broadleaf")
+        out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.15)), "variant": int(rng.integers(0, 8))})
+
+    # red pines on the spur and the rocky rim above the ravine
+    def pine_ok(x, z):
+        sp = np.asarray(L["spur"]["axis"])
+        d = min(np.hypot(x - q[0], z - q[1]) for q in sp)
+        if d > 7.0 or ctx["slope_deg"](x, z) > 40 or not keep_clear(x, z, 1.6):
+            return False
+        return np.hypot(x - M["lookout"][0], z - M["lookout"][1]) > 4.0
+    for p in poisson(rng, (-34.0, 8.0, -8.0, 46.0), 5.5, pine_ok)[:7]:
+        out.append({"kind": "pine", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.1)), "variant": int(rng.integers(0, 8))})
+
+    # bamboo clumps on the east shoulder
+    def bamboo_ok(x, z):
+        return ctx["in_zone"]("bamboo", x, z) and ctx["slope_deg"](x, z) < 36 and keep_clear(x, z, 1.8)
+    for p in poisson(rng, (30.0, -28.0, 72.0, 18.0), 1.9, bamboo_ok):
+        out.append({"kind": "bamboo", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.15)), "variant": int(rng.integers(0, 8))})
+
+    # shrubs along edges (azalea, hydrangea), ferns in the shade, boulders where the ground is rough
+    def shrub_ok(x, z):
+        pd = ctx["path_dist"](x, z)
+        if pd < 1.6 or pd > 7.0 or ctx["pad_dist"](x, z) < 1.0 or ctx["water_dist"](x, z) < 1.0:
+            return False
+        if ctx["slope_deg"](x, z) > 33 or not far_from_markers(x, z, 3.0):
+            return False
+        return noise.fbm(np.array(x / 7.0), np.array(z / 7.0), 2, 13) > 0.48
+    for p in poisson(rng, (b[0], -40.0, b[2], 100.0), 3.0, shrub_ok):
+        kind = "hydrangea" if (p[1] < 10 and rng.uniform() < 0.5) else ("azalea" if rng.uniform() < 0.6 else "shrub")
+        out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.2)), "variant": int(rng.integers(0, 8))})
+
+    def fern_ok(x, z):
+        shade = ctx["in_zone"]("cedar", x, z) or ctx["water_dist"](x, z) < 6.0 or np.hypot(x, z) < 13.0
+        return shade and keep_clear(x, z, 1.2) and ctx["slope_deg"](x, z) < 40 and far_from_markers(x, z, 2.5)
+    for p in poisson(rng, (b[0], -60.0, 40.0, 20.0), 2.2, fern_ok)[:420]:
+        out.append({"kind": "fern", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.2)), "variant": int(rng.integers(0, 8))})
+
+    def rock_ok(x, z):
+        s = ctx["slope_deg"](x, z)
+        return 14 < s < 44 and keep_clear(x, z, 1.4) and far_from_markers(x, z, 4.0) and noise.value(np.array(x / 9.0), np.array(z / 9.0), 21) > 0.55
+    for p in poisson(rng, (b[0], b[1], b[2], b[3]), 4.5, rock_ok)[:160]:
+        out.append({"kind": "boulder", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.5, 1.4)), "variant": int(rng.integers(0, 8))})
+    return out
+
+
+CANOPY_R = {"camphor": 13.0, "cedar": 2.6, "maple": 3.4, "beech": 3.6, "broadleaf": 3.4, "pine": 3.0,
+            "persimmon": 3.2, "choppable": 1.6, "bamboo": 1.6}

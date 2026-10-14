@@ -123,8 +123,9 @@ def locomotion_pose(P, phase, kind='walk', extra=None):
 
 
 def bob_walk(t):
-    """t in [0,1) within one step: 0 contact, .25 down, .5 passing, .75 up -> px offset."""
-    return -0.6 * math.cos(2 * math.pi * (t - 0.25))
+    """t in [0,1) within one step: 0 contact, .25 down, .5 passing, .75 up -> px offset. Two
+    levels after rounding (0 and -1): the head bobs one pixel, never two."""
+    return -0.5 - 0.5 * math.cos(2 * math.pi * (t - 0.25))
 
 
 def bob_run(t):

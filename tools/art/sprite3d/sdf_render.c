@@ -8,16 +8,17 @@
  *   18..29  shape parameters (see sd_prim)
  *   30..33  bounding sphere in camera space (cx, cy, cz, r), r already includes blend k
  *   34      band count (0..4)
- *   35..62  bands, 7 floats each: axis, lo, hi, material, wave amplitude, wave count, wave phase
- *           axis 0/1/2 = local x/y/z, 3 = radius in the local xz plane, 4 = angle about local y
- *           (degrees, atan2(x, z)); the wave moves lo and hi by amp * sin(count * angle + phase).
- *   64..71  two optional cut planes in the shape frame (nx, ny, nz, d): keeps n.q <= d
+ *   35..66  bands, 8 floats each: axis, lo, hi, material, wave amplitude, wave count, wave phase,
+ *           period. axis 0/1/2 = local x/y/z, 3 = radius in the local xz plane, 4 = angle about
+ *           local y (degrees, atan2(x, z)); the wave moves lo and hi by amp * sin(count * angle +
+ *           phase); a period > 0 repeats the band (stripes: strands, pleats, weave).
+ *   68..75  two optional cut planes in the shape frame (nx, ny, nz, d): keeps n.q <= d
  */
 #include <math.h>
 #include <stdint.h>
 #include <string.h>
 
-#define STRIDE 72
+#define STRIDE 76
 #define MAXCAND 160
 #define MAXGROUP 64
 
@@ -100,7 +101,7 @@ static float sd_prim_raw(const float *P, const float *q);
 static float sd_prim(const float *P, const float *q) {
     float d = sd_prim_raw(P, q);
     for (int k = 0; k < 2; k++) {
-        const float *c = P + 64 + 4 * k;
+        const float *c = P + 68 + 4 * k;
         if (c[0] != 0.f || c[1] != 0.f || c[2] != 0.f) d = maxf(d, c[0] * q[0] + c[1] * q[1] + c[2] * q[2] - c[3]);
     }
     return d;
@@ -176,7 +177,7 @@ static float scene(const float *prims, const int *cand, int nc, const float *p, 
 static int band_material(const float *P, const float *q, int mat) {
     int nb = (int)P[34];
     for (int b = 0; b < nb && b < 4; b++) {
-        const float *B = P + 35 + b * 7;
+        const float *B = P + 35 + b * 8;
         int axis = (int)B[0];
         float v;
         if (axis <= 2) v = q[axis];
@@ -188,6 +189,7 @@ static int band_material(const float *P, const float *q, int mat) {
             float w = B[4] * sinf(B[5] * ang + B[6]);
             lo += w; hi += w;
         }
+        if (B[7] > 0.f) v = v - B[7] * floorf(v / B[7]);
         if (v >= lo && v <= hi) mat = (int)B[3];
     }
     return mat;
@@ -196,15 +198,46 @@ static int band_material(const float *P, const float *q, int mat) {
 /* Renders W x H rays. Ray (i, j) starts at (x0 + (i+.5) dx, y0 - (j+.5) dy, zmax) and runs to zmin.
  * light: unit vector toward the key light (camera space). Outputs per ray: depth (z; -1e9 on miss),
  * material (-1 miss, -2 occluder hole), part, normal xyz, ambient occlusion (0..1, 1 = open),
- * shadow (0..1, 1 = lit), and the local coordinates of the hit in its primitive (for patterns). */
+ * shadow (0..1, 1 = lit), and the local coordinates of the hit in its primitive (for patterns).
+ * Ambient occlusion and shadows are computed once per block x block group of rays (one output
+ * pixel when block = the supersampling factor), at the hit nearest the block's centre, and shared
+ * by the block's hits: the stylizer averages them per pixel anyway. */
+static void ao_shadow(const float *prims, const int *all, int nall, const float *p, const float *n,
+                      const float *light, float ao_dist, float shadow_k, float *ao, float *sh) {
+    *ao = 1.f; *sh = 1.f;
+    if (ao_dist > 0.f) {
+        float occ = 0.f, sca = 1.f;
+        for (int s = 1; s <= 5; s++) {
+            float hh = ao_dist * s / 5.f;
+            float sp[3] = {p[0] + n[0] * hh, p[1] + n[1] * hh, p[2] + n[2] * hh};
+            float dd = scene(prims, all, nall, sp, NULL, 0);
+            occ += (hh - dd) * sca;
+            sca *= 0.75f;
+        }
+        *ao = clampf(1.f - 1.6f * occ / ao_dist, 0.f, 1.f);
+    }
+    if (shadow_k > 0.f) {
+        float res = 1.f, t = 0.25f;
+        for (int s = 0; s < 64 && t < 60.f; s++) {
+            float sp[3] = {p[0] + n[0] * 0.05f + light[0] * t, p[1] + n[1] * 0.05f + light[1] * t, p[2] + n[2] * 0.05f + light[2] * t};
+            float dd = scene(prims, all, nall, sp, NULL, 0);
+            if (dd < 0.002f) { res = 0.f; break; }
+            res = minf(res, shadow_k * dd / t);
+            t += clampf(dd, 0.05f, 2.f);
+        }
+        *sh = clampf(res, 0.f, 1.f);
+    }
+}
+
 int render(const float *prims, int np, int W, int H, float x0, float y0, float dx, float dy,
-           float zmax, float zmin, const float *light, float ao_dist, float shadow_k,
+           float zmax, float zmin, const float *light, float ao_dist, float shadow_k, int block,
            float *o_depth, int16_t *o_mat, int16_t *o_part, float *o_nrm, float *o_ao, float *o_sh, float *o_loc) {
     int cand[MAXCAND];
     int all[MAXCAND];
     int nall = np < MAXCAND ? np : MAXCAND;
     for (int i = 0; i < nall; i++) all[i] = i;
     int hits = 0;
+    if (block < 1) block = 1;
     for (int j = 0; j < H; j++) {
         for (int i = 0; i < W; i++) {
             size_t o = (size_t)j * W + i;
@@ -244,7 +277,6 @@ int render(const float *prims, int np, int W, int H, float x0, float y0, float d
             o_mat[o] = (int16_t)band_material(P, q, (int)P[1]);
             o_part[o] = (int16_t)P[2];
             o_loc[o * 3] = q[0]; o_loc[o * 3 + 1] = q[1]; o_loc[o * 3 + 2] = q[2];
-            /* normal: tetrahedron differences, visible geometry only */
             const float h = 0.02f;
             const float K[4][3] = {{1, -1, -1}, {-1, -1, 1}, {-1, 1, -1}, {1, 1, 1}};
             float n[3] = {0, 0, 0};
@@ -256,30 +288,33 @@ int render(const float *prims, int np, int W, int H, float x0, float y0, float d
             float ln = sqrtf(n[0] * n[0] + n[1] * n[1] + n[2] * n[2]);
             if (ln > 1e-9f) { n[0] /= ln; n[1] /= ln; n[2] /= ln; } else { n[0] = 0; n[1] = 0; n[2] = 1; }
             o_nrm[o * 3] = n[0]; o_nrm[o * 3 + 1] = n[1]; o_nrm[o * 3 + 2] = n[2];
-            /* ambient occlusion (all prims, not just this ray's candidates) */
-            if (ao_dist > 0.f) {
-                float occ = 0.f, sca = 1.f;
-                for (int s = 1; s <= 5; s++) {
-                    float hh = ao_dist * s / 5.f;
-                    float sp[3] = {p[0] + n[0] * hh, p[1] + n[1] * hh, p[2] + n[2] * hh};
-                    float dd = scene(prims, all, nall, sp, NULL, 0);
-                    occ += (hh - dd) * sca;
-                    sca *= 0.75f;
+        }
+    }
+    /* ambient occlusion and shadow, once per block */
+    for (int bj = 0; bj < H; bj += block) {
+        for (int bi = 0; bi < W; bi += block) {
+            int ci = -1, cj = -1;
+            float bestd = 1e9f;
+            float cx = bi + (block - 1) * 0.5f, cy = bj + (block - 1) * 0.5f;
+            for (int j = bj; j < bj + block && j < H; j++)
+                for (int i = bi; i < bi + block && i < W; i++) {
+                    size_t o = (size_t)j * W + i;
+                    if (o_mat[o] < 0) continue;
+                    float dd = (i - cx) * (i - cx) + (j - cy) * (j - cy);
+                    if (dd < bestd) { bestd = dd; ci = i; cj = j; }
                 }
-                o_ao[o] = clampf(1.f - 1.6f * occ / ao_dist, 0.f, 1.f);
-            }
-            /* soft shadow toward the light */
-            if (shadow_k > 0.f) {
-                float res = 1.f, t = 0.25f;
-                for (int s = 0; s < 64 && t < 60.f; s++) {
-                    float sp[3] = {p[0] + n[0] * 0.05f + light[0] * t, p[1] + n[1] * 0.05f + light[1] * t, p[2] + n[2] * 0.05f + light[2] * t};
-                    float dd = scene(prims, all, nall, sp, NULL, 0);
-                    if (dd < 0.002f) { res = 0.f; break; }
-                    res = minf(res, shadow_k * dd / t);
-                    t += clampf(dd, 0.05f, 2.f);
+            if (ci < 0) continue;
+            size_t o = (size_t)cj * W + ci;
+            float p[3] = {x0 + (ci + 0.5f) * dx, y0 - (cj + 0.5f) * dy, o_depth[o]};
+            float n[3] = {o_nrm[o * 3], o_nrm[o * 3 + 1], o_nrm[o * 3 + 2]};
+            float ao, sh;
+            ao_shadow(prims, all, nall, p, n, light, ao_dist, shadow_k, &ao, &sh);
+            for (int j = bj; j < bj + block && j < H; j++)
+                for (int i = bi; i < bi + block && i < W; i++) {
+                    size_t oo = (size_t)j * W + i;
+                    if (o_mat[oo] < 0) continue;
+                    o_ao[oo] = ao; o_sh[oo] = sh;
                 }
-                o_sh[o] = clampf(res, 0.f, 1.f);
-            }
         }
     }
     return hits;

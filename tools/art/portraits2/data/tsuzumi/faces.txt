@@ -1,0 +1,17 @@
+neutral: eN_open eF_open bN_neutral bF_neutral nose m_neutral
+smile: eN_smile eF_smile bN_neutral bF_neutral nose m_smile blush
+grin: eN_smile eF_smile bN_up bF_up nose m_grin blush
+laugh: eN_happy eF_happy bN_up bF_up nose m_laugh blush
+surprise: eN_wide eF_wide bN_up bF_up nose m_o
+shout: eN_wide eF_wide bN_sad bF_sad nose m_shout
+sad: eN_sad eF_sad bN_sad bF_sad nose m_frown
+cry: eN_tear eF_tear bN_sad bF_sad nose m_wobble tearN tearF
+pout: eN_angry eF_angry bN_angry bF_angry nose m_pout blush puffN puffF
+angry: eN_angry eF_angry bN_angry bF_angry nose m_teeth anger
+doubt: eN_half eF_open bN_flat bF_up nose m_side
+think: eN_up eF_up bN_up bF_neutral nose m_small
+embarrassed: eN_away eF_away bN_sad bF_sad nose m_wavy blush_hatch
+serious: eN_serious eF_serious bN_flat bF_flat nose m_flat
+determined: eN_serious eF_serious bN_firm bF_firm nose m_flat
+tired: eN_half eF_half bN_sad bF_sad nose m_small sweat
+calm: eN_calm eF_calm bN_neutral bF_neutral nose m_smile

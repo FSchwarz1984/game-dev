@@ -167,6 +167,32 @@ def merge_islands(px, pal: Palette, max_size=2, skip=()):
     return px
 
 
+def rim(px, pal: Palette, skip=('skin', 'eye')):
+    """Top-left rim: a body pixel whose upper or left neighbour is empty takes one tone lighter
+    (capped at its ramp's top), the edge the key light grazes. Helps the silhouette against dark
+    ground; done before the outline so the outline stays outside."""
+    mat, tone = px['mat'], px['tone']
+    H, W = mat.shape
+    hole = px.get('hole')
+    up = np.zeros((H, W), bool)
+    up[1:, :] = mat[:-1, :] < 0
+    up[0, :] = True
+    left = np.zeros((H, W), bool)
+    left[:, 1:] = mat[:, :-1] < 0
+    left[:, 0] = True
+    if hole is not None:
+        # an edge against an occluder hole is not a lit silhouette edge
+        up[1:, :] &= ~hole[:-1, :]
+        left[:, 1:] &= ~hole[:, :-1]
+    edge = (mat >= 0) & (up | left)
+    for y, x in zip(*np.nonzero(edge)):
+        M = pal.mats[mat[y, x]]
+        if M.name in skip or any(M.name.startswith(s) for s in skip):
+            continue
+        tone[y, x] = min(tone[y, x] + 1, len(M.ramp) - 1)
+    return px
+
+
 def separation_lines(px, pal: Palette, gap=2.0, parts_only=True):
     """Where a pixel sits behind a neighbouring pixel of another part by more than `gap` units, it
     takes its material's line tone: the overlap reads as a drawn line, not a merged blob."""

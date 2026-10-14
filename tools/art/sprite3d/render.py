@@ -12,7 +12,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SRC = os.path.join(HERE, 'sdf_render.c')
-STRIDE = 72
+STRIDE = 76
 _lib = None
 
 
@@ -39,7 +39,7 @@ def lib():
     s16 = ctypes.POINTER(ctypes.c_int16)
     L.render.argtypes = [f, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_float, ctypes.c_float,
                          ctypes.c_float, ctypes.c_float, ctypes.c_float, ctypes.c_float, f, ctypes.c_float,
-                         ctypes.c_float, f, s16, s16, f, f, f, f]
+                         ctypes.c_float, ctypes.c_int, f, s16, s16, f, f, f, f]
     L.render.restype = ctypes.c_int
     _lib = L
     return L
@@ -50,7 +50,7 @@ def _p(a, t):
 
 
 def render(prims: np.ndarray, W: int, H: int, x0: float, y0: float, dx: float, dy: float, zmax: float, zmin: float,
-           light, ao_dist: float = 3.0, shadow_k: float = 6.0) -> dict:
+           light, ao_dist: float = 3.0, shadow_k: float = 6.0, block: int = 1) -> dict:
     """prims: (n, STRIDE) float32 in camera space. Returns per-ray buffers (H, W[, 3])."""
     L = lib()
     prims = np.ascontiguousarray(prims, np.float32)
@@ -64,6 +64,6 @@ def render(prims: np.ndarray, W: int, H: int, x0: float, y0: float, dx: float, d
     sh = np.empty((H, W), np.float32)
     loc = np.empty((H, W, 3), np.float32)
     F = ctypes.c_float
-    L.render(_p(prims, F), n, W, H, x0, y0, dx, dy, zmax, zmin, _p(light, F), ao_dist, shadow_k,
+    L.render(_p(prims, F), n, W, H, x0, y0, dx, dy, zmax, zmin, _p(light, F), ao_dist, shadow_k, int(block),
              _p(depth, F), _p(mat, ctypes.c_int16), _p(part, ctypes.c_int16), _p(nrm, F), _p(ao, F), _p(sh, F), _p(loc, F))
     return {'depth': depth, 'mat': mat, 'part': part, 'nrm': nrm, 'ao': ao, 'sh': sh, 'loc': loc}

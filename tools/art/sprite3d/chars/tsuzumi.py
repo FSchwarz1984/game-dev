@@ -10,7 +10,8 @@ Variants (sheets): 'plain', 'frame' (the old back-frame, empty: day 1, Saji ride
 rail), 'load' (the frame with the wicker box). The hat is its own layer (hat_shapes) so that the
 pending damage / burn states (her body material, pending decision) only swap that layer.
 
-Proportions: 33.3 px to the crown (3.2 heads, head 10.5 px), the hat apex ~37 px; shoulders 8 px."""
+Proportions: 33.3 px to the crown (3.2 heads, head 10.5 px), the hat apex ~37 px, brim 30 px wide;
+shoulders 8 px. The prologue's load stands ~45 px tall."""
 
 from __future__ import annotations
 
@@ -31,6 +32,8 @@ C = {
 }
 
 HAT_TILT = 13.0          # degrees the hat is tipped back on her head (front brim up)
+HAT_MIN_VIEW = 4.0       # the camera always sees the hat's top at least this steeply (a bow seen
+                         # from behind would otherwise turn the near brim's navy underside up)
 
 
 class Tsuzumi(Model):
@@ -54,13 +57,16 @@ class Tsuzumi(Model):
         }
 
     def rest_pose(self):
-        return {'uarmL': (0, 0, 7), 'uarmR': (0, 0, -7), 'farmL': (-16, 0, 0), 'farmR': (-16, 0, 0),
+        return {'uarmL': (0, 0, 13), 'uarmR': (0, 0, -13), 'farmL': (-16, 0, 0), 'farmR': (-16, 0, 0),
                 'thighL': (0, 0, 1.5), 'thighR': (0, 0, -1.5)}
 
     def palette(self):
         return St.Palette([
             St.Mat('hair', ['#160f1e', '#241a2e', '#33263e', '#4b3a58'], '#0f0a16', [0.30, 0.50, 0.76], line=0),
             St.Mat('hairhi', ['#33263e', '#4b3a58', '#6f5c80'], '#0f0a16', [0.42, 0.66], line=0),
+            St.Mat('hairln', ['#0c0812', '#160f1e', '#241a2e', '#33263e'], '#0f0a16', [0.30, 0.50, 0.76], line=0),
+            St.Mat('strawln', ['#8a7d96', '#9d90aa', '#cbc0cd', '#ebe3d6'], '#3b3150', [0.30, 0.50, 0.80], line=1),
+            St.Mat('wickerln', ['#4a331c', '#644728', '#8f6a3c', '#bf9558'], '#2f1e12', [0.30, 0.50, 0.78], line=1),
             St.Mat('white', ['#9d90aa', '#cbc0cd', '#ebe3d6', '#fbf7ef'], '#3b3150', [0.32, 0.52, 0.80], line=1),
             St.Mat('straw', ['#9d90aa', '#cbc0cd', '#ebe3d6', '#fbf7ef'], '#3b3150', [0.30, 0.50, 0.80], line=1),
             St.Mat('indigo', ['#201e3f', '#2f305c', '#42487d', '#5f679f'], '#16122a', [0.30, 0.50, 0.80], line=0),
@@ -108,15 +114,35 @@ class Tsuzumi(Model):
 
     # ------------------------------------------------------------------ the hat (own layer)
     def hat_shapes(self, ctx, variant='intact'):
-        """The sugegasa in its own frame: y up along the cone, brim radius 14.5, 4 px tall; the red
+        """The sugegasa in its own frame: y up along the cone, brim radius 15, 4 px tall; the red
         band runs from the crown down to the brim on her left-front; the underside is navy.
         variant: 'intact' only for now (damage and burn states wait for the body-material
-        decision; they would add cut planes and char bands here)."""
+        decision; they would add cut planes and char bands here).
+        With the prologue's tall load the brim's back strip, where the load stands, is left out
+        (the brim rests against the load), so from behind the load shows in front of the hat and
+        the brim sticks out on both sides; from every other side the load fills the gap."""
         hat = dict(part='hat')
-        S = [cone('hat', 1.9, 14.5, 0.9, 'straw', round_=0.45, at=(0, 1.9, 0),
-                  bands=[(4, 30, 50, 'red'), (1, -1.95, -1.55, 'navy')], **hat),
-             ell('hat', (1.3, 0.9, 1.3), 'straw', at=(0, 3.9, 0), **hat)]
+        kw = dict(round_=0.45, at=(0, 1.9, 0), bands=[(4, 30, 50, 'red'), (1, -1.95, -1.55, 'navy')], **hat)
+        pieces = [(None, None)]
+        bw = ctx.get('bones')
+        if ctx.get('variant') == 'load' and ctx.get('hat', 'head') in ('head', 'brim') and bw and 'hat' in bw:
+            pieces = self._load_slot(bw)
+        S = [cone('hat', 1.9, 15.0, 0.9, 'straw', cut=c1, cut2=c2, **kw) for c1, c2 in pieces]
+        S += [ell('hat', (1.3, 0.9, 1.3), 'straw', at=(0, 3.9, 0), **hat)]
         return S
+
+    def _load_slot(self, bw, c=3.6, w=5.0, lap=0.3):
+        """The brim in three pieces whose union leaves out the strip |x| < w, z < -c of the chest
+        frame (the load's footprint at the brim's height), as cut planes in the hat frame."""
+        N = np.linalg.inv(bw['chest']) @ bw['hat']          # hat frame -> chest frame
+        A, b = N[:3, :3], N[:3, 3]
+
+        def plane(n, d):
+            n = np.asarray(n, float)
+            return tuple(A.T @ n) + (d - float(n @ b),)
+        front = plane((0, 0, -1), c + lap)                  # keeps z >= -c - lap
+        back = plane((0, 0, 1), -c + lap)                   # keeps z <= -c + lap
+        return [(front, None), (back, plane((-1, 0, 0), -w)), (back, plane((1, 0, 0), -w))]
 
     def hat_place(self, bw, yaw, where):
         """Where the hat is: 'head' (worn), 'face' (lying over her face), 'chest' (sliding off as
@@ -149,7 +175,13 @@ class Tsuzumi(Model):
         pitch_h = -math.degrees(math.asin(max(-1.0, min(1.0, f[1]))))
         R = G.Ry(yaw_h) @ G.Rx(0.2 * pitch_h - ctx_lift)
         tilt = G.Ry(-yaw) @ G.Rx(-HAT_TILT) @ G.Ry(yaw)
-        return G.M4(tilt @ R, seat[:3])
+        M3 = tilt @ R
+        if ctx_lift == 0.0:
+            u = G.camera()[:3, :3] @ G.Ry(yaw) @ (M3 @ np.array([0.0, 1.0, 0.0]))
+            a = math.degrees(math.atan2(u[2], u[1]))
+            if a < HAT_MIN_VIEW:
+                M3 = G.Ry(-yaw) @ G.Rx(HAT_MIN_VIEW - a) @ G.Ry(yaw) @ M3
+        return G.M4(M3, seat[:3])
 
     # ------------------------------------------------------------------ shapes
     def head_shapes(self, ctx):
@@ -158,13 +190,13 @@ class Tsuzumi(Model):
               ell('head', (3.6, 2.7, 3.1), 'skin', at=(0, 2.6, 1.2), part='face', group='face', k=1.4)]
         hair = dict(group='hair', k=0.8)
         S += [ell('head', (5.05, 5.1, 4.85), 'hair', at=(0, 5.3, -0.3), cut=(0, -1.0, 0.30, -4.4), part='hair',
-                  bands=[(1, 2.0, 2.8, 'hairhi')], **hair)]
+                  bands=[(4, 0, 6, 'hairln', 0, 0, 0, 50), (1, 2.0, 2.8, 'hairhi')], **hair)]
         # blunt hime fringe, cut straight at the brow
         S += [ell('head', (4.55, 2.2, 1.5), 'hair', at=(0, 7.3, 3.3), cut=(0, -1.0, 0, -5.75), part='bangs', **hair)]
         # cheek locks (hime cut) with white and red ties
         for sx, nm in ((1, 'lockL'), (-1, 'lockR')):
             S += [rcone('head', (sx * 4.5, 6.6, 0.4), (sx * 4.4, -2.2, 1.0), 1.25, 0.9, 'hair', part=nm,
-                        bands=[(1, 2.2, 3.4, 'white'), (1, 1.6, 2.2, 'red')], **hair)]
+                        bands=[(1, 0.4, 1.6, 'white'), (1, -0.2, 0.4, 'red')], **hair)]
         # back of the head (the long sheet itself is the 'hairb' chain)
         S += [ell('head', (4.9, 4.2, 3.0), 'hair', at=(0, 4.0, -2.2), part='hair', **hair)]
         return S
@@ -175,7 +207,7 @@ class Tsuzumi(Model):
         for j in range(6):
             w = 4.3 - j * 0.28
             S += [box(f'hairb{j}', (w, 1.75, 0.95), 'hair', round_=0.85, at=(0, -1.4, 0), part='hairb',
-                      group='hairb', k=0.9)]
+                      group='hairb', k=0.9, bands=[(0, 0.0, 0.55, 'hairln', 0, 0, 0, 2.3)])]
         return S
 
     def shapes(self, ctx):
@@ -192,8 +224,8 @@ class Tsuzumi(Model):
         S += [rcone('neck', (0, -0.4, 0), (0, 1.8, 0), 1.05, 1.0, 'skin', part='neck'),
               ell('spine', (2.7, 2.4, 2.0), 'indigo', at=(0, 0.8, 0.05), part='torso', group='torso', k=1.0),
               ell('chest', (3.0, 2.7, 2.15), 'indigo', at=(0, 0.3, 0.1), part='torso', group='torso', k=1.0),
-              ell('chest', (1.0, 1.2, 0.6), 'white', at=(0, 2.0, 1.75), R=G.Rx(-20), part='collar'),
-              ell('chest', (0.55, 0.9, 0.5), 'red', at=(0, 1.6, 2.0), R=G.Rx(-20), part='collar')]
+              ell('chest', (0.8, 1.0, 0.5), 'white', at=(0, 1.3, 1.85), R=G.Rx(-20), part='collar'),
+              ell('chest', (0.45, 0.8, 0.45), 'red', at=(0, 1.0, 2.05), R=G.Rx(-20), part='collar')]
         # obi: white, a red cord around it, the bow on her left-front, the long tail (chain)
         S += [cyl('spine', 1.0, 2.95, 'white', round_=0.4, at=(0, 0.3, 0), part='obi'),
               torus('spine', 2.98, 0.32, 'red', at=(0, 0.25, 0), part='obi'),
@@ -215,10 +247,10 @@ class Tsuzumi(Model):
             bw['coat0'] = G.M4(np.eye(3), (p[0], top, p[2] - 0.4))
             L = max(0.25, top / 11.2)
         hz = 5.6 * L
-        hem_r = 5.4 + (1.0 - L) * 4.0
+        hem_r = 6.1 + (1.0 - L) * 4.0
         g = 1.6
         for cut in ((-1, -0.107 / L, 0, -g), (1, -0.107 / L, 0, -g), (0, 0, 1, 0.2)):
-            S += [skirt('coat0', hz, hem_r, 3.3, 'white', sx=1.0, sz=0.78, wave=(1.0, -6, 0.3), flare=(0.25, 7, 0.0),
+            S += [skirt('coat0', hz, hem_r, 3.6, 'white', sx=1.0, sz=0.78, wave=(1.0, -6, 0.3), flare=(0.25, 7, 0.0),
                         round_=0.4, at=(0, -hz, 0), cut=cut, **coat)]
         # trousers and boots
         for s, sx in (('L', 1), ('R', -1)):
@@ -229,11 +261,11 @@ class Tsuzumi(Model):
                       bands=[(1, -0.9, -0.55, 'white')])]
         # arms: haori sleeves (white, indigo lining at the opening), the hanging sleeve bags, hands
         for s, sx in (('L', 1), ('R', -1)):
-            S += [rcone('uarm' + s, (0, 0.3, 0), (0, -3.8, 0), 1.45, 1.75, 'white', part='arm' + s),
-                  cone('farm' + s, 1.7, 2.7, 1.75, 'white', round_=0.3, at=(0, -1.6, 0.0), part='arm' + s,
+            S += [rcone('uarm' + s, (0, 0.3, 0), (0, -3.8, 0), 1.55, 1.95, 'white', part='arm' + s),
+                  cone('farm' + s, 1.7, 3.0, 1.95, 'white', round_=0.3, at=(0, -1.6, 0.0), part='arm' + s,
                        bands=[(1, -1.75, -1.25, 'indigo')]),
-                  box(f'slv{s}0', (0.75, 2.1, 1.9), 'white', round_=0.7, at=(0, -1.3, 0.0), part='slv' + s,
-                      bands=[(1, -2.2, -1.7, 'indigo')]),
+                  box(f'slv{s}0', (1.0, 2.7, 2.3), 'white', round_=0.8, at=(0, -1.7, 0.0), part='slv' + s,
+                      bands=[(1, -2.8, -2.25, 'indigo')]),
                   ell('hand' + s, (0.78, 0.9, 0.78), 'skin', at=(0, -0.4, 0.15), part='hand' + s)]
         if var in ('frame', 'load'):
             S += self.frame_shapes(ctx, var == 'load')
@@ -266,25 +298,34 @@ class Tsuzumi(Model):
 
     def frame_shapes(self, ctx, box_on):
         """The back-frame (背負子) on her back, rigid with the chest: two posts from the hips to above
-        the hat (their tips show beside it, so the frame reads from the front too), four rails and a
-        shelf; straw straps over the shoulders and down the coat; the wicker box (load) on the shelf
-        with a cloth bundle tied on top."""
+        the hat (their tips show beside it, so the frame reads from the front too), rails and a
+        shelf; straw straps over the shoulders and down the coat.
+        'frame' (day 1 on: the master's old frame, empty, Saji sits on its top rail): posts to 18.4.
+        'load' (the prologue: her own frame and load, "a load twice her height" in the long shot):
+        taller posts and a stack on the shelf: the wicker box, an indigo furoshiki bundle, a rolled
+        straw mat and a paper-wrapped parcel, its top ~45 px above the ground (her crown is at 33)."""
         S = []
         w = dict(part='frame')
+        top = 24.4 if box_on else 18.4
+        half = (top + 6.5) / 2 - 0.05
         for sx in (1, -1):
-            S += [box('chest', (0.55, 12.2, 0.55), 'wood', round_=0.25, at=(sx * 3.1, 5.9, -3.9), **w),
-                  ell('chest', (0.62, 0.5, 0.62), 'wood', at=(sx * 3.1, 18.2, -3.9), **w)]
+            S += [box('chest', (0.6, half, 0.6), 'wood', round_=0.25, at=(sx * 3.7, top - 0.05 - half, -4.0), **w),
+                  ell('chest', (0.68, 0.55, 0.68), 'wood', at=(sx * 3.7, top, -4.0), **w)]
             # straps: behind the shoulder, over it, down the front of the coat to the armpit
             S += [rcone('chest', (sx * 2.0, 2.2, -2.6), (sx * 2.3, 3.2, 0.6), 0.45, 0.45, 'rope', part='strap'),
-                  rcone('chest', (sx * 2.3, 3.2, 0.6), (sx * 2.8, -1.4, 2.95), 0.45, 0.42, 'rope', part='strap')]
-        for y in (-5.4, 3.0, 10.6, 16.9):
-            S += [box('chest', (3.5, 0.42, 0.45), 'wood', round_=0.2, at=(0, y, -3.9), **w)]
-        S += [box('chest', (3.5, 0.4, 2.5), 'wood', round_=0.2, at=(0, -5.8, -6.0), **w)]
+                  rcone('chest', (sx * 2.3, 3.2, 0.6), (sx * 2.8, -1.4, 3.1), 0.45, 0.42, 'rope', part='strap')]
+        for y in (-5.4, 3.0, 10.6, 16.9) + ((23.0,) if box_on else ()):
+            S += [box('chest', (4.1, 0.45, 0.48), 'wood', round_=0.2, at=(0, y, -4.0), **w)]
+        S += [box('chest', (4.1, 0.42, 2.9), 'wood', round_=0.2, at=(0, -5.85, -6.6), **w)]
         if box_on:
-            S += [box('chest', (3.9, 4.9, 2.4), 'wicker', round_=0.8, at=(0, -0.6, -6.4), part='box',
-                      bands=[(1, 3.6, 4.9, 'wood'), (0, -0.35, 0.35, 'rope')]),
-                  ell('chest', (3.4, 2.0, 2.2), 'indigo', at=(0, 5.6, -6.1), part='bundle',
-                      bands=[(0, -0.45, 0.35, 'rope')])]
+            S += [box('chest', (4.6, 6.2, 2.9), 'wicker', round_=0.9, at=(0, 0.6, -7.0), part='box',
+                      bands=[(1, 0.0, 0.45, 'wickerln', 0, 0, 0, 1.5), (1, 5.0, 6.2, 'wood'), (0, -0.4, 0.4, 'rope')]),
+                  ell('chest', (4.4, 3.0, 2.8), 'indigo', at=(0, 9.6, -6.8), part='bundle',
+                      bands=[(0, -0.5, 0.4, 'rope'), (1, -0.4, 0.3, 'rope')]),
+                  cyl('chest', 5.0, 1.75, 'wicker', round_=0.5, at=(0, 14.3, -6.4), R=G.Rz(90), part='mat',
+                      bands=[(1, -3.6, -2.9, 'rope'), (1, 2.9, 3.6, 'rope'), (1, -0.3, 0.3, 'wickerln', 0, 0, 0, 1.2)]),
+                  ell('chest', (3.0, 2.4, 2.3), 'paper', at=(-0.4, 18.4, -6.2), part='bundle',
+                      bands=[(1, -0.3, 0.3, 'rope'), (0, -0.3, 0.3, 'rope')])]
         return S
 
     # ------------------------------------------------------------------ face
@@ -310,9 +351,12 @@ class Tsuzumi(Model):
     def anchors(self, ctx):
         a = {'hand': ('handL', (0, -0.6, 0)), 'handR': ('handR', (0, -0.6, 0)), 'head': ('head', (0, 12.0, 0)),
              'seat': ('pelvis', (0, -1.3, -0.4))}
-        if ctx.get('variant') in ('frame', 'load'):
-            a['loadTop'] = ('chest', (0, 17.4, -3.9))
-            a['hook'] = ('chest', (-3.1, 18.6, -3.9))
+        if ctx.get('variant') == 'frame':
+            a['loadTop'] = ('chest', (0, 17.4, -4.0))      # Saji's seat: the top rail
+            a['hook'] = ('chest', (-3.7, 18.8, -4.0))      # the right post's tip (the tenth lantern)
+        elif ctx.get('variant') == 'load':
+            a['loadTop'] = ('chest', (-0.4, 20.8, -6.2))   # the top of the stack
+            a['hook'] = ('chest', (-3.7, 24.8, -4.0))
         return a
 
 
@@ -330,6 +374,11 @@ import tsuzumi_acts as T  # noqa: E402
 FB = ('front', 'back')
 FLR = ('front', 'right', 'left')
 LR = ('right', 'left')
+
+# Saji riding on the 'frame' sheet: her sprite's 'seat' anchor goes on this sheet's 'loadTop'
+# anchor; per view, whether she is drawn behind Tsuzumi or over her (characters.json "rider").
+RIDER = {'front': 'behind', 'front_right': 'behind', 'front_left': 'behind', 'right': 'behind',
+         'left': 'behind', 'back': 'over', 'back_right': 'over', 'back_left': 'over'}
 
 
 def _a(fn, fps, loop, views, sheets):

@@ -10,6 +10,7 @@
 #   assets/portraits/<who>_bust.webp (internal checking only, never shipped as art).
 # - godot/icon.png: a plain placeholder app icon.
 # Re-run whenever those sources change. Only reads and writes inside the repository.
+# `--sprites-only` copies just the sprite sheets and their layout (tools/art/sprite3d uses it).
 import json
 import os
 import shutil
@@ -92,6 +93,8 @@ def icon():
 
 
 if __name__ == "__main__":
+    import sys
     sprites()
-    portraits()
-    icon()
+    if "--sprites-only" not in sys.argv:   # the sprite generator syncs only its own sheets
+        portraits()
+        icon()

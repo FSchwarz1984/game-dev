@@ -20,6 +20,19 @@ def _f(m, seq, wind=None):
     return Po.frames(m, [p for p, c in seq], [c for p, c in seq], wind=wind)
 
 
+def front_pivot(m, pose, margin=1.0):
+    """For a body lying toward the camera (the front view of the prone poses) the ground point
+    moves to the front of the body (her head end): nothing may fall below the pivot row. The
+    anchors ('hip' for the beam) say where the rest of her is."""
+    p = dict(pose)
+    bw = m.bones(p)
+    zmax = max(bw[b][2, 3] for b in ('head', 'handL', 'handR')) + 5.0
+    M = np.array(p['root_m'], float)
+    M[2, 3] -= zmax + margin
+    p['root_m'] = M
+    return p
+
+
 # ------------------------------------------------------------------ pinned and crawling
 # Prone, head toward +Z (the view decides where that is: 'front' = head toward the camera, the
 # beam then lies east-west across her hips). The upper body is propped on the elbows and the head
@@ -52,6 +65,8 @@ def pinned(m, view):
            (prone_pose(m, 0.3, 1.0, 4, 0.6, t), dict(b, expr='shut', mouth='shout')),
            (prone_pose(m, -1.0, 1.0, 0, 1.0, t), dict(b, expr='wide', mouth='open')),
            (prone_pose(m, -0.3, 1.0, -4, 0.6, t), dict(b, expr='shut', mouth='shout'))]
+    if view == 'front':
+        seq = [(front_pivot(m, p), c) for p, c in seq]
     return _f(m, seq)
 
 
@@ -67,6 +82,8 @@ def crawl(m, view):
         p['shinL'] = (30 + 20 * a, 0, 0)
         p['shinR'] = (30 - 20 * a, 0, 0)
         seq.append((p, {'expr': 'down' if i % 2 else 'open', 'mouth': 'closed'}))
+    if view == 'front':
+        seq = [(front_pivot(m, p), c) for p, c in seq]
     return _f(m, seq)
 
 

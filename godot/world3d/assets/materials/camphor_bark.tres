@@ -1,0 +1,27 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://world3d/assets/shaders/w3a_surface.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://world3d/assets/textures/camphor_bark.res" id="2"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1")
+shader_parameter/w3a_px_per_m = null
+shader_parameter/w3a_key_dir = null
+shader_parameter/w3a_see_pos = null
+shader_parameter/w3a_see_r_px = null
+shader_parameter/w3a_see_soft_px = null
+shader_parameter/w3a_far_tint = null
+shader_parameter/albedo_tex = ExtResource("2")
+shader_parameter/tint_deep = null
+shader_parameter/tint_shadow = null
+shader_parameter/tint_mid = null
+shader_parameter/tint_lit = null
+shader_parameter/tint_high = null
+shader_parameter/see_through = 1.0
+shader_parameter/see_scale = 1.0
+shader_parameter/lit = null
+shader_parameter/glow_color = null
+shader_parameter/glow_energy = null
+shader_parameter/w3a_cam_fwd = null
+shader_parameter/lantern_tint = null

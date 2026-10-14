@@ -77,7 +77,7 @@ func test_diagonal_motion_shows_the_diagonal_view_with_hysteresis() -> void:
 		a.z += 0.04
 		a.tick(DT)
 	eq(a.anim_name, "walk_front_right", "south-east")
-	eq(a.face, "right", "the four-way face for the game logic")
+	eq(a.face, "front", "the four-way face for the game logic keeps the vertical on an exact diagonal")
 	# a slight wobble toward south keeps the diagonal (hysteresis), a clear turn changes it
 	for i in 4:
 		a.x += 0.03

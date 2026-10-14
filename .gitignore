@@ -20,3 +20,9 @@ tools/vista/out/
 
 # props generator intermediates (finished assets live in godot/art/props)
 tools/props/out/
+
+# 3D asset generator intermediates (rebuilt by tools/world3d_assets); finished assets live in godot/world3d/assets
+tools/world3d_assets/out/
+
+# 3D terrain generator intermediates (rebuilt by tools/world3d); finished data lives in godot/world3d
+tools/world3d/out/

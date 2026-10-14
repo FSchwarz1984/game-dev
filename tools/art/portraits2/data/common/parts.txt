@@ -1,0 +1,167 @@
+# Parts shared by all three faces (face keys only; see palettes.py). '.' keeps what is below.
+# Face geometry shared by the three bases: near eye x22-32, far eye x46-54 (rows 37-46), brows rows 31-34,
+# nose (47-48, 49-50), mouth centred on (44, 56), cheeks rows 47-51.
+
+== nose @ 47,49
+t
+u
+
+# ---- mouths
+== m_neutral @ 42,56
+uqqu
+
+== m_smile @ 40,55
+q....q
+.qqqq.
+
+== m_grin @ 40,55
+qqqqqqq
+qmmmmmq
+.qnnnq.
+..qqq..
+
+== m_laugh @ 39,54
+qqqqqqqqq
+qmmmmmmmq
+qmmmmmmmq
+.qmnnnmq.
+..qnnnq..
+...qqq...
+
+== m_o @ 42,56
+.qq.
+qmmq
+qmmq
+.qq.
+
+== m_frown @ 41,57
+.qqqq.
+q....q
+
+== m_wobble @ 39,56
+..qqq.qqq..
+.q...q...q.
+q.........q
+
+== m_wail @ 40,55
+..qqqq..
+.qmmmmq.
+qmmnnmmq
+qqqqqqqq
+
+== m_pout @ 43,55
+qq.
+..q
+.q.
+..q
+qq.
+
+== m_flat @ 41,56
+uqqqqu
+
+== m_side @ 42,55
+.....q
+uqqqq.
+
+== m_small @ 43,56
+qqq
+qmq
+
+== m_wavy @ 40,56
+.qq..qq.
+q..qq..q
+
+== m_shout @ 39,54
+.qqqqqqqq.
+qyyyyyyyyq
+qmmmmmmmmq
+qmmmmmmmmq
+qmmnnnnmmq
+.qnnnnnnq.
+..qqqqqq..
+
+== m_teeth @ 39,55
+.qqqqqqqq.
+qyyqyyqyyq
+qyyqyyqyyq
+qq......qq
+
+# ---- tears: streams from each eye's outer corner down the cheek
+== tearN @ 22,45
+.cz.
+.cCz
+.cCz
+cCz.
+cCz.
+cCz.
+.cCz
+.cCz
+.cCz
+.zCCz
+.zCCz
+..zz.
+
+== tearF @ 51,45
+.cz.
+.cCz
+.cCz
+..cCz
+..cCz
+..cCz
+.cCz
+.cCz
+.zCCz
+..zz.
+
+# ---- blush
+== blush @ 23,48
+.bbbbb.......................bbbb.
+bbbbbbb.....................bbbbbb
+
+== blush_hatch @ 22,47
+..p.p.p.........................p.p.p.
+.pbpbpb........................pbpbpb.
+pbpbpb........................pbpbpb..
+.p.p.p........................p.p.p...
+
+# ---- sweat drop (temple, far side)
+== sweat @ 57,35
+..z..
+.zcz.
+.zcz.
+zcCCz
+zcCCz
+zCCCz
+.zzz.
+
+# ---- anger mark (on the hair, upper right)
+== anger @ 55,13
+.xx.xx.
+xXx.xXx
+xx...xx
+.......
+xx...xx
+xXx.xXx
+.xx.xx.
+
+# ---- puffed cheek (pout): the far cheek bulges past the jaw line
+== puffF @ 50,48
+....tq..
+....ttq.
+...tttq.
+...tttq.
+...tttq.
+...ttq..
+..tttq..
+..ttq...
+.ttq....
+tqq.....
+
+== puffN @ 22,51
+.qt........
+.qtt.......
+..qss......
+..qsss.....
+...qsss....
+....qsss...
+......qqs..
