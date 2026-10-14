@@ -2,16 +2,15 @@
 
 开工前先读这里。用户批准后，把条目移到 `decision-log.md`，并在这里删掉。
 
-## G1 第二轮（2026-10-14）
+## G1 第三轮（2026-10-14）
 
-评审页面：<https://claude.ai/artifact/3cvHsMaeU9aTw9gb26Lj8D>（末尾 5 条清单与下面一一对应）
+评审页面：<https://claude.ai/artifact/WhsgJ2hB6q27ftCNVDXhc7>（第二轮的答复已记入 decision-log：G1R2-1～5）
 
-1. [ ] 舞台装置与宇宙观：天岸、大潮、九十九道关、「隔」、遠化（story.md、cosmology.svg）
-2. [ ] 主角的真身：第一百道关——会走路的那一道（characters.md）
-3. [ ] シオン：不知道真相；她的谜是记忆里的两个洞
-4. [ ] 三人的华文名与英文名
-5. [ ] 作品名第三轮：A 天岸 / SKYSHORE（推荐）、B HUNDREDGATE、C 轻小说式长标题、D NEARFALL（title.md）
-- 另：游戏里一天的长度（建议约 20 分钟），等合适的时候再问。
+1. [ ] 世界观：A 秤盘世界（推荐）/ B 被咬的月亮 / C 缝起来的天（story.md、world-a.svg）
+2. [ ] 主角的真身：她就是那颗秤砣（随 A；characters.md）
+3. [ ] 名字：千鈞リラ（千钧莉拉，Lira Senkin）、大福リンネ（大福铃音，Rinne Daifuku）、彼岸アマリ（彼岸阿茉莉，Amari Higan），各有备选
+4. [ ] 作品名第四轮，按类型：①《世界歪了，八成是我干的》（推荐）②《悬界》③《背天》④《零克》ZERO GRAM；四个都不行时，请至少选定类型（title.md）
+- 另：游戏里一天的长度（建议约 20 分钟），已并入 G3 的试玩问题。
 
 ## G3 灰盒原型（2026-10-14 发布技术预览，待试玩反馈）
 

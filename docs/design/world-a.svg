@@ -1,0 +1,307 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 620" role="img" aria-labelledby="wt wd" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+<title id="wt">秤盘世界的剖面示意</title>
+<desc id="wd">一根横贯天空的秤杆"衡"架在从奈落升起的天柱上。左边的秤盘是此岸，我们的世界，正在变轻、升高；右边的秤盘是彼岸，正在下沉。九十九根锁链把秤盘挂在衡上。衡上靠左有一个空着的位置，是秤砣原本挂的地方。此岸的光点顺着锁链升上衡，流向彼岸。九十九折峠山顶的「隔」塔锁已锈断。下面是看不见底的奈落。</desc>
+<rect width="900" height="620" style="fill:var(--sky,#e4e9f3)"/>
+<rect x="0" y="500" width="900" height="120" style="fill:var(--abyss,#c9cfdd)"/>
+<rect x="109" y="502" width="448" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="690" y="507" width="406" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="138" y="515" width="498" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="430" y="520" width="292" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="186" y="528" width="422" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="726" y="533" width="207" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="73" y="541" width="309" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="605" y="546" width="318" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="-37" y="554" width="301" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="515" y="559" width="400" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="144" y="567" width="285" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="691" y="572" width="213" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="108" y="580" width="275" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="421" y="585" width="389" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="10" y="593" width="300" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="754" y="598" width="389" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<rect x="29" y="606" width="509" height="7" rx="3.5" style="fill:var(--cloud,#ffffff);opacity:.55"/>
+<rect x="603" y="611" width="343" height="6" rx="3" style="fill:var(--cloud,#ffffff);opacity:.45"/>
+<text x="24" y="598" style="font-size:16px;font-weight:700;fill:var(--ink,#1b2030)">奈落</text><text x="72" y="598" style="font-size:12px;fill:var(--muted,#586074)">秤盘下面看不见底的云海</text>
+<path d="M438,620 L442,122.0 L458,122.0 L462,620 Z" style="fill:var(--pillar,#8a8fa3)"/>
+<path d="M441,152 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,198 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,244 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,290 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,336 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,382 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,428 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,474 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,520 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,566 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<path d="M441,612 h18" style="stroke:var(--sky,#e4e9f3);stroke-width:1.2;opacity:.6"/>
+<text x="470" y="300" style="font-size:14px;font-weight:700;fill:var(--ink,#1b2030)">天柱</text><text x="470" y="318" style="font-size:12px;fill:var(--muted,#586074)">从奈落里升起，撑着整杆秤</text>
+<path d="M120,87 L780,127 L780,137 L120,97 Z" style="fill:var(--beam,#3b3f52)"/>
+<circle cx="450" cy="112.0" r="11" style="fill:var(--beam,#3b3f52);stroke:var(--sky,#e4e9f3);stroke-width:3"/>
+<text x="560" y="58" style="font-size:15px;font-weight:700;fill:var(--ink,#1b2030)">衡（秤杆）</text><text x="560" y="76" style="font-size:12px;fill:var(--muted,#586074)">白天是天上一道永不消散的白线</text>
+<circle cx="300" cy="102.9090909090909" r="15" style="fill:none;stroke:var(--vermil,#b8432c);stroke-width:2;stroke-dasharray:4 3"/>
+<text x="182" y="76.9090909090909" style="font-size:12px;font-weight:700;fill:var(--vermil,#b8432c)">秤砣原本挂在这里（空）</text>
+<path d="M55.0,296.0 L57.9,291.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M60.2,288.5 L63.0,284.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M65.4,280.9 L68.2,276.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M70.6,273.4 L73.4,269.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M75.8,265.9 L78.6,261.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M81.0,258.4 L83.8,254.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M86.2,250.8 L89.0,246.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M91.3,243.3 L94.2,239.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M96.5,235.8 L99.4,231.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M101.7,228.2 L104.6,224.1" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M106.9,220.7 L109.8,216.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M112.1,213.2 L115.0,209.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M117.3,205.7 L120.2,201.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M122.5,198.1 L125.4,194.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M127.7,190.6 L130.5,186.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M132.9,183.1 L135.7,178.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M138.1,175.5 L140.9,171.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M143.3,168.0 L146.1,163.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M148.5,160.5 L151.3,156.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M153.7,152.9 L156.5,148.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M158.8,145.4 L161.7,141.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M164.0,137.9 L166.9,133.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M169.2,130.4 L172.1,126.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M174.4,122.8 L177.3,118.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M179.6,115.3 L182.5,111.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M184.8,107.8 L187.7,103.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M130.0,296.0 L131.3,291.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M132.3,288.5 L133.6,284.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M134.6,280.9 L135.9,276.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M136.9,273.4 L138.2,269.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M139.2,265.9 L140.5,261.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M141.5,258.4 L142.8,254.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M143.8,250.8 L145.1,246.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M146.2,243.3 L147.4,239.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M148.5,235.8 L149.7,231.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M150.8,228.2 L152.0,224.1" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M153.1,220.7 L154.3,216.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M155.4,213.2 L156.7,209.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M157.7,205.7 L159.0,201.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M160.0,198.1 L161.3,194.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M162.3,190.6 L163.6,186.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M164.6,183.1 L165.9,178.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M166.9,175.5 L168.2,171.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M169.2,168.0 L170.5,163.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M171.5,160.5 L172.8,156.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M173.8,152.9 L175.1,148.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M176.2,145.4 L177.4,141.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M178.5,137.9 L179.7,133.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M180.8,130.4 L182.0,126.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M183.1,122.8 L184.3,118.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M185.4,115.3 L186.7,111.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M187.7,107.8 L189.0,103.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M250.0,296.0 L248.7,291.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M247.7,288.5 L246.4,284.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M245.4,280.9 L244.1,276.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M243.1,273.4 L241.8,269.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M240.8,265.9 L239.5,261.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M238.5,258.4 L237.2,254.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M236.2,250.8 L234.9,246.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M233.8,243.3 L232.6,239.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M231.5,235.8 L230.3,231.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M229.2,228.2 L228.0,224.1" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M226.9,220.7 L225.7,216.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M224.6,213.2 L223.3,209.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M222.3,205.7 L221.0,201.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M220.0,198.1 L218.7,194.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M217.7,190.6 L216.4,186.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M215.4,183.1 L214.1,178.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M213.1,175.5 L211.8,171.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M210.8,168.0 L209.5,163.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M208.5,160.5 L207.2,156.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M206.2,152.9 L204.9,148.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M203.8,145.4 L202.6,141.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M201.5,137.9 L200.3,133.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M199.2,130.4 L198.0,126.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M196.9,122.8 L195.7,118.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M194.6,115.3 L193.3,111.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M192.3,107.8 L191.0,103.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M325.0,296.0 L322.1,291.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M319.8,288.5 L317.0,284.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M314.6,280.9 L311.8,276.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M309.4,273.4 L306.6,269.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M304.2,265.9 L301.4,261.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M299.0,258.4 L296.2,254.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M293.8,250.8 L291.0,246.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M288.7,243.3 L285.8,239.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M283.5,235.8 L280.6,231.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M278.3,228.2 L275.4,224.1" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M273.1,220.7 L270.2,216.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M267.9,213.2 L265.0,209.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M262.7,205.7 L259.8,201.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M257.5,198.1 L254.6,194.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M252.3,190.6 L249.5,186.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M247.1,183.1 L244.3,178.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M241.9,175.5 L239.1,171.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M236.7,168.0 L233.9,163.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M231.5,160.5 L228.7,156.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M226.3,152.9 L223.5,148.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M221.2,145.4 L218.3,141.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M216.0,137.9 L213.1,133.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M210.8,130.4 L207.9,126.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M205.6,122.8 L202.7,118.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M200.4,115.3 L197.5,111.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M195.2,107.8 L192.3,103.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M45.0,300 Q190,370 335.0,300 Z" style="fill:var(--landd,#93a88e)"/>
+<path d="M45.0,300 L45.0,268.0 L52.2,269.8 L59.5,281.3 L66.8,287.6 L74.0,285.7 L81.2,287.4 L88.5,292.4 L95.8,293.1 L103.0,291.7 L110.2,292.9 L117.5,294.3 L124.8,293.9 L132.0,293.5 L139.2,294.0 L146.5,294.1 L153.8,294.0 L161.0,294.0 L168.2,294.0 L175.5,294.0 L182.8,294.0 L190.0,294.0 L197.2,294.0 L204.5,294.0 L211.8,294.0 L219.0,294.0 L226.2,294.1 L233.5,293.9 L240.8,293.7 L248.0,294.1 L255.2,294.2 L262.5,293.1 L269.8,292.6 L277.0,293.9 L284.2,292.8 L291.5,289.0 L298.8,288.9 L306.0,290.3 L313.2,283.9 L320.5,275.9 L327.8,276.5 L335.0,273.4 L335.0,300 Z" style="fill:var(--land,#b9c8b2)"/>
+<circle cx="150" cy="288" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="166" cy="290" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="236" cy="289" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<text x="45.0" y="358" style="font-size:16px;font-weight:700;fill:var(--ink,#1b2030)">此岸</text><text x="85.0" y="358" style="font-size:12px;fill:var(--muted,#586074)">我们的秤盘：正在变轻、升高</text>
+<path d="M575.0,388.0 L577.9,382.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M580.2,378.1 L583.0,372.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M585.4,368.3 L588.2,362.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M590.6,358.4 L593.4,353.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M595.8,348.6 L598.6,343.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M601.0,338.7 L603.8,333.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M606.2,328.9 L609.0,323.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M611.3,319.0 L614.2,313.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M616.5,309.2 L619.4,303.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M621.7,299.3 L624.6,293.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M626.9,289.4 L629.8,284.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M632.1,279.6 L635.0,274.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M637.3,269.7 L640.2,264.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M642.5,259.9 L645.4,254.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M647.7,250.0 L650.5,244.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M652.9,240.2 L655.7,234.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M658.1,230.3 L660.9,224.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M663.3,220.5 L666.1,215.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M668.5,210.6 L671.3,205.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M673.7,200.7 L676.5,195.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M678.8,190.9 L681.7,185.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M684.0,181.0 L686.9,175.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M689.2,171.2 L692.1,165.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M694.4,161.3 L697.3,155.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M699.6,151.5 L702.5,146.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M704.8,141.6 L707.7,136.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M650.0,388.0 L651.3,382.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M652.3,378.1 L653.6,372.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M654.6,368.3 L655.9,362.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M656.9,358.4 L658.2,353.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M659.2,348.6 L660.5,343.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M661.5,338.7 L662.8,333.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M663.8,328.9 L665.1,323.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M666.2,319.0 L667.4,313.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M668.5,309.2 L669.7,303.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M670.8,299.3 L672.0,293.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M673.1,289.4 L674.3,284.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M675.4,279.6 L676.7,274.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M677.7,269.7 L679.0,264.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M680.0,259.9 L681.3,254.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M682.3,250.0 L683.6,244.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M684.6,240.2 L685.9,234.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M686.9,230.3 L688.2,224.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M689.2,220.5 L690.5,215.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M691.5,210.6 L692.8,205.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M693.8,200.7 L695.1,195.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M696.2,190.9 L697.4,185.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M698.5,181.0 L699.7,175.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M700.8,171.2 L702.0,165.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M703.1,161.3 L704.3,155.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M705.4,151.5 L706.7,146.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M707.7,141.6 L709.0,136.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M770.0,388.0 L768.7,382.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M767.7,378.1 L766.4,372.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M765.4,368.3 L764.1,362.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M763.1,358.4 L761.8,353.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M760.8,348.6 L759.5,343.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M758.5,338.7 L757.2,333.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M756.2,328.9 L754.9,323.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M753.8,319.0 L752.6,313.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M751.5,309.2 L750.3,303.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M749.2,299.3 L748.0,293.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M746.9,289.4 L745.7,284.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M744.6,279.6 L743.3,274.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M742.3,269.7 L741.0,264.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M740.0,259.9 L738.7,254.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M737.7,250.0 L736.4,244.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M735.4,240.2 L734.1,234.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M733.1,230.3 L731.8,224.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M730.8,220.5 L729.5,215.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M728.5,210.6 L727.2,205.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M726.2,200.7 L724.9,195.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M723.8,190.9 L722.6,185.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M721.5,181.0 L720.3,175.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M719.2,171.2 L718.0,165.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M716.9,161.3 L715.7,155.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M714.6,151.5 L713.3,146.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M712.3,141.6 L711.0,136.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M845.0,388.0 L842.1,382.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M839.8,378.1 L837.0,372.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M834.6,368.3 L831.8,362.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M829.4,358.4 L826.6,353.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M824.2,348.6 L821.4,343.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M819.0,338.7 L816.2,333.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M813.8,328.9 L811.0,323.4" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M808.7,319.0 L805.8,313.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M803.5,309.2 L800.6,303.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M798.3,299.3 L795.4,293.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M793.1,289.4 L790.2,284.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M787.9,279.6 L785.0,274.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M782.7,269.7 L779.8,264.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M777.5,259.9 L774.6,254.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M772.3,250.0 L769.5,244.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M767.1,240.2 L764.3,234.7" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M761.9,230.3 L759.1,224.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M756.7,220.5 L753.9,215.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M751.5,210.6 L748.7,205.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M746.3,200.7 L743.5,195.3" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M741.2,190.9 L738.3,185.5" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M736.0,181.0 L733.1,175.6" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M730.8,171.2 L727.9,165.8" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M725.6,161.3 L722.7,155.9" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M720.4,151.5 L717.5,146.0" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M715.2,141.6 L712.3,136.2" style="stroke:var(--muted,#586074);stroke-width:2.2;stroke-linecap:round"/>
+<path d="M565.0,392 Q710,462 855.0,392 Z" style="fill:var(--landd,#93a88e)"/>
+<path d="M565.0,392 L565.0,360.0 L572.2,361.8 L579.5,373.3 L586.8,379.6 L594.0,377.7 L601.2,379.4 L608.5,384.4 L615.8,385.1 L623.0,383.7 L630.2,384.9 L637.5,386.3 L644.8,385.9 L652.0,385.5 L659.2,386.0 L666.5,386.1 L673.8,386.0 L681.0,386.0 L688.2,386.0 L695.5,386.0 L702.8,386.0 L710.0,386.0 L717.2,386.0 L724.5,386.0 L731.8,386.0 L739.0,386.0 L746.2,386.1 L753.5,385.9 L760.8,385.7 L768.0,386.1 L775.2,386.2 L782.5,385.1 L789.8,384.6 L797.0,385.9 L804.2,384.8 L811.5,381.0 L818.8,380.9 L826.0,382.3 L833.2,375.9 L840.5,367.9 L847.8,368.5 L855.0,365.4 L855.0,392 Z" style="fill:var(--land,#b9c8b2)"/>
+<circle cx="650" cy="380" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="668" cy="382" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="690" cy="381" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="742" cy="380" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="760" cy="382" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<circle cx="776" cy="379" r="2.4" style="fill:var(--light,#d99a2b)"/>
+<text x="565.0" y="450" style="font-size:16px;font-weight:700;fill:var(--ink,#1b2030)">彼岸</text><text x="605.0" y="450" style="font-size:12px;fill:var(--muted,#586074)">另一只秤盘：正在下沉</text>
+<text x="14" y="240" style="font-size:12px;font-weight:700;fill:var(--muted,#586074)">九十九根锁链</text>
+<path d="M304,280 L312,248 L320,280 M307,270 h10 M309,259 h6" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.8"/>
+<path d="M302,234 l20,20 M322,234 l-20,20" style="stroke:var(--vermil,#b8432c);stroke-width:3"/>
+<text x="328" y="270" style="font-size:12px;font-weight:700;fill:var(--vermil,#b8432c)">九十九折峠的「隔」塔</text><text x="328" y="286" style="font-size:12px;fill:var(--vermil,#b8432c)">（锁已锈断）</text>
+<path d="M215,273 L222,267 L229,273 Z" style="fill:var(--ink,#1b2030)"/><rect x="219.5" y="273" width="5" height="10" style="fill:var(--indigo,#2c4689)"/>
+<path d="M222,263 L294,114.9090909090909" style="stroke:var(--vermil,#b8432c);stroke-width:1.4;stroke-dasharray:2 4"/>
+<text x="14" y="160" style="font-size:12px;fill:var(--ink,#1b2030)">她头顶永远停着一颗星</text><text x="14" y="176" style="font-size:12px;fill:var(--muted,#586074)">（衡上那个空位）</text>
+<rect x="328" y="296" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.40"/>
+<rect x="319" y="284" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.43"/>
+<rect x="305" y="272" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.46"/>
+<rect x="297" y="260" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.49"/>
+<rect x="293" y="248" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.53"/>
+<rect x="284" y="235" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.56"/>
+<rect x="275" y="223" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.59"/>
+<rect x="265" y="211" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.62"/>
+<rect x="258" y="199" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.65"/>
+<rect x="250" y="187" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.68"/>
+<rect x="241" y="175" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.71"/>
+<rect x="230" y="163" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.74"/>
+<rect x="223" y="151" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.78"/>
+<rect x="215" y="139" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.81"/>
+<rect x="208" y="126" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.84"/>
+<rect x="201" y="114" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:0.87"/>
+<rect x="360" y="95" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="386" y="95" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="412" y="96" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="438" y="97" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="464" y="98" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="490" y="100" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="516" y="103" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="542" y="104" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="568" y="106" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="594" y="109" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="620" y="109" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<rect x="646" y="111" width="3" height="3" style="fill:var(--light,#d99a2b);opacity:.85"/>
+<path d="M640,110 L680,114" style="stroke:var(--light,#d99a2b);stroke-width:2"/><path d="M672,107 l9,6 l-10,4" style="fill:none;stroke:var(--light,#d99a2b);stroke-width:2"/>
+<text x="478" y="176" style="font-size:12px;font-weight:700;fill:var(--ink,#1b2030)">遠化：此岸的分量顺着锁链</text><text x="478" y="192" style="font-size:12px;font-weight:700;fill:var(--ink,#1b2030)">爬上衡，流向彼岸</text>
+<text x="838" y="338" style="font-size:16px;fill:var(--light,#d99a2b)">♪</text>
+<text x="858" y="322" style="font-size:16px;fill:var(--light,#d99a2b)">♪</text>
+<text x="822" y="322" style="font-size:16px;fill:var(--light,#d99a2b)">♪</text>
+<text x="814" y="300" style="font-size:12px;fill:var(--muted,#586074)">彼岸的祭典</text>
+</svg>
