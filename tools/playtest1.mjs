@@ -39,7 +39,9 @@ async function shot(name) {
   await page.waitForTimeout(60);
   const f = path.join(out, `${String(++shotN).padStart(2, '0')}-${name}.png`);
   await page.screenshot({ path: f });
-  log('shot', path.basename(f));
+  const st = await state();
+  const hud = await page.evaluate(() => ({ prompt: document.querySelector('.tgt')?.className, tip: document.querySelector('.hud-tip.on')?.textContent || '' }));
+  log('shot', path.basename(f), JSON.stringify({ target: st.target, label: st.label, control: st.control, w: st.w, ...hud }));
 }
 const state = () => page.evaluate(() => {
   const { G } = window.APP, f = G.f, P = f.player;
