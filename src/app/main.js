@@ -77,6 +77,7 @@ export async function boot(app) {
   const input = new Input(stage.canvas, ui);
   const hud = new HUD(ui, { field: f, project: (x, z, h) => stage.project(x, z, h), audio: au, touch });
   input.onTouch = () => { hud.mountTouch(); startAudio(); };
+  f.control = false; hud.show(false);   // nothing of the play HUD over the title; the story turns it on
   stage.canvas.addEventListener('pointerdown', e => {   // tap a thing to choose it
     startAudio();
     if (!f.control) return;

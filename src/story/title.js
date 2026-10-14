@@ -103,8 +103,8 @@ function injectStyle() {
   if (styled) return; styled = true;
   const s = document.createElement('style');
   s.textContent = `
-  .ttl { position: fixed; inset: 0; z-index: 40; color: #f3ecdc; font-family: "Noto Serif SC", "Shippori Mincho", serif; transition: opacity 1s ease; user-select: none; -webkit-user-select: none; }
-  .ttl.gone { opacity: 0; pointer-events: none; }
+  .ttl { position: fixed; inset: 0; z-index: 40; pointer-events: auto; color: #f3ecdc; font-family: "Noto Serif SC", "Shippori Mincho", serif; transition: opacity 1s ease; user-select: none; -webkit-user-select: none; }
+  .ttl.gone { opacity: 0; pointer-events: none; }   /* .ttl turns pointer events back on: its parent .ui has them off */
   .ttl-name { position: absolute; right: max(9vw, calc(24px + env(safe-area-inset-right, 0px))); top: 12vh; display: flex; flex-direction: row-reverse; align-items: flex-start; gap: 14px; pointer-events: none; }
   .ttl-name h1 { margin: 0; display: flex; flex-direction: column; gap: .14em; font: 700 clamp(60px, 14vh, 128px)/1 "Shippori Mincho B1", "Shippori Mincho", "Noto Serif SC", serif; color: #f6f0e2; text-shadow: 0 0 18px rgba(255, 226, 170, .22), 0 2px 0 rgba(0, 0, 0, .55); }
   .ttl-name h1 span { display: block; width: 1em; height: 1em; text-align: center; }
