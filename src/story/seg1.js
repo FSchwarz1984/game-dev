@@ -520,6 +520,7 @@ export async function day1(G) {
     await D.wait(1.0);
     await D.fade(1, 2.0);
     au.music('none', { fade: 2 });
+    await D.card('第一段　完', '下一段：九十九折宿', 3.6);
   }, { follow: false });
   G.save('end');
 }
