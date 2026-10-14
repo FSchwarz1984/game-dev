@@ -61,5 +61,7 @@
 - `src/game/`：纯逻辑（五性账本、目标选取、小伙伴、施工、种田、寻路、灰盒模拟），Node 可测，不碰渲染。
 - `src/gfx/`（2D 渲染管线）、`src/env/`（环境美术生成器与地图）、`src/art/`（角色像素图清单）、`assets/`（立绘参照、像素图、对话立绘）：2D 路线的成品代码。
 - `src/render/`、`src/world/`、`src/play/`：停用的 HD-2D 灰盒（仅参考）；`src/core/` 的输入与参数模块仍可复用。
-- `src/ui/`（操作、名牌、身体槽）、`src/fx/`（转移粒子）、`src/audio/`（沿用 v0.1 的合成音频，五性音色在 `SFX.qual`）。
+- `src/ui/`（操作、名牌、身体槽、`hud.js` 把它们接到 field）、`src/fx/`（转移粒子）、`src/audio/`（沿用 v0.1 的合成音频，五性音色在 `SFX.qual`；`field.js` 是真实录音的环境声层）、`src/vista/`（序章树顶远景与标题背景）。
+- `src/story/`：剧情层。`ui.js` 对话与字卡，`cine.js` 过场调度（游戏时钟），`seg1.js` 第一段的全部场景，`title.js` 标题菜单，`inset.js` 全屏插入镜头。`src/game/field.js`：她的身体、物体、性质动词、区域、目标选取；遠化规则："失去多少本来的性质，就有多远"。
+- `src/app/`：成品的组装（主循环、`stage.js` 渲染适配层、存档）。`tests/seg1-flow.test.js` 用机器人把第一段从头玩到尾，任何场景卡死都会让测试失败。
 - `tests/`：`node --test tests/*.test.js`。改玩法逻辑必须先让测试通过。
