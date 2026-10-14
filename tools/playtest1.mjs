@@ -143,7 +143,17 @@ async function walkStraight([x, z], tol = 0.35, soft = false) {
     const dx = x - s.x, dz = z - s.z, d = Math.hypot(dx, dz);
     if (d < tol) { await steer(0, 0); await ticks(2); return; }
     if (d < best - 0.05) { best = d; still = 0; } else if (++still > 40) { if (soft) return; throw new Error(`stuck short of ${x},${z} at ${s.x.toFixed(2)},${s.z.toFixed(2)}`); }
-    await steer(dx / d, dz / d);
+    // like a player who sees the bank: of the directions her input can give (8 on keys), take the
+    // one closest to the goal whose next step is clear
+    const dir = await page.evaluate(([ux, uz, touch]) => {
+      const f = window.APP.G.f, P = f.player, dirs = [];
+      if (touch) dirs.push([ux, uz]);
+      for (let a = 0; a < 8; a++) dirs.push([Math.round(Math.cos(a * Math.PI / 4) * 1e3) / 1e3, Math.round(Math.sin(a * Math.PI / 4) * 1e3) / 1e3]);
+      dirs.sort((p, q) => (q[0] * ux + q[1] * uz) - (p[0] * ux + p[1] * uz));
+      for (const [vx, vz] of dirs) { if (vx * ux + vz * uz < 0.2) break; if (f.canStand(P.x + vx * 0.3, P.z + vz * 0.3)) return [vx, vz]; }
+      return [ux, uz];
+    }, [dx / d, dz / d, !!VIEW.touch]);
+    await steer(dir[0], dir[1]);
     await ticks(3);
   }
   await steer(0, 0);
@@ -184,7 +194,8 @@ async function prologueRun() {
   await until(s => s.dlg, 'statues line'); await shot('statues');
   await until(s => s.control && !s.busy, 'control on the road');
   // up the switchbacks: the road's own bends (map.objects.road.path), then the graves terrace
-  await walk([96, 72.4], 0.8);
+  const bend = await page.evaluate(() => window.APP.G.stage.map.objects.road.bends[0]);
+  await walk([bend.x, bend.z], 1.0);
   await shot('switchbacks');
   await walk(P.gravesStand, 1.4);
   await until(s => s.control && !s.busy, 'the graves are offered');
