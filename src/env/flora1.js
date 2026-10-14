@@ -373,6 +373,23 @@ export function higanbana(seed, n = 0) {
   return { s, meta: { ax: W / 2, ay: by + 1, sway: 0.7, shadow: 0, foliage: true, kind: 'under' } };
 }
 
+/* ---------------- new: 女郎花 (ominaeshi) — thin stems, flat-topped sprays of tiny yellow flowers ---------------- */
+export function ominaeshi(seed) {
+  const R = RNG(seed * 47 + 9), W = 18, H = 30, s = new SB(W, H), by = H - 1, ns = R.int(2, 3);
+  const Y = ramp('#e2c43a', 4, { lo: 0.45, hi: 0.3, hueShift: 0.02 });
+  for (let k = 0; k < ns; k++) {
+    const x0 = W / 2 + R.range(-3, 3), x1 = x0 + R.range(-3, 3), top = R.int(4, 10);
+    PX.stroke(x0, by, x1, top + 2, 0.55, 0.45, (x, y, t) => s.pz(x, y, V1.fern[t > 0.6 ? 3 : 2], 1 + t, { m: MAT.LEAF, b: 1 }));
+    for (let j = 0; j < 2; j++) { const yy = by - 5 - j * 5, d = j % 2 ? 1 : -1; PX.stroke(x0 + (x1 - x0) * (1 - yy / by), yy, x0 + d * 4, yy - 2, 0.9, 0.2, (x, y) => s.pz(x, y, V1.fern[2], 1.5, { m: MAT.LEAF, b: 1 })); }
+    // the flat spray: a few pixels wide, two tall, lit on the upper left
+    const w = R.int(3, 5);
+    for (let dx = -w; dx <= w; dx++) for (let dy = -1; dy <= 0; dy++) { if (Math.abs(dx) === w && dy === -1) continue; if (R() < 0.12) continue;
+      s.pz(x1 + dx, top + dy, Y[clamp(Math.round(2.4 - dy * 0.6 - dx / w * 0.8 + (R() - 0.5)), 0, 3)], 6 + (k & 1), { m: MAT.PETAL, b: 3 }); }
+  }
+  POST.outline(s, { k: 0.8 }); POST.normals(s, 1);
+  return { s, meta: { ax: W / 2, ay: by + 1, sway: 1.1, shadow: 0, foliage: true, kind: 'under' } };
+}
+
 /* preview for tools/env/sheet.mjs */
 export function PREVIEW() {
   return [
@@ -380,6 +397,6 @@ export function PREVIEW() {
     ['pine', () => pine(1, 110)], ['pineLean', () => pine(9, 118, 0.9)], ['maple', () => layered(3)], ['mapleR', () => layered(9, { red: true })], ['mapleS', () => layered(5, { W: 70, H: 76, layers: 4 })],
     ['lobe', () => camphorLobe(11, 196, 112)],
     ['bamboo', () => bamboo(1, 180)], ['fern', () => fern(1)], ['sasa', () => sasa(1)], ['kudzu', () => kudzu(1)], ['susuki', () => susuki(1)], ['lily', () => lily(1)],
-    ['shrubC', () => shrub(1, 'camellia', 34, 24)], ['shrubA', () => shrub(2, 'azalea', 28, 18)], ['hydr', () => hydrangea(1)], ['dayfl', () => dayflower(1)], ['mush', () => mushroom(1)], ['higan', () => higanbana(1)],
+    ['shrubC', () => shrub(1, 'camellia', 34, 24)], ['shrubA', () => shrub(2, 'azalea', 28, 18)], ['hydr', () => hydrangea(1)], ['dayfl', () => dayflower(1)], ['mush', () => mushroom(1)], ['higan', () => higanbana(1)], ['omina', () => ominaeshi(1)],
   ];
 }

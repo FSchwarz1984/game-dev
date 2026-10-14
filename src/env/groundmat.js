@@ -170,14 +170,50 @@ export function yard(X, Y, x, y, leaves = 0.3) {
   OUT[3] = (r - 0.5) * 0.3; OUT[4] = 0; OUT[5] = MAT.PATH; OUT[6] = 0;
 }
 
-/* ---------------- clearing under the great tree: worn earth, moss, short grass ----------------
-   the borders are ragged at the pixel scale (a fine noise added to the mask), never clean lines */
+/* ---------------- clearing under the great tree: a patchwork, calm enough for the actors to pop ----------------
+   moss rings round the roots, worn bare earth where she walks, lawn in lusher and shorter stretches with
+   clover, and ground decals: fallen camphor leaves and twigs drifting out from the roots (thinning with
+   distance), a few half-buried stones. The borders fray at the pixel scale. LITTER is the trunk (world px). */
+export const LITTER = { x: 1000, y: 540, r: 240 };
+export function setLitter(x, y, r) { LITTER.x = x; LITTER.y = y; LITTER.r = r; }
+const LEAF = [[66, 96, 48], [146, 146, 66], [140, 78, 50], [170, 134, 86]], TWIG = [[84, 64, 48], [120, 96, 70]];
 export function clearing(X, Y, x, y, wear = 0.3) {
   const N = NZ;
-  const w = N.warp.sample(X * 0.5, Y * 0.5) * 0.6 + N.mid.sample(X * 1.1, Y * 1.1) * 0.4 + wear * 0.3 - 0.18 + (N.cl.sample(x * 1.3, y * 1.3) - 0.5) * 0.12;
-  if (w > 0.6) { yard(X, Y, x, y, 0.5); return; }
-  if (w < 0.43) { moss(X, Y, x, y, 0.25); return; }
-  grass(X, Y, x, y, 0.75, 0.8, 0.12);
+  const dT = Math.hypot(X - LITTER.x, (Y - LITTER.y) * 1.25) / LITTER.r;      // 0 at the trunk → 1 where the litter thins out
+  const rag = (N.cl.sample(x * 1.3, y * 1.3) - 0.5) * 0.12, patch = N.warp.sample(X * 0.5, Y * 0.5), mid = N.mid.sample(X * 1.1, Y * 1.1);
+  if (dT < 0.34 + rag + (patch - 0.5) * 0.14) { moss(X, Y, x, y, 0.12); decals(X, Y, x, y, dT, 1); return; }   // the moss ring at the roots
+  const w = patch * 0.6 + mid * 0.4 + wear * 0.3 - 0.18 + rag;
+  if (w > 0.6) { yard(X, Y, x, y, 0.45); decals(X, Y, x, y, dT, 0.6); return; }                                 // worn bare earth
+  if (w < 0.4) { moss(X, Y, x, y, 0.25); decals(X, Y, x, y, dT, 0.9); return; }                                 // moss in the hollows
+  grass(X, Y, x, y, 0.42 + (patch - 0.5) * 0.4, 0.8, 0.26);                                                     // lawn: lush and short stretches, clover, flowers
+  decals(X, Y, x, y, dT, 0.8);
+}
+function decals(X, Y, x, y, dT, k) {
+  // fallen leaves (2 px: glossy, yellowing, old red, dry) and twigs, dense under the crown, thinning outward
+  const near = Math.pow(clamp(1.15 - dT, 0, 1), 1.6) * k;
+  if (near > 0.02) {
+    const cx = Math.floor(X / 5), cy = Math.floor(Y / 4), h = hashi(cx, cy, 131);
+    if ((h & 255) < near * 110) {
+      const ox = X - cx * 5 - ((h >> 8) & 3), oy = Y - cy * 4 - ((h >> 10) & 3), kind = (h >> 12) & 7;
+      if (kind < 6) {
+        const col = LEAF[(h >> 15) & 3], diag = (h >> 17) & 1;
+        if (ox === 0 && oy === 0) { set(col); OUT[3] = -0.2; OUT[4] = 0.3; }
+        else if (ox === 1 && oy === diag) { set(col, 0.8); OUT[3] = 0.15; OUT[4] = 0; }
+      } else {
+        const len = 3 + ((h >> 15) & 3);
+        if (oy === 0 && ox >= 0 && ox < len) { set(TWIG[ox === 0 ? 1 : 0]); OUT[5] = MAT.BARK; }
+        else if (oy === 1 && ox >= 1 && ox < len) { OUT[0] *= 0.82; OUT[1] *= 0.82; OUT[2] *= 0.84; }   // its little shadow
+      }
+    }
+  }
+  // half-buried stones: a lit top-left, a shadow tucked under the lower edge
+  const sx = Math.floor(X / 23), sy = Math.floor(Y / 17), sh = hashi(sx, sy, 137);
+  if ((sh & 255) < 10 * k) {
+    const cxs = sx * 23 + 5 + ((sh >> 8) & 11), cys = sy * 17 + 5 + ((sh >> 12) & 7), rx = 2 + ((sh >> 16) & 3), ry = 1.3 + ((sh >> 18) & 1) * 0.9;
+    const u = (X + 0.5 - cxs) / rx, v = (Y + 0.5 - cys) / ry, d = u * u + v * v;
+    if (d < 1) { set(PAL.stoneWarm[clamp(Math.round(3.6 - u * 1.3 - v * 1.6), 1, 6)]); OUT[3] = u * 0.5; OUT[4] = -v * 0.5; OUT[5] = MAT.STONE; OUT[6] = 0; }
+    else if (d < 1.9 && v > 0.2) { OUT[0] *= 0.74; OUT[1] *= 0.74; OUT[2] *= 0.78; }
+  }
 }
 
 /* ---------------- moss carpet (v0.1): three greens by a slow field and the pixel hash, bright fruiting specks ---------------- */

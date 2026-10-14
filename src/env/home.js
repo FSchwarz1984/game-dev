@@ -33,7 +33,7 @@
    ===================================================================== */
 import { MapKit } from './mapkit.js';
 import { Terrain, PPM } from './terrain.js';
-import { TM, WM, noiseG } from './groundmat.js';
+import { TM, WM, noiseG, setLitter } from './groundmat.js';
 import { RNG, hash2, fbm, clamp, drain } from './core.js';
 import * as F from './flora.js';
 import * as V from './flora1.js';
@@ -103,10 +103,15 @@ export function* layoutTerrainG(T) {
   yield* T.zoneG([[88, 72.0], [104, 72.0], [104, 76.0], [88, 76.0]], { wall: WM.STONEWALL, raw: true });    // under the west hairpin
   // material zones
   yield* T.zoneG([[33, 25], [44, 22.5], [58, 23], [68, 27.5], [70, 36], [66, 45], [56, 49.5], [42, 48.5], [33, 42], [31, 33]], { top: TM.CLEAR, pa: 110, only: [TM.MEADOW], seed: 61, amp: 1.2 }); yield;
-  yield* T.zoneG([[40.5, 22.5], [49, 20.5], [58, 22], [61.5, 27.5], [60.8, 33.5], [55, 31], [50, 30.6], [45, 31], [39, 31.5]], { top: TM.MOSS, pa: 60, only: [TM.CLEAR, TM.MEADOW], seed: 63, amp: 0.8 });
+  // (the moss ring round the roots, the fallen leaves and twigs are painted by the clearing itself: setLitter)
+  setLitter(50 * PPM, 28.6 * PPM, 10 * PPM);
+  yield* T.zoneG([[40.5, 21.5], [49, 19.5], [58, 21], [61.5, 25.5], [56, 24.2], [50, 23.6], [44, 24.4]], { top: TM.MOSS, pa: 60, only: [TM.CLEAR, TM.MEADOW], seed: 63, amp: 0.8 });
   // worn earth before the hut door and along the way to the shrine (she walks here every day)
   yield* T.zoneG(Terrain.ell(41.4, 35.9, 3.2, 1.4, 20), { top: TM.CLEAR, pa: 240, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 64, amp: 0.5, scale: 1.2 });
   yield* T.zoneG([[44, 35.5], [52, 35.7], [57.4, 35.3], [58.0, 36.3], [52, 36.6], [44, 36.7]], { top: TM.CLEAR, pa: 200, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 65, amp: 0.4, scale: 1.0 });
+  // her daily ways, worn into the lawn in patches: hut door → her load at the roots, the roots → the shrine
+  yield* T.zoneG([[41.6, 35.2], [44.2, 33.4], [46.8, 32.0], [47.8, 32.8], [45.0, 34.4], [42.6, 36.0]], { top: TM.CLEAR, pa: 220, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 71, amp: 0.35, scale: 0.9 });
+  yield* T.zoneG([[51.6, 32.0], [54.6, 32.4], [57.0, 33.9], [56.6, 34.9], [54.0, 33.6], [51.4, 33.0]], { top: TM.CLEAR, pa: 220, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 72, amp: 0.35, scale: 0.9 });
   yield* T.zoneG([[65.5, 57.9], [74, 57.6], [81.5, 57.9], [82.4, 60.2], [80.6, 62.6], [73, 62.2], [66.4, 62.7]], { top: TM.MOSS, pa: 90, only: [TM.GRASS], seed: 69, amp: 0.7, scale: 1.6 }); // graves terrace
   yield* T.zoneG([[18, 6], [33, 5], [34, 13], [26, 15.5], [19, 14]], { top: TM.MOSS, pa: 40, only: [TM.MEADOW, TM.GRASS], seed: 65 }); // around the pool
   yield* T.zoneG([[18, 14], [24, 15], [21, 40], [16, 40]], { top: TM.GRASS, pb: 60, only: [TM.MEADOW], seed: 66 });
@@ -177,6 +182,7 @@ function registerSprites(K) {
   for (let i = 0; i < 2; i++) S('dayflower' + i, () => V.dayflower(i + 1));
   for (let i = 0; i < 2; i++) S('mushroom' + i, () => V.mushroom(i + 1));
   for (let i = 0; i < 3; i++) S('higan' + i, () => V.higanbana(i + 1, i === 2 ? 2 : 0));
+  for (let i = 0; i < 3; i++) S('ominaeshi' + i, () => V.ominaeshi(i + 1));
   for (let i = 0; i < 3; i++) S('moss' + i, () => F.mossClump(i + 1, 12 + i * 4));
   for (let i = 0; i < 8; i++) S('tuft' + i, () => F.tuft(i + 1, i < 4 ? 0 : i < 5 ? 1 : i < 6 ? 2 : 3));
   // made things
@@ -348,6 +354,9 @@ function* populateG(K) {
   under(['fern0', 'fern1', 'fern2', 'fern3', 'moss0', 'moss1'], 26, (x, z) => { const d = Math.hypot(x - tx, (z - tz) * 1.25); return d > 4.2 && d < 9; }, 0.9); yield;
   under(['dayflower0', 'dayflower1', 'fern1', 'sasa1'], 22, (x, z) => (x > 30 && x < 70 && z > 22 && z < 50) && Math.hypot(x - tx, z - tz) > 8, 1.6);
   under(['lily0', 'lily1', 'susuki1', 'hydrangea0'], 10, (x, z) => x > 54 && x < 76 && z > 36 && z < 52, 2.4);
+  // the clearing's late-summer flowers (tiny, no colliders): 露草 in the damp by the roots and the hut, a few 女郎花 in the sun
+  under(['dayflower0', 'dayflower1'], 16, (x, z) => { const d = Math.hypot(x - tx, (z - tz) * 1.25); return (d > 5 && d < 12 && z > 26) || Math.hypot(x - 40.8, z - 35.5) < 4.5; }, 1.1); yield;
+  under(['ominaeshi0', 'ominaeshi1', 'ominaeshi2'], 7, (x, z) => x > 33 && x < 68 && z > 34 && z < 48 && Math.hypot(x - tx, z - tz) > 9, 2.2);
   under(['moss0', 'moss1', 'moss2'], 24, (x, z) => Math.hypot(x - tx, z - tz) < 11 || (x < 34 && z < 16), 0.9);
   under(['hydrangea0', 'hydrangea1'], 5, (x, z) => x < 22 && z > 12 && z < 40, 2.5);
   under(['rock0', 'rock1', 'rock2', 'rock3'], 22, () => true, 2); yield 0.75;
