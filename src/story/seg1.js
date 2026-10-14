@@ -315,11 +315,11 @@ export async function day1(G) {
     D.fade(0, 2.6);
     au.sfx('wings');
     await D.wait(3.2);
+    her.pose = null;
     await D.play('tsuzumi', 'sitUp', { hold: 0.4 });
     stage.inset('hat', true);                 // the inside of the hat, for a moment: 本来無東西　何処有南北
     await D.wait(1.6);
-    stage.inset('hat', false);
-    her.pose = null;
+    stage.inset('hat', false);                // (she has stood up behind the insert)
     await D.wait(0.8);
     D.face('tsuzumi', 'back');                // the crown above has half lost its colour
     D.cam(P.camphor[0], P.camphor[1], { y: 6, speed: 0.6 });
