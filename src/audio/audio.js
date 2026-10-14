@@ -707,6 +707,20 @@ SFX.blip = (o, sp, t) => { // dialogue voice blips
     } else if (vc === "crow") {
       const x = v.o("sawtooth", 560 + (i % 4) * 30, t, t + 0.08), vca = v.g(0.55), nz = v.n("white", t, t + 0.08, 0.5), bp = v.f("bandpass", 1300, 2), g = v.g(0);
       chain(nz, v.g(0.45), vca.gain); perc(g.gain, t, 0.004, 0.8, 0.05); chain(x, vca, bp, g, out);
+    } else if (vc === "tsuzumi") { // calm, rounder and lower: a soft mallet on wood
+      const f = 420 + ((i * 29) % 7) * 18 + rnd(-8, 8);
+      const a = v.o("sine", f, t, t + 0.07), b = v.o("triangle", f * 2.001, t, t + 0.05), lp = v.f("lowpass", 1900, 0), g = v.g(0);
+      a.frequency.setValueAtTime(f * 1.03, t); a.frequency.exponentialRampToValueAtTime(f, t + 0.02);
+      chain(b, v.g(0.12), lp); a.connect(lp); perc(g.gain, t, 0.004, 0.22, 0.05); chain(lp, g, out);
+    } else if (vc === "saji") { // a child: high, quick, bouncy
+      const f = 780 + ((i * 41) % 9) * 34 + rnd(-20, 20);
+      const a = v.o("square", f, t, t + 0.05), lp = v.f("lowpass", 3600, 0), g = v.g(0);
+      a.frequency.setValueAtTime(f * 1.12, t); a.frequency.exponentialRampToValueAtTime(f, t + 0.015);
+      chain(a, lp); perc(g.gain, t, 0.002, 0.13, 0.03); chain(lp, g, out);
+    } else if (vc === "shione") { // low, breathy and unhurried
+      const f = 300 + ((i * 23) % 5) * 14;
+      noiseHit(v, out, "pink", t, "bandpass", f * 3.2, 3, 0.22, 0.09);
+      const a = v.o("sine", f, t, t + 0.1), g = v.g(0); perc(g.gain, t, 0.01, 0.16, 0.08); chain(a, g, out);
     } else { // tsuzura: bright, quick, a little squeaky
       const f = 650 + ((i * 37) % 11) * 28 + rnd(-15, 15);
       const a = v.o("triangle", f, t, t + 0.06), b = v.o("square", f * 1.003, t, t + 0.06), lp = v.f("lowpass", 3200, 0), g = v.g(0);
