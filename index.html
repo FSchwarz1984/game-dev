@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>HD-2D Graybox</title>
+<style id="app-style">
+:root { color-scheme: dark; }
+html, body { margin: 0; height: 100%; background: #0d0f14; overflow: hidden; overscroll-behavior: none; }
+body {
+  touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+  font: 12px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: #e8eee0;
+}
+#app { position: fixed; inset: 0; overflow: hidden; }
+#app canvas.view { display: block; width: 100%; height: 100%; }
+.ui { position: absolute; inset: 0; pointer-events: none; }
+.debug {
+  position: absolute; left: 8px; top: 8px; margin: 0; padding: 6px 8px; max-width: calc(100% - 32px);
+  background: rgba(8, 10, 16, 0.74); border-radius: 6px; white-space: pre-wrap; pointer-events: none;
+}
+.touch-ui {
+  position: absolute; right: max(16px, env(safe-area-inset-right)); bottom: max(16px, env(safe-area-inset-bottom));
+  display: grid; grid-template-columns: repeat(2, 56px); gap: 12px; pointer-events: auto;
+}
+.touch-btn {
+  width: 56px; height: 56px; padding: 0; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid rgba(255, 255, 255, 0.6); background: rgba(10, 14, 22, 0.5); color: #fff; touch-action: none;
+}
+.touch-btn svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.touch-btn:active { background: rgba(255, 226, 122, 0.4); }
+.stick-base {
+  position: absolute; display: none; transform: translate(-50%, -50%); border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.45); background: rgba(10, 14, 22, 0.3); pointer-events: none;
+}
+.stick-knob {
+  position: absolute; left: 50%; top: 50%; width: 44px; height: 44px; margin: -22px 0 0 -22px;
+  border-radius: 50%; background: rgba(255, 255, 255, 0.6);
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<!-- Dev entry: `npm run dev` bundles src/main.js into .dev/main.js and serves this page. -->
+<script src=".dev/main.js"></script>
+</body>
+</html>
