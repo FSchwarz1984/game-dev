@@ -17,7 +17,7 @@
    Units inside: world px (X east, Y south, Z up). Inputs: metres.
    ===================================================================== */
 import { clamp, lerp, hash2, hashi, fbm, smoothPath, NoiseTile, bayer, drain } from './core.js';
-import { TM, WM, FLAG, OUT, noise, grass, clearing, moss, floor, path, paving, tread, gravel, bed, rootTop, wall } from './groundmat.js';
+import { TM, WM, FLAG, OUT, noise, grass, clearing, moss, floor, path, paving, tread, cheek, gravel, bed, rootTop, wall } from './groundmat.js';
 import { MAT } from './paint.js';
 import { PAL } from './palette.js';
 
@@ -140,16 +140,26 @@ export class Terrain {
     const ax = a[0] * PPM, ay = a[1] * PPM, bx = b[0] * PPM, by = b[1] * PPM;
     const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, hw = width * PPM / 2;
     const corners = [[ax - uy * hw, ay + ux * hw], [ax + uy * hw, ay - ux * hw], [bx + uy * hw, by - ux * hw], [bx - uy * hw, by + ux * hw]];
-    const ragA = o.ragged ?? 1.5;
+    const ragA = o.ragged ?? 1.5, N = noise();
     this.fill(corners, (i, X, Y) => {
       const px = X + 0.5 - ax, py = Y + 0.5 - ay; const along = px * ux + py * uy, across = px * -uy + py * ux;
-      // ragged ends of each tread so the flight doesn't read as a ruler-straight block
-      if (Math.abs(across) > hw - ragA * hash2(Math.floor(along / 6), across > 0 ? 1 : 2, 91) * 2) return;
+      // an irregular outer edge (edge stones of several sizes, the bank and the grass biting in), never a ruler line
+      const side = across > 0 ? 1 : 2;
+      const rag = ragA * (hash2(Math.floor(along / 7), side, 91) * 1.2 + N.cl.sample(along * 0.45 + side * 61, side * 37) * 1.8);
+      if (Math.abs(across) > hw - rag * 2) return;
       const t = clamp(along / L, 0, 0.9999); const k = Math.floor(t * n);
       const z = lerp(Z0, Z1, (k + 1) / n) * PPM;
-      this.Z[i] = Math.round(z * ZS); this.top[i] = TM.STEP; this.wallK[i] = WM.RISER;
+      // edge stones (cheeks) along both sides, 0.3–0.65 m wide: their faces are rough stone, not slab risers
+      const edgeD = hw - rag * 2 - Math.abs(across), cw = PPM * 0.3 + N.cl2.sample(along * 0.3, side * 53) * 7;
+      // the bank and its grass bite into the edge stones in tongues (same field as groundmat.cheek's moss band),
+      // with grassy faces, so the outline wanders stone by stone
+      const g = 1 + N.cl.sample(X * 0.45 + 17, Y * 0.45) * 9;
+      this.Z[i] = Math.round(z * ZS);
+      if (edgeD < g - 1.6) { this.top[i] = TM.GRASS; this.wallK[i] = WM.EARTH; this.pa[i] = 60; this.pb[i] = 50; return; }
+      this.top[i] = TM.STEP; this.wallK[i] = edgeD < cw ? WM.STONEWALL : WM.RISER;
       this.a0[i] = k & 255; this.a1[i] = clamp(Math.round(across + hw), 0, 255);
       this.pa[i] = clamp(Math.round((t * n - k) * (L / n)), 0, 255); // depth into the tread from its front edge... (px)
+      this.pb[i] = clamp(Math.round(edgeD), 0, 255);                  // distance to the flight's outer edge (px)
     });
   }
   /** a road / path material along a polyline (metres); o.mat TM.PATH|TM.PAVE, o.rut */
@@ -313,7 +323,7 @@ export class Terrain {
       case TM.NEEDLE: floor(X, Y, x, y, 0.1); break;
       case TM.PATH: { const e = this.a1[i] / 255; path(X, Y, x, y, e, this.a0[i] / 120 * 30, 30, pa); break; }
       case TM.PAVE: paving(X, Y, x, y, pb); break;
-      case TM.STEP: tread(X, Y, x, y, this.a0[i], this.a1[i], this.pa[i], 0.4); break;
+      case TM.STEP: if (this.wallK[i] === WM.STONEWALL) cheek(X, Y, x, y, this.a0[i], this.pb[i], this.pa[i]); else tread(X, Y, x, y, this.a0[i], this.a1[i], this.pa[i], 0.4, this.pb[i]); break;
       case TM.ROOT: rootTop(X, Y, x, y, this.a0[i], this.a1[i] / 127.5 - 1); break;
       case TM.GRAVEL: gravel(X, Y, x, y); break;
       case TM.BED: bed(X, Y, x, y); break;

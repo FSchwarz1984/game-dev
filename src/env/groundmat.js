@@ -374,21 +374,48 @@ export function paving(X, Y, x, y, moss_ = 0.5) {
 
 /* ---------------- stone step tread ----------------
    stepIdx, across (px from the flight's left edge), depthIn (px from the nosing) */
-export function tread(X, Y, x, y, stepIdx, across, depthIn, mossy = 0.4) {
+export function tread(X, Y, x, y, stepIdx, across, depthIn, mossy = 0.4, edgeD = 99) {
+  // weathered slabs, mid-grey rather than pale; the nosing catches the light; moss creeps in from the edge
+  // stones and gathers at the back of each tread, a little lichen
   const off = hash2(stepIdx, 0, 41) * 30, seg = Math.floor((across + off) / 23);
   const h = hashi(seg, stepIdx, 43), tone = (h & 255) / 255;
   const fu = (across + off) % 23;
-  const rr = (h >> 8) & 1 ? PAL.stoneWarm : PAL.stone;
-  let t = 3 + tone * 1.2 + (bayer(x, y) - 0.5) * 0.6;
-  if (depthIn < 1.2) t += 1.6;             // the nosing catches the light
-  else if (depthIn < 2.2) t += 0.6;
-  if (fu < 1) t -= 2.2;                    // joint between slabs
-  else if (fu < 2) t += 0.6;
+  const rr = (h >> 8) & 3 ? PAL.stoneWarm : PAL.stone;
+  let t = 1.9 + tone * 1.0 + (bayer(x, y) - 0.5) * 0.6 + (NZ.mid.sample(X * 1.3, Y * 1.3) - 0.5) * 0.8;
+  if (depthIn < 1.2) t += 1.1;             // the nosing catches the light
+  else if (depthIn < 2.2) t += 0.5;
+  if (fu < 1) t -= 1.6;                    // joint between slabs
+  else if (fu < 2) t += 0.5;
   let c = rr[clamp(Math.round(t), 0, rr.length - 1)];
-  const edge = across < 5 || hash2(X >> 1, Y >> 1, 47) < mossy * 0.1;
-  if (edge && hash2(X, Y, 49) < 0.55) c = MOSS[2 + (hash2(X, Y, 50) < 0.5 ? 0 : 1)];
+  const mz = NZ.warp.sample(X * 0.7 + 11, Y * 0.7);
+  const m = mossy * 0.12 + (edgeD < 14 ? (14 - edgeD) / 14 * 0.55 : 0) + (depthIn > 3 ? 0.18 : 0) + (fu < 1.5 ? 0.25 : 0);
+  if (hash2(X, Y, 49) < m * (mz > 0.42 ? 1 : 0.3)) c = MOSS[2 + (hash2(X, Y, 50) < 0.6 ? 0 : 1)];
+  else if (hash2(X >> 1, Y, 48) > 0.985) c = [150, 150, 118];   // lichen
   set(c);
   OUT[3] = 0; OUT[4] = depthIn < 1.5 ? 0.2 : 0; OUT[5] = MAT.STONE; OUT[6] = FLAG.STEP;
+}
+/* the flight's edge stones (cheeks): rough blocks of several sizes along each side, rounded and lit on the
+   upper left, dark joints, moss on some tops and in the joints; grass creeps over the outer edge */
+export function cheek(X, Y, x, y, stepIdx, edgeD, depthIn) {
+  const gx = X / 8, gy = Y / 6, cx = Math.floor(gx), cy = Math.floor(gy);
+  let d1 = 1e9, d2 = 1e9, id = 0, ox = 0, oy = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const h = hashi(cx + i, cy + j, 181), px = cx + i + 0.15 + (h & 255) / 255 * 0.7, py = cy + j + 0.15 + ((h >> 8) & 255) / 255 * 0.7;
+    const dx = gx - px, dy = gy - py, d = dx * dx + dy * dy;
+    if (d < d1) { d2 = d1; d1 = d; id = h; ox = dx; oy = dy; } else if (d < d2) d2 = d;
+  }
+  const gap = Math.sqrt(d2) - Math.sqrt(d1), dth = bayer(x, y) - 0.5;
+  const R = (id >> 16) & 1 ? PAL.stoneWarm : PAL.stone;
+  let t = 2.1 + ((id >> 17) & 3) * 0.3 + dth * 0.5 - ox * 1.5 - oy * 1.7;   // each block rounded, lit toward the upper left
+  if (depthIn < 1.2) t += 0.6;
+  let c = gap < 0.08 ? R[1] : R[clamp(Math.round(t), 1, R.length - 2)];
+  const mz = NZ.warp.sample(X * 0.6 + 40, Y * 0.6);
+  if ((gap < 0.16 && mz > 0.45) || (((id >> 20) & 3) === 0 && oy < 0.1 && mz > 0.35)) c = MOSS[clamp(Math.round(2.4 - oy * 2 + dth), 1, 4)];
+  set(c); OUT[3] = clamp(ox * 0.9, -0.5, 0.5); OUT[4] = clamp(-oy * 0.9, -0.5, 0.5); OUT[5] = MAT.STONE; OUT[6] = 0;
+  // the bank and its grass bite into the outer edge in tongues, so the flight's outline wanders stone by stone
+  // (the grass tongues themselves are terrain cells, see Terrain.stairs; here the moss where the stone goes under)
+  const g = 1 + NZ.cl.sample(X * 0.45 + 17, Y * 0.45) * 9;
+  if (edgeD < g + (gap < 0.2 ? 1.2 : 0)) { set(MOSS[clamp(Math.round(1.6 + dth * 2 + (edgeD - g) * 0.4), 1, 3)]); OUT[5] = MAT.MOSS; OUT[4] = 0.1; }
 }
 
 /* ---------------- gravel / stream shingle ---------------- */
