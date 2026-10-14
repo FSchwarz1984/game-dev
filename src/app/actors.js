@@ -43,6 +43,13 @@ export class Actor {
     this.lastX = this.body.x; this.lastZ = this.body.z;
   }
 
+  /** Back to plain standing on the ground (between scenes that left her up a tree or posed). */
+  reset() {
+    this.climbTo = null; this.lift = 0; this.pose = null; this.one = null; this.scripted = false;
+    this.follow = null; this.ride = null; this.loopAnim = 'idle'; this.t = 0;
+    this.lastX = this.x; this.lastZ = this.z;
+  }
+
   get x() { return this.body.x; } set x(v) { this.body.x = v; }
   get z() { return this.body.z; } set z(v) { this.body.z = v; }
 

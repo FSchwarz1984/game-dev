@@ -285,10 +285,12 @@ async function rise(G) {
 export async function day1(G) {
   const { D, f, stage, P, au } = G;
   const her = stage.actor('tsuzumi'), saji = stage.actor('saji');
+  her.reset?.(); saji.reset?.();               // the night left her up the camphor: down on the roots
   her.variant = 'none'; her.visible = true;
   saji.visible = false;
   f.control = false; G.hud.show(false);
   f.player.x = P.wake[0]; f.player.z = P.wake[1];
+  her.lastX = her.x; her.lastZ = her.z;
   G.todGen = (G.todGen || 0) + 1; G.hour = 7.0; D.tod(G.hour);
   au.music('none', { fade: 0.1 });
   stage.morning?.();                         // the far's marks: scars, the pale crown, the pale dango
