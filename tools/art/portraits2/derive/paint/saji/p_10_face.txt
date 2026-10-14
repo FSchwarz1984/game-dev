@@ -1,0 +1,8 @@
+# --- face: the reference's brows are removed from the base (they are parts now); bang shadow on the forehead
+repl q s 38,24,50,34
+repl qu t 58,24,70,36
+below t s hHLMDOK 26,20,72,40
+# the clump edge right of the far forehead gap: one tone lighter so it reads as hair, not as a mark on the skin
+repl O D 64,26,68,36
+# the darkest red left as single pixels on the bang tips reads as spots on the forehead: one tone lighter there
+repl O D 46,28,62,37

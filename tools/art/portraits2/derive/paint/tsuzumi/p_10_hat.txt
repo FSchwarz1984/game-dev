@@ -1,0 +1,21 @@
+# --- hat top: clean cream, the far half a step darker, a few straw ribs, inked front edge
+poly W only=WVU : 0,0 96,0 96,35.5 80,31.5 60,27 40,22.5 20,18.5 0,13.5
+poly V only=W : 58,0 70,0 96,18 96,35.5 80,31.5 68,28.6 74,22 66,10
+line V only=W : 30,5 18,17
+line V only=W : 38,5 34,21
+line V only=W : 52,9 54,25
+line U only=W : 66,14 70,28
+line U only=WV : 82,22 86,32
+edge Y WVU 1234hHLMDOKsq. dirs=d 0,0,95,38
+# band: highlight along its upper edge, ink along its lower edge
+edge P Rr WVU dirs=d 20,0,95,30
+edge R r WV dirs=u 20,0,95,30
+# --- hat underside: one dark navy with the ribs seen from below
+repl 4 3 0,14,95,56
+repl 1 2 0,14,95,56
+line 1 only=23 : 2,16 1,30
+line 1 only=23 : 8,17 4,34
+line 1 only=23 : 14,18 8,32
+line 1 only=23 : 80,34 79,50
+line 1 only=23 : 86,35 86,51
+line 1 only=23 : 92,36 93,52

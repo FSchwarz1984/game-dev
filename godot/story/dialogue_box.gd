@@ -1,17 +1,17 @@
 class_name DialogueBox
 extends Control
 ## The dialogue box at native pixel resolution, laid out per docs/knowledge/13-pixel-portraits.md §5:
-## the 80x80 pixel portrait stands in its own 84x84 card at the left end of the box (rising 24 px
-## above it), and the text column starts 8 px right of the card, so the portrait can never cover a
-## word (F-3). The name plate sits on the box's top border above the text column, always one line,
+## the 96x96 pixel portrait (v3, G5R-7) stands in its own 100x100 card at the left end of the box
+## (rising 40 px above it), and the text column starts 8 px right of the card, so the portrait can
+## never cover a word (F-3). The name plate sits on the box's top border above the text column, always one line,
 ## as wide as the name. Narration (no speaker) has no card and uses the full width.
 ## Everything is drawn on whole native pixels; the stage scales it by an integer.
 
 const BOX_W := 468
 const BOX_H := 64
 const BOTTOM := 6
-const CARD := 84
-const CARD_RISE := 24
+const CARD := 100
+const CARD_RISE := 40
 const PANEL := Color8(14, 12, 18, 238)
 const BORDER := Color8(214, 182, 120, 150)
 const BORDER_IN := Color8(10, 9, 13, 255)

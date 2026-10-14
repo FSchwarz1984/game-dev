@@ -1,0 +1,4 @@
+# material edits after the reference-class skin: ear
+poly s : 30.5,32.6 29,33.6 28,35.6 27.6,38.5 27.8,41.5 28.8,44.4 30.4,46.8 32.4,48.8 34.2,50 34.2,33
+repl e s
+repl x s

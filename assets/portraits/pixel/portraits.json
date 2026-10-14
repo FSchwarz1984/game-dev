@@ -1,11 +1,7 @@
 {
- "size": 80,
- "version": 2,
- "eye_line": [
-  39.0,
-  41.5
- ],
- "source": "tools/art/portraits2 (hand-drawn pixel data)",
+ "size": 96,
+ "version": 3,
+ "source": "tools/art/portraits2 (pixel data; bases started from the owner's illustrations and finished by hand)",
  "characters": {
   "tsuzumi": {
    "name": "百々つゞみ",
@@ -28,42 +24,52 @@
     "tired",
     "calm"
    ],
+   "eye_mid": [
+    49.5,
+    49.5
+   ],
    "palette": {
+    "1": "#3d4566",
+    "2": "#2d334c",
+    "3": "#202336",
+    "5": "#414c78",
+    "6": "#2f3658",
+    "7": "#20243c",
+    "8": "#121322",
     "C": "#a8d9f2",
-    "D": "#241a2e",
-    "E": "#2a2444",
-    "H": "#6f5c80",
-    "I": "#45508a",
-    "L": "#4b3a58",
-    "M": "#33263e",
-    "N": "#2f345e",
-    "O": "#16122a",
-    "P": "#3e1424",
-    "Q": "#1d1f3c",
-    "R": "#c63f5c",
-    "U": "#c9bccb",
-    "V": "#e9e0d3",
-    "W": "#fbf7ef",
+    "D": "#2b2134",
+    "E": "#33324a",
+    "H": "#5f4d6c",
+    "K": "#120c17",
+    "L": "#4a3b55",
+    "M": "#3a2d44",
+    "O": "#1d1524",
+    "P": "#4e1426",
+    "R": "#c4425f",
+    "U": "#c7b4a5",
+    "V": "#e4d6c6",
+    "W": "#f6ecdf",
     "X": "#931f35",
-    "Y": "#9a8ca6",
-    "a": "#d2d9e8",
-    "b": "#f7a8a6",
+    "Y": "#8a7470",
+    "a": "#d6dbea",
+    "b": "#f5a3a0",
     "c": "#e9f7ff",
-    "e": "#6e7a98",
-    "i": "#a7b1c8",
-    "j": "#4b3a58",
-    "k": "#16122a",
+    "e": "#666b8c",
+    "h": "#7d6a8e",
+    "i": "#a0a6c0",
+    "j": "#7a6470",
+    "k": "#1a1220",
     "l": "#ffffff",
     "m": "#5e1d2d",
     "n": "#de6f7c",
     "p": "#e57683",
-    "q": "#7a3a3c",
+    "q": "#8a4a4c",
     "r": "#8c2b45",
-    "s": "#fde7d8",
-    "t": "#f2c4b0",
-    "u": "#d99a88",
-    "v": "#d9d3e3",
-    "w": "#faf8fb",
+    "s": "#fdeadb",
+    "t": "#f4c9b8",
+    "u": "#d99a8c",
+    "v": "#d8d6e2",
+    "w": "#fbf9fb",
     "x": "#e23b4e",
     "y": "#fffaf5",
     "z": "#5f9fd0"
@@ -72,16 +78,12 @@
     "neutral": [
      "eN_open",
      "eF_open",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_neutral"
     ],
     "smile": [
      "eN_smile",
      "eF_smile",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_smile",
      "blush"
@@ -89,8 +91,6 @@
     "grin": [
      "eN_smile",
      "eF_smile",
-     "bN_up",
-     "bF_up",
      "nose",
      "m_grin",
      "blush"
@@ -98,8 +98,6 @@
     "laugh": [
      "eN_happy",
      "eF_happy",
-     "bN_up",
-     "bF_up",
      "nose",
      "m_laugh",
      "blush"
@@ -107,16 +105,12 @@
     "surprise": [
      "eN_wide",
      "eF_wide",
-     "bN_up",
-     "bF_up",
      "nose",
      "m_o"
     ],
     "shout": [
-     "eN_wide",
-     "eF_wide",
-     "bN_sad",
-     "bF_sad",
+     "eN_shut",
+     "eF_shut",
      "nose",
      "m_shout"
     ],
@@ -126,15 +120,11 @@
      "bN_sad",
      "bF_sad",
      "nose",
-     "m_frown",
-     "wellN",
-     "wellF"
+     "m_frown"
     ],
     "cry": [
      "eN_tear",
      "eF_tear",
-     "bN_sad",
-     "bF_sad",
      "nose",
      "m_wobble",
      "tearN",
@@ -143,14 +133,11 @@
     "pout": [
      "eN_angry",
      "eF_angry",
-     "bN_angry",
-     "bF_angry",
      "nose",
      "m_pout",
      "blush",
-     "puffN",
      "puffF",
-     "huff"
+     "huff@66,63"
     ],
     "angry": [
      "eN_angry",
@@ -159,7 +146,7 @@
      "bF_angry",
      "nose",
      "m_teeth",
-     "anger"
+     "anger@70,22"
     ],
     "doubt": [
      "eN_half",
@@ -168,22 +155,18 @@
      "bF_up",
      "nose",
      "m_side",
-     "qmark"
+     "qmark@84,22"
     ],
     "think": [
      "eN_up",
      "eF_up",
-     "bN_up",
-     "bF_neutral",
      "nose",
      "m_hmm",
-     "dots"
+     "dots@70,40"
     ],
     "embarrassed": [
      "eN_away",
      "eF_away",
-     "bN_sad",
-     "bF_sad",
      "nose",
      "m_wavy",
      "blush_hatch"
@@ -199,25 +182,21 @@
     "determined": [
      "eN_angry",
      "eF_angry",
-     "bN_firm",
-     "bF_firm",
+     "bN_angry",
+     "bF_angry",
      "nose",
-     "m_flat"
+     "m_set"
     ],
     "tired": [
      "eN_half",
      "eF_half",
-     "bN_sad",
-     "bF_sad",
      "nose",
      "m_small",
-     "sweat"
+     "sweat@68,40"
     ],
     "calm": [
      "eN_calm",
      "eF_calm",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_smile"
     ]
@@ -244,64 +223,72 @@
     "calm",
     "blank"
    ],
+   "eye_mid": [
+    63.0,
+    39.0
+   ],
    "palette": {
-    "5": "#86607c",
-    "6": "#5f4058",
-    "7": "#432c40",
-    "8": "#2a0f1a",
+    "1": "#d4566a",
+    "2": "#a8374b",
+    "3": "#7a2337",
+    "4": "#4a1424",
+    "5": "#7e5470",
+    "6": "#5a3550",
+    "7": "#3f2238",
+    "8": "#26101f",
     "C": "#a8d9f2",
-    "D": "#73647c",
-    "E": "#6d2333",
-    "H": "#e6d8de",
-    "L": "#c6b3c1",
-    "M": "#a08ea1",
-    "O": "#3b3150",
-    "P": "#6d2333",
-    "R": "#cc4b5d",
-    "V": "#ece3e2",
-    "W": "#fcf9f6",
+    "D": "#96809c",
+    "E": "#6d1f30",
+    "H": "#e6d6df",
+    "J": "#b85a68",
+    "K": "#47344f",
+    "L": "#d2bfcf",
+    "M": "#b8a2b8",
+    "O": "#6e5a7a",
+    "P": "#2e0d18",
+    "R": "#8e3244",
+    "U": "#cbbcc6",
+    "V": "#ebe0dc",
+    "W": "#fcf8f2",
     "X": "#931f35",
-    "Y": "#9c8a9f",
-    "a": "#f8cfc4",
-    "b": "#f7a8a6",
+    "Y": "#8f7d91",
+    "a": "#f8c0b8",
+    "b": "#f5a3a0",
     "c": "#e9f7ff",
-    "e": "#c84a5c",
-    "h": "#f7f0f2",
-    "i": "#ec9a96",
-    "j": "#7a5470",
-    "k": "#2a0f1a",
+    "e": "#c4505f",
+    "i": "#e98a8e",
+    "j": "#a8636a",
+    "k": "#3a0f1c",
     "l": "#ffffff",
     "m": "#5e1d2d",
     "n": "#de6f7c",
     "p": "#e57683",
-    "q": "#7a3a3c",
-    "r": "#9e3548",
-    "s": "#fde7d8",
-    "t": "#f2c4b0",
-    "u": "#d99a88",
-    "v": "#d9d3e3",
-    "w": "#faf8fb",
+    "q": "#95504f",
+    "r": "#5c1b2a",
+    "s": "#fdeadb",
+    "t": "#f4c9b8",
+    "u": "#d99a8c",
+    "v": "#ddd1dc",
+    "w": "#fbf7f8",
     "x": "#e23b4e",
     "y": "#fffaf5",
     "z": "#5f9fd0"
    },
    "recipes": {
     "neutral": [
+     "marks",
      "eN_open",
      "eF_open",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_neutral"
     ],
     "smile": [
      "eN_smile",
      "eF_smile",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_smile",
-     "blush"
+     "blush",
+     "marks"
     ],
     "grin": [
      "eN_smile",
@@ -310,7 +297,8 @@
      "bF_up",
      "nose",
      "m_grin",
-     "blush"
+     "blush",
+     "marks"
     ],
     "laugh": [
      "eN_happy",
@@ -319,9 +307,11 @@
      "bF_up",
      "nose",
      "m_laugh",
-     "blush"
+     "blush",
+     "marks"
     ],
     "surprise": [
+     "marks",
      "eN_wide",
      "eF_wide",
      "bN_up",
@@ -330,22 +320,22 @@
      "m_o"
     ],
     "shout": [
-     "eN_wide",
-     "eF_wide",
-     "bN_sad",
-     "bF_sad",
+     "marks",
+     "eN_shut",
+     "eF_shut",
+     "bN_angry",
+     "bF_angry",
      "nose",
      "m_shout"
     ],
     "sad": [
+     "marks",
      "eN_sad",
      "eF_sad",
      "bN_sad",
      "bF_sad",
      "nose",
-     "m_frown",
-     "wellN",
-     "wellF"
+     "m_frown"
     ],
     "cry": [
      "eN_tear",
@@ -355,7 +345,8 @@
      "nose",
      "m_wobble",
      "tearN",
-     "tearF"
+     "tearF",
+     "marks"
     ],
     "pout": [
      "eN_angry",
@@ -365,36 +356,39 @@
      "nose",
      "m_pout",
      "blush",
-     "puffN",
+     "marks",
      "puffF",
-     "huff"
+     "huff@81,53"
     ],
     "angry": [
+     "marks",
      "eN_angry",
      "eF_angry",
      "bN_angry",
      "bF_angry",
      "nose",
      "m_teeth",
-     "anger"
+     "anger@78,10"
     ],
     "doubt": [
+     "marks",
      "eN_half",
      "eF_open",
      "bN_flat",
      "bF_up",
      "nose",
      "m_side",
-     "qmark"
+     "qmark@84,8"
     ],
     "think": [
+     "marks",
      "eN_up",
      "eF_up",
      "bN_up",
      "bF_neutral",
      "nose",
      "m_hmm",
-     "dots"
+     "dots@82,24"
     ],
     "embarrassed": [
      "eN_away",
@@ -403,38 +397,39 @@
      "bF_sad",
      "nose",
      "m_wavy",
-     "blush_hatch"
+     "blush_hatch",
+     "marks"
     ],
     "serious": [
+     "marks",
      "eN_serious",
      "eF_serious",
-     "bN_flat",
-     "bF_flat",
+     "bN_flat@46,29",
+     "bF_flat@71,34",
      "nose",
      "m_flat"
     ],
     "tired": [
+     "marks",
      "eN_half",
      "eF_half",
      "bN_sad",
      "bF_sad",
      "nose",
      "m_small",
-     "sweat"
+     "sweat@84,22"
     ],
     "calm": [
+     "marks",
      "eN_calm",
      "eF_calm",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_smile"
     ],
     "blank": [
+     "marks",
      "eN_blank",
      "eF_blank",
-     "bN_neutral",
-     "bF_neutral",
      "nose",
      "m_small"
     ]
@@ -460,46 +455,55 @@
     "tired",
     "calm"
    ],
+   "eye_mid": [
+    49.5,
+    43.0
+   ],
    "palette": {
-    "1": "#4fa8a0",
-    "2": "#2f7d7a",
-    "3": "#215a5d",
-    "4": "#13282c",
-    "5": "#e6f3df",
-    "6": "#c2dfc4",
-    "7": "#94c0a6",
-    "8": "#702e5e",
-    "9": "#4e2045",
-    "A": "#a5702a",
+    "1": "#4a7f80",
+    "2": "#2f5c63",
+    "3": "#1f3d44",
+    "4": "#12242a",
+    "5": "#eaeedb",
+    "6": "#cfd7c1",
+    "7": "#a8b6a1",
+    "8": "#6c7a6a",
+    "9": "#f8c6b6",
+    "A": "#a06a28",
+    "B": "#5a3a18",
     "C": "#a8d9f2",
-    "D": "#9b2434",
-    "E": "#173c42",
-    "F": "#e2ae3c",
-    "G": "#ffe58c",
-    "H": "#ff8f6c",
-    "L": "#ef5340",
-    "M": "#cf3439",
-    "O": "#4a1222",
-    "R": "#d8443c",
+    "D": "#8b2229",
+    "E": "#123e46",
+    "F": "#e0a840",
+    "G": "#ffe08a",
+    "H": "#e3564c",
+    "K": "#3a0f17",
+    "L": "#d03c3b",
+    "M": "#b52e31",
+    "O": "#5f1820",
+    "Q": "#6a2e3f",
+    "R": "#d83a3a",
     "X": "#931f35",
-    "a": "#9bdccd",
+    "Z": "#41162a",
+    "a": "#a8e0d6",
     "b": "#f59a98",
     "c": "#e9f7ff",
-    "e": "#2c7a78",
-    "i": "#4fa8a0",
-    "j": "#8c3a3e",
-    "k": "#36101c",
+    "e": "#227078",
+    "h": "#f37f66",
+    "i": "#4ea6a4",
+    "j": "#9a5a52",
+    "k": "#2a0f15",
     "l": "#ffffff",
     "m": "#5e1d2d",
     "n": "#de6f7c",
-    "p": "#e57683",
-    "q": "#7a3a3c",
-    "r": "#a52a33",
-    "s": "#fde7d8",
-    "t": "#f2c4b0",
-    "u": "#d99a88",
-    "v": "#d9d3e3",
-    "w": "#faf8fb",
+    "p": "#e5707c",
+    "q": "#8a3b3a",
+    "r": "#a5262c",
+    "s": "#fde2cf",
+    "t": "#f5c2aa",
+    "u": "#dc9580",
+    "v": "#d9d6dc",
+    "w": "#fbf9f7",
     "x": "#e23b4e",
     "y": "#fffaf5",
     "z": "#5f9fd0"
@@ -551,8 +555,8 @@
     "shout": [
      "eN_shut",
      "eF_shut",
-     "bN_sad",
-     "bF_sad",
+     "bN_angry",
+     "bF_angry",
      "nose",
      "m_shout"
     ],
@@ -562,9 +566,7 @@
      "bN_sad",
      "bF_sad",
      "nose",
-     "m_frown",
-     "wellN",
-     "wellF"
+     "m_frown"
     ],
     "cry": [
      "eN_tear",
@@ -584,9 +586,8 @@
      "nose",
      "m_pout",
      "blush",
-     "puffN",
      "puffF",
-     "huff"
+     "huff@68,57"
     ],
     "angry": [
      "eN_angry",
@@ -595,7 +596,7 @@
      "bF_angry",
      "nose",
      "m_teeth",
-     "anger"
+     "anger@84,3"
     ],
     "doubt": [
      "eN_half",
@@ -604,7 +605,7 @@
      "bF_up",
      "nose",
      "m_side",
-     "qmark"
+     "qmark@80,10"
     ],
     "think": [
      "eN_up",
@@ -613,7 +614,7 @@
      "bF_neutral",
      "nose",
      "m_hmm",
-     "dots"
+     "dots@72,24"
     ],
     "embarrassed": [
      "eN_away",
@@ -627,8 +628,8 @@
     "serious": [
      "eN_serious",
      "eF_serious",
-     "bN_flat",
-     "bF_flat",
+     "bN_flat@37,31",
+     "bF_flat@60,35",
      "nose",
      "m_flat"
     ],
@@ -639,7 +640,7 @@
      "bF_sad",
      "nose",
      "m_small",
-     "sweat"
+     "sweat@70,14"
     ],
     "calm": [
      "eN_calm",

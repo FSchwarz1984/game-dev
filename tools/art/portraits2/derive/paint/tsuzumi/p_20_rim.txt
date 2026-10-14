@@ -1,0 +1,7 @@
+# hat brim's outer rim seen below the underside (left and right), cream in shadow
+px V : 0,47 1,47 2,47
+span U 53 : 80-85
+span V 53 : 86-95
+# ear: rim and inner fold
+edge u s hHLMDOK dirs=lu 17,45,24,58
+line t only=s : 21,48 21,53

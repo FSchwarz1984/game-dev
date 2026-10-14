@@ -1,0 +1,8 @@
+# --- collar shading: red band lit on its upper edge, dark on its lower; plum (Q) lit under the band (P),
+# shadowed toward the cape (Z)
+repl rR R 18,66,66,95
+edge r R cPQZs5678 dirs=d 18,66,66,95
+edge r R PQZ dirs=r 46,66,66,95
+repl PQZ Q 18,66,70,95
+edge P Q R dirs=u 18,66,70,95
+edge Z Q 5678. dirs=dl 18,66,70,95

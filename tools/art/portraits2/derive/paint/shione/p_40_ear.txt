@@ -1,0 +1,4 @@
+# --- C. ear: rim line, inner fold
+edge q st hHLMDOK dirs=lud 26,32,34,50
+line u only=st : 31,36 30,38 30,41 31,43 32,45
+rect t only=s : 32,37,33,46

@@ -1,0 +1,28 @@
+# --- bangs: flat clumps (L), shade on the right of each (M), dark separations (D), sheen band (H/h);
+# clumps of uneven width, leaning with the 12-degree head tilt
+rect L only=hHLMDO : 30,29,67,44
+line M only=L : 35,29 32,43
+line D only=LM : 36,29 33,43
+line M only=L : 40,29 37,43
+line D only=LM : 41,29 38,43
+line M only=L : 47,29 44,43
+line D only=LM : 48,29 45,43
+line M only=L : 51,29 48,43
+line D only=LM : 52,29 49,43
+line M only=L : 58,29 55,43
+line D only=LM : 59,29 56,43
+line M only=L : 62,29 59,43
+line D only=LM : 63,29 60,43
+line M only=L : 68,29 65,43
+line D only=LM : 69,29 66,43
+line H only=LM : 33,31 32,35
+px h : 33,32
+line H only=LM : 38,31 37,34
+line H only=LM : 43,31 42,35
+px h : 43,32
+line H only=LM : 49,31 48,34
+line H only=LM : 54,31 53,35
+px h : 54,32
+line H only=LM : 60,31 59,34
+line H only=LM : 65,31 64,35
+px h : 65,32

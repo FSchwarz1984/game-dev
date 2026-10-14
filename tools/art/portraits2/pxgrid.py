@@ -2,9 +2,10 @@
 
 Data layout (tools/art/portraits2/data/<char>/):
   base.txt   the bust without a face: SIZE lines of SIZE keys (palettes.py), '.' = transparent
-  parts.txt  named parts:   == name @ x,y   followed by the part's rows ('.' = keep what is below)
+  parts.txt  named parts:   == name @ x,y   followed by the part's rows ('.' = keep what is below, '_' = erase)
   faces.txt  one expression per line:   name: part part part@x,y ...   (layered in order; @x,y moves a part)
-Lines starting with '#' are comments. Every row of a grid is written out pixel by pixel; nothing is generated.
+Lines starting with '#' are comments. Every row of a grid is written out pixel by pixel. (v3: base.txt was started
+from the owner's illustration by derive/ and finished by hand; see docs/knowledge/13-pixel-portraits.md section 9.)
 """
 
 import os
@@ -17,7 +18,7 @@ from palettes import PALETTES, rgb
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')
-SIZE = 80
+SIZE = 96
 
 
 def _rows(lines):

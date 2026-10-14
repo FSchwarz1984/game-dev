@@ -1,0 +1,5 @@
+# --- B. bangs: the forehead seen through the gaps is in their shadow; soft clump edges
+below t s hHLMDOK n=2 44,14,82,36
+rect t only=s : 44,14,82,30
+edge u t hHLMDOK dirs=u 44,14,82,33
+edge M hHL st dirs=lr 44,14,82,33
