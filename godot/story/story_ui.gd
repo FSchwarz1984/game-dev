@@ -258,7 +258,13 @@ func letterbox(on: bool) -> void:
 
 ## For the debug bridge.
 func snapshot() -> Dictionary:
-	var out := {"open": _open, "blocking": blocking}
+	var out := {"open": _open, "blocking": blocking, "fade": cinema.fade_alpha if cinema != null else 0.0,
+		"labels": {}}
+	for key in _labels:
+		var l: Label = _labels[key]
+		if l.modulate.a > 0.01:
+			out["labels"][key] = {"text": l.text, "alpha": snappedf(l.modulate.a, 0.01),
+				"rect": [l.position.x, l.position.y, l.size.x, l.size.y]}
 	if _open:
 		var line: Dictionary = _lines[_i]
 		out.merge({"who": line.get("who", "narr"), "index": _i, "count": _lines.size(), "shown": _shown,

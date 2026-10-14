@@ -29,6 +29,7 @@ const DEFAULT_SETTINGS := {
 }
 
 var settings: Dictionary = DEFAULT_SETTINGS.duplicate()
+var overrides: Dictionary = {}   # from the command line: in force for this run, never saved
 var flags: Dictionary = {}
 var body_rules: BodyRules
 var touch_seen := false   # a real (not mouse-emulated) touch has happened
@@ -48,30 +49,26 @@ func _ready() -> void:
 
 
 ## Command-line overrides for checking (after "--"): --scheme=explicit|obvious,
-## --font=pixel|vector, --body=draft|legacy, --touch-ui=on|off|auto.
+## --font=pixel|vector, --body=draft|legacy, --touch-ui=on|off|auto. Not saved.
 func _apply_cmdline() -> void:
+	var names := {"scheme": "control_scheme", "font": "font_theme", "body": "body_profile", "touch-ui": "touch_ui"}
 	for a in OS.get_cmdline_user_args():
 		var kv := a.trim_prefix("--").split("=", true, 1)
-		if kv.size() != 2:
-			continue
-		match kv[0]:
-			"scheme":
-				settings["control_scheme"] = kv[1]
-			"font":
-				settings["font_theme"] = kv[1]
-			"body":
-				settings["body_profile"] = kv[1]
-			"touch-ui":
-				settings["touch_ui"] = kv[1]
+		if kv.size() == 2 and names.has(kv[0]):
+			overrides[names[kv[0]]] = kv[1]
 
 
 func setting(key: String):
+	if overrides.has(key):
+		return overrides[key]
 	return settings.get(key, DEFAULT_SETTINGS.get(key))
 
 
+## A choice made in the game (or a debug key): it replaces any command-line override and is saved.
 func set_setting(key: String, value) -> void:
-	if settings.get(key) == value:
+	if setting(key) == value:
 		return
+	overrides.erase(key)
 	settings[key] = value
 	Save.write("settings", settings)
 	settings_changed.emit(key, value)

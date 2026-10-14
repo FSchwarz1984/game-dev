@@ -20,6 +20,14 @@ var last_error := ""
 var _memory: Dictionary = {}
 
 
+## "-- --save-root=<dir>" sends every save elsewhere (the playtest bot isolates its runs this way, so
+## a checking run never changes the player's settings or saves).
+func _init() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--save-root="):
+			root = a.substr(12)
+
+
 func path_of(slot: String) -> String:
 	return root.path_join(slot + ".json")
 

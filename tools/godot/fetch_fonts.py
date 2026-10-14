@@ -13,7 +13,8 @@
 #    saved as WOFF2. This is the alternative "vector" theme (pending the user's choice).
 #
 # Downloads go to <work_dir> (untrusted data; this script only reads font tables from it).
-# Needs: npm, git, fontTools, brotli (pip install --user brotli) for WOFF2 output.
+# Needs: npm, git, fontTools, and brotli importable under python3 -I (a --user install is not seen in
+# isolated mode; here it was installed with: python3 -m pip install --break-system-packages brotli).
 import os
 import shutil
 import subprocess

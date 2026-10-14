@@ -72,6 +72,11 @@ func _ready() -> void:
 		GameState.setting("control_scheme"), GameState.setting("font_theme"), GameState.touch_ui_on()])
 
 
+func _exit_tree() -> void:
+	CharacterLibrary.clear()
+	UiTheme.clear()
+
+
 func _layer(n: int, label: String) -> CanvasLayer:
 	var l := CanvasLayer.new()
 	l.layer = n
@@ -81,7 +86,7 @@ func _layer(n: int, label: String) -> CanvasLayer:
 
 
 func _apply_theme() -> void:
-	var k := UiTheme.current()
+	var k := String(GameState.setting("font_theme"))
 	story.apply_theme(k)
 	hud.apply_theme(k)
 
@@ -119,7 +124,7 @@ func _process(dt: float) -> void:
 func _on_action(a: Dictionary) -> void:
 	var type := String(a.get("type", ""))
 	if story.dialogue_open:
-		if type in ["context", "advance", "dodge", "pick", "quality"]:
+		if type in ["context", "advance", "dodge"]:
 			story.advance()
 		return
 	if story.blocking:
@@ -192,8 +197,40 @@ func _dev(what: String) -> void:
 			cycle.call("body_profile", ["draft", "legacy"])
 		"touch":
 			cycle.call("touch_ui", ["auto", "on", "off"])
+		"cinema":
+			_cinema_check()
+			return
 	print("DEV %s -> scheme=%s font=%s body=%s touch_ui=%s" % [what, GameState.setting("control_scheme"),
 		GameState.setting("font_theme"), GameState.setting("body_profile"), GameState.setting("touch_ui")])
+
+
+# ------------------------------------------------------------------ internal checks (debug builds)
+
+## F10: every director verb in one scene, to check by eye and by the bot: a camera shot with a
+## slow crane, Saji's scripted walk, her bow, the letterbox, a fade to black with a caption card on
+## top of it (the fade must stay under the words), a title drop over white, a subtitle, and the
+## hand-back of actors and camera at the end.
+func _cinema_check() -> void:
+	if director.busy:
+		return
+	director.scene(func(d: Director) -> void:
+		field.control = false
+		hud.show_hud(false)
+		d.letterbox(true)
+		d.shot("stairs", {"speed": 1.5})
+		await d.move("saji", [Vector2(saji.x, saji.z - 1.5)], {"speed": 2.0})
+		await d.play("tsuzumi", "bow")
+		await d.fade(1.0, 0.6, Color.BLACK)
+		await d.card("（测试）字幕卡", "淡入淡出在文字下面", 2.0)
+		await d.fade(1.0, 0.5, Color.WHITE)
+		await d.title("天岸", "（测试）标题", 2.0)
+		await d.fade(0.0, 0.6)
+		await d.sub("（测试）字幕：没有对话框的台词。", 1.6)
+		d.letterbox(false)
+		d.follow({"speed": 4.0})
+		await d.wait(0.6)
+		field.control = true
+		hud.show_hud(true))
 
 
 # ------------------------------------------------------------------ test dialogues (internal)

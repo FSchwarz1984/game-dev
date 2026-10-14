@@ -27,6 +27,7 @@ var opt: Dictionary = DEFAULTS.duplicate()
 var trail: Array[Vector2] = []
 var mode := "side"          # "side" or "trail"
 var _stuck_t := 0.0
+var _trail_end := false     # the trail goal is the last crumb before the lead
 
 
 func _init(px: float = 0.0, pz: float = 0.0, options: Dictionary = {}) -> void:
@@ -77,7 +78,9 @@ func update(dt: float, lead_x: float, lead_z: float, lead_face: String, blocker:
 			goal = _next_on_trail(me)
 
 	var d := me.distance_to(goal)
-	if d < float(opt["near"]):
+	# on the trail the next crumb is a short step ahead: only stop at the end of the trail
+	var stop := float(opt["near"]) if mode == "side" else (0.3 if _trail_end else 0.05)
+	if d < stop:
 		moving = false
 		_stuck_t = 0.0
 		return false
@@ -117,5 +120,6 @@ func _next_on_trail(me: Vector2) -> Vector2:
 		if acc >= float(opt["trail_spacing"]):
 			min_index = i
 			break
-	var target_i := maxi(min_index, best - 2)
+	var target_i := maxi(min_index, best - 4)  # a metre ahead along her path
+	_trail_end = target_i == min_index
 	return trail[target_i]

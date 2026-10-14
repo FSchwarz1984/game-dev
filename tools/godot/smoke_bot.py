@@ -56,6 +56,8 @@ class Bot:
         for p in (self.state_path, self.cmd_path):
             if os.path.exists(p):
                 os.remove(p)
+        import shutil
+        shutil.rmtree(os.path.join(self.out, "userdata"), ignore_errors=True)  # every run starts clean
         xvfb = subprocess.Popen(["Xvfb", self.display, "-screen", "0", "%dx%dx24" % (self.w, self.h), "-nolisten", "tcp"],
                                 stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.procs.append(xvfb)
@@ -67,6 +69,7 @@ class Bot:
         args = head + ["--rendering-method", "mobile", "--rendering-driver", "vulkan",
                 "--resolution", "%dx%d" % (self.w, self.h), "--position", "0,0", "--",
                 "--bot-state=" + self.state_path, "--bot-cmd=" + self.cmd_path, "--bot-log",
+                "--save-root=" + os.path.join(self.out, "userdata"),
                 "--scheme=explicit", "--body=draft", "--font=pixel", "--touch-ui=" + ("on" if self.mode == "touch" else "off")]
         self.log = open(os.path.join(self.out, "log.txt"), "w")
         self.game = subprocess.Popen(args, env=self.env, stdout=self.log, stderr=subprocess.STDOUT)
@@ -311,6 +314,8 @@ class Bot:
             self.face("Left")
             s = self.wait_for(lambda s: (s["target"] or {}).get("id") == "lantern", 3, "facing the lantern targets it")
         self.check("targeted the stone lantern", s["target"]["id"] == "lantern")
+        s = self.wait_for(lambda s: abs(s["actors"]["saji"]["h"] - 1.5) < 1e-3, 6, "Saji follows her onto the plateau")
+        self.check("Saji followed her up both staircases", True, "saji at %s" % s["actors"]["saji"])
         self.check("the key says what a press does now: take", s["hud"]["plans"].get("w", {}).get("verb") == "take"
                    and s["hud"]["plans"]["w"]["reason"] == "", str(s["hud"]["plans"].get("w")))
         self.shot("04-target")
@@ -441,9 +446,55 @@ class Bot:
 
         if self.mode == "touch":
             self.one_key_long_press()
+        else:
+            self.cinema_check()
+            self.vector_font()
         self.shot("10-end")
         s = self.state()
         self.note("fps %s" % s["fps"])
+
+    def cinema_check(self):
+        """F10 (debug builds): the director's verbs in one scene. The fade must stay under the words."""
+        self.tap_key("F10")
+        s = self.wait_for(lambda s: s["dialogue"].get("fade", 0) >= 0.99 and s["dialogue"]["labels"].get("card", {}).get("alpha", 0) >= 0.99,
+                          15, "the caption card over a black fade")
+        self.shot("11-fade-card")
+        self.note("actors during the scene: %s" % s["actors"])
+        img = self.pixels("11-fade-card")
+        x, y, w, h = [v * s["scale"] for v in s["dialogue"]["labels"]["card"]["rect"]]
+        bright = sum(1 for yy in range(int(y), int(y + h)) for xx in range(int(x), int(x + w)) if max(img.getpixel((xx, yy))[:3]) > 200)
+        self.check("the card's words are drawn over the black fade", bright > 40, "%d bright pixels in the card" % bright)
+        from PIL import ImageStat
+        corner = img.crop((0, int(self.h * 0.3), int(self.w * 0.25), int(self.h * 0.6))).convert("L")
+        mean = ImageStat.Stat(corner).mean[0]
+        self.check("the fade covers the world", mean < 6, "mean %.1f" % mean)
+        s = self.wait_for(lambda s: s["dialogue"]["labels"].get("title", {}).get("alpha", 0) >= 0.99, 12, "the title drop over white")
+        self.shot("12-title")
+        s = self.wait_for(lambda s: s["player"]["control"] and not s["dialogue"]["blocking"], 20, "the scene ends")
+        states = {k: v["state"] for k, v in s["actors"].items()}
+        self.check("after the scene every actor is back in locomotion", set(states.values()) == {"locomotion"}, str(states))
+
+    def vector_font(self):
+        """F7 (debug builds): the vector font theme, in Saji's dialogue."""
+        self.tap_key("F7")
+        s = self.wait_for(lambda s: s["settings"]["font"] == "vector", 3, "font theme vector")
+        sj = self.entity(s, "saji")
+        self.face("Right" if sj["x"] > s["player"]["x"] else "Left")
+        s = self.wait_for(lambda s: (s["target"] or {}).get("id") == "saji", 4, "Saji is targeted")
+        self.tap_key("e")
+        s = self.wait_for(lambda s: s["dialogue"].get("open") and s["dialogue"]["index"] == 0, 3, "dialogue (vector font)")
+        time.sleep(2.6)
+        self.shot("13-vector-font")
+        self.advance(s)
+        self.advance(self.state())
+        self.advance(self.state())
+        s = self.wait_for(lambda s: not s["dialogue"].get("open") and s["player"]["control"], 6, "closed")
+        self.tap_key("F7")
+        self.wait_for(lambda s: s["settings"]["font"] == "pixel", 3, "back to the pixel font")
+
+    def pixels(self, name):
+        from PIL import Image
+        return Image.open(os.path.join(self.out, name + ".png")).convert("RGB")
 
     def advance(self, s):
         """Advance the open dialogue to its end, with the real input of the mode."""

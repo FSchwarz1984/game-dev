@@ -17,7 +17,7 @@ extends Node
 ##   "context"  E / Enter / pad A / the context key      "advance"  any tap while a dialogue captures
 ##   "dodge"    Space      "cycle"  Tab / pad R3       "pause"  Esc / pad Start / Android back
 ##   "dispatch" F   "recall" R   (stubs)               "pick"  {pos: logical screen px}
-##   "dev"      {what: "scheme" | "font" | "body" | "touch"} F6-F9, debug builds only
+##   "dev"      {what: "scheme" | "font" | "body" | "touch" | "cinema"} F6-F10, debug builds only
 
 signal action(a: Dictionary)
 
@@ -165,9 +165,9 @@ func _key(e: InputEventKey) -> void:
 			_emit({"type": "recall"})
 		KEY_ESCAPE:
 			_emit({"type": "pause"})
-		KEY_F6, KEY_F7, KEY_F8, KEY_F9:
+		KEY_F6, KEY_F7, KEY_F8, KEY_F9, KEY_F10:
 			if OS.is_debug_build():
-				var what: String = {KEY_F6: "scheme", KEY_F7: "font", KEY_F8: "body", KEY_F9: "touch"}[code]
+				var what: String = {KEY_F6: "scheme", KEY_F7: "font", KEY_F8: "body", KEY_F9: "touch", KEY_F10: "cinema"}[code]
 				_emit({"type": "dev", "what": what})
 
 

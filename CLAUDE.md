@@ -8,7 +8,7 @@
 - 核心动词「移」：**取 / 予 / 放**。五性：**重・熱・光・音・生**（已批准）。高阶性质：**形・声・名・魂**，对应化身、凭依、付丧（已批准方向）。
 - 世界事件「遠化」= 东西失去了性质，看得见却不再"近"（已批准）。
 - 平台（W-1…W-3，2026-10-14）：**原生版本，Windows 电脑 + 安卓手机**；不再要求网页运行，品质深度与上限优先。两个平台都用 Mobile 渲染器（2D 上它和 Forward+ 只差辉光，统一后 Windows 与安卓画面一致，验证一次就够）；**手机只支持横屏**（P-3）。成品以 **Artifact 下载页**交付（页面里保存整个游戏的压缩包，大文件分块上传、页面拼回）。
-- **引擎（E-1，2026-10-14）：迁移到 Godot 4**，充分利用引擎与开源资源，必要时可以改引擎。容器里下载不到官方二进制，编辑器和网页导出模板从源码编译（见 `docs/knowledge/10-godot-toolchain.md`）。JS 版（`src/`）停止开发，只作参考。
+- **引擎（E-1，2026-10-14）：迁移到 Godot 4**，充分利用引擎与开源资源，必要时可以改引擎。用官方 4.7.2 二进制（从 downloads.godotengine.org 下载、用 godot-builds 的 SHA512 校验；GitHub 的 release 资源在容器里是 403）；只有要改引擎时才用 `tools/godot/` 的源码编译脚本（见 `docs/knowledge/10-godot-toolchain.md`）。架构见 `docs/knowledge/16-godot-architecture.md`。JS 版（`src/`）停止开发，只作参考。
 - **画面路线（A-1，2026-10-14）：2D 像素，目标风来之国（Eastward）品质。** 以 v0.1 的 2.5D 像素管线为底：原生 480×270、整数放大、逐像素法线与高度参与实时光照与阴影。HD-2D（3D 地形）路线已停用：用户"绝对不接受像 Minecraft 一样方方正正的地图"，而我们只能用代码生成美术，做不到 SE 的成熟品质。
 - 旧版 v0.1 已被用户否决（0 分），代码保存在 `legacy/v0.1/`，仅供参考；其中 `src/audio.js` 的合成音频引擎用户评价"整体不错"，可复用（需修掉怪声，见 knowledge/05）。v0.1 的画面氛围后来被用户认为好过 G3 灰盒（P-2），它的像素美术生成器值得复用。
 - 作品名暂定《天岸》（占位，G1R4-2）。三人定名：百々つゞみ、家守さぢ、垣外しをね（G1R4-1）。世界观 v3「天岸」已采用。
@@ -44,7 +44,7 @@
 
 ## 4. 技术约定
 
-- **Godot 版（当前）：** 工程在 `godot/`。每次新会话先装工具链（约 2.5 分钟）：`bash tools/godot/setup-runtime.sh && bash tools/godot/setup-godot.sh && bash tools/godot/setup-android-sdk.sh`（官方 4.7.2 编辑器与模板，SHA512 校验；细节和坑见 `docs/knowledge/10-godot-toolchain.md`）。原生 480×270、viewport 拉伸、整数倍、aspect=expand（窗口更大就看到更多世界，不留黑边）；中日文必须开 `include_text_server_data` 和严格断行（`line_breaking_strictness=3`）；地形、台阶、路按 `docs/knowledge/15-perspective-rules.md`。比例 1 米 = 20 原生像素，角色约 34–40 像素高。
+- **Godot 版（当前）：** 工程在 `godot/`。每次新会话先装工具链（约 2.5 分钟）：`bash tools/godot/setup-runtime.sh && bash tools/godot/setup-godot.sh && bash tools/godot/setup-android-sdk.sh`（官方 4.7.2 编辑器与模板，SHA512 校验；细节和坑见 `docs/knowledge/10-godot-toolchain.md`）。原生 480×270、整数倍、窗口更大就看到更多世界（不留黑边）；拉伸模式是 `canvas_items`，整数倍和画布尺寸按窗口自己算，世界在原生分辨率的视口里画，镜头跟随她时锁整像素、演出运镜可亚像素平移（`viewport` 拉伸做不到，见 knowledge/16 §2、§12）；中日文必须开 `include_text_server_data` 和严格断行（`line_breaking_strictness=3`）；地形、台阶、路按 `docs/knowledge/15-perspective-rules.md`。比例 1 米 = 20 原生像素，角色约 34–40 像素高。
 - JS 版（停用，只作参考）：WebGL2 自研 2D 管线（`src/gfx/` 等）。`src/render/`、`src/world/`、`src/play/` 里的 Three.js 3D 代码是更早停用的 HD-2D 灰盒。knowledge/03 记录的是 HD-2D 研究，已不再是方向。
 - 交付（Godot 版）：导出 Windows 与安卓包，放进 Artifact 下载页。（JS 版的规则：单文件构建到 `dist/`，Artifact 版本 body-only、纯 ASCII。）
 - 验证：每个视觉或玩法改动在汇报前必须截图或录序列验证，并检查手机横屏视口。Godot 版在 Xvfb + Mesa 软件渲染下运行游戏截图（见 knowledge/10）；JS 版用无头 Chromium（`playtest-capture` 技能）。

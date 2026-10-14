@@ -21,6 +21,10 @@ const LINE := {"pixel": 16, "vector": 16}
 static var _fonts: Dictionary = {}
 
 
+static func clear() -> void:
+	_fonts.clear()
+
+
 static func font(kind: String) -> Font:
 	if _fonts.has(kind):
 		return _fonts[kind]
@@ -51,7 +55,3 @@ static func make(kind: String) -> Theme:
 	t.default_font = font(kind)
 	t.default_font_size = size(kind, "body")
 	return t
-
-
-static func current() -> String:
-	return String(GameState.setting("font_theme"))

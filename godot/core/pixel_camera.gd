@@ -21,6 +21,7 @@ var _getter: Callable
 var _point := Vector2.ZERO
 var _smooth := Vector2.ZERO        # unsnapped follow position
 var _last_target := Vector2.INF
+var _moving_t := 0.0               # seconds since the target last moved (pixel lock holds 0.2 s)
 
 
 func follow(getter: Callable, opts: Dictionary = {}) -> void:
@@ -46,12 +47,16 @@ func point(world_px: Vector2, opts: Dictionary = {}) -> void:
 func update(dt: float) -> void:
 	var k := 1.0 - exp(-speed * dt)
 	if mode == "follow" and _getter.is_valid():
-		var t: Vector2 = (_getter.call() as Vector2).round()
-		var moving := _last_target != Vector2.INF and t != _last_target
-		_last_target = t
+		var raw: Vector2 = _getter.call()
+		if _last_target != Vector2.INF and raw != _last_target:
+			_moving_t = 0.0
+		else:
+			_moving_t += dt
+		_last_target = raw
+		var t := raw.round()
 		_smooth += (t - _smooth) * k
 		var lag := _smooth - t
-		pos = _clamp(t + (lag.round() if moving else lag))
+		pos = _clamp(t + (lag.round() if _moving_t < 0.2 else lag))
 	elif mode == "point":
 		pos += (_point - pos) * k
 		if pos.distance_to(_point) < 0.01:

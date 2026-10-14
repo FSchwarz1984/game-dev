@@ -38,6 +38,10 @@ class ErrorLog:
 
 
 func _initialize() -> void:
+	# a hard stop in case a test never finishes (an await that is never resumed)
+	create_timer(600.0).timeout.connect(func() -> void:
+		print("tests: TIMEOUT after 600 s")
+		quit(1))
 	_main.call_deferred()
 
 
@@ -91,4 +95,10 @@ func _main() -> void:
 				for msg in errs:
 					print("     - error: %s" % msg)
 	print("tests: %d passed, %d failed, %d checks, %d ms" % [passed, failed, checks, Time.get_ticks_msec() - t0])
-	quit(1 if failed > 0 else 0)
+	quit.call_deferred(1 if failed > 0 else 0)  # first, so a failing cleanup cannot hang the run
+	# drop static caches so nothing outlives the engine (loaded by path: this script is compiled
+	# before the autoloads exist, so it must not name classes that use them)
+	for path in ["res://actors/character_library.gd", "res://ui/ui_theme.gd"]:
+		var s = load(path)
+		if s != null and s.has_method("clear"):
+			s.clear()

@@ -19,6 +19,13 @@ static var _frames: Dictionary = {}   # "<char>/<sheet>" -> SpriteFrames
 static var _anchors: Dictionary = {}  # "<char>/<sheet>/<anim>_<view>" -> Array of anchor dicts
 
 
+## Drops the caches (at exit, so no resource outlives the engine).
+static func clear() -> void:
+	_frames.clear()
+	_anchors.clear()
+	_layout.clear()
+
+
 static func layout() -> Dictionary:
 	if _layout.is_empty():
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(LAYOUT_PATH))

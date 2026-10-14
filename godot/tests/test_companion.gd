@@ -48,3 +48,37 @@ func test_she_follows_up_the_stairs_on_the_test_region() -> void:
 		c.update(DT, f.player.x, f.player.z, "back", blk)
 	near(r.height_at(c.x, c.z), 1.5, 1e-6, "Saji is up there too (at %.2f, %.2f)" % [c.x, c.z])
 	check(Vector2(c.x - f.player.x, c.z - f.player.z).length() < 2.5, "and close")
+
+
+func test_she_follows_the_smoke_route_onto_the_plateau() -> void:
+	# the playtest bot's route: up the first stairs, west along the cliff, back, up the second
+	# stairs, then west on the plateau
+	var r := RegionData.load_dir("res://world/regions/test")
+	var f := Field.new({"ground": r.ground_kind, "height": r.height_at, "profile": TestCase.profile("draft")})
+	f.player.x = 10.25
+	f.player.z = 22.5
+	var c := Companion.new(11.6, 22.6)
+	var blk := func(x: float, z: float, fx: float, fz: float) -> Dictionary:
+		return {"wall": true} if r.ground_kind(x, z, fx, fz) != Field.Ground.GROUND else {}
+	var step := func(dir: Vector2) -> void:
+		f.update(DT, {"mx": dir.x, "mz": dir.y})
+		c.lead(f.player.x, f.player.z)
+		c.update(DT, f.player.x, f.player.z, Proj.face_of(f.player.fx, f.player.fz), blk)
+	var goto := func(x: float, z: float) -> void:
+		for i in 400:
+			var d := Vector2(x - f.player.x, z - f.player.z)
+			if d.length() < 0.15:
+				break
+			step.call(d.normalized())
+	goto.call(10.25, 15.0)
+	goto.call(10.25, 12.2)
+	goto.call(4.0, 9.0)
+	for i in 36:
+		step.call(Vector2(0, -1))
+	goto.call(10.25, 9.0)
+	goto.call(10.25, 5.2)
+	goto.call(7.45, 3.0)
+	for i in 120:
+		step.call(Vector2.ZERO)
+	near(f.player.h, 1.5, 1e-6, "she is on the plateau")
+	near(r.height_at(c.x, c.z), 1.5, 1e-6, "Saji followed her up (at %.2f, %.2f, mode %s)" % [c.x, c.z, c.mode])

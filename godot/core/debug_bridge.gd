@@ -83,6 +83,14 @@ func _run_command() -> void:
 	cmd_ack = id
 
 
+func _actors(m) -> Dictionary:
+	var out := {}
+	for id in m.world.actors:
+		var a: Actor = m.world.actors[id]
+		out[id] = {"state": a.state_name(), "anim": a.anim_name, "x": snappedf(a.x, 0.01), "z": snappedf(a.z, 0.01), "h": a.h}
+	return out
+
+
 func _write_state() -> void:
 	var m = main
 	var stage: PixelStage = m.stage
@@ -137,6 +145,7 @@ func _write_state() -> void:
 		"entities": ents, "keys": keys, "stick": not InputRouter.stick.is_empty(),
 		"hud": {"plans": plans, "prompt": [m.hud.prompt_rect.position.x, m.hud.prompt_rect.position.y, m.hud.prompt_rect.size.x, m.hud.prompt_rect.size.y]},
 		"dialogue": dlg,
+		"actors": _actors(m),
 		"ledger": {"totals": field.L.totals(), "air": field.L.air},
 		"camera": [snappedf(stage.render_cam.x, 0.01), snappedf(stage.render_cam.y, 0.01)],
 		"sounds": Audio.played.map(func(p): return p[0]),
