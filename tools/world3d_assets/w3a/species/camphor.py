@@ -617,9 +617,14 @@ def shimenawa(base):
     c = np.array([cx, ROPE_Y, cz])
     rope_r = 0.24
     th = np.linspace(0, 2 * math.pi, 97)
+    # a tied rope does not dip into every hollow: the upper envelope of the surface, smoothed
+    from scipy.ndimage import gaussian_filter1d, maximum_filter1d
+    rho = np.array([surface_rho(base, ROPE_Y, t) for t in th[:-1]])
+    rho = gaussian_filter1d(maximum_filter1d(rho, 9, mode='wrap'), 3.0, mode='wrap')
+    rho = np.append(rho, rho[0])
     pts = []
-    for t in th:
-        rr = surface_rho(base, ROPE_Y, t) + rope_r * 0.8
+    for t, r_ in zip(th, rho):
+        rr = r_ + rope_r * 0.8
         d = _dir(t)
         sag = 0.22 * max(0.0, -math.cos(t)) ** 2
         pts.append(c + d * rr + np.array([0, -sag, 0]))

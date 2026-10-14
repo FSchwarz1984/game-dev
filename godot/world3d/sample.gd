@@ -224,10 +224,10 @@ func _place_marker_props() -> void:
 		["kakehi", t.marker("spring") + Vector3(3.3, 0, 0.4), 0.0, false],
 		["signpost", Vector3(-16.4, 0, 19.0), 0.25, false],
 		["waymark", Vector3(8.4, 0, 17.4), -0.1, false],
-		["basket_tall", door + Vector3(-2.6, 0, 0.8), 0.4, false],
-		["basket_flat", door + Vector3(2.1, 0, 1.3), 0.0, false],
-		["straw_sheaves", Vector3(-22.3, 0, 13.4), 0.2, false],
-		["straw_heap", Vector3(-13.9, 0, 15.9), -0.3, false],
+		["basket_tall", door + Vector3(2.4, 0, 0.1), 0.4, false],
+		["basket_flat", door + Vector3(3.6, 0, 1.4), 0.0, false],
+		["straw_sheaves", Vector3(-22.2, 0, 11.4), 1.4, false],
+		["straw_heap", Vector3(-21.6, 0, 17.0), -0.3, false],
 	]
 	for ds in dressing.asset_slots:
 		slots.append([ds[0], ds[1], ds[2], true])
@@ -462,10 +462,10 @@ func _make_route() -> void:
 		pass
 	# out of the hut's door, across the yard to the shrine under the great camphor, along its front,
 	# back past the yard and down the spur to the lookout
-	var pts := [Vector2(-18.0, 15.4), Vector2(-14.6, 11.4), Vector2(-11.2, 10.0), Vector2(-7.0, 10.1),
-		Vector2(-3.4, 10.4), Vector2(-6.2, 13.4), Vector2(-11.0, 16.2), Vector2(-16.2, 17.2),
-		Vector2(-19.0, 19.6), Vector2(-19.6, 23.0), Vector2(-20.4, 28.0), Vector2(-21.8, 33.5),
-		Vector2(-22.8, 38.0), Vector2(-23.5, 41.6)]
+	var pts := [Vector2(-18.0, 15.3), Vector2(-14.2, 15.0), Vector2(-13.1, 13.6), Vector2(-13.0, 10.8),
+		Vector2(-11.2, 10.0), Vector2(-7.0, 10.1), Vector2(-3.4, 10.4), Vector2(-6.2, 13.4),
+		Vector2(-11.0, 16.2), Vector2(-16.2, 17.2), Vector2(-19.0, 19.6), Vector2(-19.6, 23.0),
+		Vector2(-20.4, 28.0), Vector2(-21.8, 33.5), Vector2(-22.8, 38.0), Vector2(-23.5, 41.6)]
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))
@@ -474,6 +474,8 @@ func _make_route() -> void:
 
 
 func _drive_route() -> void:
+	if args.has("route_log") and frame % 30 == 0:
+		print("ROUTE f=%d i=%d her=(%.2f, %.2f) saji=(%.2f, %.2f)" % [frame, route_i, her.pos.x, her.pos.z, saji.pos.x, saji.pos.z])
 	for k in [KEY_W, KEY_A, KEY_S, KEY_D]:
 		keys_down[k] = false
 	if route_i >= route.size():
