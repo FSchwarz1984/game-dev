@@ -98,9 +98,11 @@ export class Actor {
 
   followStep(dt, stage) {
     const lead = stage.actor(this.follow);
-    // a little behind and to the side of her, never in front of the camera's view of her
-    const bx = lead.x - (lead.face === 'left' ? -1.1 : lead.face === 'right' ? 1.1 : 0.7);
-    const bz = lead.z - (lead.face === 'back' ? -1.0 : lead.face === 'front' ? 1.0 : 0.3);
+    // beside and a little behind her, always a step north of her feet so she never stands
+    // between the camera and Tsuzumi
+    const side = lead.face === 'left' ? 1 : lead.face === 'right' ? -1 : (this.x >= lead.x ? 1 : -1);
+    const bx = lead.x + side * 1.0;
+    const bz = lead.z - 0.45;
     const dx = bx - this.x, dz = bz - this.z, d = Math.hypot(dx, dz);
     if (d < 0.5) return;
     const sp = Math.min(d, (d > 3 ? 4.6 : 3.2) * dt);

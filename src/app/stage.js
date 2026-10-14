@@ -232,6 +232,11 @@ export async function createStage({ root, field, vistaView, onProgress = null })
 
     update(dt) {
       for (const a of Object.values(actors)) a.update(dt, stage);
+      // while a scene turns her, her facing for choosing targets turns with her
+      if (!field.control) {
+        const F = { front: [0, 1], back: [0, -1], left: [-1, 0], right: [1, 0] }[actors.tsuzumi.face];
+        if (F) { P.fx = F[0]; P.fz = F[1]; }
+      }
       // her height follows the ground (plus a climb or a hop)
       const pairs = Object.entries(actors);
       for (const [id, a] of pairs) {
