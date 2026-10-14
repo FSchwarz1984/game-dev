@@ -30,7 +30,19 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 
+## What PixelStage.fit() does in the game: fill the window at an integer scale, the logical canvas
+## growing with it (1280x720 -> 640x360, 1200x540 -> 600x270, 1920x1080 -> 480x270).
+func _fit() -> void:
+	var win := Vector2(root.size)
+	var sc := maxi(1, floori(minf(win.x / 480.0, win.y / 270.0)))
+	var cs := Vector2i(floori(win.x / sc), floori(win.y / sc))
+	if root.content_scale_size != cs:
+		root.content_scale_size = cs
+
+
 func _run() -> void:
+	_fit()
+	root.size_changed.connect(_fit)
 	var layer := CanvasLayer.new()
 	layer.layer = 1
 	root.add_child(layer)

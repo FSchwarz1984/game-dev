@@ -18,7 +18,7 @@ if [ ! -f "$CACHE" ] || [ -n "$(find "$PROJ/vista" -name '*.gd' -newer "$CACHE" 
 fi
 DISP="${XVFB_DISPLAY:-:93}"
 W="${RES%x*}"; H="${RES#*x}"
-Xvfb "$DISP" -screen 0 "$((W > 1280 ? W : 1280))x$((H > 720 ? H : 720))x24" -nolisten tcp >/dev/null 2>&1 &
+Xvfb "$DISP" -screen 0 "$((W + 256))x$((H + 256))x24" -nolisten tcp >/dev/null 2>&1 &
 XPID=$!
 trap 'kill $XPID 2>/dev/null || true' EXIT
 export DISPLAY="$DISP"

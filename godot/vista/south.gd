@@ -6,7 +6,7 @@ extends Node2D
 ##   far group (parallax 0.1): sky, stars, sky shore + its lights, cloud deck, ground (with the wave),
 ##     lights on the ground, river lanterns, the wave's curtain and motes, the rising lights
 ##   canopy group (parallax 1): crown behind her, stirring sprays, her figure, crown in front of her
-##   near leaves (parallax 2.4, only while the camera rises out of the crown)
+##   near leaves (parallax 2.4 at 480x270, only while the camera rises out of the crown)
 ##   the end of the wave (white rising over everything, motes rushing past)
 ## Layout: the composition is the JS 480x270 frame; a larger logical view (integer scale, expand)
 ## shows more of the same world around it. The horizon sits where the JS put it for that height
@@ -274,7 +274,12 @@ func update(st: Dictionary, t: float) -> void:
 	comp_rise.set_param("excess", excess_rise)
 	oy_canopy = int(floor(view.y - float(m["CT"]) - dy + 0.5)) - int(m["oyC"])
 	canopy.position = Vector2(dx, oy_canopy)
-	var on := int(floor(view.y + 4.0 - dy * 2.4 + 0.5))
+	# near leaves: JS oN = round(H + 4 - 2.4 dy). Its sprays were laid out for the frame's height, so on
+	# a taller view (longer crane) they would hang in the open sky at pan 0; instead they keep the
+	# reference frame's place against the crown at pan 0 (80 px above it) and the same 150 px of travel
+	# past it, leaving the frame at pan 1 as in the JS
+	var near_k := 2.4 if (exact or view.y <= int(m["refH"])) else (150.0 + pan_d) / pan_d
+	var on := int(floor(view.y + 4.0 - dy * near_k + 0.5))
 	near.position = Vector2(dx, on)
 	near.visible = on < view.y
 
