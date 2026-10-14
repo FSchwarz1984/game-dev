@@ -266,8 +266,10 @@ class World:
         self.face[m] = FACE['wetbank']
         sid = self._new_surface(id=wt.get('id', 'water'), kind=KIND['water'], height=s)
         self.sid[m] = sid
-        # a wet margin of soil round the water
-        ring = (~m) & (ndi.distance_transform_edt(~m) < wt.get('wet', 0.5) * PPM)
+        # a wet margin of soil round the water, wide in places and pinched to nothing in others
+        X, Y = f.grid()
+        width = wt.get('wet', 0.5) * PPM * np.clip(noise.fbm(X / 40.0, Y / 40.0, self.seed + 503, 2) * 1.8 - 0.25, 0.15, 1.3)
+        ring = (~m) & (ndi.distance_transform_edt(~m) < width)
         ring &= np.isin(self.top, [TOP['meadow'], TOP['lawn'], TOP['moss'], TOP['forest'], TOP['earth']])
         self.top[ring] = TOP['wetbank']
 

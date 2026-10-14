@@ -14,3 +14,6 @@ godot/export/
 # Generator intermediates (rebuilt by tools/terrain and tools/flora); finished assets live in godot/
 tools/terrain/out/
 tools/flora/out/
+
+# vista generator intermediates (finished assets live in godot/vista)
+tools/vista/out/

@@ -111,7 +111,7 @@ _add('grass', lab_ramp(17, 61, 19.0, 118, cool=34, warm=-20))         # meadow, 
 _add('grass_cool', lab_ramp(15, 57, 17.0, 130, cool=30, warm=-16))    # damp / shaded stretches
 _add('grass_dry', lab_ramp(20, 64, 19.0, 100, cool=30, warm=-14))     # sun-bleached, ochre
 _add('lawn', lab_ramp(16, 57, 16.0, 122, cool=32, warm=-18))
-_add('moss', lab_ramp(13, 54, 19.0, 126, cool=28, warm=-22))
+_add('moss', lab_ramp(16, 57, 18.0, 124, cool=28, warm=-22))
 _add('forest', lab_ramp(13, 49, 10.0, 66, cool=30, warm=8))           # forest soil
 _add('litter', lab_ramp(20, 58, 21.0, 62, cool=14, warm=10))          # fallen leaves
 _add('needle', lab_ramp(19, 53, 17.0, 68, cool=14, warm=8))
@@ -122,7 +122,7 @@ _add('stone', lab_ramp(20, 71, 4.5, 86, cool=120, warm=0, c_end=0.8))  # dressed
 _add('stone_warm', lab_ramp(21, 69, 8.0, 74, cool=60, warm=6, c_end=0.7))
 _add('rock', lab_ramp(17, 68, 8.0, 62, cool=70, warm=10, c_end=0.7))  # cliff rock: grey-brown
 _add('rock_warm', lab_ramp(19, 68, 13.0, 64, cool=30, warm=8, c_end=0.7))
-_add('soil', lab_ramp(17, 57, 16.0, 62, cool=24, warm=8))             # earth banks
+_add('soil', lab_ramp(18, 58, 12.0, 70, cool=26, warm=8))             # earth banks
 _add('wetsoil', lab_ramp(11, 43, 10.0, 70, cool=30, warm=6))
 _add('water', lab_ramp(15, 60, 12.0, 205, cool=12, warm=-40, c_end=0.6))
 _add('lichen', lab_ramp(38, 76, 21.0, 100, cool=10, warm=-6))

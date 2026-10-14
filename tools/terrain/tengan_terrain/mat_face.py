@@ -202,11 +202,12 @@ def paint_faces(S, world, top, atlases, seed=0):
         # vegetation clinging to the face: clumps (clusters ~1 m) of grass and moss, lit on top
         vz = noise.fbm(Xm / 26.0, vm / 9.0, seed + 17, 3)
         vy = noise.vnoise(Xm / 2.2, vm / 1.6, seed + 18)
-        cover = (vz + (vy - 0.5) * 0.35) > (0.56 if st != FACE['bank'] else 0.42)
+        thr = 0.38 if st != FACE['wetbank'] else 0.6
+        cover = (vz + (vy - 0.5) * 0.35) > thr
         green = np.where(noise.fbm(Xm / 60.0, vm / 30.0, seed + 19, 2) > 0.5, R['grass_cool'], R['moss'])
-        top_of_clump = cover & ~((noise.fbm(Xm / 26.0, (vm + 1) / 9.0, seed + 17, 3) + (noise.vnoise(Xm / 2.2, (vm + 1) / 1.6, seed + 18) - 0.5) * 0.35) > (0.56 if st != FACE['bank'] else 0.42))
+        top_of_clump = cover & ~((noise.fbm(Xm / 26.0, (vm + 1) / 9.0, seed + 17, 3) + (noise.vnoise(Xm / 2.2, (vm + 1) / 1.6, seed + 18) - 0.5) * 0.35) > thr)
         rp = np.where(cover, green, rp)
-        tone_m = np.where(cover, np.where(top_of_clump, 4.0, 2.6 + (vy > 0.6)), tone_m)
+        tone_m = np.where(cover, np.where(top_of_clump, 4.2, 3.0 + (vy > 0.6) - 0.6 * rel[m]), tone_m)
         # grass curtains: long hanging sod from the lip, in clumps
         cur = np.floor(4 + noise.fbm(Xm / 7.0, np.full(m.sum(), 9.0), seed + 20, 2) * 9.0 - 3.0)
         curtain = fk[m] <= cur

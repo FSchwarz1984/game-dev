@@ -1,0 +1,216 @@
+{
+ "format": "tengan-terrain-markers/1",
+ "datum_m": 10.0,
+ "markers": [
+  {
+   "id": "camphor",
+   "kind": "tree.camphor",
+   "at": [
+    52.0,
+    28.8
+   ],
+   "footprint": {
+    "trunk_radius": 2.6,
+    "root_radius": 8.5
+   },
+   "note": "the great camphor; its crown should shade the whole clearing",
+   "ground_h": 0.0
+  },
+  {
+   "id": "hut",
+   "kind": "building.hut",
+   "at": [
+    38.8,
+    37.0
+   ],
+   "footprint": {
+    "w": 5.2,
+    "d": 3.8
+   },
+   "note": "stands on the 0.5 m hut pad; door faces south toward hut_steps",
+   "ground_h": 0.5
+  },
+  {
+   "id": "shrine",
+   "kind": "building.shrine",
+   "at": [
+    65.0,
+    34.6
+   ],
+   "footprint": {
+    "w": 1.8,
+    "d": 1.4
+   },
+   "note": "on the 0.5 m shrine pad, facing south",
+   "ground_h": 0.5
+  },
+  {
+   "id": "graves",
+   "kind": "props.graves",
+   "at": [
+    76.0,
+    56.4
+   ],
+   "footprint": {
+    "w": 14.0,
+    "d": 1.0
+   },
+   "note": "nine small graves in a row, backs to the dry-stone wall, facing south",
+   "ground_h": -1.5
+  },
+  {
+   "id": "dosojin",
+   "kind": "props.dosojin",
+   "at": [
+    108.2,
+    76.4
+   ],
+   "footprint": {
+    "w": 1.2,
+    "d": 0.8
+   },
+   "note": "paired roadside gods at the foot of the T2 bank, north of the road near the east entrance",
+   "ground_h": -4.5
+  },
+  {
+   "id": "lookout",
+   "kind": "spot.lookout",
+   "at": [
+    40.6,
+    59.0
+   ],
+   "footprint": {
+    "w": 6.0,
+    "d": 4.0
+   },
+   "note": "bare rock spur over the plain; fence/seat optional",
+   "ground_h": 0.0
+  },
+  {
+   "id": "spring",
+   "kind": "spot.spring",
+   "at": [
+    15.0,
+    25.6
+   ],
+   "ground_h": -0.30000001192092896
+  },
+  {
+   "id": "east_entrance",
+   "kind": "spot.exit",
+   "at": [
+    119.0,
+    80.0
+   ],
+   "ground_h": -4.5
+  },
+  {
+   "id": "west_exit",
+   "kind": "spot.exit",
+   "at": [
+    1.0,
+    44.6
+   ],
+   "ground_h": -1.0
+  },
+  {
+   "id": "north_exit",
+   "kind": "spot.exit",
+   "at": [
+    94.4,
+    0.8
+   ],
+   "ground_h": 4.5
+  }
+ ],
+ "stairs": [
+  {
+   "id": "S1_graves",
+   "x": 90.0,
+   "z_bottom": 54.6,
+   "z_top": 52.5,
+   "width": 2.2,
+   "from": 8.5,
+   "to": 10.0,
+   "steps": 6,
+   "tread": 0.42
+  },
+  {
+   "id": "S2",
+   "x": 112.5,
+   "z_bottom": 64.6,
+   "z_top": 62.49999999999999,
+   "width": 2.2,
+   "from": 7.0,
+   "to": 8.5,
+   "steps": 6,
+   "tread": 0.42
+  },
+  {
+   "id": "S3",
+   "x": 82.0,
+   "z_bottom": 74.5,
+   "z_top": 72.4,
+   "width": 2.2,
+   "from": 5.5,
+   "to": 7.0,
+   "steps": 6,
+   "tread": 0.42
+  },
+  {
+   "id": "N1",
+   "x": 87.0,
+   "z_bottom": 21.6,
+   "z_top": 19.6,
+   "width": 1.8,
+   "from": 10.0,
+   "to": 11.5,
+   "steps": 6,
+   "tread": 0.4
+  },
+  {
+   "id": "N2",
+   "x": 92.0,
+   "z_bottom": 13.2,
+   "z_top": 11.2,
+   "width": 1.8,
+   "from": 11.5,
+   "to": 13.0,
+   "steps": 6,
+   "tread": 0.4
+  },
+  {
+   "id": "N3",
+   "x": 94.2,
+   "z_bottom": 7.0,
+   "z_top": 5.0,
+   "width": 1.8,
+   "from": 13.0,
+   "to": 14.5,
+   "steps": 6,
+   "tread": 0.4
+  },
+  {
+   "id": "hut_steps",
+   "x": 38.8,
+   "z_bottom": 40.55,
+   "z_top": 40.15,
+   "width": 1.6,
+   "from": 10.0,
+   "to": 10.5,
+   "steps": 2,
+   "tread": 0.4
+  },
+  {
+   "id": "shrine_steps",
+   "x": 65.0,
+   "z_bottom": 38.75,
+   "z_top": 38.35,
+   "width": 1.4,
+   "from": 10.0,
+   "to": 10.5,
+   "steps": 2,
+   "tread": 0.4
+  }
+ ]
+}

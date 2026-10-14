@@ -131,26 +131,28 @@ def paint_grass(P, idx, X, Y, calm, wild, lipd, footd, seed):
     # where clumps gather: masses ~1-3 m across with open ground between them
     extra = (wild - 0.5) * 0.35 - calm * 0.18
 
+    meadow_k = 1.0 - calm         # the meadow is lush; the lawn where people walk stays calm
+
     def dens_fn(ax, ay):
-        return np.clip((noise.fbm(ax / 34.0, ay / 34.0, seed + 8, 3) + extra - 0.40) * 2.6, 0.0, 0.92)
+        return np.clip((noise.fbm(ax / 34.0, ay / 34.0, seed + 8, 3) + extra - 0.36 + 0.14 * meadow_k) * 2.2, 0.0, 0.92)
     dens = dens_fn(X, Y)
     off, tx, tz, tip = _clumps(X, Y, dens, cw=10, ch=6, seed=seed + 11, blade=0.5 + 0.6 * wild - 0.3 * calm, dens_fn=dens_fn)
-    # in the open between masses there is no 'gap' shading: flat ground
-    open_ground = dens < 0.08
-    off = np.where(open_ground, 0.0, off)
-    # lawn: half the gaps are not shaded, the highlight tips rarer -> calmer
+    # Balance: a clump mass must not read darker than the open ground around it, or the
+    # masses become camouflage blobs. Gaps between clumps darken only in proportion to
+    # how dense the mass is, and the mass is lifted a little to pay for its shadows.
     gap = off < 0
-    soft = gap & (noise.vnoise(X / 1.7 + 3, Y / 1.7, seed + 12) < 0.55 * calm + 0.1)
-    off = np.where(soft, 0.0, off)
+    keep_gap = noise.vnoise(X / 1.7 + 3, Y / 1.7, seed + 12) < dens * (0.75 - 0.35 * calm)
+    off = np.where(gap & ~keep_gap, 0.0, off)
     off = np.where((off > 1) & lawn, 1.0, off)
-    tone = tb + off
+    lift = dens * 0.45
+    tone = _dither_round(base + lift, X, Y, 0.35, seed + 13) + off
     # sparse lit blades on the clumps of light patches
     r = noise.hash01(X.astype(np.int64), (Y.astype(np.int64)) // 2, seed + 9)
-    tone = np.where((tb >= 3) & (off > 0) & (r > 0.9 + 0.06 * calm), tone + 1, tone)
+    tone = np.where((tb >= 3) & (off > 0) & (r > 0.86 + 0.1 * calm), tone + 1, tone)
     P.ramp.flat[idx] = rp
     P.tone.flat[idx] = np.clip(tone, 0, N_TONES - 1)
-    P.tx.flat[idx] = tx * (1 - open_ground)
-    P.tz.flat[idx] = tz * (1 - open_ground)
+    P.tx.flat[idx] = tx
+    P.tz.flat[idx] = tz
 
 
 def paint_moss(P, idx, X, Y, seed):
@@ -223,9 +225,12 @@ def paint_forest(P, idx, X, Y, seed):
     off, tx, tz, tip = _clumps(X, Y, 0.0, cw=7, ch=4, seed=seed + 4, blade=0.0, dens_fn=dens_fn)
     open_ground = dens_fn(X, Y) < 0.1
     off = np.where(open_ground, 0.0, np.clip(off, -1, 1))
-    green = damp > 0.56
-    base = np.where(green, 2.6, 2.9) + (pv - 0.5) * 1.2
+    # damp hollows: moss creeps over the mounds only (the soil between stays brown), so a
+    # damp stretch reads as a green-tinged floor, not as a green blot on brown
+    green = (damp > 0.6) & (off >= 0) & ~open_ground & (noise.vnoise(X / 2.0, Y / 2.0, seed + 10) < 0.35 + (damp - 0.6) * 2.5)
+    base = 2.9 + (pv - 0.5) * 1.2
     tone = _dither_round(base, X, Y, 0.4, seed + 5) + off
+    tone = np.where(green, tone - 0.3, tone)
     rp = np.where(green, R['moss'], R['forest']).astype(np.uint8)
     # leaf litter in drifts on the drier ground: flecks close to the soil's value
     drift = noise.fbm(X / 30.0 + 21, Y / 30.0, seed + 6, 3)
@@ -312,33 +317,41 @@ def paint_atlas_top(P, idx, X, Y, atlas, ramp_a, ramp_b, seed, scale=1.0, base_t
 
 
 def paint_rock_relief(P, idx, X, Y, atlas, seed, scale=2.0, base_tone=3.6):
-    """Bare rock outcrop tops: the scan's height as a shaded relief (lit from the
-    upper left), quantised to a few tones in clusters; dark cracks only where
-    the segmentation parts the plates; lichen rosettes on the high, dry spots,
-    moss in the cracks and hollows."""
-    hgt = atlas['h']
+    """Bare rock outcrop tops, drawn as facets: the scan's relief (lit from the upper
+    left) is smoothed and posterised into three or four crisp tone bands with no
+    dither, so the rock reads as planes with hard edges, not as a soft bump map.
+    Dark cracks only along long concave creases; lichen rosettes on high dry
+    spots, moss in the creases and low hollows."""
+    from scipy import ndimage as ndi
+    hgt = ndi.gaussian_filter(atlas['h'], 1.2, mode='wrap')
     ah, aw = hgt.shape
     ax = (np.floor(X / scale).astype(np.int64)) % aw
     ay = (np.floor(Y / scale).astype(np.int64)) % ah
     gy, gx = np.gradient(hgt)
     sx, sy = gx[ay, ax], gy[ay, ax]
     hh = hgt[ay, ax]
-    light = -(sx * 0.7 + sy * 0.7) * 9.0                         # upper-left lit
-    t = base_tone + np.clip(light, -1.6, 1.6) + (hh - 0.5) * 0.9
-    t = _dither_round(t, X, Y, 0.35, seed + 1)
-    # cracks: the deepest concave creases of the relief (continuous lines, not a lattice)
+    light = -(sx + sy) * 6.5
+    t = np.round(base_tone + np.clip(light, -1.4, 1.4) + (hh - 0.5) * 0.8)
+    # creases: concave lines of the relief, small fragments dropped so no dashes remain
     lap = (np.roll(hgt, 1, 0) + np.roll(hgt, -1, 0) + np.roll(hgt, 1, 1) + np.roll(hgt, -1, 1) - 4 * hgt)
-    crack = lap[ay, ax] > np.percentile(lap, 93)
+    cm = lap > np.percentile(lap, 92)
+    lab, n = ndi.label(cm, structure=np.ones((3, 3)))
+    if n:
+        sizes = ndi.sum(cm, lab, range(1, n + 1))
+        keep = np.zeros(n + 1, bool)
+        keep[1:] = sizes >= 9
+        cm = keep[lab]
+    crack = cm[ay, ax]
     rp = np.where(noise.fbm(X / 120.0, Y / 120.0, seed + 3, 2) > 0.5, R['rock_warm'], R['rock']).astype(np.uint8)
-    t = np.where(crack, 1.3, t)
+    t = np.where(crack, 1.4, t)
     mz = noise.fbm(X / 24.0, Y / 24.0, seed + 4, 2)
-    mossy = (crack & (mz > 0.45)) | ((hh < 0.3) & (mz > 0.55))
+    mossy = (crack & (mz > 0.42)) | ((hh < 0.28) & (mz > 0.52))
     rp = np.where(mossy, R['moss'], rp)
-    t = np.where(mossy, 2.4 + (mz > 0.62), t)
+    t = np.where(mossy, 2.6 + (mz > 0.6), t)
     lz = noise.fbm(X / 9.0 + 5, Y / 9.0, seed + 7, 2)
-    lich = (~crack) & (~mossy) & (hh > 0.6) & (lz > 0.7) & (noise.vnoise(X / 1.5, Y / 1.5, seed + 8) > 0.35)
+    lich = (~crack) & (~mossy) & (hh > 0.58) & (lz > 0.69) & (noise.vnoise(X / 1.5, Y / 1.5, seed + 8) > 0.35)
     rp = np.where(lich, R['lichen'], rp)
-    t = np.where(lich, np.where(lz > 0.7, 4, 3), t)
+    t = np.where(lich, np.where(lz > 0.74, 4, 3), t)
     P.ramp.flat[idx] = rp
     P.tone.flat[idx] = np.clip(t, 0, N_TONES - 1)
     P.tx.flat[idx] = np.clip(sx * 6.0, -0.5, 0.5)
@@ -544,7 +557,7 @@ def _details(P, world, E, Xg, Yg, seed):
     foot = E['foot']
     lawn = top == TOP['lawn']
     # tuft density: wild stretches and along lips and feet; sparse in the lawn
-    dens = (0.10 + 0.55 * wild) * np.where(lawn, 0.35, 1.0)
+    dens = (0.16 + 0.62 * wild) * np.where(lawn, 0.35, 1.0)
     dens = dens + smoothstep(26.0, 2.0, lip) * 0.45 + smoothstep(22.0, 2.0, foot) * 0.5
     dens = np.clip(dens * (0.6 + 0.8 * noise.fbm(Xg / 90.0, Yg / 90.0, seed + 2, 2)), 0, 1).astype(np.float32)
     ys, xs, hh = stamps.jitter_points(grass, 7, 6, dens, seed + 3)
@@ -576,6 +589,14 @@ def _details(P, world, E, Xg, Yg, seed):
     ys, xs, hh = stamps.jitter_points(ground, 7, 5, pd, seed + 13)
     which = ((hh >> np.uint32(3)) % np.uint32(len(stamps.PEBBLES))).astype(np.int64)
     stamps.stamp(P.prio, P.tone, P.ramp, ys, xs, stamps.PEBBLES, which, allow=ground)
+    # stones along the pool's shore
+    shore = top == TOP['wetbank']
+    if shore.any():
+        ys, xs, hh = stamps.jitter_points(shore, 5, 4, np.float32(0.55), seed + 17)
+        which = ((hh >> np.uint32(3)) % np.uint32(len(stamps.PEBBLES))).astype(np.int64)
+        t = stamps.stamp(P.prio, P.tone, P.ramp, ys, xs, stamps.PEBBLES, which, allow=shore)
+        P.ramp[t] = R['rock']
+        P.tone[t] = np.clip(3.2 + (P.tone[t] - np.round(P.tone[t])) * 1.5, 1, 5)
     # rock fall at the foot of every cliff: stones on the lower ground, densest at the foot
     rub = (E['sfoot'] < 20) & ~np.isin(top, [TOP['water'], TOP['tread'], TOP['cheek'], TOP['void']])
     rd = (smoothstep(20.0, 1.0, E['sfoot']) ** 1.5 * 0.4).astype(np.float32)

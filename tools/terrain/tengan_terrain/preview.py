@@ -14,8 +14,8 @@ TOD = {
     # bounce = light thrown back from the ground onto walls, sat = grade saturation
     'morning': dict(elev=24.0, sun=(0.76, 0.68, 0.55), sky=(0.56, 0.58, 0.65), bounce=(0.20, 0.19, 0.15), sat=0.92),
     'noon': dict(elev=58.0, sun=(0.64, 0.61, 0.53), sky=(0.53, 0.56, 0.60), bounce=(0.24, 0.23, 0.17), sat=0.95),
-    'dusk': dict(elev=12.0, sun=(1.12, 0.68, 0.40), sky=(0.42, 0.37, 0.49), bounce=(0.18, 0.12, 0.09), sat=0.95),
-    'night': dict(elev=40.0, sun=(0.20, 0.25, 0.40), sky=(0.19, 0.23, 0.36), bounce=(0.03, 0.03, 0.05), sat=0.75),
+    'dusk': dict(elev=15.0, sun=(1.40, 0.84, 0.46), sky=(0.44, 0.38, 0.50), bounce=(0.20, 0.13, 0.09), sat=1.0),
+    'night': dict(elev=40.0, sun=(0.22, 0.27, 0.44), sky=(0.21, 0.25, 0.39), bounce=(0.03, 0.03, 0.05), sat=0.75),
 }
 
 

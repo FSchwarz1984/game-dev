@@ -1,0 +1,823 @@
+{
+ "id": "home_saddle",
+ "label": "峠の大楠（地形ベンチマーク）: terrain only; trees, buildings and props come from their own generators",
+ "size_m": [
+  120,
+  100
+ ],
+ "origin_m": [
+  0,
+  0
+ ],
+ "cell_m": 0.25,
+ "max_step_m": 0.3,
+ "logic": "logic.png",
+ "art": "ground.png",
+ "art_offset_px": [
+  0,
+  -322
+ ],
+ "entities": [],
+ "zones": [],
+ "spawn": {
+  "x": 41.2,
+  "z": 44.6,
+  "face": "back"
+ },
+ "companion": {
+  "id": "saji",
+  "x": 43.0,
+  "z": 45.0
+ },
+ "shots": {
+  "saddle": {
+   "x": 44.0,
+   "z": 41.5
+  },
+  "camphor": {
+   "x": 52.0,
+   "z": 33.0
+  },
+  "graves": {
+   "x": 80.0,
+   "z": 57.0
+  },
+  "graves_stairs": {
+   "x": 88.0,
+   "z": 55.0
+  },
+  "switchbacks": {
+   "x": 101.0,
+   "z": 69.0
+  },
+  "lookout": {
+   "x": 40.5,
+   "z": 58.5
+  },
+  "spring": {
+   "x": 17.5,
+   "z": 27.5
+  },
+  "dosojin": {
+   "x": 108.0,
+   "z": 77.5
+  },
+  "north_stairs": {
+   "x": 88.5,
+   "z": 19.0
+  }
+ },
+ "terrain": {
+  "format": "tengan-terrain-bake/1",
+  "ppm": 20,
+  "datum_m": 10.0,
+  "projection": "game px: X = x*20, Y = (z - h)*20; depth D = (z + h)*20, larger is nearer",
+  "screen_origin_px": [
+   0,
+   -322
+  ],
+  "screen_size_px": [
+   2400,
+   2294
+  ],
+  "chunk_px": 512,
+  "sun": {
+   "toward_xz": [
+    -0.92,
+    0.38
+   ],
+   "note": "fixed azimuth from the upper left of the screen; elevation varies with time of day"
+  },
+  "encodings": {
+   "albedo": "RGBA8 sRGB, A = terrain coverage",
+   "normal": "RGB8 Godot 2D normal map: R screen right, G screen up, B out of screen",
+   "light": "RGB8: R = sun horizon elevation (deg * 255/90), G = sky visibility 0..1, B = material code (top id, or 32 + face style)",
+   "depth": "RGB8: (R*256 + G) = round(D*2) + 8192, D = z_px + h_px (world px); B = round((h_m + 0.0) * 4.0)",
+   "masks/logic.png": "core RegionData mask: one px per 0.25 m cell, R*256 + G = height in cm (datum included), B = core material id (0 void, 1 grass, 2 dirt, 3 stone, 4 stairs, 5 water, 6 deep water, 7 cliff/wall)",
+   "masks/height.png": "world grid 20 px/m: (R*256 + G) = round(h_m*100) + 32768 (datum included; 0 = no ground); B = surface kind (1 level, 2 ramp, 3 stair tread, 4 stair cheek, 5 water, 6 landing)",
+   "masks/material.png": "world grid: R = top material id, G = 255 walkable (cliff lips are 0), B = flags (1 road, 2 stair, 4 water, 8 deep water, 16 cliff lip barrier, 32 cliff foot, 64 ramp)",
+   "masks/sun.png": "world grid: R = sun horizon elevation (deg * 255/90) of the ground, G = sky visibility; for shading actors by their feet",
+   "walk_regions.json": "walkable regions split at steps > step_m, polygons in metres (outer + holes)"
+  },
+  "top_materials": {
+   "void": 0,
+   "meadow": 1,
+   "lawn": 2,
+   "moss": 3,
+   "forest": 4,
+   "dirt": 5,
+   "earth": 6,
+   "gravel": 7,
+   "tread": 8,
+   "paving": 9,
+   "rock": 10,
+   "cheek": 11,
+   "water": 12,
+   "wetbank": 13,
+   "scree": 14
+  },
+  "face_styles": {
+   "none": 32,
+   "rock": 33,
+   "earth": 34,
+   "wall": 35,
+   "riser": 36,
+   "cheekface": 37,
+   "bank": 38,
+   "rampfill": 39,
+   "wetbank": 40
+  },
+  "chunks": [
+   {
+    "name": "c00_00",
+    "col": 0,
+    "row": 0,
+    "pos_px": [
+     0,
+     -322
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c00_00_albedo.png",
+     "normal": "terrain/c00_00_normal.png",
+     "light": "terrain/c00_00_light.png",
+     "depth": "terrain/c00_00_depth.png"
+    }
+   },
+   {
+    "name": "c01_00",
+    "col": 1,
+    "row": 0,
+    "pos_px": [
+     512,
+     -322
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c01_00_albedo.png",
+     "normal": "terrain/c01_00_normal.png",
+     "light": "terrain/c01_00_light.png",
+     "depth": "terrain/c01_00_depth.png"
+    }
+   },
+   {
+    "name": "c02_00",
+    "col": 2,
+    "row": 0,
+    "pos_px": [
+     1024,
+     -322
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c02_00_albedo.png",
+     "normal": "terrain/c02_00_normal.png",
+     "light": "terrain/c02_00_light.png",
+     "depth": "terrain/c02_00_depth.png"
+    }
+   },
+   {
+    "name": "c03_00",
+    "col": 3,
+    "row": 0,
+    "pos_px": [
+     1536,
+     -322
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c03_00_albedo.png",
+     "normal": "terrain/c03_00_normal.png",
+     "light": "terrain/c03_00_light.png",
+     "depth": "terrain/c03_00_depth.png"
+    }
+   },
+   {
+    "name": "c04_00",
+    "col": 4,
+    "row": 0,
+    "pos_px": [
+     2048,
+     -322
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c04_00_albedo.png",
+     "normal": "terrain/c04_00_normal.png",
+     "light": "terrain/c04_00_light.png",
+     "depth": "terrain/c04_00_depth.png"
+    }
+   },
+   {
+    "name": "c00_01",
+    "col": 0,
+    "row": 1,
+    "pos_px": [
+     0,
+     190
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c00_01_albedo.png",
+     "normal": "terrain/c00_01_normal.png",
+     "light": "terrain/c00_01_light.png",
+     "depth": "terrain/c00_01_depth.png"
+    }
+   },
+   {
+    "name": "c01_01",
+    "col": 1,
+    "row": 1,
+    "pos_px": [
+     512,
+     190
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c01_01_albedo.png",
+     "normal": "terrain/c01_01_normal.png",
+     "light": "terrain/c01_01_light.png",
+     "depth": "terrain/c01_01_depth.png"
+    }
+   },
+   {
+    "name": "c02_01",
+    "col": 2,
+    "row": 1,
+    "pos_px": [
+     1024,
+     190
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c02_01_albedo.png",
+     "normal": "terrain/c02_01_normal.png",
+     "light": "terrain/c02_01_light.png",
+     "depth": "terrain/c02_01_depth.png"
+    }
+   },
+   {
+    "name": "c03_01",
+    "col": 3,
+    "row": 1,
+    "pos_px": [
+     1536,
+     190
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c03_01_albedo.png",
+     "normal": "terrain/c03_01_normal.png",
+     "light": "terrain/c03_01_light.png",
+     "depth": "terrain/c03_01_depth.png"
+    }
+   },
+   {
+    "name": "c04_01",
+    "col": 4,
+    "row": 1,
+    "pos_px": [
+     2048,
+     190
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c04_01_albedo.png",
+     "normal": "terrain/c04_01_normal.png",
+     "light": "terrain/c04_01_light.png",
+     "depth": "terrain/c04_01_depth.png"
+    }
+   },
+   {
+    "name": "c00_02",
+    "col": 0,
+    "row": 2,
+    "pos_px": [
+     0,
+     702
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c00_02_albedo.png",
+     "normal": "terrain/c00_02_normal.png",
+     "light": "terrain/c00_02_light.png",
+     "depth": "terrain/c00_02_depth.png"
+    }
+   },
+   {
+    "name": "c01_02",
+    "col": 1,
+    "row": 2,
+    "pos_px": [
+     512,
+     702
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c01_02_albedo.png",
+     "normal": "terrain/c01_02_normal.png",
+     "light": "terrain/c01_02_light.png",
+     "depth": "terrain/c01_02_depth.png"
+    }
+   },
+   {
+    "name": "c02_02",
+    "col": 2,
+    "row": 2,
+    "pos_px": [
+     1024,
+     702
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c02_02_albedo.png",
+     "normal": "terrain/c02_02_normal.png",
+     "light": "terrain/c02_02_light.png",
+     "depth": "terrain/c02_02_depth.png"
+    }
+   },
+   {
+    "name": "c03_02",
+    "col": 3,
+    "row": 2,
+    "pos_px": [
+     1536,
+     702
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c03_02_albedo.png",
+     "normal": "terrain/c03_02_normal.png",
+     "light": "terrain/c03_02_light.png",
+     "depth": "terrain/c03_02_depth.png"
+    }
+   },
+   {
+    "name": "c04_02",
+    "col": 4,
+    "row": 2,
+    "pos_px": [
+     2048,
+     702
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c04_02_albedo.png",
+     "normal": "terrain/c04_02_normal.png",
+     "light": "terrain/c04_02_light.png",
+     "depth": "terrain/c04_02_depth.png"
+    }
+   },
+   {
+    "name": "c00_03",
+    "col": 0,
+    "row": 3,
+    "pos_px": [
+     0,
+     1214
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c00_03_albedo.png",
+     "normal": "terrain/c00_03_normal.png",
+     "light": "terrain/c00_03_light.png",
+     "depth": "terrain/c00_03_depth.png"
+    }
+   },
+   {
+    "name": "c01_03",
+    "col": 1,
+    "row": 3,
+    "pos_px": [
+     512,
+     1214
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c01_03_albedo.png",
+     "normal": "terrain/c01_03_normal.png",
+     "light": "terrain/c01_03_light.png",
+     "depth": "terrain/c01_03_depth.png"
+    }
+   },
+   {
+    "name": "c02_03",
+    "col": 2,
+    "row": 3,
+    "pos_px": [
+     1024,
+     1214
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c02_03_albedo.png",
+     "normal": "terrain/c02_03_normal.png",
+     "light": "terrain/c02_03_light.png",
+     "depth": "terrain/c02_03_depth.png"
+    }
+   },
+   {
+    "name": "c03_03",
+    "col": 3,
+    "row": 3,
+    "pos_px": [
+     1536,
+     1214
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c03_03_albedo.png",
+     "normal": "terrain/c03_03_normal.png",
+     "light": "terrain/c03_03_light.png",
+     "depth": "terrain/c03_03_depth.png"
+    }
+   },
+   {
+    "name": "c04_03",
+    "col": 4,
+    "row": 3,
+    "pos_px": [
+     2048,
+     1214
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c04_03_albedo.png",
+     "normal": "terrain/c04_03_normal.png",
+     "light": "terrain/c04_03_light.png",
+     "depth": "terrain/c04_03_depth.png"
+    }
+   },
+   {
+    "name": "c00_04",
+    "col": 0,
+    "row": 4,
+    "pos_px": [
+     0,
+     1726
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c00_04_albedo.png",
+     "normal": "terrain/c00_04_normal.png",
+     "light": "terrain/c00_04_light.png",
+     "depth": "terrain/c00_04_depth.png"
+    }
+   },
+   {
+    "name": "c01_04",
+    "col": 1,
+    "row": 4,
+    "pos_px": [
+     512,
+     1726
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c01_04_albedo.png",
+     "normal": "terrain/c01_04_normal.png",
+     "light": "terrain/c01_04_light.png",
+     "depth": "terrain/c01_04_depth.png"
+    }
+   },
+   {
+    "name": "c02_04",
+    "col": 2,
+    "row": 4,
+    "pos_px": [
+     1024,
+     1726
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c02_04_albedo.png",
+     "normal": "terrain/c02_04_normal.png",
+     "light": "terrain/c02_04_light.png",
+     "depth": "terrain/c02_04_depth.png"
+    }
+   },
+   {
+    "name": "c03_04",
+    "col": 3,
+    "row": 4,
+    "pos_px": [
+     1536,
+     1726
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c03_04_albedo.png",
+     "normal": "terrain/c03_04_normal.png",
+     "light": "terrain/c03_04_light.png",
+     "depth": "terrain/c03_04_depth.png"
+    }
+   },
+   {
+    "name": "c04_04",
+    "col": 4,
+    "row": 4,
+    "pos_px": [
+     2048,
+     1726
+    ],
+    "size_px": [
+     512,
+     512
+    ],
+    "files": {
+     "albedo": "terrain/c04_04_albedo.png",
+     "normal": "terrain/c04_04_normal.png",
+     "light": "terrain/c04_04_light.png",
+     "depth": "terrain/c04_04_depth.png"
+    }
+   }
+  ],
+  "shader": "terrain.gdshader",
+  "walk_regions": "walk_regions.json",
+  "generator": "python3 tools/terrain/bake.py tools/terrain/layouts/home_saddle.json --godot"
+ },
+ "markers": [
+  {
+   "id": "camphor",
+   "kind": "tree.camphor",
+   "at": [
+    52.0,
+    28.8
+   ],
+   "footprint": {
+    "trunk_radius": 2.6,
+    "root_radius": 8.5
+   },
+   "note": "the great camphor; its crown should shade the whole clearing",
+   "ground_h": 0.0
+  },
+  {
+   "id": "hut",
+   "kind": "building.hut",
+   "at": [
+    38.8,
+    37.0
+   ],
+   "footprint": {
+    "w": 5.2,
+    "d": 3.8
+   },
+   "note": "stands on the 0.5 m hut pad; door faces south toward hut_steps",
+   "ground_h": 0.5
+  },
+  {
+   "id": "shrine",
+   "kind": "building.shrine",
+   "at": [
+    65.0,
+    34.6
+   ],
+   "footprint": {
+    "w": 1.8,
+    "d": 1.4
+   },
+   "note": "on the 0.5 m shrine pad, facing south",
+   "ground_h": 0.5
+  },
+  {
+   "id": "graves",
+   "kind": "props.graves",
+   "at": [
+    76.0,
+    56.4
+   ],
+   "footprint": {
+    "w": 14.0,
+    "d": 1.0
+   },
+   "note": "nine small graves in a row, backs to the dry-stone wall, facing south",
+   "ground_h": -1.5
+  },
+  {
+   "id": "dosojin",
+   "kind": "props.dosojin",
+   "at": [
+    108.2,
+    76.4
+   ],
+   "footprint": {
+    "w": 1.2,
+    "d": 0.8
+   },
+   "note": "paired roadside gods at the foot of the T2 bank, north of the road near the east entrance",
+   "ground_h": -4.5
+  },
+  {
+   "id": "lookout",
+   "kind": "spot.lookout",
+   "at": [
+    40.6,
+    59.0
+   ],
+   "footprint": {
+    "w": 6.0,
+    "d": 4.0
+   },
+   "note": "bare rock spur over the plain; fence/seat optional",
+   "ground_h": 0.0
+  },
+  {
+   "id": "spring",
+   "kind": "spot.spring",
+   "at": [
+    15.0,
+    25.6
+   ],
+   "ground_h": -0.30000001192092896
+  },
+  {
+   "id": "east_entrance",
+   "kind": "spot.exit",
+   "at": [
+    119.0,
+    80.0
+   ],
+   "ground_h": -4.5
+  },
+  {
+   "id": "west_exit",
+   "kind": "spot.exit",
+   "at": [
+    1.0,
+    44.6
+   ],
+   "ground_h": -1.0
+  },
+  {
+   "id": "north_exit",
+   "kind": "spot.exit",
+   "at": [
+    94.4,
+    0.8
+   ],
+   "ground_h": 4.5
+  }
+ ],
+ "stairs": [
+  {
+   "id": "S1_graves",
+   "x": 90.0,
+   "z_bottom": 54.6,
+   "z_top": 52.5,
+   "width": 2.2,
+   "from": 8.5,
+   "to": 10.0,
+   "steps": 6,
+   "tread": 0.42
+  },
+  {
+   "id": "S2",
+   "x": 112.5,
+   "z_bottom": 64.6,
+   "z_top": 62.49999999999999,
+   "width": 2.2,
+   "from": 7.0,
+   "to": 8.5,
+   "steps": 6,
+   "tread": 0.42
+  },
+  {
+   "id": "S3",
+   "x": 82.0,
+   "z_bottom": 74.5,
+   "z_top": 72.4,
+   "width": 2.2,
+   "from": 5.5,
+   "to": 7.0,
+   "steps": 6,
+   "tread": 0.42
+  },
+  {
+   "id": "N1",
+   "x": 87.0,
+   "z_bottom": 21.6,
+   "z_top": 19.6,
+   "width": 1.8,
+   "from": 10.0,
+   "to": 11.5,
+   "steps": 6,
+   "tread": 0.4
+  },
+  {
+   "id": "N2",
+   "x": 92.0,
+   "z_bottom": 13.2,
+   "z_top": 11.2,
+   "width": 1.8,
+   "from": 11.5,
+   "to": 13.0,
+   "steps": 6,
+   "tread": 0.4
+  },
+  {
+   "id": "N3",
+   "x": 94.2,
+   "z_bottom": 7.0,
+   "z_top": 5.0,
+   "width": 1.8,
+   "from": 13.0,
+   "to": 14.5,
+   "steps": 6,
+   "tread": 0.4
+  },
+  {
+   "id": "hut_steps",
+   "x": 38.8,
+   "z_bottom": 40.55,
+   "z_top": 40.15,
+   "width": 1.6,
+   "from": 10.0,
+   "to": 10.5,
+   "steps": 2,
+   "tread": 0.4
+  },
+  {
+   "id": "shrine_steps",
+   "x": 65.0,
+   "z_bottom": 38.75,
+   "z_top": 38.35,
+   "width": 1.4,
+   "from": 10.0,
+   "to": 10.5,
+   "steps": 2,
+   "tread": 0.4
+  }
+ ]
+}

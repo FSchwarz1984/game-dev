@@ -1,0 +1,16 @@
+[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+
+[deps]
+
+source_file="res://world/regions/home_saddle/terrain/c00_03_normal.png"
+
+[params]
+
+compress/mode=0
+mipmaps/generate=false
+process/fix_alpha_border=false
+process/premult_alpha=false
+detect_3d/compress_to=0
