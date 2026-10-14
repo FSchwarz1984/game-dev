@@ -188,6 +188,7 @@ export async function createStage({ root, field, vistaView, onProgress = null })
     climbPoints: () => [...O.camphor.climb.map(h => [h.x, h.z, h.y]), [O.camphor.top.x, O.camphor.top.z + 9, 12]],
     vista(state) {
       vstate = state;
+      stage.vistaOn = !!state;
       if (state && !state.figure && state.shot !== 'title') state.figure = drawFigure;
       VV.show(state);
       canvas.style.visibility = state ? 'hidden' : 'visible';

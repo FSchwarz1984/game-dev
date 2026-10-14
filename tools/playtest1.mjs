@@ -45,7 +45,7 @@ async function shot(name) {
 }
 const state = () => page.evaluate(() => {
   const { G } = window.APP, f = G.f, P = f.player;
-  return { x: P.x, z: P.z, control: f.control, busy: G.D.busy, blocking: G.ui.blocking, dlg: !!G.ui.dlg, target: f.target?.id || null, label: f.contextLabel(), w: P.holder.q.w, saved: localStorage.getItem('amagishi.save') };
+  return { x: P.x, z: P.z, control: f.control, busy: G.D.busy, blocking: G.ui.blocking, dlg: !!G.ui.dlg, target: f.target?.id || null, label: f.contextLabel(), w: P.holder.q.w, saved: localStorage.getItem('amagishi.save'), vista: !!G.stage.vistaOn };
 });
 // advance the clock n frames of 1/30 s without drawing
 const ticks = n => page.evaluate(n => { for (let i = 0; i < n; i++) window.APP.tick(1 / 30); }, n);
@@ -218,7 +218,7 @@ async function prologueRun() {
   await shot('night-camphor');
   await walk(P.camphorFoot, 0.4); await face('camphor'); await contextKey();
   await ticks(200); await shot('climb');
-  await until(s => !s.control, 'treetop'); await play(240); await shot('vista-treetop');
+  await until(s => s.vista, 'the treetop view'); await play(270); await shot('vista-treetop');
   for (const [n, f] of [['rise', 700], ['sky', 500], ['wave', 400]]) { await play(f); await shot('vista-' + n); }
   await until(s => s.saved && s.saved.includes('day1'), 'prologue saved');
 }
