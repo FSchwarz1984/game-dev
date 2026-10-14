@@ -19,6 +19,7 @@ uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;                    // > 1 blooms (only light sources)
 uniform float emission_at_night : hint_range(0.0, 1.0) = 0.0;  // 1: emission follows w3_night
 uniform bool cutaway = false;                           // stipple out where it hides her (roofs)
+uniform float cutaway_scale = 1.0;
 
 varying vec3 v_wp;
 varying vec3 v_wn;
@@ -40,7 +41,7 @@ void vertex() {
 
 void fragment() {
 	vec2 cell = w3_ptex(v_wp);
-	if (cutaway && w3_cutaway(v_wp, cell)) {
+	if (cutaway && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
 		discard;
 	}
 	vec3 wn = normalize(v_wn);

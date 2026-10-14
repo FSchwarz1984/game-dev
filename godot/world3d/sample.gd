@@ -167,6 +167,7 @@ func _place_props() -> void:
 		props_root.add_child(inst)
 		if kind == "camphor":
 			_scale_cutaway(inst, 5.0)
+			_solid_cutaway(inst, 3.0)
 		for fp in a.get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, inst.rotation.y) * sc
 			blockers.append([pos + off, float(fp[2]) * sc])
@@ -192,6 +193,19 @@ func _scale_cutaway(n: Node, k: float) -> void:
 				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
 	for c in n.get_children():
 		_scale_cutaway(c, k)
+
+
+## The great tree's limbs and trunk also thin out around her when they stand between her and us.
+func _solid_cutaway(n: Node, k: float) -> void:
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		var mi := n as MeshInstance3D
+		for si in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(si)
+			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("toon_solid"):
+				(m as ShaderMaterial).set_shader_parameter("cutaway", true)
+				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
+	for c in n.get_children():
+		_solid_cutaway(c, k)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -286,10 +300,10 @@ func _follow_saji(dt: float) -> void:
 func _make_route() -> void:
 	for m in ["hut_door", "offering_box", "camphor_south", "lookout"]:
 		pass
-	var pts := [Vector2(-15.0, 9.6), Vector2(-12.6, 3.0), Vector2(-11.0, -2.5), Vector2(-10.0, -5.4),
-		Vector2(-6.0, -6.2), Vector2(-1.0, -7.0), Vector2(4.0, -8.5), Vector2(7.8, -5.0), Vector2(8.6, 2.0),
-		Vector2(5.0, 9.8), Vector2(-3.0, 9.8), Vector2(-9.5, 8.6), Vector2(-16.0, 12.0), Vector2(-17.2, 17.0),
-		Vector2(-18.8, 23.0), Vector2(-20.8, 30.0), Vector2(-22.4, 36.0), Vector2(-23.4, 40.6)]
+	var pts := [Vector2(-18.0, 15.4), Vector2(-15.0, 11.0), Vector2(-12.0, 9.6), Vector2(-10.0, 9.8),
+		Vector2(-5.0, 10.2), Vector2(1.0, 10.6), Vector2(4.0, 10.6), Vector2(1.0, 11.0), Vector2(-6.0, 12.6),
+		Vector2(-12.0, 15.6), Vector2(-18.4, 18.4), Vector2(-19.4, 22.0), Vector2(-20.4, 28.0),
+		Vector2(-21.8, 33.5), Vector2(-22.8, 38.0), Vector2(-23.5, 41.4)]
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))
