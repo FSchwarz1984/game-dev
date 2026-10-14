@@ -10,7 +10,7 @@ import { todEnv, palette } from './tod.js';
 import { paintSky, makeStars, starCanvas, drawTwinklers } from './sky.js';
 import { buildGroundGen, GROUND_MATS, G } from './ground.js';
 import { paintBuildings, roadLanterns } from './buildings.js';
-import { paintCanopy, paintGrass, FOLIAGE_MATS } from './foliage.js';
+import { paintCanopy, paintCanopyGen, paintGrass, FOLIAGE_MATS } from './foliage.js';
 import { COL, glow, px, LightTiles, AddBuffer } from './lights.js';
 
 export function buildTitle(W, H, seed) { return run(titleGen(W, H, seed)); }
@@ -56,7 +56,7 @@ export function* titleGen(W, H, seed) {
   }
   // the canopy overhead, seen from below: dark undersides, rims toward the moon and the open sky
   yield;
-  const canopy = titleCanopy(W, H, yh, moon, R);
+  const canopy = yield* titleCanopy(W, H, yh, moon, R);
   yield;
   const sprays = canopy.sprays;
   // grass along the bottom edge, in three bands that stir with their own phase
@@ -198,7 +198,7 @@ function canopyEdge(W, H, x) { // lower edge of the canopy (px): low at both sid
   return H * (0.15 + 0.2 * Math.pow(Math.abs(u - 0.38) / 0.62, 1.6)) + (u > 0.6 ? (u - 0.6) * H * 0.22 : 0);
 }
 
-function titleCanopy(W, H, yh, moon, R) {
+function* titleCanopy(W, H, yh, moon, R) {
   const light = [0.55, -0.55, -0.6]; // the moon is up and behind the leaves: we see their shaded side
   const clumps = [];
   const edge = x => canopyEdge(W, H, x);
@@ -224,7 +224,7 @@ function titleCanopy(W, H, yh, moon, R) {
     { pts: curve([W + 12, H * 0.48], [W * 0.8, H * 0.02], -0.14, 14, 7.5, 2), z: 0.9, dark: 1 },
     { pts: curve([W * 0.88, H * 0.27], [W * 0.97, H * 0.38], 0.2, 6, 2.6, 0.9), z: 0.95, dark: 1 },
   ];
-  const layer = paintCanopy(W, H, { clumps, limbs, light, cell: 3.4, cellSeed: 9, rimBelow: { x: moon.x, y: moon.y, r: moon.r * 9 } }, 61);
+  const layer = yield* paintCanopyGen(W, H, { clumps, limbs, light, cell: 3.4, cellSeed: 9, rimBelow: { x: moon.x, y: moon.y, r: moon.r * 9 } }, 61);
   // hanging sprays, painted separately so they can stir
   const sprays = [];
   for (let k = 0; k < 7; k++) {

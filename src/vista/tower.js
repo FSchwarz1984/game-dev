@@ -4,17 +4,17 @@
 // and the faintest hanging silhouettes: the reveal belongs to the south shot).
 //   state.tower: 1 = blinking. Set 0: one last blink, then dark for good.
 
-import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, ridged, makeCanvas, ctx2d, mix3, pack, IndexLayer, I } from './util.js';
+import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, ridged, makeCanvas, ctx2d, mix3, pack, IndexLayer, I, run } from './util.js';
 import { todEnv, palette } from './tod.js';
 import { paintSky, makeStars, starCanvas, drawTwinklers } from './sky.js';
-import { paintCanopy, FOLIAGE_MATS } from './foliage.js';
+import { paintCanopyGen, FOLIAGE_MATS } from './foliage.js';
 import { glow, px } from './lights.js';
 
 const M = { ridge: 1, ridgeRim: 2, far: 3, steel: 4, steelRim: 5, concrete: 6, concreteDark: 7, wire: 8, farRim: 9 };
 
-export function* towerGen(W, H, seed) { yield; return buildTower(W, H, seed); }
+export function buildTower(W, H, seed) { return run(towerGen(W, H, seed)); }
 
-export function buildTower(W, H, seed) {
+export function* towerGen(W, H, seed) {
   const R = rng(seed * 13 + 9);
   const env = todEnv(21);
   const cx = Math.round(W / 2);
@@ -25,6 +25,7 @@ export function buildTower(W, H, seed) {
     return mix3(c, [96, 150, 150], k * 0.55);
   });
   const stars = makeStars(W, yh, seed * 5 + 3, { density: 0.8 });
+  yield;
   // ridges: the summit ridge (near, dark, cedars on the line) and a farther one behind it
   const tx = Math.round(cx + W * 0.11);                     // the tower's foot
   const ridgeTop = x => {
@@ -69,6 +70,7 @@ export function buildTower(W, H, seed) {
     const slope = top[Math.min(W - 1, x + 1)] - top[Math.max(0, x - 1)];
     L.idx[ty * W + x] = I(M.ridgeRim, slope > 0.6 ? 5 : slope < -0.6 ? 3 : 4, 3, 0);
   }
+  yield;
   // the ventilation shaft of the tunnel under the ridge, left of the tower
   const vx = Math.round(tx - W * 0.17), vy = Math.round(ridgeTop(vx));
   const vw = Math.max(7, Math.round(H * 0.035)), vh = Math.max(10, Math.round(H * 0.05));
@@ -112,12 +114,13 @@ export function buildTower(W, H, seed) {
   }
   for (const i of wires) L.idx[i] = I(M.wire, 2, 2, 0);
   const lamp = { x: tx, y: mastTop };
+  yield;
   // the canopy framing the shot: a mass at the lower left, a spray at the right edge
   const clumps = [];
   for (let k = 0; k < 9; k++) clumps.push({ x: W * (-0.04 + R() * 0.26), y: H * (0.78 + R() * 0.3), rx: 18 + R() * 10, ry: 13 + R() * 5, z: R() });
   for (let k = 0; k < 4; k++) clumps.push({ x: W * (0.94 + R() * 0.1), y: H * (0.9 + R() * 0.14), rx: 16 + R() * 8, ry: 12 + R() * 4, z: R() });
   clumps.push({ x: W * 0.05, y: H * 0.1, rx: 22, ry: 14, z: 1 }, { x: W * 0.13, y: H * 0.03, rx: 18, ry: 12, z: 1.2 }, { x: -6, y: H * 0.22, rx: 16, ry: 12, z: 1.1 });
-  const canopy = paintCanopy(W, H, { clumps, limbs: [{ pts: [[-10, H * 0.26, 4.5], [W * 0.08, H * 0.12, 3], [W * 0.16, -4, 2]], z: 0.8, dark: 1 }], light: [0.6, -0.4, -0.5], cell: 3.4, cellSeed: 13, rimBelow: { x: W * 0.6, y: H * 0.4, r: W } }, 91);
+  const canopy = yield* paintCanopyGen(W, H, { clumps, limbs: [{ pts: [[-10, H * 0.26, 4.5], [W * 0.08, H * 0.12, 3], [W * 0.16, -4, 2]], z: 0.8, dark: 1 }], light: [0.6, -0.4, -0.5], cell: 3.4, cellSeed: 13, rimBelow: { x: W * 0.6, y: H * 0.4, r: W } }, 91);
 
   // palettes
   const glowCol = [96, 150, 150];

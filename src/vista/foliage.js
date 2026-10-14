@@ -4,7 +4,7 @@
 // shadow on the ones behind; edges facing the light get a rim. Limbs are bark cylinders with
 // fissures and moss. Painted once into an IndexLayer; palettes give the time of day.
 
-import { clamp, lerp, smooth, rng, hash2, vnoise, IndexLayer, I, iMat } from './util.js';
+import { clamp, lerp, smooth, rng, hash2, vnoise, IndexLayer, I, iMat, run } from './util.js';
 
 export const F = { deep: 1, leaf: 2, young: 3, rim: 4, glint: 5, bark: 6, moss: 7, twig: 8, dark: 9 };
 export const FOLIAGE_MATS = [];
@@ -64,22 +64,73 @@ function leafCellsRaw(w, h, cs, seed) {
   return { val, edge, id };
 }
 
+// larger cells: the small clusters of leaves a clump is made of. For each pixel, the offset from its
+// cluster's centre (x, y in -127..127 of the cluster's radius). Cached by size like the leaf cells.
+const SUB_CACHE = new Map();
+function subCells(w, h, cs, seed) {
+  const key = w + 'x' + h + ':' + cs + ':' + seed;
+  let c = SUB_CACHE.get(key);
+  if (!c) { c = subCellsRaw(w, h, cs, seed); SUB_CACHE.set(key, c); if (SUB_CACHE.size > 3) SUB_CACHE.delete(SUB_CACHE.keys().next().value); }
+  return c;
+}
+function subCellsRaw(w, h, cs, seed) {
+  const nx = new Int8Array(w * h), ny = new Int8Array(w * h);
+  const cy = cs * 0.78, ir = 1 / (cs * 0.62);
+  const gw = Math.ceil(w / cs) + 3, gh = Math.ceil(h / cy) + 3;
+  const PX = new Float64Array(gw * gh), PY = new Float64Array(gw * gh);
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) {
+    const k = j * gw + i;
+    PX[k] = (i - 1 + 0.15 + hash2(i, j, seed) * 0.7 + (j & 1) * 0.5) * cs;   // staggered rows: clusters overlap like scales
+    PY[k] = (j - 1 + 0.15 + hash2(i, j, seed + 1) * 0.7) * cy;
+  }
+  const c0 = new Int32Array(w), c1 = new Int32Array(w);
+  for (let x = 0; x < w; x++) { c0[x] = Math.floor(x / cs) + 1; c1[x] = Math.floor(x / cs - 0.5) + 1; }
+  for (let y = 0; y < h; y++) {
+    const cj = Math.floor(y / cy) + 1, yy = y + 0.5;
+    for (let x = 0; x < w; x++) {
+      const xx = x + 0.5;
+      let best = 1e18, bk = 0;
+      for (let j = cj - 1; j <= cj + 1; j++) {
+        const ci = (j & 1) ? c1[x] : c0[x], row = j * gw;
+        const i0 = ci > 0 ? ci - 1 : 0, i1 = ci + 1 < gw ? ci + 1 : gw - 1;
+        for (let i = i0; i <= i1; i++) {
+          const k = row + i, dx = xx - PX[k], dy = (yy - PY[k]) * 1.28, d = dx * dx + dy * dy;
+          if (d < best) { best = d; bk = k; }
+        }
+      }
+      let dx = (xx - PX[bk]) * ir, dy = (yy - PY[bk]) * 1.28 * ir;
+      const l2 = dx * dx + dy * dy;
+      if (l2 > 1) { const l = 1 / Math.sqrt(l2); dx *= l; dy *= l; }
+      const o = y * w + x;
+      nx[o] = Math.round(dx * 127); ny[o] = Math.round(dy * 127);
+    }
+  }
+  return { nx, ny };
+}
+
 /**
  * Paint a canopy into an IndexLayer.
  * spec: { clumps: [{x,y,rx,ry,z,young?,lobes?}], limbs: [{pts:[[x,y,r],...], z}], light:[lx,ly,lz], cell? }
  */
-export function paintCanopy(w, h, spec, seed) {
+export function paintCanopy(w, h, spec, seed) { return run(paintCanopyGen(w, h, spec, seed)); }
+// the same in steps (yields between clumps), for builds sliced over frames
+export function* paintCanopyGen(w, h, spec, seed) {
   const L = new IndexLayer(w, h), R = rng(seed);
   const Zb = new Float32Array(w * h).fill(-1e9);
   const own = new Int32Array(w * h).fill(-1);   // which clump/limb wrote the pixel
   const cells = leafCells(w, h, spec.cell || 3.6, spec.cellSeed ?? 7);
+  if (w * h > 4000) yield;
+  const sub = subCells(w, h, spec.sub || (spec.cell || 3.6) * 2.3, (spec.cellSeed ?? 7) + 101);
   const Lt = norm3(spec.light || [0.7, -0.45, 0.5]);
   const items = [...(spec.limbs || []).map(l => ({ k: 'limb', ...l })), ...(spec.clumps || []).map(c => ({ k: 'clump', ...c }))];
   items.sort((a, b) => a.z - b.z);
-  items.forEach((it, n) => {
+  for (let n = 0; n < items.length; n++) {
+    const it = items[n];
     if (it.k === 'limb') limb(L, Zb, own, n, it, Lt, R);
-    else clump(L, Zb, own, n, it, Lt, R, cells);
-  });
+    else clump(L, Zb, own, n, it, Lt, R, cells, sub);
+    if ((n & 7) === 7 && w * h > 4000) yield;
+  }
+  if (w * h > 4000) yield;
   // contact shadow: a pixel whose neighbour toward the light belongs to a nearer item sits in its shade
   const src = L.idx.slice(), sx = Math.round(Lt[0] * 2.2), sy = Math.round(Lt[1] * 2.2);
   for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
@@ -94,6 +145,7 @@ export function paintCanopy(w, h, spec, seed) {
       else if (m === F.bark || m === F.moss) L.idx[i] = I(m, Math.max(0, ((v >> 5) & 7) - 3), (v >> 3) & 3, 0);
     }
   }
+  if (w * h > 4000) yield;
   if (spec.rimBelow) rimBelow(L, spec.rimBelow); else rimPass(L, own, Lt);
   L.despeckle(v => { const m = iMat(v); return m === F.leaf || m === F.deep || m === F.young; });
   L.own = own; L.depth = Zb;
@@ -102,7 +154,7 @@ export function paintCanopy(w, h, spec, seed) {
 
 function norm3(v) { const l = Math.hypot(v[0], v[1], v[2]) || 1; return [v[0] / l, v[1] / l, v[2] / l]; }
 
-function clump(L, Zb, own, n, c, Lt, R, cells) {
+function clump(L, Zb, own, n, c, Lt, R, cells, sub) {
   const { w, h } = L;
   // lobes: the clump is a few overlapping balls of leaves
   const lobes = c.lobes || (() => {
@@ -125,7 +177,9 @@ function clump(L, Zb, own, n, c, Lt, R, cells) {
   const young = c.young ?? 0.05, zc = c.z * 4, ao = c.ao || 0, glintOk = c.glint !== false;
   const yng = R() < young * 3; // a clump of new summer leaves, a lighter green
   const leafMat = yng ? F.young : F.leaf, lx = Lt[0], ly = Lt[1], lz = Lt[2];
-  const cval = cells.val, idx = L.idx;
+  const cval = cells.val, idx = L.idx, snx = sub.nx, sny = sub.ny;
+  // the clusters of leaves show as bumps on the clump (not on small sprays, where a cluster is the spray)
+  const SK = 0.75 * smooth(5, 13, Math.min(c.rx, c.ry));
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     let best = -1, nx = 0, ny = 0;
     const px = x + 0.5, py = y + 0.5;
@@ -134,22 +188,25 @@ function clump(L, Zb, own, n, c, Lt, R, cells) {
       if (q > best) { best = q; nx = dx; ny = dy; }
     }
     const i = y * w + x, cv = cval[i];
-    // scalloped outline: whole leaf cells in or out near the edge
-    if (best < (cv - 0.35) * 0.22) continue;
+    const bx = snx[i] * (1 / 127), by = sny[i] * (1 / 127), bz = Math.sqrt(Math.max(0, 1 - bx * bx - by * by));
+    // a lumpy outline (the clusters bulge) of whole leaf cells
+    if (best + (bz - 0.55) * 0.16 * SK < (cv - 0.35) * 0.22) continue;
     const nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny));
     const z = zc + nz;
     if (z <= Zb[i]) continue;
-    let v = (nx * lx + ny * ly + nz * lz) * 0.5 + 0.5;
-    v += (cv - 0.5) * 0.3;                         // leaf by leaf
+    let Nx = nx + bx * SK, Ny = ny + by * SK, Nz = nz + bz * SK;
+    const inv = 1 / Math.sqrt(Nx * Nx + Ny * Ny + Nz * Nz); Nx *= inv; Ny *= inv; Nz *= inv;
+    let v = (Nx * lx + Ny * ly + Nz * lz) * 0.5 + 0.5;
+    v += (cv - 0.5) * 0.2;                         // leaf by leaf
     v -= smooth(0.2, 0.9, ny) * 0.12;              // the underside of the clump
     let band = v < 0.34 ? 0 : v < 0.52 ? 1 : v < 0.7 ? 2 : 3;
     band = band - ao < 0 ? 0 : band - ao;
     if (c.dark && band > 1) band = 1;
-    if (band > 0 && band < 3 && cv < 0.16) band--;                 // a few leaves turned away: irregular dark notches
+    if (band === 2 && cv < 0.07) band = 1;                         // a few leaves turned away
     else if (band === 2 && !ao && cv > 0.95 && nz > 0.5) band = 3; // and a few catching the light
     let mat = band === 0 ? F.deep : leafMat, sun = BAND_SUN[band];
     if (glintOk && band === 3 && cv > 0.95 && nz > 0.6) { mat = F.glint; sun = HI_SUN; }
-    let sky = Math.round((0.5 - ny * 0.5) * 3 + 0.3); sky = sky < 0 ? 0 : sky > 3 ? 3 : sky;
+    let sky = Math.round((0.5 - (ny * 0.6 + Ny * 0.4) * 0.5) * 3 + 0.3); sky = sky < 0 ? 0 : sky > 3 ? 3 : sky;
     Zb[i] = z; own[i] = n;
     idx[i] = (mat << 8) | (sun << 5) | (sky << 3);
   }

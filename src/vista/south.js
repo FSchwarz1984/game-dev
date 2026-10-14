@@ -14,7 +14,7 @@ import { paintSky, makeStars, starCanvas, drawTwinklers, CloudDeck, cloudPalette
 import { buildGroundGen, GROUND_MATS, G, TOWN, HEADMAN, HAMLETS, RIVER, SWITCHBACKS } from './ground.js';
 import { paintBuildings, roadLanterns } from './buildings.js';
 import { buildSkyShoreGen, skyShorePalette } from './skyshore.js';
-import { paintCanopy, FOLIAGE_MATS } from './foliage.js';
+import { paintCanopy, paintCanopyGen, FOLIAGE_MATS } from './foliage.js';
 import { Wave } from './wave.js';
 import { COL, glow, px, LightTiles, AddBuffer } from './lights.js';
 
@@ -175,11 +175,11 @@ export function* southGen(W, H, seed) {
   // ---------------- the canopy
   const CH = CT + D + 40;                     // canopy layer: CT px visible at pan 1, then the mass below
   yield;
-  const back = canopyBack(W, CH, CT, R);
+  const back = yield* canopyBack(W, CH, CT, R);
   yield;
-  const frontC = canopyFront(W, CH, CT, R);
+  const frontC = yield* canopyFront(W, CH, CT, R);
   yield;
-  const nearL = nearLeaves(W, H, R);
+  const nearL = yield* nearLeaves(W, H, R);
   // sprays on the crown's top edge that stir (kept away from where she sits)
   const stir = [];
   for (const fx of [0.05, 0.17, 0.3, 0.88, 0.97]) {
@@ -555,7 +555,7 @@ function drawShoreLights(AB, shore, ring, ringC, t, reveal, T, arrivals) {
 
 // ---------------------------------------------------------------- canopy
 
-function canopyBack(W, CH, CT, R) {
+function* canopyBack(W, CH, CT, R) {
   const P = (fx, y, r) => [W * fx, y, r];
   // the limb she sits on: out of the crown on the right, reaching left over the drop, tapering
   const limb = [P(1.06, CT - 12, 9), P(0.96, CT - 22, 8), P(0.86, CT - 29, 7), P(0.77, CT - 33, 6.4), P(0.69, CT - 35, 5.9),
@@ -583,7 +583,7 @@ function canopyBack(W, CH, CT, R) {
   clumps.push({ x: W * 0.5, y: CT - 45, rx: 6, ry: 4, z: 1.6, glint: false }, { x: W * 0.8, y: CT - 41, rx: 7, ry: 5, z: 1.6, young: 0.4, glint: false });
   // sprays rising at the far left
   for (let k = 0; k < 3; k++) clumps.push({ x: W * (0.01 + R() * 0.08), y: CT - 56 + R() * 18, rx: 14 + R() * 6, ry: 10 + R() * 4, z: 1.2 + R() * 0.3, glint: false });
-  const layer = paintCanopy(W, CH, { clumps, limbs: [{ pts: limb, z: 1.5 }], light: [0.72, -0.42, 0.45] }, 41);
+  const layer = yield* paintCanopyGen(W, CH, { clumps, limbs: [{ pts: limb, z: 1.5 }], light: [0.72, -0.42, 0.45] }, 41);
   const limbTop = x => {
     for (let y = 0; y < CH; y++) { const v = layer.idx[y * W + x]; if (v && ((v >> 8) === 6 || (v >> 8) === 7)) return y; }
     return CT - 40;
@@ -591,7 +591,7 @@ function canopyBack(W, CH, CT, R) {
   return { layer, limbTop };
 }
 
-function canopyFront(W, CH, CT, R) {
+function* canopyFront(W, CH, CT, R) {
   // clumps in front of the limb, around her: they overlap the limb's underside and her lap
   const P = (fx, y, rx, ry, z) => ({ x: W * fx, y, rx, ry, z });
   const clumps = [
@@ -599,10 +599,10 @@ function canopyFront(W, CH, CT, R) {
     P(0.84, CT - 12, 22, 14, 3.1), P(0.98, CT - 20, 20, 14, 3), P(0.4, CT - 4, 22, 13, 3),
     P(0.22, CT - 2, 24, 14, 3), P(0.05, CT - 8, 24, 15, 3),
   ].map(c => ({ ...c, glint: false }));
-  return { layer: paintCanopy(W, CH, { clumps, limbs: [], light: [0.72, -0.42, 0.45] }, 43) };
+  return { layer: yield* paintCanopyGen(W, CH, { clumps, limbs: [], light: [0.72, -0.42, 0.45] }, 43) };
 }
 
-function nearLeaves(W, H, R) {
+function* nearLeaves(W, H, R) {
   // sprays right in front of the lens, in shade: only seen while the camera rises past them
   const h = H + 40, clumps = [], limbs = [];
   const sprays = [[0.08, 0.35], [0.3, 0.75], [0.55, 0.3], [0.8, 0.62], [0.97, 0.2], [0.42, 1.0], [0.7, 0.98]];
@@ -613,7 +613,7 @@ function nearLeaves(W, H, R) {
     limbs.push({ pts, z: 0.2, dark: 1 });
     for (let k = 1; k <= 4; k++) clumps.push({ x: pts[k][0] + (R() - 0.5) * 10, y: pts[k][1] - 4 + (R() - 0.5) * 8, rx: 16 + R() * 10, ry: 11 + R() * 6, z: 0.5 + R() * 0.4, ao: 1, glint: false, dark: true });
   }
-  return paintCanopy(W, h, { clumps, limbs, light: [0.72, -0.42, 0.45], cell: 4.6, cellSeed: 5 }, 47);
+  return yield* paintCanopyGen(W, h, { clumps, limbs, light: [0.72, -0.42, 0.45], cell: 4.6, cellSeed: 5 }, 47);
 }
 
 
