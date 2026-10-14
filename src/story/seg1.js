@@ -231,8 +231,8 @@ async function rise(G) {
     // the camera leaves the leaves behind and the plain opens below
     await D.tween(7, k => { v.pan = k; v.tod = 19.4 + k * 0.4; });
     await D.wait(1.5);
-    await D.say(T('十六号。送魂的晚上。'));
-    await D.wait(2.0);
+    await D.sub('十六号。送魂的晚上。', 3.2);     // over the view, not in a box: nothing covers her on the branch
+    await D.wait(1.0);
 
     // one light leaves the ground; another; then all of them, in no hurry
     au.festival(0.25, { near: 0.6 });
@@ -263,7 +263,8 @@ async function rise(G) {
     v.pose = 'stand';
     await D.wait(0.4);
     v.pose = 'shout';
-    await D.say({ who: 'tsuzumi', text: '喂——那边的人——', slow: true });
+    au.sfx('blip', { voice: 'tsuzumi', i: 1 });
+    await D.sub('喂——那边的人——', 2.6);
     await D.tween(2.6, k => { v.wave = 0.55 + k * 0.45; }, { ease: false });
     await D.fade(1, 0.15, '#f4f1ea');
     au.music('none', { fade: 0.1 });

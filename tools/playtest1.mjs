@@ -49,6 +49,14 @@ const state = () => page.evaluate(() => {
 });
 // advance the clock n frames of 1/30 s without drawing
 const ticks = n => page.evaluate(n => { for (let i = 0; i < n; i++) window.APP.tick(1 / 30); }, n);
+// the same, but a line of dialogue that comes up is read and dismissed like a player would
+async function play(n) {
+  for (let done = 0; done < n; done += 15) {
+    await ticks(15);
+    const s = await state();
+    if (s.dlg) await advance();
+  }
+}
 
 // ---------------------------------------------------------------- input primitives
 let held = new Set();
@@ -210,8 +218,8 @@ async function prologueRun() {
   await shot('night-camphor');
   await walk(P.camphorFoot, 0.4); await face('camphor'); await contextKey();
   await ticks(200); await shot('climb');
-  await until(s => !s.control && s.dlg, 'treetop line'); await shot('vista-treetop');
-  for (const [n, f] of [['rise', 700], ['sky', 500], ['wave', 400]]) { await ticks(f); await shot('vista-' + n); }
+  await until(s => !s.control, 'treetop'); await play(240); await shot('vista-treetop');
+  for (const [n, f] of [['rise', 700], ['sky', 500], ['wave', 400]]) { await play(f); await shot('vista-' + n); }
   await until(s => s.saved && s.saved.includes('day1'), 'prologue saved');
 }
 
