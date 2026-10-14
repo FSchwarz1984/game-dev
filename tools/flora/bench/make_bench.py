@@ -19,7 +19,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 FLORA = os.path.dirname(HERE)
 REPO = os.path.dirname(os.path.dirname(FLORA))
 sys.path.insert(0, FLORA)
-from flora.core import Rng, fbm2, hash01, vnoise2  # noqa: E402
+from flora.core import PPM, Rng, fbm2, hash01, vnoise2  # noqa: E402
 
 PROJECT = '''config_version=5
 
@@ -181,6 +181,99 @@ def glade_layout(cat, seed=5):
             'player': [cx + 10, cy + 150], 'lanterns': lanterns, 'clearing': [cx, cy + 150, 300, 170]}
 
 
+def saddle_layout(cat, seed=9):
+    """The real home saddle (godot/world/regions/home_saddle, the terrain agent's bake): the great
+    camphor at its marker, the clearing between the hut and the shrine, plants placed by kind on
+    the ground they belong to (heights and materials read from the region's logic mask)."""
+    rdir = os.path.join(REPO, 'godot', 'world', 'regions', 'home_saddle')
+    with open(os.path.join(rdir, 'region.json')) as fh:
+        region = json.load(fh)
+    with open(os.path.join(rdir, 'markers.json')) as fh:
+        markers = {m['id']: m for m in json.load(fh)['markers']}
+    logic = np.asarray(Image.open(os.path.join(rdir, 'logic.png')).convert('RGB')).astype(int)
+    cell = region['cell_m']
+    ox, oz = region.get('origin_m', [0, 0])
+
+    def ground(x, z):
+        i, j = int((x - ox) / cell), int((z - oz) / cell)
+        if not (0 <= j < logic.shape[0] and 0 <= i < logic.shape[1]):
+            return None, 0
+        r, g_, b = logic[j, i]
+        return (r * 256 + g_) / 100.0, b
+
+    rng = Rng(seed)
+    plants = []
+
+    def put(name, x, z, kinds=(1, 2)):
+        """Place where the ground is grass or dirt and level within 0.3 m over the plant's foot."""
+        h, mat = ground(x, z)
+        if h is None or mat not in kinds:
+            return False
+        for dx, dz in ((0.6, 0), (-0.6, 0), (0, 0.4), (0, -0.4)):
+            h2, m2 = ground(x + dx, z + dz)
+            if h2 is None or abs(h2 - h) > 0.3:
+                return False
+        plants.append({'scene': cat[name]['scene'], 'x_m': round(x, 2), 'z_m': round(z, 2), 'h_m': round(h, 2)})
+        return True
+
+    cx, cz = markers['camphor']['at']
+    put('camphor_a', cx, cz)
+    # the forest behind: cedars and red pines on the terrace north of the camphor, in groups
+    k = 0
+    for x in np.arange(6, 116, 4.2):
+        for z0 in (11.0, 15.5):
+            z = z0 + rng.range(-1.2, 1.2)
+            xx = x + rng.range(-1.2, 1.2)
+            if abs(xx - cx) < 13 and z > cz - 14:
+                continue
+            if rng() < 0.30:
+                continue
+            name = 'cedar_%d' % (1 + k % 5) if (xx < 70 or rng() < 0.4) else 'red_pine_%d' % (1 + k % 5)
+            if put(name, xx, z):
+                k += 1
+    # the hut: a persimmon at its west end, hydrangeas along the pad
+    hx, hz = markers['hut']['at']
+    put('persimmon_1', hx - 5.2, hz - 1.0)
+    for i, dx in enumerate((-2.0, 0.2, 2.4)):
+        put('hydrangea_%d' % (1 + i), hx + dx, hz + 2.9)
+    # the shrine: a maple turning behind it, clipped azaleas flanking the front
+    sx, sz = markers['shrine']['at']
+    put('maple_turn_1', sx + 4.5, sz - 3.5)
+    put('maple_green_2', sx + 8.0, sz + 1.5)
+    put('azalea_1', sx - 2.2, sz + 2.4)
+    put('azalea_2', sx + 2.2, sz + 2.4)
+    put('maple_red_1', sx + 14.0, sz + 6.0)
+    # ferns in the camphor's moss, between the roots
+    for i, (dx, dz) in enumerate(((-6.0, 2.0), (6.5, 2.5), (-3.5, 4.0), (4.0, 4.5), (-8.5, -1.0), (8.0, -0.5))):
+        put('fern_%d' % (1 + i % 5), cx + dx, cz + dz, kinds=(1, 2, 3))
+    # the road's verges: ominaeshi and dayflower; susuki on the open south slope
+    for i, x in enumerate(np.arange(30, 80, 7.5)):
+        put('ominaeshi_%d' % (1 + i % 4), x + rng.range(-1, 1), 41.8 + rng.range(-0.3, 0.3))
+        put('tsuyukusa_%d' % (1 + i % 4), x + 3.5 + rng.range(-1, 1), 46.8 + rng.range(-0.3, 0.3))
+    for i, x in enumerate(np.arange(52, 92, 3.2)):
+        put('susuki_%d' % (1 + i % 5), x + rng.range(-0.8, 0.8), 49.5 + rng.range(-1.2, 1.2))
+    # higanbana in a drift along the graves (the old custom), on the bench below the wall
+    gx, gz = markers['graves']['at']
+    for i, dx in enumerate(np.arange(-7, 7.5, 1.6)):
+        put('higanbana_%d' % (1 + i % 4), gx + dx + rng.range(-0.3, 0.3), gz + 1.6 + rng.range(-0.3, 0.3))
+    # a beech or two in the moss corner west of the camphor, bamboo by the spring
+    put('beech_1', cx - 20.0, cz - 4.0)
+    put('beech_2', cx - 24.0, cz + 2.0)
+    spx, spz = markers['spring']['at']
+    put('bamboo_1', spx + 5.0, spz - 3.0)
+    put('bamboo_2', spx + 7.5, spz + 1.0)
+    put('shrub_1', hx + 6.5, hz + 2.8)
+    put('shrub_2', sx - 6.0, sz + 2.0)
+    off = region['art_offset_px']
+    h0 = ground(cx, cz)[0]
+    px = [int(cx * PPM), int((cz + 8.0) * PPM)]
+    return {'ground': 'res://bench/saddle_ground.png', 'ground_offset': off,
+            'bounds': [int((cx - 36) * PPM), int((cz - h0 - 24) * PPM), int(72 * PPM), int(52 * PPM)],
+            'plants': plants, 'player': px, 'player_h_px': round(ground(cx, cz + 8.0)[0] * PPM, 1),
+            'lanterns': [[int((hx + 2.6) * PPM), int((hz - 0.5 - ground(hx + 2.6, hz - 0.5)[0]) * PPM)],
+                         [int(sx * PPM), int((sz + 1.2 - ground(sx, sz + 1.2)[0]) * PPM)]]}
+
+
 def main(proj, src=None):
     os.makedirs(os.path.join(proj, 'bench', 'layouts'), exist_ok=True)
     os.makedirs(os.path.join(proj, 'bench', 'char'), exist_ok=True)
@@ -208,6 +301,13 @@ def main(proj, src=None):
         b = L['bounds']
         Image.fromarray(ground(b[2], b[3], 3 if name == 'row' else 4, L.get('clearing')), 'RGBA').save(
             os.path.join(proj, 'bench', 'ground_%s.png' % name))
+    rdir = os.path.join(REPO, 'godot', 'world', 'regions', 'home_saddle')
+    if os.path.exists(os.path.join(rdir, 'markers.json')):
+        saddle = saddle_layout(cat)
+        with open(os.path.join(proj, 'bench', 'layouts', 'saddle.json'), 'w') as fh:
+            json.dump(saddle, fh, indent=1)
+        shutil.copyfile(os.path.join(rdir, 'ground.png'), os.path.join(proj, 'bench', 'saddle_ground.png'))
+        print('saddle: %d plants' % len(saddle['plants']))
     # her front idle frame (56x64, feet at (28, 61)) and its normal map, for scale
     for suf in ('', '_n'):
         im = Image.open(os.path.join(REPO, 'assets', 'sprites', 'tsuzumi_plain%s.png' % suf))

@@ -22,7 +22,7 @@
    "albedo": "shadow.png",
    "offset": [
     -10,
-    -26
+    -13
    ],
    "size": [
     54,
@@ -45,7 +45,7 @@
   "elevation_deg": 40.0,
   "shadow_dir_xz": [
    0.9243,
-   -0.3818
+   0.3818
   ]
  },
  "sway_amp": 0.6,

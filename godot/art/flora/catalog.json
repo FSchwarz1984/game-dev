@@ -33,11 +33,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -15,
-     -21
+     -13
     ],
     "size": [
      51,
-     36
+     37
     ]
    }
   },
@@ -79,11 +79,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -18,
-     -22
+     -14
     ],
     "size": [
      58,
-     38
+     39
     ]
    }
   },
@@ -125,11 +125,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -15,
-     -20
+     -8
     ],
     "size": [
      47,
-     33
+     31
     ]
    }
   },
@@ -171,11 +171,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -9,
-     -21
+     -14
     ],
     "size": [
      39,
-     33
+     34
     ]
    }
   },
@@ -222,11 +222,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -12,
-     -121
+     -8
     ],
     "size": [
      237,
-     131
+     124
     ]
    },
    "trunk": {
@@ -285,11 +285,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -15,
-     -126
+     -4
     ],
     "size": [
      307,
-     138
+     124
     ]
    },
    "trunk": {
@@ -348,11 +348,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -16,
-     -106
+     -6
     ],
     "size": [
      221,
-     113
+     101
     ]
    },
    "trunk": {
@@ -411,11 +411,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -197
+     -30
     ],
     "size": [
      388,
-     224
+     232
     ]
    },
    "trunk": {
@@ -474,11 +474,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -192
+     -15
     ],
     "size": [
-     386,
-     211
+     387,
+     217
     ]
    },
    "trunk": {
@@ -537,11 +537,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -213
+     -14
     ],
     "size": [
      359,
-     227
+     202
     ]
    },
    "trunk": {
@@ -600,11 +600,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -198
+     -34
     ],
     "size": [
      379,
-     236
+     235
     ]
    },
    "trunk": {
@@ -777,11 +777,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -88,
-     -292
+     -37
     ],
     "size": [
      659,
-     345
+     339
     ]
    },
    "trunk": {
@@ -950,7 +950,7 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -86,
-     -332
+     -71
     ],
     "size": [
      661,
@@ -1009,11 +1009,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -133
+     -12
     ],
     "size": [
-     311,
-     147
+     310,
+     141
     ]
    },
    "trunk": {
@@ -1067,11 +1067,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -138
+     -10
     ],
     "size": [
      327,
-     144
+     146
     ]
    },
    "trunk": {
@@ -1125,11 +1125,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -167
+     -12
     ],
     "size": [
      396,
-     177
+     175
     ]
    },
    "trunk": {
@@ -1183,7 +1183,7 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -163
+     -6
     ],
     "size": [
      401,
@@ -1241,11 +1241,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -156
+     -6
     ],
     "size": [
      375,
-     162
+     164
     ]
    },
    "trunk": {
@@ -1269,8 +1269,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.35,
-   0.35
+   0.43,
+   0.43
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1280,12 +1280,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -17,
-     -12
+     -15,
+     -17
     ],
     "size": [
      29,
-     16
+     19
     ]
    },
    "shadow": {
@@ -1309,8 +1309,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.29,
-   0.29
+   0.35,
+   0.35
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1320,24 +1320,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -13,
-     -12
+     -12,
+     -16
     ],
     "size": [
      26,
-     19
+     21
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -6,
-     -6
+     -2,
+     -2
     ],
     "size": [
-     9,
-     9
+     5,
+     5
     ]
    }
   },
@@ -1349,8 +1349,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.39,
-   0.39
+   0.48,
+   0.48
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1361,11 +1361,11 @@
     "normal": "crown_n.png",
     "offset": [
      -14,
-     -15
+     -20
     ],
     "size": [
-     29,
-     20
+     27,
+     22
     ]
    },
    "shadow": {
@@ -1389,8 +1389,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.39,
-   0.39
+   0.48,
+   0.48
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1400,12 +1400,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -14,
-     -12
+     -12,
+     -16
     ],
     "size": [
-     26,
-     16
+     25,
+     17
     ]
    },
    "shadow": {
@@ -1429,8 +1429,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.34,
-   0.34
+   0.41,
+   0.41
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1440,12 +1440,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -17,
-     -13
+     -15,
+     -16
     ],
     "size": [
-     31,
-     19
+     29,
+     20
     ]
    },
    "shadow": {
@@ -1456,8 +1456,8 @@
      -2
     ],
     "size": [
-     8,
-     8
+     5,
+     5
     ]
    }
   },
@@ -1469,8 +1469,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.37,
-   0.51
+   0.4,
+   0.56
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1480,12 +1480,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -3,
-     -16
+     -13,
+     -17
     ],
     "size": [
-     14,
-     18
+     26,
+     19
     ]
    },
    "shadow": {
@@ -1493,11 +1493,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      0,
-     -4
+     -3
     ],
     "size": [
-     6,
-     7
+     5,
+     5
     ]
    }
   },
@@ -1509,8 +1509,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.45,
-   0.51
+   0.51,
+   0.55
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1520,12 +1520,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -8,
-     -15
+     -11,
+     -17
     ],
     "size": [
-     17,
-     17
+     20,
+     20
     ]
    },
    "shadow": {
@@ -1537,7 +1537,7 @@
     ],
     "size": [
      12,
-     6
+     7
     ]
    }
   },
@@ -1549,8 +1549,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.35,
-   0.49
+   0.36,
+   0.55
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1560,12 +1560,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -8,
-     -15
+     -13,
+     -17
     ],
     "size": [
-     19,
-     17
+     26,
+     20
     ]
    },
    "shadow": {
@@ -1573,11 +1573,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -4,
-     -3
+     -2
     ],
     "size": [
      10,
-     8
+     7
     ]
    }
   },
@@ -1589,8 +1589,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.36,
-   0.48
+   0.38,
+   0.53
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -1600,12 +1600,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -10,
-     -15
+     -13,
+     -18
     ],
     "size": [
-     18,
-     17
+     23,
+     20
     ]
    },
    "shadow": {
@@ -1613,11 +1613,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -2
+     -4
     ],
     "size": [
-     11,
-     6
+     12,
+     8
     ]
    }
   },
@@ -1646,12 +1646,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -22,
-     -29
+     -25,
+     -34
     ],
     "size": [
-     46,
-     33
+     49,
+     38
     ]
    },
    "shadow": {
@@ -1659,7 +1659,7 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -4,
-     -24
+     -13
     ],
     "size": [
      39,
@@ -1692,11 +1692,11 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -27,
+     -28,
      -31
     ],
     "size": [
-     50,
+     51,
      38
     ]
    },
@@ -1705,11 +1705,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -17,
-     -27
+     -16
     ],
     "size": [
      49,
-     40
+     39
     ]
    }
   },
@@ -1751,11 +1751,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -5,
-     -26
+     -13
     ],
     "size": [
      41,
-     38
+     37
     ]
    }
   },
@@ -1797,11 +1797,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -8,
-     -26
+     -16
     ],
     "size": [
      45,
-     40
+     42
     ]
    }
   },
@@ -1843,11 +1843,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -7,
-     -69
+     -18
     ],
     "size": [
      146,
-     81
+     86
     ]
    },
    "trunk": {
@@ -1901,11 +1901,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -12,
-     -69
+     -26
     ],
     "size": [
      160,
-     78
+     80
     ]
    },
    "trunk": {
@@ -1959,11 +1959,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -8,
-     -69
+     -16
     ],
     "size": [
-     153,
-     86
+     150,
+     80
     ]
    },
    "trunk": {
@@ -2016,12 +2016,12 @@
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -18,
-     -77
+     -19,
+     -22
     ],
     "size": [
-     164,
-     85
+     166,
+     82
     ]
    },
    "trunk": {
@@ -2074,12 +2074,12 @@
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -29,
-     -69
+     -30,
+     -22
     ],
     "size": [
      159,
-     78
+     88
     ]
    },
    "trunk": {
@@ -2133,11 +2133,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -8,
-     -78
+     -24
     ],
     "size": [
-     173,
-     92
+     174,
+     99
     ]
    },
    "trunk": {
@@ -2191,11 +2191,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -8,
-     -72
+     -13
     ],
     "size": [
      181,
-     91
+     94
     ]
    },
    "trunk": {
@@ -2249,11 +2249,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -24,
-     -77
+     -23
     ],
     "size": [
-     164,
-     84
+     163,
+     96
     ]
    },
    "trunk": {
@@ -2277,8 +2277,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.87,
-   0.89
+   0.9,
+   1.12
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -2288,24 +2288,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -6,
-     -21
+     -8,
+     -25
     ],
     "size": [
-     11,
-     22
+     15,
+     27
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -3,
-     -3
+     -4,
+     -2
     ],
     "size": [
-     6,
-     7
+     9,
+     5
     ]
    }
   },
@@ -2317,8 +2317,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.66,
-   0.81
+   0.77,
+   0.97
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -2329,11 +2329,11 @@
     "normal": "crown_n.png",
     "offset": [
      -5,
-     -19
+     -23
     ],
     "size": [
-     11,
-     21
+     14,
+     25
     ]
    },
    "shadow": {
@@ -2344,7 +2344,7 @@
      -3
     ],
     "size": [
-     8,
+     9,
      7
     ]
    }
@@ -2357,8 +2357,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.92,
-   1.06
+   0.98,
+   1.15
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -2368,12 +2368,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -5,
-     -24
+     -4,
+     -26
     ],
     "size": [
-     10,
-     26
+     11,
+     28
     ]
    },
    "shadow": {
@@ -2384,7 +2384,7 @@
      -2
     ],
     "size": [
-     5,
+     8,
      5
     ]
    }
@@ -2397,8 +2397,8 @@
   "block": [],
   "collision": null,
   "crown_height_m": [
-   0.67,
-   0.69
+   0.81,
+   0.95
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -2409,22 +2409,22 @@
     "normal": "crown_n.png",
     "offset": [
      -5,
-     -17
+     -22
     ],
     "size": [
      11,
-     18
+     24
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -3,
+     -2,
      -3
     ],
     "size": [
-     7,
+     6,
      7
     ]
    }
@@ -2443,8 +2443,8 @@
   ],
   "collision": null,
   "crown_height_m": [
-   3.67,
-   5.9
+   3.54,
+   6.0
   ],
   "crown_sort_px": 26,
   "kind": "tree",
@@ -2454,12 +2454,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -83,
-     -150
+     -85,
+     -146
     ],
     "size": [
-     173,
-     109
+     176,
+     104
     ]
    },
    "shadow": {
@@ -2467,23 +2467,23 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -120
+     -28
     ],
     "size": [
-     190,
-     145
+     187,
+     138
     ]
    },
    "trunk": {
     "albedo": "trunk.png",
     "normal": "trunk_n.png",
     "offset": [
-     -56,
-     -118
+     -63,
+     -119
     ],
     "size": [
-     117,
-     122
+     131,
+     123
     ]
    }
   },
@@ -2501,8 +2501,8 @@
   ],
   "collision": null,
   "crown_height_m": [
-   4.45,
-   5.89
+   4.32,
+   5.98
   ],
   "crown_sort_px": 26,
   "kind": "tree",
@@ -2512,12 +2512,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -84,
-     -147
+     -82,
+     -143
     ],
     "size": [
-     162,
-     103
+     159,
+     95
     ]
    },
    "shadow": {
@@ -2525,23 +2525,23 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -101
+     -7
     ],
     "size": [
-     195,
-     123
+     193,
+     122
     ]
    },
    "trunk": {
     "albedo": "trunk.png",
     "normal": "trunk_n.png",
     "offset": [
-     -55,
-     -116
+     -58,
+     -115
     ],
     "size": [
-     100,
-     120
+     110,
+     119
     ]
    }
   },
@@ -2559,8 +2559,8 @@
   ],
   "collision": null,
   "crown_height_m": [
-   3.88,
-   5.72
+   3.76,
+   5.81
   ],
   "crown_sort_px": 26,
   "kind": "tree",
@@ -2570,12 +2570,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -38,
-     -145
+     -34,
+     -144
     ],
     "size": [
-     145,
-     104
+     140,
+     103
     ]
    },
    "shadow": {
@@ -2583,10 +2583,10 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -110
+     -25
     ],
     "size": [
-     216,
+     214,
      129
     ]
    },
@@ -2594,12 +2594,12 @@
     "albedo": "trunk.png",
     "normal": "trunk_n.png",
     "offset": [
-     -7,
-     -109
+     -8,
+     -110
     ],
     "size": [
-     79,
-     113
+     86,
+     114
     ]
    }
   },
@@ -2641,11 +2641,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -106
+     -6
     ],
     "size": [
      277,
-     112
+     118
     ]
    },
    "trunk": {
@@ -2699,11 +2699,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -102
+     -6
     ],
     "size": [
      212,
-     108
+     102
     ]
    },
    "trunk": {
@@ -2757,11 +2757,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -106
+     -7
     ],
     "size": [
      245,
-     112
+     118
     ]
    },
    "trunk": {
@@ -2815,11 +2815,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -100
+     -6
     ],
     "size": [
      249,
-     106
+     109
     ]
    },
    "trunk": {
@@ -2873,7 +2873,7 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -6,
-     -97
+     -6
     ],
     "size": [
      202,
@@ -2931,11 +2931,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -13,
-     -30
+     -14
     ],
     "size": [
      63,
-     48
+     44
     ]
    }
   },
@@ -2977,11 +2977,11 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -15,
-     -27
+     -13
     ],
     "size": [
      60,
-     41
+     43
     ]
    }
   },
@@ -3022,12 +3022,12 @@
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -13,
-     -29
+     -12,
+     -18
     ],
     "size": [
-     57,
-     43
+     56,
+     47
     ]
    }
   },
@@ -3069,7 +3069,7 @@
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
      -10,
-     -26
+     -13
     ],
     "size": [
      54,
@@ -3086,7 +3086,7 @@
   "collision": null,
   "crown_height_m": [
    0.6,
-   1.69
+   1.61
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -3096,24 +3096,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -14,
+     -20,
      -36
     ],
     "size": [
-     28,
-     39
+     41,
+     43
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -4,
+     -6,
      -3
     ],
     "size": [
-     8,
-     7
+     11,
+     9
     ]
    }
   },
@@ -3126,7 +3126,7 @@
   "collision": null,
   "crown_height_m": [
    0.6,
-   1.58
+   1.75
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -3136,24 +3136,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -15,
-     -33
+     -25,
+     -38
     ],
     "size": [
-     23,
-     39
+     46,
+     48
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -6,
+     -5,
      -3
     ],
     "size": [
      11,
-     7
+     9
     ]
    }
   },
@@ -3166,7 +3166,7 @@
   "collision": null,
   "crown_height_m": [
    0.6,
-   1.67
+   1.7
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -3176,24 +3176,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -14,
-     -35
+     -20,
+     -38
     ],
     "size": [
-     23,
-     40
+     41,
+     48
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -6,
-     -6
+     -5,
+     -2
     ],
     "size": [
-     12,
-     12
+     11,
+     8
     ]
    }
   },
@@ -3206,7 +3206,7 @@
   "collision": null,
   "crown_height_m": [
    0.6,
-   1.77
+   1.84
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -3216,24 +3216,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -11,
-     -37
+     -16,
+     -40
     ],
     "size": [
-     25,
-     42
+     38,
+     50
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -4,
+     -6,
      -3
     ],
     "size": [
-     10,
-     8
+     12,
+     9
     ]
    }
   },
@@ -3246,7 +3246,7 @@
   "collision": null,
   "crown_height_m": [
    0.6,
-   1.73
+   1.91
   ],
   "crown_sort_px": 0,
   "kind": "herb",
@@ -3256,24 +3256,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -16,
-     -36
+     -20,
+     -42
     ],
     "size": [
-     32,
-     39
+     40,
+     51
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -3,
+     -5,
      -3
     ],
     "size": [
-     8,
-     7
+     11,
+     9
     ]
    }
   },
@@ -3296,12 +3296,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -9,
-     -5
+     -12,
+     -6
     ],
     "size": [
-     17,
-     8
+     22,
+     9
     ]
    },
    "shadow": {
@@ -3313,7 +3313,7 @@
     ],
     "size": [
      12,
-     10
+     9
     ]
    }
   },
@@ -3336,12 +3336,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -8,
-     -5
+     -11,
+     -6
     ],
     "size": [
-     15,
-     7
+     23,
+     9
     ]
    },
    "shadow": {
@@ -3352,8 +3352,8 @@
      -4
     ],
     "size": [
-     12,
-     9
+     7,
+     8
     ]
    }
   },
@@ -3376,24 +3376,24 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -8,
-     -5
+     -11,
+     -6
     ],
     "size": [
-     17,
-     7
+     23,
+     9
     ]
    },
    "shadow": {
     "albedo": "shadow.png",
     "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
     "offset": [
-     -6,
-     -4
+     -4,
+     -3
     ],
     "size": [
-     12,
-     9
+     10,
+     7
     ]
    }
   },
@@ -3416,12 +3416,12 @@
     "data": "crown_d.png",
     "normal": "crown_n.png",
     "offset": [
-     -9,
-     -5
+     -12,
+     -6
     ],
     "size": [
-     16,
-     8
+     23,
+     9
     ]
    },
    "shadow": {
@@ -3433,7 +3433,7 @@
     ],
     "size": [
      12,
-     9
+     8
     ]
    }
   },

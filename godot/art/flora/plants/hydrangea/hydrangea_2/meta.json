@@ -10,11 +10,11 @@
    "normal": "crown_n.png",
    "data": "crown_d.png",
    "offset": [
-    -27,
+    -28,
     -31
    ],
    "size": [
-    50,
+    51,
     38
    ]
   },
@@ -22,11 +22,11 @@
    "albedo": "shadow.png",
    "offset": [
     -17,
-    -27
+    -16
    ],
    "size": [
     49,
-    40
+    39
    ],
    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
   }
@@ -45,7 +45,7 @@
   "elevation_deg": 40.0,
   "shadow_dir_xz": [
    0.9243,
-   -0.3818
+   0.3818
   ]
  },
  "sway_amp": 0.6,

@@ -1,8 +1,9 @@
 class_name FloraField
 extends RefCounted
 ## What every plant from tools/flora shares at run time (docs/knowledge/18-vegetation.md): where she
-## is (x-ray holes in crowns and big trunks), the wind, and the sun of the lighting contract shared
-## with the terrain (the same sun_dir and sun_elev_deg the terrain shader takes).
+## is (x-ray holes in crowns and big trunks), the wind, and the sun's elevation and colours for the
+## cast shadows (knowledge/15 section 0: shadows from a north-west sun, always to the lower right).
+## The surface light is not set here: it is the DirectionalLight2D's own screen-space direction.
 ##
 ## Plants (FloraPlant) register their materials when they enter the tree and drop them when they
 ## leave. A plant scene's materials are shared by all its instances, so one call per material
@@ -10,14 +11,11 @@ extends RefCounted
 ##
 ##   FloraField.set_player(feet_px, sort_y)    every frame: her feet as drawn (Proj.to_px(x, z, h))
 ##                                             and her ground point y (Proj.sort_px(x, z).y)
-##   FloraField.set_sun(elev_deg, sun_color, sky_color)   when the time of day changes: sun_color =
-##                                             the DirectionalLight2D colour * energy, sky_color = the
+##   FloraField.set_sun(elev_deg, sun_color, sky_color)   when the time of day changes: the elevation
+##                                             the terrain's horizon maps use, sun_color = the
+##                                             DirectionalLight2D colour * energy, sky_color = the
 ##                                             CanvasModulate colour
 ##   FloraField.set_wind(strength)             0 calm, 1 normal, 2 gale
-
-## Toward the sun on the ground (x east, z south). Must match the terrain bake (tools/terrain,
-## region.json "sun.toward_xz") and tools/flora/flora/core.py SUN_TOWARD_XZ.
-const TOWARD_XZ := Vector2(-0.92, 0.38)
 
 enum Kind { LIT, SHADOW }
 
@@ -25,7 +23,6 @@ static var _mats: Dictionary = {}     # ShaderMaterial -> {"kind", "users", "occ
 static var player_feet := Vector2(-100000, -100000)
 static var player_sort_y := -100000.0
 static var wind := 1.0
-static var sun_dir := Vector3(-0.708, 0.643, 0.292)
 static var sun_elev_deg := 40.0
 static var shade_color := Color(0.50, 0.53, 0.62)
 static var shadow_strength := 1.0
@@ -73,17 +70,16 @@ static func set_wind(strength: float) -> void:
 			m.set_shader_parameter("wind_strength", strength)
 
 
-## The sun at elev_deg above the horizon on the fixed azimuth. A plant's shadow on open ground ends
-## as dark as the terrain's own shadows: lit ground = albedo * (sky + sun * N.L), shadowed = albedo
-## * sky (the terrain shader's model), so the shadow multiplies by sky / (sky + sun * N.L).
-static func set_sun(elev_deg: float, sun_color: Color, sky_color: Color, strength: float = 1.0) -> void:
-	var d := TOWARD_XZ.normalized()
-	var e := deg_to_rad(elev_deg)
-	sun_dir = Vector3(d.x * cos(e), sin(e), d.y * cos(e))
+## The sun at elev_deg above the horizon. A plant's shadow on open ground ends as dark as the
+## terrain's own shadows: lit ground = albedo * (sky + sun * N.L), shadowed = albedo * sky (the
+## terrain shader's model), so the shadow multiplies by sky / (sky + sun * N.L). ground_ndl: N.L of
+## open level ground under the main light (the terrain's normal convention: level ground faces the
+## viewer, tilted up; about 0.75 for the upper-left-front light).
+static func set_sun(elev_deg: float, sun_color: Color, sky_color: Color, ground_ndl: float = 0.75,
+		strength: float = 1.0) -> void:
 	sun_elev_deg = elev_deg
-	var ndl := maxf(sun_dir.y, 0.0)
-	shade_color = Color(_ratio(sky_color.r, sun_color.r * ndl), _ratio(sky_color.g, sun_color.g * ndl),
-		_ratio(sky_color.b, sun_color.b * ndl))
+	shade_color = Color(_ratio(sky_color.r, sun_color.r * ground_ndl), _ratio(sky_color.g, sun_color.g * ground_ndl),
+		_ratio(sky_color.b, sun_color.b * ground_ndl))
 	shadow_strength = strength
 	for m in _mats:
 		_apply_sun(m, _mats[m])
@@ -99,13 +95,12 @@ static func _apply(m: ShaderMaterial, e: Dictionary) -> void:
 		if e["occluder"]:
 			m.set_shader_parameter("player_feet", player_feet)
 			m.set_shader_parameter("player_sort_y", player_sort_y)
-	_apply_sun(m, e)
+	else:
+		_apply_sun(m, e)
 
 
 static func _apply_sun(m: ShaderMaterial, e: Dictionary) -> void:
-	if e["kind"] == Kind.LIT:
-		m.set_shader_parameter("sun_dir", sun_dir)
-	else:
+	if e["kind"] == Kind.SHADOW:
 		m.set_shader_parameter("sun_elev_deg", sun_elev_deg)
 		m.set_shader_parameter("shade_color", shade_color)
 		m.set_shader_parameter("shadow_strength", shadow_strength)

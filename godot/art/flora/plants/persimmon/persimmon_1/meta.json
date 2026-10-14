@@ -9,12 +9,12 @@
    "albedo": "trunk.png",
    "normal": "trunk_n.png",
    "offset": [
-    -56,
-    -118
+    -63,
+    -119
    ],
    "size": [
-    117,
-    122
+    131,
+    123
    ]
   },
   "crown": {
@@ -22,23 +22,23 @@
    "normal": "crown_n.png",
    "data": "crown_d.png",
    "offset": [
-    -83,
-    -150
+    -85,
+    -146
    ],
    "size": [
-    173,
-    109
+    176,
+    104
    ]
   },
   "shadow": {
    "albedo": "shadow.png",
    "offset": [
     -6,
-    -120
+    -28
    ],
    "size": [
-    190,
-    145
+    187,
+    138
    ],
    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
   }
@@ -50,14 +50,14 @@
   30
  ],
  "crown_height_m": [
-  3.67,
-  5.9
+  3.54,
+  6.0
  ],
  "sun_ref": {
   "elevation_deg": 40.0,
   "shadow_dir_xz": [
    0.9243,
-   -0.3818
+   0.3818
   ]
  },
  "sway_amp": 1.0,

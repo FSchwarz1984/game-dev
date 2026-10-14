@@ -184,8 +184,8 @@ def persimmon(name, seed):
     n_l = rng.int(3, 4)
     for k in range(n_l):
         a = 2 * math.pi * k / n_l + rng.range(-0.4, 0.4)
-        out = rng.range(1.6, 2.4)
-        end = top + np.array([math.cos(a) * out, rng.range(1.6, 2.4), math.sin(a) * out * 0.8])
+        out = rng.range(2.0, 2.8)
+        end = top + np.array([math.cos(a) * out, rng.range(1.5, 2.3), math.sin(a) * out * 0.8])
         path = arch.limb_to(top - np.array([0, 0.2, 0]), end, rise=0.3, seed=seed * 11 + k, n=18)
         # crooked: a kink or two
         path[:, 0] += 0.25 * np.sin(np.linspace(0, 3.1, len(path)) * 2 + k) * np.linspace(0, 1, len(path))
@@ -201,10 +201,10 @@ def persimmon(name, seed):
             p.tube(sp, np.linspace(rb, rb * 0.45, len(sp)), bark, R.PART_LIMB, dens=2.8)
             tips.append(en)
         tips.append(end)
-    tips.append(crown_c + np.array([0, crown_r[1] * 0.4, 0]))
+    tips.append(crown_c + np.array([0, crown_r[1] * 0.45, 0]))
     for c in tips:
-        rm = rng.range(1.15, 1.5)
-        c = c + np.array([0, rm * 0.25, 0])
+        rm = rng.range(0.85, 1.20)
+        c = c + np.array([0, rm * 0.30, 0])
         p.mass(c, np.array([rm, rm * 0.70, rm]), leaf, env, cell_r=0.26 * rng.range(0.9, 1.1),
                bumps=(3, 5, 0.12, 0.26), sway=float(np.clip(0.4 + 0.12 * math.hypot(c[0] - top[0], c[2] - top[2]), 0.3, 1.0)),
                fringe=0.3)
@@ -214,7 +214,7 @@ def persimmon(name, seed):
 
     def fruit(pl, cv):
         frng = Rng(seed * 3 + 1)
-        n = frng.int(12, 18)
+        n = frng.int(18, 26)
         cand = np.nonzero(pl.c_pos[:, 1] < crown_c[1] + crown_r[1] * 0.2)[0]
         if len(cand) == 0:
             return
@@ -222,9 +222,9 @@ def persimmon(name, seed):
             i = int(frng.pick(cand))
             c = pl.c_pos[i]
             d = normalize(c - pl.masses[pl.c_mass[i]]['c'])
-            P = c + d * 0.26 + np.array([0, -0.10, 0.25])
-            mat = fruit_o if frng() < 0.5 else fruit_g
-            R.ellipsoids(cv, pl.D([P]), [[0.13, 0.125, 0.13 * pl.kz]], R.PART_DETAIL, mat,
+            P = c + d * 0.16 + np.array([0, -0.06, 0.14])
+            mat = fruit_o if frng() < 0.6 else fruit_g
+            R.ellipsoids(cv, pl.D([P]), [[0.15, 0.14, 0.15 * pl.kz]], R.PART_DETAIL, mat,
                          mass=pl.c_mass[i], nkz=pl.kz)
     p.details.append(fruit)
     return p

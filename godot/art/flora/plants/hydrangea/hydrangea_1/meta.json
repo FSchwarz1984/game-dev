@@ -10,19 +10,19 @@
    "normal": "crown_n.png",
    "data": "crown_d.png",
    "offset": [
-    -22,
-    -29
+    -25,
+    -34
    ],
    "size": [
-    46,
-    33
+    49,
+    38
    ]
   },
   "shadow": {
    "albedo": "shadow.png",
    "offset": [
     -4,
-    -24
+    -13
    ],
    "size": [
     39,
@@ -45,7 +45,7 @@
   "elevation_deg": 40.0,
   "shadow_dir_xz": [
    0.9243,
-   -0.3818
+   0.3818
   ]
  },
  "sway_amp": 0.6,

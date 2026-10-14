@@ -7,7 +7,7 @@ extends Node
 ##   --cam=x,y                 camera centre, world px
 ##   --player=x,y              placeholder character's feet, world px (also the x-ray hole)
 ##   --shot=path.png           window capture (x3) at frame --frame (default 40)
-##   --full=path.png           whole-layout capture at native resolution
+##   --full=path.png           whole-layout capture at native resolution (--full-rect=x,y,w,h: a part)
 ##   --seq=dir --seq-n=24 --seq-every=4   a sequence of window captures (sway, occlusion)
 ##   --wind=1.0                --walk=x0,y0,x1,y1  (player walks during a sequence)
 
@@ -27,6 +27,7 @@ var layout := {}
 var lanterns: Array = []
 var seq_taken := 0
 var walk := []
+var player_lift := 0.0
 
 
 func _ready() -> void:
@@ -103,12 +104,17 @@ func _load_layout(name: String) -> void:
 	g.texture = load(layout["ground"])
 	g.centered = false
 	g.z_index = -10
+	var go: Array = layout.get("ground_offset", [0, 0])
+	g.position = Vector2(go[0], go[1])
 	world.add_child(g)
 	for it in layout["plants"]:
 		var sc: PackedScene = load(it["scene"])
-		var n := sc.instantiate() as Node2D
-		n.position = Vector2(it["x"], it["y"])
+		var n := sc.instantiate() as FloraPlant
 		things.add_child(n)
+		if it.has("x_m"):
+			n.place(it["x_m"], it["z_m"], it.get("h_m", 0.0))
+		else:
+			n.position = Vector2(it["x"], it["y"])
 	for it in layout.get("props", []):
 		var s := Sprite2D.new()
 		s.texture = load(it["texture"])
@@ -127,35 +133,42 @@ func _load_layout(name: String) -> void:
 	player.centered = false
 	player.offset = Vector2(-28, -61)
 	player.position = _vec("player", Vector2(layout.get("player", [240, 200])[0], layout.get("player", [240, 200])[1]))
+	if layout.has("player_h_px"):
+		# on raised ground: the node sorts at the ground point, the picture is lifted (knowledge/16 §3)
+		player_lift = float(layout["player_h_px"])
+		player.offset.y -= player_lift
 	things.add_child(player)
 	var foot := Sprite2D.new()
 	foot.texture = load("res://bench/char/foot_shadow.png")
 	foot.centered = true
-	foot.position = Vector2(0, -1)
+	foot.position = Vector2(0, -1 - player_lift)
 	foot.z_index = -1
 	foot.modulate = Color(1, 1, 1, 0.55)
 	player.add_child(foot)
 
 
-## The terrain's time-of-day table (tools/terrain/tengan_terrain/preview.py TOD): sun elevation,
-## sun colour * energy (DirectionalLight2D), sky = ambient (CanvasModulate).
+## The terrain's time-of-day table (tools/terrain/tengan_terrain/preview.py TOD, knowledge/17 §4):
+## sun elevation, sun colour * energy (DirectionalLight2D), sky = ambient (CanvasModulate).
+## The main light's screen-space direction is fixed (knowledge/15 §0): upper left, a little in
+## front: rotation -42.5 deg, height 0.42 (the direction baked into the sprites).
 func _preset(p: String) -> void:
 	var presets := {
 		"morning": {"elev": 24.0, "sun": Color(0.76, 0.68, 0.55), "sky": Color(0.56, 0.58, 0.65)},
 		"noon": {"elev": 58.0, "sun": Color(0.64, 0.61, 0.53), "sky": Color(0.53, 0.56, 0.60)},
-		"dusk": {"elev": 12.0, "sun": Color(1.12, 0.68, 0.40), "sky": Color(0.42, 0.37, 0.49)},
-		"night": {"elev": 40.0, "sun": Color(0.20, 0.25, 0.40), "sky": Color(0.19, 0.23, 0.36)},
+		"dusk": {"elev": 15.0, "sun": Color(1.12, 0.68, 0.40), "sky": Color(0.42, 0.37, 0.49)},
+		"night": {"elev": 40.0, "sun": Color(0.20, 0.25, 0.40), "sky": Color(0.19, 0.23, 0.36), "strength": 0.5},
 	}
 	var q: Dictionary = presets[p]
 	shade.color = q["sky"]
 	sun.color = q["sun"]
 	sun.energy = 1.0
-	FloraField.set_sun(q["elev"], q["sun"], q["sky"])
-	# the placeholder character takes Godot's own 2D light: point the light the same way on screen
-	var s := FloraField.sun_dir
-	var on_screen := Vector2(s.x, -(s.y - s.z) * 0.70710678)     # toward the sun, screen (y down)
-	sun.rotation = Vector2(0, 1).angle_to(-on_screen)
-	sun.height = clampf((s.y + s.z) * 0.70710678, 0.0, 1.0)
+	sun.rotation_degrees = -42.5
+	sun.height = 0.42
+	# at night the moon's shadows are kept faint: a multiply sprite would also cut into the
+	# lanterns' light (the terrain's own shadows only take the main light away)
+	FloraField.set_sun(q["elev"], q["sun"], q["sky"], 0.75, float(q.get("strength", 1.0)))
+	if args.has("light-only"):      # check: no ambient, only the main light on the normal maps
+		shade.color = Color(0, 0, 0)
 	if p == "night" or p == "dusk":
 		var tex := GradientTexture2D.new()
 		tex.fill = GradientTexture2D.FILL_RADIAL
@@ -188,8 +201,8 @@ func _process(_delta: float) -> void:
 		var n := int(args.get("seq-n", "24")) * int(args.get("seq-every", "4"))
 		var t := clampf(float(frame - 10) / float(max(1, n)), 0.0, 1.0)
 		player.position = (walk[0].lerp(walk[1], t)).round()
-	FloraField.set_player(player.global_position, player.global_position.y)
-	_cam(_vec("cam", player.position + Vector2(0, -40)))
+	FloraField.set_player(player.global_position - Vector2(0, player_lift), player.global_position.y)
+	_cam(_vec("cam", player.position + Vector2(0, -40 - player_lift)))
 	var shot_frame := int(args.get("frame", "40"))
 	if args.has("shot") and frame == shot_frame:
 		_save_window(String(args["shot"]))
@@ -216,6 +229,9 @@ func _save_window(path: String) -> void:
 
 func _save_full(path: String) -> void:
 	var b: Array = layout["bounds"]
+	if args.has("full-rect"):
+		var r := String(args["full-rect"]).split(",")
+		b = [float(r[0]), float(r[1]), float(r[2]), float(r[3])]
 	var size := Vector2i(int(b[2]), int(b[3]))
 	var big := SubViewport.new()
 	big.size = size

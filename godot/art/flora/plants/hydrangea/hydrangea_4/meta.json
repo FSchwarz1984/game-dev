@@ -22,11 +22,11 @@
    "albedo": "shadow.png",
    "offset": [
     -8,
-    -26
+    -16
    ],
    "size": [
     45,
-    40
+    42
    ],
    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
   }
@@ -45,7 +45,7 @@
   "elevation_deg": 40.0,
   "shadow_dir_xz": [
    0.9243,
-   -0.3818
+   0.3818
   ]
  },
  "sway_amp": 0.6,

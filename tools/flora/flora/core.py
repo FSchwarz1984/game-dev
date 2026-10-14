@@ -20,24 +20,26 @@ SQ2 = math.sqrt(2.0)
 # parts (limb tips, mass centres, root paths) stay at true world scale.
 KZ = 0.42
 
-# Two lights, as in hand-drawn 3/4 pixel art (knowledge/15 section 0: light from the upper left):
-#  - the SHADING light baked into the sprites comes from the upper left of the picture and a little
-#    toward the viewer, so faces turned to the camera are mid-tone, tops and left sides are lit,
-#    right sides are dark (about the run-time sun at noon, seen on the screen);
-#  - the SUN of the run-time lighting contract shared with the terrain (tools/terrain, toward_xz):
-#    a fixed azimuth, its elevation changing with the time of day. It casts the shadows (baked at
-#    SUN_ELEV_REF; the shadow shader stretches and slides them continuously for other elevations)
-#    and lights the normal maps in Godot (uniform sun_dir).
+# Two lights, as the lead set it for the whole game (knowledge/15 section 0, 2026-10-14: surface
+# light and cast shadows are handled apart):
+#  - SURFACE light in screen space: the main light comes from the upper left of the picture and a
+#    little toward the viewer, so tops are brightest, faces turned to the camera are mid-tone, left
+#    sides lit, right sides dark. Baked into the sprites (LIGHT_C) and, in Godot, the screen-space
+#    direction of the DirectionalLight2D that lights the normal maps (rotation -42.5 deg, height 0.42
+#    give this same vector).
+#  - CAST SHADOWS from a sun in the north-west: they always fall to the lower right, their length
+#    changing continuously with the sun's elevation (baked at SUN_ELEV_REF; the shadow shader
+#    stretches and slides them). The azimuth must match the terrain's horizon maps.
 _LC = np.array([-0.55, 0.60, 0.58])                 # camera space: x right, y up, z toward viewer
 LIGHT_C = _LC / np.linalg.norm(_LC)
 LIGHT_W = np.array([LIGHT_C[0], (LIGHT_C[1] + LIGHT_C[2]) / SQ2, (LIGHT_C[2] - LIGHT_C[1]) / SQ2])
 LIGHT_W = LIGHT_W / np.linalg.norm(LIGHT_W)         # the shading light in world space (crown self-shade)
-SUN_TOWARD_XZ = (-0.92, 0.38)       # toward the sun on the ground (x east, z south): the terrain's
+SUN_TOWARD_XZ = (-0.92, -0.38)      # toward the shadow sun on the ground (x east, z south): WNW
 SUN_ELEV_REF = 40.0                 # the elevation the cast shadows are baked at (degrees)
 
 
 def sun_vector(elev_deg, toward_xz=SUN_TOWARD_XZ):
-    """Unit vector toward the sun (world x east, y up, z south)."""
+    """Unit vector toward the shadow sun (world x east, y up, z south)."""
     d = np.asarray(toward_xz, np.float64)
     d = d / np.linalg.norm(d)
     e = math.radians(elev_deg)

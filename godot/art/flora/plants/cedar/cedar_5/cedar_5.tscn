@@ -14,14 +14,14 @@
 shader = ExtResource("3_flora_shadow")
 shader_parameter/channel = 2
 shader_parameter/ref_elevation = 40.00
-shader_parameter/shadow_dir = Vector2(0.9243, -0.3818)
+shader_parameter/shadow_dir = Vector2(0.9243, 0.3818)
 shader_parameter/crown_height_px = 216.6
 
 [sub_resource type="ShaderMaterial" id="m_shadow0"]
 shader = ExtResource("3_flora_shadow")
 shader_parameter/channel = 0
 shader_parameter/ref_elevation = 40.00
-shader_parameter/shadow_dir = Vector2(0.9243, -0.3818)
+shader_parameter/shadow_dir = Vector2(0.9243, 0.3818)
 shader_parameter/crown_height_px = 216.6
 
 [sub_resource type="CanvasTexture" id="ct_trunk"]
@@ -60,14 +60,14 @@ metadata/flora_block = [[0.00, 0.00, 0.40]]
 z_index = -9
 texture = ExtResource("9_shadow")
 centered = false
-offset = Vector2(-6, -156)
+offset = Vector2(-6, -6)
 material = SubResource("m_shadow2")
 
 [node name="Shadow" type="Sprite2D" parent="."]
 z_index = -9
 texture = ExtResource("9_shadow")
 centered = false
-offset = Vector2(-6, -156)
+offset = Vector2(-6, -6)
 material = SubResource("m_shadow0")
 
 [node name="Trunk" type="Sprite2D" parent="."]

@@ -12,14 +12,16 @@
 // node origin) and the layer really covers her (sway_data.b bit 6, sampled at her chest, waist and
 // head), a hole opens around her chest in stepped alpha. Per texel, so the edge is pixel art.
 //
-// Light: the run-time contract shared with the terrain shader (tools/terrain/godot/terrain.gdshader):
-// CanvasModulate is the sky (ambient); a DirectionalLight2D only lends the sun's colour and energy,
-// its direction is the world vector sun_dir; point lights (lanterns, fire) light the normal map
-// as usual. The sprite's albedo already holds the plant's own shading (self-shade, inner dark).
+// Light (knowledge/15 section 0): surface light in screen space. CanvasModulate is the sky
+// (ambient); the DirectionalLight2D is the main light, its screen-space direction (upper left, a
+// little in front) lighting the normal map exactly like Godot's own 2D light, so plants, actors
+// and the terrain agree; point lights (lanterns, fire) as usual. The sprite's albedo already holds
+// the plant's own shading (self-shade, the crown's dark inside), baked for that same direction.
+// Cast shadows are not here: they are the plant's Shadow nodes (flora_shadow.gdshader).
 //
 // Uniforms set for every plant at once by FloraField (art/flora/flora_field.gd): player_feet,
-// player_sort_y, wind_strength, sun_dir. Instance uniform sun_vis: 0..1, the sun reaching this plant
-// (1 in the open; lower in a cliff's shadow, from the terrain's sun mask at its foot).
+// player_sort_y, wind_strength. Instance uniform sun_vis: 0..1, how much of the main light reaches
+// this plant (1 in the open; lower in a cliff's shadow, from the terrain's sun mask at its foot).
 shader_type canvas_item;
 
 uniform sampler2D sway_data : filter_nearest, repeat_disable;
@@ -36,7 +38,6 @@ uniform float hole_lift = 17.0;
 uniform vec2 player_feet = vec2(-100000.0, -100000.0);   // her feet as drawn (world px)
 uniform float player_sort_y = -100000.0;                // her ground point y (world px), sorts
 uniform float wind_strength = 1.0;                      // 0 calm, 1 normal, 2 gale
-uniform vec3 sun_dir = vec3(-0.708, 0.643, 0.292);      // toward the sun: x east, y up, z south
 instance uniform float sun_vis = 1.0;
 
 varying vec4 v_mod;
@@ -146,20 +147,8 @@ void fragment() {
 	}
 }
 
-// Godot's canvas NORMAL: x right, y down, z out of the screen. In the oblique 3/4 view, screen up
-// is (0, 1, -1)/sqrt2 and out of the screen is (0, 1, 1)/sqrt2 in the world (x east, y up, z south).
-vec3 world_normal(vec3 ns) {
-	float up = -ns.y;
-	float o = ns.z;
-	return normalize(vec3(ns.x, (up + o) * 0.70710678, (o - up) * 0.70710678));
-}
-
 void light() {
-	if (LIGHT_IS_DIRECTIONAL) {
-		float ndl = max(dot(world_normal(NORMAL), normalize(sun_dir)), 0.0);
-		LIGHT = vec4(LIGHT_COLOR.rgb * LIGHT_ENERGY * v_albedo * ndl * sun_vis, 1.0);
-	} else {
-		float ndl = max(dot(NORMAL, LIGHT_DIRECTION), 0.0);
-		LIGHT = vec4(LIGHT_COLOR.rgb * LIGHT_ENERGY * v_albedo * ndl, LIGHT_COLOR.a);
-	}
+	float ndl = max(dot(NORMAL, LIGHT_DIRECTION), 0.0);
+	float vis = LIGHT_IS_DIRECTIONAL ? sun_vis : 1.0;
+	LIGHT = vec4(LIGHT_COLOR.rgb * LIGHT_ENERGY * v_albedo * ndl * vis, LIGHT_COLOR.a);
 }

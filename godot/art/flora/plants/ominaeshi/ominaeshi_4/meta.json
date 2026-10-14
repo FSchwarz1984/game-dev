@@ -11,21 +11,21 @@
    "data": "crown_d.png",
    "offset": [
     -5,
-    -17
+    -22
    ],
    "size": [
     11,
-    18
+    24
    ]
   },
   "shadow": {
    "albedo": "shadow.png",
    "offset": [
-    -3,
+    -2,
     -3
    ],
    "size": [
-    7,
+    6,
     7
    ],
    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
@@ -38,14 +38,14 @@
   32
  ],
  "crown_height_m": [
-  0.67,
-  0.69
+  0.81,
+  0.95
  ],
  "sun_ref": {
   "elevation_deg": 40.0,
   "shadow_dir_xz": [
    0.9243,
-   -0.3818
+   0.3818
   ]
  },
  "sway_amp": 1.0,
