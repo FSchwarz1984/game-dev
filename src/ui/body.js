@@ -37,7 +37,7 @@ function injectStyle() {
   if (styled) return; styled = true;
   const s = document.createElement('style');
   s.textContent = `
-  .body-g { position: fixed; left: 12px; top: 12px; z-index: 14; pointer-events: none; padding: 7px 9px 6px; border-radius: 8px; background: rgba(20, 16, 24, .42); backdrop-filter: blur(2px); font: 700 13px/1 "Noto Serif SC", "Shippori Mincho", serif; color: #f4f1ea; }
+  .body-g { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 14; pointer-events: none; padding: 7px 9px 6px; border-radius: 8px; background: rgba(20, 16, 24, .42); backdrop-filter: blur(2px); font: 700 13px/1 "Noto Serif SC", "Shippori Mincho", serif; color: #f4f1ea; }
   .bg-row { display: flex; align-items: center; gap: 6px; height: 17px; }
   .bg-row b { width: 14px; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
   .bg-row span { display: flex; gap: 2px; }
@@ -46,7 +46,7 @@ function injectStyle() {
   .bg-row i.base { outline: 1px solid rgba(255,255,255,.75); outline-offset: 1px; }
   .bg-row.flash { animation: bg-flash .5s ease-out; }
   @keyframes bg-flash { 0% { transform: translateX(4px) scale(1.08); filter: brightness(1.8); } 100% { transform: none; filter: none; } }
-  @media (max-width: 520px) { .body-g { left: 8px; top: 8px; padding: 5px 7px; font-size: 12px; } .bg-row { height: 15px; } .bg-row i { width: 6px; height: 6px; } }
+  @media (max-width: 520px) { .body-g { left: calc(8px + env(safe-area-inset-left, 0px)); top: calc(8px + env(safe-area-inset-top, 0px)); padding: 5px 7px; font-size: 12px; } .bg-row { height: 15px; } .bg-row i { width: 6px; height: 6px; } }
   `;
   document.head.appendChild(s);
 }

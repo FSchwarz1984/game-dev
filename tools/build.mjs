@@ -54,7 +54,10 @@ ${js}
 </html>
 `;
 
+// The artifact host allows Google Fonts; the standalone page stays offline (system fallbacks).
+const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Noto+Serif+SC:wght@700&display=swap">';
 const artifact = `<title>${title}</title>
+${fonts}
 <style>
 :root{color-scheme:dark}
 body{background:#0d0f14}

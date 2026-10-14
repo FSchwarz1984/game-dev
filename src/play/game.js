@@ -302,10 +302,13 @@ function helpCard(root) {
     <div>WASD 移动 · [ ] 转镜头 · Z 缩放 · T 时段</div>
     <div>1–5 取 重熱光音生 · Shift+1–5 予 · L 再按 1–5 放</div>
     <div>E 情境动作 · F 派小伙伴搬 · R 召回 · Tab 换目标 · Space 闪避</div>
+    <b>试一试</b>
+    <div>取巨石的重，给桥头的压板，门就开了；按 F 让小伙伴把南岸的原木搬回来，再看工地一层层立起来。</div>
+    <div>溪水取熱会结冰；身体轻了能走朽桥；神棚可以把身体还原。</div>
     <div class="dim">H 收起</div>`;
   root.appendChild(el);
   const s = document.createElement('style');
-  s.textContent = `.help-card { position: fixed; right: 12px; top: 12px; z-index: 14; max-width: 330px; padding: 8px 11px; border-radius: 8px; background: rgba(20,16,24,.5); color: #f1ece0; font: 500 12px/1.6 "Noto Sans SC", system-ui, sans-serif; pointer-events: none; }
+  s.textContent = `.help-card { position: fixed; right: calc(12px + env(safe-area-inset-right, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 14; max-width: 330px; padding: 8px 11px; border-radius: 8px; background: rgba(20,16,24,.5); color: #f1ece0; font: 500 12px/1.6 "Noto Sans SC", system-ui, sans-serif; pointer-events: none; }
     .help-card b { font: 700 13px/1.4 "Noto Serif SC", serif; } .help-card .dim { opacity: .6; } .help-card.off { display: none; }`;
   document.head.appendChild(s);
   addEventListener('keydown', e => { if (e.code === 'KeyH') el.classList.toggle('off'); });
