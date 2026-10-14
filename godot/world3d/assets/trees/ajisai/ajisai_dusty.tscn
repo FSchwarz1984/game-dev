@@ -1,0 +1,13 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/trees/ajisai/ajisai_dusty_wood.res" id="1"]
+[ext_resource type="ArrayMesh" path="res://world3d/assets/trees/ajisai/ajisai_dusty_leaves.res" id="2"]
+
+[node name="AjisaiDusty" type="Node3D" unique_id=1442407803]
+
+[node name="Wood" type="MeshInstance3D" parent="." unique_id=945301223]
+mesh = ExtResource("1")
+
+[node name="Leaves" type="MeshInstance3D" parent="." unique_id=263299009]
+extra_cull_margin = 2.0
+mesh = ExtResource("2")

@@ -51,6 +51,10 @@ void fragment() {
 	if (t.a < 0.5) {
 		discard;
 	}
+	// cards are double-sided and may face either way: keep the ground normal they were given
+	if (!FRONT_FACING) {
+		NORMAL = -NORMAL;
+	}
 	vec2 cell = w3_ptex(v_wp);
 	int acc = int(t.g * 255.0 + 0.5) - 1;
 	vec3 alb;

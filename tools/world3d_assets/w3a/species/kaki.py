@@ -33,8 +33,8 @@ def tiles():
         'mass': [(LV.broad_leaves, dict(W=int(16 + (i % 3) * 3), H=int(14 + (i % 2) * 3), seed=S + i)) for i in range(9)],
         'small': [(LV.broad_leaves, dict(W=12, H=11, seed=S + 50 + i)) for i in range(4)],
         'interior': [(LV.broad_leaves, dict(W=18, H=15, seed=S + 80 + i, gloss=0.0)) for i in range(2)],
-        'fruit': [(LV.fruit, dict(W=5, seed=S + 90, colours=FRUIT_RIPE)), (LV.fruit, dict(W=4, seed=S + 91, colours=FRUIT_RIPE)),
-                  (LV.fruit, dict(W=5, seed=S + 92, colours=FRUIT_GOLD))],
+        'fruit': [(LV.fruit, dict(W=7, seed=S + 90, colours=FRUIT_RIPE)), (LV.fruit, dict(W=6, seed=S + 91, colours=FRUIT_RIPE)),
+                  (LV.fruit, dict(W=6, seed=S + 92, colours=FRUIT_GOLD))],
     }
     return FO.build_tiles(specs)
 
@@ -65,7 +65,7 @@ def variant(key, H, nl, spread, nfruit, vs, sets):
     span = max(np.max([np.linalg.norm((m.c - cc)[[0, 2]]) + m.r[0] for m in masses]), 1.5)
     crown_kw = dict(centre=tuple(cc), radii=(span, H * 0.35, span),
                     base_tint=TR.tint_for('#4d6c3a'), young_tint=TR.tint_for('#5f7a3a'), old_tint=TR.tint_for('#3f5f3e'),
-                    overlap=1.4, fill_density=0.9, clump_overlap=1.0, interior_frac=0.2, spray_rate=0.0,
+                    overlap=1.1, fill_density=0.8, clump_overlap=1.0, interior_frac=0.25, spray_rate=0.0,
                     env_k=0.35, up_bias=0.35, flex_r=span, max_cards=600 - nfruit)
     # fruit: hanging on the outer, camera-facing side of the masses
     fruits = []
@@ -76,7 +76,7 @@ def variant(key, H, nl, spread, nfruit, vs, sets):
             dd = normalize(R.normal(0, 1, 3) + back * 0.9 + np.array([0, -0.2, 0]))
             if dd @ back > 0.2:
                 break
-        p = m.c + dd * m.r * 0.92 + np.array([0, -0.15, 0])
+        p = m.c + dd * m.r * 1.0 + np.array([0, -0.12, 0])
         ft = sets['fruit'][0 if R.uniform() < 0.55 else (1 if R.uniform() < 0.6 else 2)]
         fruits.append(CD.Card(p, normalize(dd + np.array([0, 0.5, 0])), ft[1], ft[2], ft[0], 0.95,
                               np.array([1.0, 1.0, 1.0]), 0.6, 'fruit', 3.0))

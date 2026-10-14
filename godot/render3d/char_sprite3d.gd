@@ -27,9 +27,11 @@ static func pixel_texture(path: String) -> Texture2D:
 	return ImageTexture.create_from_image(t.get_image())
 
 
-func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i) -> void:
+func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i, sprite_pitch := 39.33) -> void:
 	frame_size = fsize
 	pivot = piv
+	mat.set_shader_parameter("pivot_px", Vector2(piv))
+	mat.set_shader_parameter("sprite_pitch_deg", sprite_pitch)
 	mat.set_shader_parameter("sheet", sheet)
 	mat.set_shader_parameter("sheet_n", sheet_n)
 	var l := -float(piv.x)
@@ -60,6 +62,7 @@ func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i)
 	mesh = m
 
 
-func show_frame(col: int, row: int, flip := false) -> void:
+func show_frame(col: int, row: int, flip := false, head := Vector2(0.5, -35.0)) -> void:
 	mat.set_shader_parameter("frame_rect", Vector4(col * frame_size.x, row * frame_size.y, frame_size.x, frame_size.y))
 	mat.set_shader_parameter("flip_h", flip)
+	mat.set_shader_parameter("head_px", head)

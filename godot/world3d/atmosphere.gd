@@ -14,6 +14,7 @@ var rng := RandomNumberGenerator.new()
 var _mote_acc := 0.0
 var _fly_acc := 0.0
 var _rain_acc := 0.0
+var glints: Array = []          # [position, phase] from the dressing: small things that catch the light
 
 
 func setup(e: W3Env, t: Terrain3D) -> void:
@@ -35,16 +36,17 @@ func _build_shafts() -> void:
 	mm.mesh = q
 	var pts := []
 	# gaps around the camphor's crown, a few at the forest edges
-	for i in 14:
-		var a := rng.randf() * TAU
-		var r := rng.randf_range(5.0, 15.0)
+	# a few gaps in the great camphor's crown, toward its rim
+	for i in 6:
+		var a := TAU * (float(i) + rng.randf_range(0.1, 0.9)) / 6.0
+		var r := rng.randf_range(8.0, 14.0)
 		pts.append(Vector2(cos(a) * r, sin(a) * r * 0.9))
 	mm.instance_count = pts.size()
 	for i in pts.size():
 		var p: Vector2 = pts[i]
 		var y := terrain.height_at(p.x, p.y)
 		mm.set_instance_transform(i, Transform3D(Basis(), Vector3(p.x, y, p.y)))
-		mm.set_instance_custom_data(i, Color(rng.randf_range(6.0, 10.0), rng.randf_range(7.0, 15.0), rng.randf_range(0.45, 1.0), rng.randf() * TAU))
+		mm.set_instance_custom_data(i, Color(rng.randf_range(6.0, 9.0), [6.0, 9.0, 14.0, 20.0][i % 4], rng.randf_range(0.5, 1.0), rng.randf() * TAU))
 	shafts.multimesh = mm
 	var m := ShaderMaterial.new()
 	m.shader = load("res://render3d/shaders/light_shaft.gdshader")
@@ -84,6 +86,8 @@ func _step(p: Array, dt: float) -> void:
 		c.a = clampf(minf(t / 0.8, (life - t) / 0.8), 0.0, 1.0) * (1.0 if blink > 0.1 else 0.0)
 	elif kind == 3:      # wisp tail: rises and fades
 		c.a = clampf(1.0 - t / life, 0.0, 1.0) * 0.8
+	elif kind == 6:      # glint: a short sparkle, up and down once
+		c.a = sin(clampf(t / life, 0.0, 1.0) * PI)
 	elif kind == 4:      # rain: falls; dies on the ground
 		var gy := terrain.height_at(p[0].x, p[0].z)
 		if p[0].y <= gy:
@@ -131,6 +135,16 @@ func update(dt: float, at: Vector3) -> void:
 			p.y = gy + rng.randf_range(2.0, 7.0)
 			var c := Color(0.72, 0.78, 0.86, 0.55)
 			particles.spawn(p, Vector3(env.wind * 0.6, -11.0, 0.8), 1.2, c, Vector2(1, 4), 0.0, 4)
+	# glints: coins in the offering box catch the light now and then (fainter by lantern light)
+	for gl in glints:
+		gl[1] = float(gl[1]) - dt
+		if float(gl[1]) <= 0.0:
+			gl[1] = rng.randf_range(2.2, 4.0)
+			var gp: Vector3 = gl[0]
+			var k := 1.7 if not is_night else 1.1
+			var gc := Color(1.0, 0.9, 0.62) * k
+			gc.a = 1.0
+			particles.spawn(gp + Vector3(rng.randf_range(-0.12, 0.12), 0.0, rng.randf_range(-0.05, 0.05)), Vector3.ZERO, 0.45, gc, Vector2(1, 1), 1.0, 6)
 	# will-o'-wisps by the graves at night
 	for wd in wisps:
 		var light: OmniLight3D = wd["light"]

@@ -25,8 +25,8 @@ uniform float porosity : hint_range(0.0, 1.0) = 0.5;
 uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // sunlit rim band (lighter, warmer)
 uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
-uniform float shadow_shrink = 0.86;               // cards cast slightly smaller shadows (sun flecks)
-uniform float shadow_sieve = 0.22;                // and let this share of their texels through
+uniform float shadow_shrink = 1.08;               // cards cast slightly smaller shadows (sun flecks)
+uniform float shadow_sieve = 0.03;                // and let this share of their texels through
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 v_wp;
@@ -77,8 +77,13 @@ void fragment() {
 			discard;
 		}
 	}
-	if (cutaway && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
+	// (never in the shadow pass: the cut-away is for the eye, the shadow stays whole)
+	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
 		discard;
+	}
+	// cards are rebuilt facing the camera whatever their winding: undo the engine's back-face flip
+	if (foliage_mode == 1 && !FRONT_FACING) {
+		NORMAL = -NORMAL;
 	}
 	vec3 wn = normalize(v_wn);
 	vec3 alb = w3_srgb_to_linear(COLOR.rgb * tx.rgb) * tint.rgb;

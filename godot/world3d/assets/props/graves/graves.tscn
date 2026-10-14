@@ -1,0 +1,39 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/props/graves/graves_mesh.res" id="1"]
+
+[node name="Graves" type="Node3D" unique_id=934683792]
+metadata/w3a_kind = "props"
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
+mesh = ExtResource("1")
+
+[node name="hook_0" type="Marker3D" parent="." unique_id=1734428931]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4.182, 1.234, 0.197)
+
+[node name="hook_1" type="Marker3D" parent="." unique_id=275151253]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2.975, 1.178, 0.197)
+
+[node name="hook_2" type="Marker3D" parent="." unique_id=158279727]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.845, 1.116, 0.087)
+
+[node name="hook_3" type="Marker3D" parent="." unique_id=2120751289]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.773, 1.118, 0.243)
+
+[node name="hook_4" type="Marker3D" parent="." unique_id=1611435290]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.401, 1.206, 0.156)
+
+[node name="hook_5" type="Marker3D" parent="." unique_id=386645388]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.556, 1.152, 0.135)
+
+[node name="hook_6" type="Marker3D" parent="." unique_id=235072566]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2.65, 1.111, 0.198)
+
+[node name="hook_7" type="Marker3D" parent="." unique_id=2030427296]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.792, 1.26, 0.201)
+
+[node name="hook_8" type="Marker3D" parent="." unique_id=1773846833]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.093, 1.232, 0.239)
+
+[node name="hook_9" type="Marker3D" parent="." unique_id=515764647]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5.346, 1.43, 0.25)

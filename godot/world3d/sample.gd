@@ -11,7 +11,7 @@ extends Node
 ##   --pitch=deg        camera pitch (evidence renders)
 ## Keys: WASD / arrows walk, Shift runs. F2 toggles the time of day (debug).
 
-const CHARS_JSON := "res://actors/characters.json"
+const CHARS_JSON := "res://world3d/sprites/characters.json"
 const CATALOG := "res://world3d/assets/catalog.json"
 
 var pv: PixelView3D
@@ -34,6 +34,9 @@ var keys_down := {}
 var _haze_h := 0.0
 var atmos: W3Atmosphere
 var dressing: W3Dressing
+var vista: W3Vista
+var _still := 0.0                 # seconds she has stood still on the lookout
+var _route_done_t := -1.0         # route recordings: time since she reached the end
 
 
 func _ready() -> void:
@@ -81,12 +84,19 @@ func _ready() -> void:
 	dressing = W3Dressing.new()
 	dressing.name = "Dressing"
 	pv.world_root.add_child(dressing)
-	dressing.build(terrain)
-	dressing.set_time(env.hours)
+	dressing.lean_k = pv_lean()
+	dressing.build(terrain, catalog)
+	_place_marker_props()
+	_set_hours(env.hours)
 	atmos = W3Atmosphere.new()
 	atmos.name = "Atmosphere"
 	pv.world_root.add_child(atmos)
 	atmos.setup(env, terrain)
+	atmos.glints = dressing.glints
+	vista = W3Vista.new()
+	vista.name = "Vista"
+	add_child(vista)
+	vista.setup(pv, env, terrain)
 	_spawn_characters()
 	focus = her.pos
 	if args.has("at"):
@@ -94,6 +104,12 @@ func _ready() -> void:
 		her.place(Vector3(float(p[0]), 0.0, float(p[1])))
 		saji.place(her.pos + Vector3(-0.9, 0, -0.5))
 	pv.follow(_cam_target, {"cut": true})
+	if args.has("hide"):
+		# debugging: hide parts of the world by node name (Grass, Rocks, Dressing, Atmosphere, ...)
+		for n in String(args["hide"]).split(","):
+			var node := pv.world_root.get_node_or_null(n)
+			if node is Node3D:
+				(node as Node3D).visible = false
 	if args.get("route", "") == "walk":
 		_make_route()
 
@@ -124,21 +140,29 @@ const KIND_ALIASES := {
 	"maple": ["momiji", "kaede", "maple"], "persimmon": ["kaki", "persimmon"], "bamboo": ["take", "madake", "bamboo"],
 	"beech": ["buna", "beech"], "broadleaf": ["konara", "kunugi", "keyaki", "nara", "broadleaf"],
 	"azalea": ["tsutsuji", "azalea"], "hydrangea": ["ajisai", "hydrangea"], "fern": ["shida", "fern"],
-	"shrub": ["shrub", "kanboku", "tsutsuji", "ajisai"], "choppable": ["choppable", "kare", "dead", "konara"],
+	"shrub": ["tsubaki", "camellia", "shrub"], "choppable": ["kare", "choppable", "dead"], "susuki": ["susuki"],
 }
 
 
 ## The asset that stands for a placement kind, if the catalog has one (variant picks among several).
+## Assets tagged "accent" (the red maples) are kept for one maple in four, never for the stand-ins.
 func _asset_for(kind: String, variant: int) -> String:
 	var names := []
+	var accents := []
 	var keys: Array = KIND_ALIASES.get(kind, [kind])
 	for name in catalog:
 		var a: Dictionary = catalog[name]
 		var sp := String(a.get("species", ""))
 		for k in keys:
 			if name == k or name.begins_with(k + "_") or sp == k:
-				names.append(name)
+				if "accent" in a.get("tags", []):
+					accents.append(name)
+				else:
+					names.append(name)
 				break
+	if kind == "maple" and not accents.is_empty() and variant % 4 == 3:
+		accents.sort()
+		return accents[(variant / 4) % accents.size()]
 	if names.is_empty():
 		return ""
 	names.sort()
@@ -150,6 +174,11 @@ func _place_props() -> void:
 	for p in terrain.info["placements"]:
 		var kind: String = p["kind"]
 		var name := _asset_for(kind, int(p.get("variant", 0)))
+		var sc := float(p.get("scale", 1.0))
+		if name == "" and kind == "choppable" and catalog.has("sugi_e"):
+			# no tree made for felling yet: a young cedar someone planted by the path
+			name = "sugi_e"
+			sc = 0.62
 		if name == "" or not catalog.has(name):
 			continue
 		var a: Dictionary = catalog[name]
@@ -161,18 +190,145 @@ func _place_props() -> void:
 		inst.position = pos
 		if a.get("category", "") != "building":
 			inst.rotation.y = float(p.get("rot", 0.0)) if kind != "camphor" else 0.0
-		var sc := float(p.get("scale", 1.0))
 		if kind != "camphor":
 			inst.scale = Vector3.ONE * sc
 		props_root.add_child(inst)
 		if kind == "camphor":
 			_scale_cutaway(inst, 5.0)
 			_solid_cutaway(inst, 3.0)
+			_crown_proxy(inst, a)
 		for fp in a.get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, inst.rotation.y) * sc
 			blockers.append([pos + off, float(fp[2]) * sc])
 		n += 1
 	print("PROPS placed=", n)
+
+
+## The catalog's buildings, lights and dressing at the layout's markers (and the light slots the
+## dressing hands over). Lights with a lit variant swap to it from dusk to dawn.
+var _lit_pairs: Array = []        # [unlit node, lit node]
+
+
+func _place_marker_props() -> void:
+	var t := terrain
+	var door := t.marker("hut_door")
+	var slots := [
+		["hut", door - Vector3(-0.87, 0, 3.0), 0.0, false],
+		["shrine", t.marker("shrine"), 0.0, false],
+		["offering_box", t.marker("offering_box"), 0.0, false],
+		["graves", t.marker("graves"), 0.0, false],
+		["dosojin", t.marker("dosojin"), 0.0, false],
+		["woodpile", t.marker("woodpile"), 0.0, false],
+		["fallen_branch", t.marker("fallen_branch"), 0.6, false],
+		["stump_axe", t.marker("choppable_tree") + Vector3(1.4, 0, 0.9), 0.3, false],
+		["kakehi", t.marker("spring") + Vector3(3.3, 0, 0.4), 0.0, false],
+		["signpost", Vector3(-16.4, 0, 19.0), 0.25, false],
+		["waymark", Vector3(8.4, 0, 17.4), -0.1, false],
+		["basket_tall", door + Vector3(-2.6, 0, 0.8), 0.4, false],
+		["basket_flat", door + Vector3(2.1, 0, 1.3), 0.0, false],
+		["straw_sheaves", Vector3(-22.3, 0, 13.4), 0.2, false],
+		["straw_heap", Vector3(-13.9, 0, 15.9), -0.3, false],
+	]
+	for ds in dressing.asset_slots:
+		slots.append([ds[0], ds[1], ds[2], true])
+	# the graves' hooks carry the ten paper lanterns of the bon (lit at night)
+	if catalog.has("graves") and catalog.has("lantern_paper"):
+		var g := t.marker("graves")
+		g.y = t.height_at(g.x, g.z)
+		var hooks: Array = catalog["graves"].get("anchors", {}).get("hook", [])
+		for i in hooks.size():
+			var hk: Array = hooks[i]
+			slots.append(["lantern_paper", g + Vector3(hk[0], float(hk[1]) - 0.58, hk[2]), 0.0, true])
+			if i % 3 == 1:
+				dressing._light(g + Vector3(hk[0], float(hk[1]) - 0.4, float(hk[2]) + 0.3), Color(1.0, 0.74, 0.46), 1.2, 4.2)
+	var lean := pv_lean()
+	for sl in slots:
+		var nm: String = sl[0]
+		if not catalog.has(nm):
+			continue
+		var a: Dictionary = catalog[nm]
+		var p: Vector3 = sl[1]
+		var gy := t.height_at(p.x, p.z)
+		if not sl[3]:
+			p.y = gy
+		else:
+			# something hanging in the air leans with the thing it hangs from
+			p.z -= lean * maxf(p.y - gy, 0.0)
+		var base := _instance(String(a["scene"]))
+		if base == null:
+			continue
+		base.position = p
+		base.rotation.y = float(sl[2])
+		props_root.add_child(base)
+		var lit_path := String(a.get("variants", {}).get("lit", ""))
+		if lit_path != "":
+			var lit := _instance(lit_path)
+			if lit:
+				lit.position = p
+				lit.rotation.y = float(sl[2])
+				lit.visible = false
+				props_root.add_child(lit)
+				_lit_pairs.append([base, lit])
+		for fp in a.get("footprint", []):
+			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(sl[2]))
+			blockers.append([Vector3(p.x, 0, p.z) + off, float(fp[2])])
+		if nm == "offering_box":
+			var gl: Array = a.get("anchors", {}).get("glint", [0.0, 0.45, 0.0])
+			dressing.glints.append([p + Vector3(gl[0], gl[1], float(gl[2]) - lean * float(gl[1])), 0.0])
+
+
+func _instance(path: String) -> Node3D:
+	var ps: PackedScene = load(path)
+	if ps == null:
+		return null
+	return ps.instantiate() as Node3D
+
+
+## The time of day for the world, the dressing's lights and the lit variants of the lanterns.
+func _set_hours(h: float) -> void:
+	env.set_time(h)
+	if dressing:
+		dressing.set_time(h)
+	var on := h >= 18.4 or h <= 5.4
+	for lp in _lit_pairs:
+		(lp[0] as Node3D).visible = not on
+		(lp[1] as Node3D).visible = on
+
+
+## A dense evergreen crown casts one deep shade: a shadow-only body inside the camphor's crown fills
+## the gaps between its leaf masses in the shadow map. The leaf cards still cast the ragged rim, and
+## the ground draws the small sun flecks inside the shade (toon_terrain).
+func _crown_proxy(parent: Node3D, a: Dictionary) -> void:
+	var cr: Dictionary = a.get("crown", {})
+	if cr.is_empty():
+		return
+	var c: Array = cr["centre"]
+	var r := float(cr["radius"]) * 0.78
+	var base := float(cr["base"])
+	var top := float(a.get("height", base + r))
+	var cy := (base + top) * 0.5 + 0.5
+	var ry := (top - base) * 0.42
+	var sph := SphereMesh.new()
+	sph.radial_segments = 32
+	sph.rings = 12
+	var arr := sph.get_mesh_arrays()
+	var verts: PackedVector3Array = arr[Mesh.ARRAY_VERTEX]
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 4242
+	var ph := [rng.randf() * TAU, rng.randf() * TAU, rng.randf() * TAU]
+	for i in verts.size():
+		var v: Vector3 = verts[i] * 2.0
+		var ang := atan2(v.z, v.x)
+		var lob: float = 1.0 + 0.12 * sin(3.0 * ang + ph[0]) + 0.08 * sin(5.0 * ang + ph[1]) + 0.05 * sin(7.0 * ang + ph[2])
+		verts[i] = Vector3(v.x * r * lob + float(c[0]), v.y * ry + cy, v.z * r * lob + float(c[2]))
+	arr[Mesh.ARRAY_VERTEX] = verts
+	var mesh := ArrayMesh.new()
+	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+	var mi := MeshInstance3D.new()
+	mi.name = "CrownShadow"
+	mi.mesh = mesh
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
+	parent.add_child(mi)
 
 
 ## Big canopies fade over a wide disc while she is under them (foreground that thins out).
@@ -191,6 +347,10 @@ func _scale_cutaway(n: Node, k: float) -> void:
 		for m in mats:
 			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("foliage"):
 				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
+				# a dense evergreen crown: deep shade under it, the light gets through only as the
+				# small sun flecks the ground draws (toon_terrain), not as big holes
+				(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.3)
+				(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.0)
 	for c in n.get_children():
 		_scale_cutaway(c, k)
 
@@ -300,10 +460,12 @@ func _follow_saji(dt: float) -> void:
 func _make_route() -> void:
 	for m in ["hut_door", "offering_box", "camphor_south", "lookout"]:
 		pass
-	var pts := [Vector2(-18.0, 15.4), Vector2(-15.0, 11.0), Vector2(-12.0, 9.6), Vector2(-10.0, 9.8),
-		Vector2(-5.0, 10.2), Vector2(1.0, 10.6), Vector2(4.0, 10.6), Vector2(1.0, 11.0), Vector2(-6.0, 12.6),
-		Vector2(-12.0, 15.6), Vector2(-18.4, 18.4), Vector2(-19.4, 22.0), Vector2(-20.4, 28.0),
-		Vector2(-21.8, 33.5), Vector2(-22.8, 38.0), Vector2(-23.5, 41.4)]
+	# out of the hut's door, across the yard to the shrine under the great camphor, along its front,
+	# back past the yard and down the spur to the lookout
+	var pts := [Vector2(-18.0, 15.4), Vector2(-14.6, 11.4), Vector2(-11.2, 10.0), Vector2(-7.0, 10.1),
+		Vector2(-3.4, 10.4), Vector2(-6.2, 13.4), Vector2(-11.0, 16.2), Vector2(-16.2, 17.2),
+		Vector2(-19.0, 19.6), Vector2(-19.6, 23.0), Vector2(-20.4, 28.0), Vector2(-21.8, 33.5),
+		Vector2(-22.8, 38.0), Vector2(-23.5, 41.6)]
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))
@@ -347,10 +509,85 @@ func _set_view(i: int) -> void:
 	env.rain = float(args.get("rain", "0"))
 	if v.size() > 3:
 		env.rain = v[3]
-	env.set_time(v[2])
-	if dressing:
-		dressing.set_time(v[2])
+	_set_hours(v[2])
 	pv.follow(_cam_target, {"cut": true})
+
+
+## The lookout: standing still on it for a moment she looks out (W3Vista). A/D turn her head, W/S
+## (or walking keys after a turn) bring the top-down view back.
+func _update_vista(dt: float, dir: Vector2) -> void:
+	var lk := terrain.marker("lookout")
+	var near := Vector2(her.pos.x - lk.x, her.pos.z - lk.z).length() < 1.9
+	if not vista.active:
+		if near and dir == Vector2.ZERO and her.speed < 0.05 and _still >= 0.0:
+			_still += dt
+			if _still > 0.8:
+				vista.active = true
+				vista.yaw = 180.0
+				vista.yaw_target = 180.0
+		elif not near:
+			_still = 0.0
+	else:
+		if not route.is_empty():
+			_autopan(dt)
+		else:
+			if _key(KEY_A) or _key(KEY_LEFT):
+				vista.yaw_target -= 55.0 * dt
+			if _key(KEY_D) or _key(KEY_RIGHT):
+				vista.yaw_target += 55.0 * dt
+			if _key(KEY_W) or _key(KEY_S) or _key(KEY_UP) or _key(KEY_DOWN):
+				vista.active = false
+				_still = -1.0         # she has to step off before she looks out again
+	if _still < 0.0 and not near:
+		_still = 0.0
+	vista.update(dt)
+
+
+## Recordings: once she looks out, the head turns east to the kiln's smoke, back across the lower
+## layer to the waterfall in the west, and settles on the road going down into the mist.
+const AUTOPAN := [[0.0, 180.0], [2.6, 180.0], [5.4, 110.0], [6.6, 110.0], [9.4, 181.0], [11.2, 181.0]]
+var _pan_t := 0.0
+
+
+func _autopan(dt: float) -> void:
+	_pan_t += dt
+	if args.has("route_quit") and _pan_t > float(AUTOPAN[-1][0]) + 1.5:
+		get_tree().quit()
+	for i in AUTOPAN.size() - 1:
+		var a: Array = AUTOPAN[i]
+		var b: Array = AUTOPAN[i + 1]
+		if _pan_t >= float(a[0]) and _pan_t <= float(b[0]):
+			var t := smoothstep(float(a[0]), float(b[0]), _pan_t)
+			vista.yaw_target = lerpf(float(a[1]), float(b[1]), t)
+			vista.yaw = vista.yaw_target
+			return
+	vista.yaw_target = float(AUTOPAN[-1][1])
+
+
+func _set_vview(i: int) -> void:
+	var v: Array = _shot_list[i]
+	env.rain = float(v[2])
+	_set_hours(float(v[1]))
+	vista.active = true
+	vista.amount = 1.0
+	vista.yaw = float(v[0])
+	vista.yaw_target = float(v[0])
+
+
+## A still: the window as shown (graded, at the window's size) and the native frame taken from it
+## (one pixel per native pixel, the grading included).
+func _save_shot(base: String) -> void:
+	var win := get_viewport().get_texture().get_image()
+	win.save_png(base + "_win.png")
+	var s := pv.scale_factor
+	var lg := Vector2i(pv.logical)
+	var nat := Image.create(lg.x, lg.y, false, Image.FORMAT_RGB8)
+	var off := Vector2i(pv.margin) + Vector2i(s / 2, s / 2)
+	for y in lg.y:
+		for x in lg.x:
+			nat.set_pixel(x, y, win.get_pixel(mini(off.x + x * s, win.get_width() - 1), mini(off.y + y * s, win.get_height() - 1)))
+	nat.save_png(base + ".png")
+	print("SHOT ", base, " ", lg, " x", s)
 
 
 func _process(dt: float) -> void:
@@ -359,13 +596,19 @@ func _process(dt: float) -> void:
 	if not route.is_empty():
 		_drive_route()
 	var dir := _input_dir()
+	_update_vista(dt, dir)
+	if vista.active or vista.amount > 0.0:
+		dir = Vector2.ZERO
 	her.step(dt, dir)
 	_follow_saji(dt)
 	_lay(her_shadow, her.pos)
 	_lay(saji_shadow, saji.pos)
 	# aerial perspective measured from her: the land that falls away below her hazes over
 	_haze_h = lerpf(_haze_h, her.pos.y, clampf(dt * 1.5, 0.0, 1.0)) if frame > 1 else her.pos.y
-	RenderingServer.global_shader_parameter_set("w3_haze", Vector4(_haze_h, 1.5, 34.0, 0.8))
+	# (it starts well below her, so the cuts and dips near her keep their colour; the plain below
+	# the lookout, 40 m down, is in full haze)
+	var haze_max := 0.0 if args.has("nohaze") else 0.78
+	RenderingServer.global_shader_parameter_set("w3_haze", Vector4(_haze_h, 5.0, 40.0, haze_max))
 	var chest := her.chest()
 	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 26.0))
 	pv.update_camera(dt)
@@ -385,13 +628,35 @@ func _process(dt: float) -> void:
 			var outdir := String(args["shots"]).split(":", true, 1)[0]
 			var v: Array = _shot_list[_shot_i]
 			var base := "%s/v%02d_%d_%d_%sh" % [outdir, _shot_i, int(v[0]), int(v[1]), String.num(v[2], 1)]
-			pv.vp.get_texture().get_image().save_png(base + ".png")
-			print("SHOT ", base)
+			_save_shot(base)
 			_shot_i += 1
 			if _shot_i >= _shot_list.size():
 				get_tree().quit()
 				return
 			_set_view(_shot_i)
+		return
+	if args.has("vshots"):
+		# stills of the view from the lookout: --vshots=dir:bearing,hour[,rain];...
+		if _shot_list.is_empty():
+			var vspec := String(args["vshots"]).split(":", true, 1)
+			for v in vspec[1].split(";"):
+				var p := v.split(",")
+				var e := [float(p[0]), float(p[1]) if p.size() > 1 else 10.0]
+				e.append(float(p[2]) if p.size() > 2 else 0.0)
+				_shot_list.append(e)
+			var lk := terrain.marker("lookout")
+			her.place(lk)
+			saji.place(lk + Vector3(-0.9, 0, -0.5))
+			_set_vview(0)
+		if frame % int(args.get("settle", "40")) == 0:
+			var vdir := String(args["vshots"]).split(":", true, 1)[0]
+			var vv: Array = _shot_list[_shot_i]
+			_save_shot("%s/vista%02d_%d_%sh" % [vdir, _shot_i, int(vv[0]), String.num(vv[1], 1)])
+			_shot_i += 1
+			if _shot_i >= _shot_list.size():
+				get_tree().quit()
+				return
+			_set_vview(_shot_i)
 		return
 	if args.has("shot") and frame == int(args.get("frames", "30")):
 		var path: String = args["shot"]

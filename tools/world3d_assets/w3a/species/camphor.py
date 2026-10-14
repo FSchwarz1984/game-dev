@@ -27,18 +27,44 @@ from ..tube import Spine, tube
 SEED = 7001
 NAME = 'camphor_great'
 
-# ------------------------------------------------------------------------------- the trunk
-BUTTRESS = [  # angle (rad, 0 = north, pi/2 = west, pi = south, 3pi/2 = east), reach at ground (m), width
-    (0.40, 0.80, 0.55), (1.45, 1.10, 0.50), (2.35, 1.00, 0.50), (3.14, 0.45, 0.62),
-    (3.95, 1.00, 0.50), (4.85, 1.15, 0.50), (5.90, 0.70, 0.55),
+# ------------------------------------------------------------------------------- the base
+# The trunk, its buttress roots and the crotch where the limbs leave are one signed-distance
+# surface (w3a/sdf.py): every junction gets a fillet, the roots leave the trunk as tall buttresses,
+# arch down, run over the ground (fitted to the saddle terrain) and dive in at different lengths.
+GRID_H = 0.15                      # voxel (m) of the base field
+K_MAJOR = 0.42                     # blend radius trunk / roots / limbs (m)
+K_MINOR = 0.2                      # small roots and burls
+BASE_TRIS = 6600                   # decimation target for the base surface
+TWIST = 0.08                       # rad per metre
+ROPE_Y = 2.45                      # shimenawa height
+
+TRUNK_PTS = [[0, -2.4, 0], [0, -0.9, 0], [0.05, 0.6, 0.05], [0.25, 2.4, -0.05], [0.4, 4.2, -0.15], [0.35, 5.6, -0.25],
+             [0.3, 6.6, -0.3]]
+TRUNK_R = [3.2, 3.15, 3.05, 2.85, 2.6, 2.3, 2.0]
+TRUNK_TOP = 6.5
+
+# theta: 0 north (-z), pi/2 west (-x), pi south (toward the camera), 3pi/2 east.
+# The layout around the tree limits the reach: the road passes 9 m east, the shrine terrace starts
+# 7 m west-south-west, her path runs 10 m south, in front of the graves.
+ROOTS = [  # theta, start height on the trunk, radius, reach from the axis (m), meander (m), knee, fork
+    (0.30, 2.0, 0.95, 7.4, 0.7, False, None),
+    (1.10, 2.3, 1.05, 8.0, -0.9, False, (0.55, 0.75, 3.0)),
+    (1.86, 1.8, 0.85, 6.0, 0.5, False, None),
+    (2.52, 2.2, 0.95, 7.8, -0.7, True, None),
+    (3.32, 1.6, 0.72, 5.3, 0.45, False, None),
+    (3.96, 2.4, 1.0, 7.5, 0.9, False, (0.5, -0.7, 2.6)),
+    (4.66, 2.1, 1.0, 7.0, -0.6, False, None),
+    (5.46, 2.0, 0.9, 6.6, 0.5, False, None),
+]
+MINOR_ROOTS = [  # theta at the trunk foot, radius, reach, meander
+    (3.64, 0.26, 5.4, -0.5), (5.05, 0.28, 5.8, 0.6), (2.20, 0.24, 4.9, 0.4), (0.72, 0.26, 5.2, -0.4),
+    (2.95, 0.2, 4.4, 0.3),
 ]
 BURLS = [  # angle, height (m), amplitude (m), angular width, vertical width
-    (2.55, 2.9, 0.42, 0.30, 0.7), (3.95, 1.9, 0.30, 0.25, 0.55), (1.6, 3.6, 0.36, 0.28, 0.6),
-    (4.9, 3.2, 0.28, 0.22, 0.5), (3.2, 4.3, 0.22, 0.20, 0.45),
+    (2.55, 3.3, 0.40, 0.30, 0.7), (4.0, 3.6, 0.30, 0.25, 0.55), (1.6, 3.9, 0.36, 0.28, 0.6),
+    (4.9, 3.4, 0.28, 0.22, 0.5), (3.25, 4.4, 0.24, 0.20, 0.45),
 ]
-HOLLOW_AT = (2.98, 0.75, 0.42, 0.34, 0.85)   # angle, centre height, depth, angular half-width, half-height
-TWIST = 0.08                                  # rad per metre
-ROPE_Y = 2.35                                 # shimenawa height
+HOLLOW = (2.95, 0.8, 0.62, 0.85, 0.75)   # angle, centre height, half-width, half-height, depth
 
 
 def _angdiff(a, b):
@@ -46,40 +72,324 @@ def _angdiff(a, b):
 
 
 def _theta(x, z):
-    """Ring angle of a direction (0 = north, pi/2 = west), as the tube frames use for the trunk."""
+    """Angle about the trunk (0 = north, pi/2 = west)."""
     t = np.arctan2(-x, -z)
     return np.where(t < 0, t + 2 * math.pi, t)
 
 
-def trunk_radius(theta, y, r0):
+def _dir(theta):
+    return np.array([-math.sin(theta), 0.0, -math.cos(theta)])
+
+
+def trunk_ref(y):
+    return np.interp(y, [p[1] for p in TRUNK_PTS], TRUNK_R)
+
+
+def trunk_R(theta, y):
     theta = np.asarray(theta, np.float64)
+    y = np.asarray(y, np.float64)
     th = theta + TWIST * y
-    r = r0 * (1 + 0.06 * np.sin(5 * th + 0.7) + 0.04 * np.sin(3 * th + 2.1))
-    g = math.exp(-max(y, 0) / 1.35) ** 1.3 * (1 if y > -0.4 else math.exp((y + 0.4) * 0.4))
-    for a, reach, w in BUTTRESS:
-        d = _angdiff(theta, a)
-        r = r + reach * np.exp(-(d / w) ** 2) * g
-    r = r + 0.75 * g
-    for a, h, amp, wa, wh in BURLS:
-        d = _angdiff(th, a)
-        r = r + amp * np.exp(-(d / wa) ** 2 - ((y - h) / wh) ** 2)
-    a, h, depth, wa, wh = HOLLOW_AT
-    d = _angdiff(theta, a)
-    r = r - depth * np.exp(-(d / wa) ** 4 - ((y - h) / wh) ** 4)
-    return r
+    r = trunk_ref(y) * (1 + 0.06 * np.sin(5 * th + 0.7) + 0.04 * np.sin(3 * th + 2.1) + 0.02 * np.sin(8 * th + 1.3))
+    r = r + 0.42 * np.exp(-np.maximum(y, 0) / 0.9)
+    f = np.clip((y - 5.3) / (TRUNK_TOP - 5.3), 0, 1)
+    return r * np.sqrt(np.maximum(1 - f * f, 0.0))
 
 
-def trunk_rfun(theta, k, frac, spine):
-    return trunk_radius(theta, float(spine.pos[k, 1]), float(spine.rad[k]))
+def root_spine(theta, h0, r0, reach, meander, knee, ground, R):
+    """Control points and radii of a buttress root: inside the trunk at h0, down the trunk as a
+    tall buttress, a hump where it meets the ground, then a low ridge half sunk in the soil that
+    thins, wanders and fades into the ground at `reach` (heights relative to the ground below)."""
+    d = _dir(theta)
+    side = np.array([d[2], 0.0, -d[0]])
+    rt = float(trunk_R(theta, 0.6))
+    ph = R.uniform(0, 2 * math.pi)
+    f2 = R.uniform(2.2, 3.4)
+    pts, rad = [], []
+
+    def at(rho, lam, y_rel=None, y_abs=None):
+        p = d * rho + side * lam
+        y = y_abs if y_abs is not None else float(ground(p[0], p[2])) + y_rel
+        return np.array([p[0], y, p[2]])
+    pts.append(at(rt - 0.75 * r0, 0.0, y_abs=h0))
+    rad.append(r0 * 0.9)
+    pts.append(at(rt + 0.2 * r0, 0.0, y_abs=h0 * 0.45 + 0.15))
+    rad.append(r0)
+    pts.append(at(rt + 0.75 * r0 + 0.45, 0.05 * meander, y_rel=0.3 * r0))           # the hump
+    rad.append(r0 * 0.82)
+    rho1 = rt + 1.5 * r0 + 0.9
+    pts.append(at(rho1, 0.15 * meander, y_rel=0.02))
+    rad.append(r0 * 0.58)
+    n = 4
+    for i in range(n):
+        t = (i + 1) / n
+        rho = rho1 + (reach - rho1) * t
+        lam = meander * (0.15 + 0.85 * math.sin(math.pi * t * 0.9 + 0.3)) + 0.25 * math.sin(f2 * t * math.pi + ph)
+        rr = r0 * (0.46 - 0.26 * t) * (1 + R.uniform(-0.1, 0.1))
+        y_rel = -0.3 * rr - 0.1 * t
+        if knee and i == 1:
+            y_rel = -1.0 * rr
+        if knee and i == 2:
+            y_rel = 0.0
+        pts.append(at(rho, lam, y_rel=y_rel))
+        rad.append(rr)
+    pts.append(at(reach + 0.7, lam + 0.2 * meander, y_rel=-1.2 * rad[-1] - 0.3))
+    rad.append(rad[-1] * 0.85)
+    return pts, rad
 
 
-TRUNK_PTS = [[0, -0.9, 0], [0.05, 0.6, 0.05], [0.25, 2.4, -0.05], [0.4, 4.2, -0.15], [0.35, 5.6, -0.25]]
-TRUNK_R = [3.15, 3.05, 2.85, 2.6, 2.3]
+def base_parts(R, ground, limb_defs):
+    """The parts of the base field: trunk (+ burls), roots, the first metres of each limb."""
+    from .. import sdf as SD
+    trunk = SD.TrunkSDF('trunk', TRUNK_PTS, trunk_R, trunk_ref, y_lo=-2.6, y_top=TRUNK_TOP + 0.2)
+    major = [trunk]
+    minor = []
+    roots = []
+    for i, (th, h0, r0, reach, mea, knee, fork) in enumerate(ROOTS):
+        pts, rad = root_spine(th, h0, r0, reach, mea, knee, ground, R)
+        s_tall = 1.4 + 0.9 * r0
+
+        def sv(s, s_tall=s_tall):
+            t = float(np.clip((s - 0.3 * s_tall) / (1.2 * s_tall), 0, 1))
+            return 1.4 + (0.68 - 1.4) * t * t * (3 - 2 * t)
+
+        def sl(s, s_tall=s_tall):
+            t = float(np.clip((s - 0.3 * s_tall) / (1.2 * s_tall), 0, 1))
+            return 0.7 + (1.25 - 0.7) * t * t * (3 - 2 * t)
+        p = SD.TubeSDF(f'root{i}', pts, rad, group='major', sv=sv, sl=sl, ribs=(3, 0.1, 0.25 + 0.05 * i))
+        major.append(p)
+        roots.append(p)
+        if fork is not None:                      # a side root splitting off along the way
+            f, dth, ln = fork
+            q, tg, rr = p.sp.point_at(f)
+            dd = normalize(tg * np.array([1, 0, 1]))
+            sd = np.array([dd[2], 0, -dd[0]])
+            dn = normalize(dd * math.cos(dth) + sd * math.sin(dth))
+            fpts = [q + np.array([0, 0.05, 0])]
+            for k in range(1, 4):
+                pp = q + dn * ln * k / 3 + sd * 0.25 * math.sin(k)
+                fpts.append(np.array([pp[0], float(ground(pp[0], pp[2])) + (-0.08 if k < 3 else -0.6), pp[2]]))
+            fr = [rr * 0.7, rr * 0.55, rr * 0.42, rr * 0.3]
+            fp = SD.TubeSDF(f'root{i}f', fpts, fr, group='minor', sv=lambda s: 0.7, sl=lambda s: 1.2,
+                            ribs=(3, 0.1, 0.3))
+            minor.append(fp)
+            roots.append(fp)
+    for j, (th, r0, reach, mea) in enumerate(MINOR_ROOTS):
+        d = _dir(th)
+        side = np.array([d[2], 0.0, -d[0]])
+        rt = float(trunk_R(th, 0.3))
+        pts = []
+        for k, t in enumerate((0.0, 0.25, 0.5, 0.75, 0.9, 1.0)):
+            rho = rt - 0.3 + (reach - rt + 0.3) * t
+            pp = d * rho + side * (mea * math.sin(t * math.pi) + 0.15 * math.sin(t * 7.0 + j))
+            y = float(ground(pp[0], pp[2])) + (0.2 if k == 0 else (-0.25 * r0 if k < 5 else -0.6))
+            pts.append(np.array([pp[0], y, pp[2]]))
+        p = SD.TubeSDF(f'minor{j}', pts, [r0 * 1.5, r0, r0 * 0.9, r0 * 0.75, r0 * 0.6, r0 * 0.5], group='minor',
+                       sv=lambda s: 0.75, sl=lambda s: 1.2, ribs=(2, 0.1, 0.4))
+        minor.append(p)
+        roots.append(p)
+    for k, (a, h, amp, wa, wh) in enumerate(BURLS):
+        rr = float(trunk_R(a, h))
+        dd = _dir(a + TWIST * 0.0)
+        c = dd * (rr - 0.55 * amp * 1.8 + amp) + np.array([0, h, 0])
+        lat = np.array([dd[2], 0, -dd[0]])
+        minor.append(SD.EllipsoidSDF(f'burl{k}', c, (wa * rr * 0.9, wh, amp * 1.8),
+                                     axes=[lat, [0, 1, 0], dd], family='trunk'))
+    limbs = []
+    for name, (pts, rr, s_cut) in limb_defs.items():
+        p = SD.TubeSDF('limb_' + name, pts, rr, group='major', uv_mode='front', uv_ref=-WD.view_back_upright(),
+                       s_end=s_cut, end_taper=(s_cut - 0.8, s_cut, 0.84), ribs=(4, 0.04, 0.1))
+        major.append(p)
+        limbs.append(p)
+    a, h, hw, hh, dep = HOLLOW
+    dd = _dir(a)
+    rr = float(trunk_R(a, h))
+    hollow = SD.EllipsoidSDF('hollow', dd * (rr + 0.2 - dep * 0.45) + np.array([0, h, 0]), (hw, hh, dep),
+                             axes=[[dd[2], 0, -dd[0]], [0, 1, 0], dd])
+    return trunk, roots, limbs, major, minor, hollow
 
 
-def _trunk_step(f):
-    y = TRUNK_PTS[0][1] + f * (TRUNK_PTS[-1][1] - TRUNK_PTS[0][1])
-    return 0.18 if y < 1.7 else 0.42
+def limb_cut(L_pts, L_r, parents):
+    """Arc length along a limb where it is well clear of the parts it grows from: the blended
+    base takes the limb up to there."""
+    from .. import sdf as SD
+    sp = Spine(L_pts, L_r, step=0.1)
+    for s, q, r in zip(sp.s, sp.pos, sp.rad):
+        if all(float(p.dist(q[None, :])[0]) > r * 1.05 for p in parents):
+            return float(s)
+    return float(sp.length * 0.5)
+
+
+def _base_key(M):
+    """Cache key of the base: its code, the limbs, the crown masses (they shade it) and the ground."""
+    import hashlib
+    from .. import terrain as TE
+    h = hashlib.sha1()
+    here = os.path.dirname(os.path.abspath(__file__))
+    for f in (os.path.join(here, '..', 'sdf.py'), os.path.join(here, '..', 'tube.py'), os.path.join(here, '..', 'cards.py')):
+        h.update(open(f, 'rb').read())
+    src = open(os.path.abspath(__file__), encoding='utf-8').read()
+    h.update(src[src.index('-' * 40 + ' the base'):src.index('-' * 40 + ' the crown')].encode())
+    h.update(repr(LIMBS).encode())
+    h.update(repr([(m.c.tolist(), m.r.tolist(), m.flat, m.sag, m.yaw) for m in M]).encode())
+    hp = os.path.join(TE.SADDLE, 'height.png')
+    if os.path.exists(hp):
+        h.update(open(hp, 'rb').read())
+    return h.hexdigest()[:16]
+
+
+def base_mesh(R, M, ground):
+    """The blended base (cached in tools/world3d_assets/out/cache: the field and the decimation take
+    most of a minute; the cache only saves time, the result is the same)."""
+    import pickle
+    from .. import sdf as SD
+    cdir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'out', 'cache')
+    os.makedirs(cdir, exist_ok=True)
+    path = os.path.join(cdir, f'camphor_base_{_base_key(M)}.pkl')
+    if os.path.exists(path):
+        d = pickle.load(open(path, 'rb'))
+        trunk, roots, limbs, major, minor, hollow = base_parts(R, ground, d['defs'])
+        md = MeshData()
+        md.add(d['p'], d['n'], d['uv'], d['idx'], uv2=d['uv2'], col=d['col'])
+        grid = SD.Grid(d['lo'], d['lo'] + (np.array(d['n_grid']) - 1) * d['h'], d['h'])
+        return md, dict(grid=grid, F=d['F'].astype(np.float64), trunk=trunk, roots=roots, limbs=limbs,
+                        defs=d['defs'], stats=d['stats'])
+    md, base = _base_mesh(R, M, ground)
+    base['F'] = base['F'].astype(np.float32).astype(np.float64)     # the same values the cache gives back
+    a = md.arrays()
+    g = base['grid']
+    pickle.dump({'p': a['p'], 'n': a['n'], 'uv': a['uv'], 'idx': a['idx'], 'uv2': a['uv2'], 'col': a['col'],
+                 'F': base['F'].astype(np.float32), 'lo': g.lo, 'h': g.h, 'n_grid': [int(x) for x in g.n],
+                 'defs': base['defs'], 'stats': base['stats']}, open(path, 'wb'))
+    return md, base
+
+
+def _base_mesh(R, M, ground):
+    """The blended base: field, surface nets, projection, decimation, per-owner bark mapping,
+    welded seams, colour / AO / moss. Returns (MeshData, parts, field info)."""
+    from .. import sdf as SD
+    from ..core import fbm3
+    # which limbs start in the base, and how far the base takes them
+    probe = SD.TrunkSDF('trunk', TRUNK_PTS, trunk_R, trunk_ref, y_lo=-2.6, y_top=TRUNK_TOP + 0.2)
+    defs = {}
+    lim = {n: (np.array(p), np.array(r)) for n, p, r, _ in LIMBS}
+    for name in ('E', 'W', 'S', 'NW', 'NE', 'N', 'L'):
+        pts, rr = lim[name]
+        s_exit = limb_cut(pts, rr, [probe])
+        defs[name] = (pts, rr, s_exit + 1.6)
+    from .. import sdf as SD2
+    parents = {'SEs': 'S', 'SWs': 'S', 'SEu': 'L', 'SWu': 'L'}
+    for name, par in parents.items():
+        pts, rr = lim[name]
+        ppts, prr = lim[par]
+        pp = SD2.TubeSDF('p', ppts, prr)
+        s_exit = limb_cut(pts, rr, [pp])
+        defs[name] = (pts, rr, s_exit + 1.2)
+        # the parent's base part must reach past the junction
+        q = pts[0]
+        sp = Spine(ppts, prr, step=0.1)
+        s_j = float(sp.s[int(np.argmin(np.linalg.norm(sp.pos - q, axis=1)))])
+        p0 = defs[par]
+        defs[par] = (p0[0], p0[1], max(p0[2], s_j + 1.6))
+    trunk, roots, limbs, major, minor, hollow = base_parts(R, ground, defs)
+    lo = np.array([-10.0, -2.6, -10.0])
+    hi = np.array([10.0, 12.6, 10.0])
+    for p in major + minor:
+        a, b = p.bbox()
+        lo = np.minimum(lo, a - 0.6)
+        hi = np.maximum(hi, b + 0.6)
+    lo[1] = max(lo[1], -2.6)
+    grid = SD.Grid(lo, hi, GRID_H)
+    Fa = SD.smin_exp_field(grid, major, K_MAJOR)
+    Fb = SD.min_field(grid, minor, fill=10.0)
+    F = SD.smin_poly(Fa, Fb, K_MINOR)
+    sl, X = grid.box(hollow.bbox()[0] - 0.4, hollow.bbox()[1] + 0.4)
+    F[sl] = SD.smax_poly(F[sl], -hollow.dist(X), 0.16)
+    # bark-scale lumps: displaced surface (less on thin parts)
+    _, Xall = grid.box(grid.lo, grid.lo + (grid.n - 1) * grid.h)
+    nz = (fbm3(Xall[..., 0] / 1.3, Xall[..., 1] / 1.3, Xall[..., 2] / 1.3, octaves=3, seed=SEED) - 0.5) * 0.2 \
+        + (fbm3(Xall[..., 0] / 0.45, Xall[..., 1] / 0.45, Xall[..., 2] / 0.45, octaves=2, seed=SEED + 5) - 0.5) * 0.07
+    F = F + nz
+    del Xall
+    V, T = SD.surface_nets(F, grid)
+    # drop what is well under the ground
+    gy = ground(V[:, 0], V[:, 2])
+    under = V[:, 1] < gy - 0.45
+    T = T[~np.all(under[T], axis=1)]
+    V, T, _ = SD.compact(V, T)
+    V = SD.project(V, F, grid, iters=3)
+    keep = SD.boundary_vertices(T, len(V))
+    V = SD.taubin(V, T, iters=3, keep=keep)
+    V = SD.project(V, F, grid, iters=2, keep=keep)
+    n_raw = len(T)
+    V, T, _ = SD.decimate(V, T, BASE_TRIS)
+    keep = SD.boundary_vertices(T, len(V))
+    V = SD.project(V, F, grid, iters=2, keep=keep)
+    from scipy import ndimage
+    Fs = ndimage.gaussian_filter(F, 0.9)
+    N = normalize(grid.gradient(Fs, V, eps=grid.h))
+    # owners: the part each triangle belongs to (its bark mapping)
+    parts = [trunk] + roots + limbs
+    fam = {p.name: i for i, p in enumerate(parts)}
+    cen = V[T].mean(axis=1)
+    D = np.stack([p.dist(cen) for p in parts], axis=1)
+    for p in minor:
+        if p.family == 'trunk':              # burls belong to the trunk's mapping
+            D[:, 0] = np.minimum(D[:, 0], p.dist(cen))
+    owner = np.argmin(D, axis=1)
+    uv_fns = [p.uv for p in parts]
+    wraps = [True] * len(parts)
+    cuv = SD.corner_uvs(V, T, owner, uv_fns, wraps)
+    V2, T2, UV, src = SD.weld(V, T, cuv)
+    N2 = N[src]
+    # crotch measure: near two different parts at once
+    Dv = np.stack([p.dist(V2) for p in parts], axis=1)
+    Dv[:, 0] = np.minimum(Dv[:, 0], np.min(np.stack([p.dist(V2) for p in minor if p.family == 'trunk'], 1), axis=1))
+    Ds = np.sort(np.maximum(Dv, 0), axis=1)
+    crotch = np.exp(-Ds[:, 1] / 0.45) * np.clip(1 - Ds[:, 0] / 0.5, 0, 1)
+    # cavity AO from the field along the normal
+    ao_f = np.ones(len(V2))
+    for i, dl in enumerate((0.25, 0.55, 1.0, 1.7)):
+        f = grid.sample(F, V2 + N2 * dl)
+        ao_f -= np.clip(dl - f, 0, None) / dl * (0.5 ** i) * 0.55
+    ao_f = np.clip(ao_f, 0.25, 1)
+    own_v = np.zeros(len(V2), np.int64)
+    own_v[T2.reshape(-1)] = np.repeat(owner, 3)
+    kinds = np.array(['trunk'] + ['root'] * len(roots) + ['limb'] * len(limbs))[own_v]
+    gy = ground(V2[:, 0], V2[:, 2])
+    hrel = V2[:, 1] - gy
+    vis = CD.sky_visibility(V2, N2, M, n_rays=16)
+    ao = ao_f ** 0.7 * (1 - 0.25 * crotch) * (1 - 0.3 * np.clip((0.25 - hrel) / 0.4, 0, 1)) * (0.68 + 0.32 * vis)
+    ao = np.clip(ao, 0.22, 1.0)
+    col = np.ones((len(V2), 3))
+    g = np.clip((0.35 - hrel) / 0.5, 0, 1)[:, None]                      # earth at the foot
+    col = col * (1 - g) + np.array([0.80, 0.74, 0.64]) * g
+    damp = np.clip(-N2[:, 2] * 0.7 + 0.3, 0, 1) * np.clip(1.4 - V2[:, 1] / 4.0, 0, 1) * (kinds != 'limb')
+    col = col * (1 - 0.3 * damp[:, None]) + np.array([0.78, 0.86, 0.70]) * 0.3 * damp[:, None]
+    mossc = np.clip(crotch * 1.3, 0, 1)[:, None] * 0.45                 # moss pooled in the crotches
+    col = col * (1 - mossc) + np.array([0.66, 0.80, 0.50]) * mossc
+    moss = np.where(kinds == 'trunk', 0.1 + 0.4 * np.clip((V2[:, 1] - 4.4) / 1.2, 0, 1),
+                    np.where(kinds == 'root', 0.12 + 0.18 * np.clip(1.2 - hrel, 0, 1), 0.45))
+    moss = np.clip(moss + 0.85 * crotch + 0.25 * np.clip(-N2[:, 2], 0, 1) * (kinds != 'limb'), 0, 1)
+    md = MeshData()
+    C = np.concatenate([np.clip(col, 0, 1), ao[:, None]], axis=1)
+    md.add(V2, N2, UV * TEXEL_PER_M / 256.0, T2, uv2=np.stack([np.full(len(V2), 7.0), moss], 1), col=C)
+    stats = {'base_raw_tris': int(n_raw), 'base_tris': int(len(T2)), 'base_verts': int(len(V2)),
+             'grid': [int(x) for x in grid.n]}
+    return md, dict(grid=grid, F=F, trunk=trunk, roots=roots, limbs=limbs, defs=defs, stats=stats)
+
+
+TRIM = {}   # limb name -> arc length where its swept tube starts (filled by build)
+
+
+def _trim_limb(name, pts, rr, s0):
+    """A limb's control points from arc length s0 on (the blended base covers what is before)."""
+    sp = Spine(pts, rr, step=0.05)
+    s_ctrl = np.interp(np.arange(len(pts)), sp.t, sp.s)
+    q0, _, r0 = sp.point_at(s0 / sp.length)
+    keep = [i for i in range(len(pts)) if s_ctrl[i] > s0 + 0.5]
+    npts = [q0] + [pts[i] for i in keep]
+    nr = [r0] + [rr[i] for i in keep]
+    return npts, nr
 
 
 def _limb_step(r0):
@@ -90,8 +400,8 @@ def _limb_step(r0):
 # y = height - 0.819 * z): the south limbs rise steeply so their foliage stays above the trunk
 # and the shimenawa on screen, while the long low arms spread east and west.
 LIMBS = [  # name, control points, radii, moss
-    ('E', [[0.9, 4.3, 0.35], [4.6, 5.5, 1.1], [8.6, 6.3, 2.0], [12.4, 7.6, 2.4], [15.2, 8.8, 2.0], [16.6, 9.6, 1.0]], [1.35, 1.05, 0.8, 0.55, 0.36, 0.2], 0.7),
-    ('W', [[-1.0, 4.1, 0.45], [-4.9, 5.2, 1.4], [-9.1, 5.9, 2.2], [-12.8, 7.2, 2.6], [-15.4, 8.6, 2.0], [-16.8, 9.4, 0.8]], [1.4, 1.1, 0.82, 0.56, 0.36, 0.2], 0.7),
+    ('E', [[0.9, 4.3, 0.35], [4.4, 4.9, 1.4], [8.0, 6.7, 1.3], [11.4, 6.8, 2.9], [14.4, 8.6, 2.3], [16.6, 9.9, 1.0]], [1.35, 1.06, 0.8, 0.56, 0.36, 0.2], 0.7),
+    ('W', [[-1.0, 4.1, 0.45], [-4.5, 5.1, 1.7], [-8.2, 5.2, 1.2], [-11.6, 7.5, 2.9], [-14.8, 8.1, 2.5], [-16.8, 9.7, 0.9]], [1.4, 1.1, 0.82, 0.56, 0.36, 0.2], 0.7),
     ('S', [[0.2, 4.7, 1.0], [0.5, 8.0, 3.0], [0.9, 11.4, 5.6], [1.0, 14.2, 7.8], [0.8, 15.6, 9.4]], [1.12, 0.86, 0.6, 0.4, 0.24], 0.4),
     ('NW', [[-0.6, 4.9, -0.7], [-3.4, 7.6, -3.6], [-6.6, 9.4, -5.4], [-9.4, 10.4, -6.4]], [1.2, 0.9, 0.6, 0.34], 0.5),
     ('NE', [[0.7, 4.9, -0.6], [3.6, 7.8, -3.2], [6.8, 9.6, -4.8], [9.4, 10.6, -5.8]], [1.15, 0.86, 0.56, 0.3], 0.5),
@@ -104,43 +414,34 @@ LIMBS = [  # name, control points, radii, moss
 ]
 
 
-def skeleton(R):
+def skeleton(defs):
+    """The limbs as swept tubes, each starting a little inside the end of its blended base part
+    (radius eased from 96.5 % so the tube surfaces out of the blend at a shallow angle; bark v
+    continues from the base part)."""
+    from ..core import smoothstep
     limbs = []
-    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=72, cap_end=True,
-                    moss=0.35, step_fn=_trunk_step)
-    limbs.append(trunk)
     named = {}
     for name, pts, rr, moss in LIMBS:
+        s0 = 0.0
+        s_cut = 0.0
+        if name in defs:
+            s_cut = defs[name][2]
+            s0 = max(s_cut - 0.8, 0.0)
+            pts, rr = _trim_limb(name, pts, rr, s0)
+
+        def rfun(th, k, frac, sp, s0=s0, sc=s_cut):
+            return np.full(len(th), sp.rad[k] * (0.965 + 0.035 * float(smoothstep(sc, sc + 1.0, sp.s[k] + s0))))
         L = WD.Limb(name, pts, rr, kind='limb', moss=moss, n_around=14 if rr[0] > 0.9 else 10,
-                    step_fn=_limb_step(rr[0]))
+                    step_fn=_limb_step(rr[0]), rfun=rfun)
+        L.tags['s0'] = s0
         limbs.append(L)
         named[name] = L
-    # roots: each big buttress runs on as a root along the ground, rounded, curving, sinking in
-    for i, (a, reach, w) in enumerate(BUTTRESS):
-        if reach < 0.75:
-            continue
-        d = np.array([-math.sin(a), 0, -math.cos(a)])          # theta 0 = north (-z), pi/2 = west (-x)
-        side = np.array([d[2], 0, -d[0]])
-        bend = R.normal(0, 0.45)
-        L1 = R.uniform(2.2, 3.4)
-        r_in = 3.0 + reach * 0.6
-        pts = [d * (r_in - 0.9) + [0, 1.0, 0],
-               d * (r_in + L1 * 0.15) + side * bend * 0.1 + [0, 0.42, 0],
-               d * (r_in + L1 * 0.55) + side * bend * 0.5 + [0, 0.12, 0],
-               d * (r_in + L1) + side * bend * 0.95 + [0, -0.6, 0]]
-        rr = [0.95, 0.78, 0.6, 0.5]
-        limbs.append(WD.Limb(f'root{i}', pts, rr, kind='root', n_around=10, moss=0.45, cap_end=False,
-                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.55 - 0.1 * f))
-    # a few thin surface roots wandering between the big ones
-    for j, a in enumerate((0.85, 2.0, 4.3, 5.55)):
-        d = np.array([-math.sin(a), 0, -math.cos(a)])
-        side = np.array([d[2], 0, -d[0]])
-        bend = R.normal(0, 0.6)
-        pts = [d * 3.4 + [0, 0.2, 0], d * 4.6 + side * bend * 0.4 + [0, 0.06, 0], d * 5.8 + side * bend + [0, -0.12, 0]]
-        limbs.append(WD.Limb(f'sroot{j}', [p + np.array([0, -0.12, 0]) * (q == 2) for q, p in enumerate(pts)], [0.24, 0.2, 0.16],
-                             kind='root', n_around=7, moss=0.3, cap_end=False,
-                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.7))
     return limbs, named
+
+
+def _shift_v(L, dv):
+    for k in range(len(L.md.uv)):
+        L.md.uv[k] = L.md.uv[k] + np.array([0.0, dv])
 
 
 # ------------------------------------------------------------------------------- the crown
@@ -153,31 +454,33 @@ def masses():
     def add(c, r, **kw):
         kw.setdefault('seed', len(M) * 31 + 5)
         M.append(CD.Mass(c, r, **kw))
-    # tier A: shelves on the low arms
-    add((13.6, 9.6, 2.6), (5.0, 2.2, 4.6), flat=0.65, sag=0.5)          # E
-    add((9.4, 10.6, -5.6), (4.4, 2.3, 4.2), flat=0.6, sag=0.35)         # NE
-    add((-14.0, 9.4, 2.4), (5.2, 2.2, 4.6), flat=0.65, sag=0.5)         # W
-    add((-9.6, 10.4, -6.0), (4.4, 2.3, 4.2), flat=0.6, sag=0.35)        # NW
-    add((-1.0, 11.6, -11.0), (5.6, 2.4, 4.0), flat=0.6, sag=0.3)        # N
+    # tier A: lobes hanging on the low arms, at different heights, undersides lumpy (not shelves)
+    add((11.4, 9.0, 3.6), (4.2, 2.3, 3.8), flat=0.3, sag=0.7, lump=0.2)          # E inner
+    add((15.4, 10.6, 1.6), (3.4, 2.2, 3.4), flat=0.3, sag=0.8, lump=0.2)         # E outer
+    add((9.4, 10.9, -5.6), (4.4, 2.5, 4.2), flat=0.35, sag=0.4, lump=0.18)       # NE
+    add((-11.8, 8.7, 3.0), (4.4, 2.4, 3.9), flat=0.3, sag=0.7, lump=0.2)         # W inner
+    add((-15.6, 10.2, 1.2), (3.2, 2.1, 3.2), flat=0.3, sag=0.8, lump=0.2)        # W outer
+    add((-9.6, 10.2, -6.0), (4.4, 2.5, 4.2), flat=0.35, sag=0.4, lump=0.18)      # NW
+    add((-1.0, 11.8, -11.0), (5.6, 2.6, 4.0), flat=0.35, sag=0.3, lump=0.18)     # N
     # the south arch, high
-    add((0.8, 16.0, 8.5), (5.0, 2.4, 3.6), flat=0.6, sag=0.3)           # S
-    add((7.6, 12.6, 7.2), (3.6, 2.0, 3.0), flat=0.6, sag=0.3)           # SE
-    add((-7.4, 12.3, 7.4), (3.8, 2.0, 3.0), flat=0.6, sag=0.3)          # SW
+    add((0.8, 16.0, 8.5), (5.0, 2.6, 3.6), flat=0.4, sag=0.3, lump=0.16)         # S
+    add((7.4, 12.2, 7.2), (3.6, 2.2, 3.0), flat=0.35, sag=0.5, lump=0.18)        # SE
+    add((-7.6, 12.8, 7.4), (3.8, 2.2, 3.0), flat=0.35, sag=0.5, lump=0.18)       # SW
     # tier B
-    add((-7.0, 14.0, 1.6), (5.0, 2.6, 4.4), flat=0.5)
-    add((7.2, 14.2, 1.0), (5.2, 2.6, 4.4), flat=0.5)
-    add((0.0, 14.6, -6.4), (6.0, 2.8, 4.6), flat=0.5)
-    add((-1.0, 15.4, 4.6), (4.4, 2.4, 3.4), flat=0.5)
-    # tier C: the dome
-    add((-0.8, 18.6, -1.2), (6.4, 3.2, 5.4), flat=0.4, clumps=0.5)
-    add((4.8, 17.4, 2.2), (4.2, 2.6, 3.8), flat=0.4)
-    add((-5.6, 17.0, -3.0), (4.0, 2.6, 3.8), flat=0.4)
-    add((2.0, 21.0, -2.6), (2.8, 1.6, 2.6), flat=0.4, clumps=0.3)
-    # fringe
-    add((16.8, 9.2, -0.6), (2.4, 1.6, 2.4), flat=0.5, clumps=0.3)
-    add((-17.2, 9.0, -0.2), (2.3, 1.5, 2.3), flat=0.5, clumps=0.3)
-    add((11.6, 12.6, 6.0), (2.4, 1.6, 2.2), flat=0.5, clumps=0.3)
-    add((-11.0, 12.2, 6.2), (2.4, 1.6, 2.2), flat=0.5, clumps=0.3)
+    add((-7.0, 14.4, 1.6), (5.2, 2.8, 4.4), flat=0.35, lump=0.16)
+    add((7.4, 13.8, 1.0), (5.4, 2.8, 4.4), flat=0.35, lump=0.16)
+    add((0.0, 14.8, -6.4), (6.0, 3.0, 4.6), flat=0.35, lump=0.16)
+    add((-1.0, 15.6, 4.6), (4.4, 2.5, 3.4), flat=0.35, lump=0.16)
+    # tier C: the dome, one big head and two shoulders
+    add((-0.8, 18.8, -1.2), (6.8, 3.4, 5.6), flat=0.3, clumps=0.45, lump=0.14)
+    add((5.2, 17.0, 2.4), (3.8, 2.4, 3.4), flat=0.3, lump=0.18)
+    add((-5.8, 16.6, -3.2), (3.6, 2.4, 3.4), flat=0.3, lump=0.18)
+    add((2.4, 21.2, -2.8), (2.6, 1.5, 2.4), flat=0.3, clumps=0.3)
+    # fringe, breaking the outline
+    add((17.6, 8.8, -0.8), (2.2, 1.6, 2.2), flat=0.3, clumps=0.3, sag=0.5)
+    add((-17.8, 9.4, -0.4), (2.1, 1.5, 2.1), flat=0.3, clumps=0.3, sag=0.5)
+    add((12.0, 12.8, 6.4), (2.0, 1.5, 2.0), flat=0.3, clumps=0.3)
+    add((-11.4, 12.0, 6.6), (2.4, 1.6, 2.2), flat=0.3, clumps=0.3)
     return M
 
 
@@ -200,8 +503,12 @@ def fern_tile(W, seed):
 def leaf_tiles():
     S = SEED
     specs = {
-        'mass': [(LV.clumps, dict(W=22, seed=S + 100 + i, r=(2.0, 3.5), gloss=0.22, tips=7, fill=2.0, sep_p=0.55)) for i in range(10)],
-        'small': [(LV.clumps, dict(W=15, seed=S + 200 + i, r=(1.8, 3.0), gloss=0.22, tips=5, shape=0.40, sep_p=0.55)) for i in range(5)],
+        'mass': [(LV.clumps, dict(W=24, seed=S + 100 + i, r=(3.6, 5.2), gloss=0.3, tips=9, tip_len=(2.0, 3.4), fill=1.25,
+                                  sep_p=0.5, top_p=0.35, scallop=(6, 9))) for i in range(6)]
+              + [(LV.clumps, dict(W=24, seed=S + 150 + i, r=(3.0, 4.6), gloss=0.3, tips=10, tip_len=(2.0, 3.2), fill=1.4,
+                                  sep_p=0.5, top_p=0.3, scallop=(6, 9), ragged=0.3, lobes=3)) for i in range(4)],
+        'small': [(LV.clumps, dict(W=16, seed=S + 200 + i, r=(2.6, 3.8), gloss=0.3, tips=6, shape=0.40, fill=1.3,
+                                   sep_p=0.8, top_p=0.5)) for i in range(5)],
         'interior': [(LV.clumps, dict(W=24, seed=S + 300 + i, r=(2.6, 4.0), gloss=0.0, tips=2, shape=0.46, ragged=0.1, top_p=0.3, sep_p=0.4)) for i in range(2)],
         'fern': [(fern_tile, dict(W=12, seed=S + 500 + i)) for i in range(3)],
         'moss': [(LV.clumps, dict(W=9, seed=S + 600 + i, r=(1.2, 2.0), gloss=0.0, tips=2, shape=0.42, aspect=0.6, top_p=0.6)) for i in range(2)],
@@ -220,9 +527,9 @@ def _tint(hexcol, body=LV.BODY):
 
 def crown(M, sets):
     return CD.crown_cards(M, (0.0, 12.5, 0.5), (17.0, 7.0, 15.5), sets, seed=SEED + 9,
-                          base_tint=_tint('#5a7340'), young_tint=_tint('#73823f'), old_tint=_tint('#40634a'),
-                          base_y=7.0, top_y=21.0, overlap=1.7, clump_overlap=1.3, fill_density=0.7,
-                          max_cards=3400)
+                          base_tint=_tint('#566e3e'), young_tint=_tint('#6b7944'), old_tint=_tint('#3a5646'),
+                          base_y=7.0, top_y=21.0, overlap=1.05, clump_overlap=0.95, fill_density=0.6,
+                          interior_frac=0.5, env_k=0.2, clump_k=0.1, up_bias=0.2, max_cards=3300)
 
 
 def epiphytes(R, named, sets):
@@ -247,45 +554,26 @@ def epiphytes(R, named, sets):
 
 # ------------------------------------------------------------------------------- wood colour, ao, moss
 def wood_colour(P, N, L):
+    """Limbs and branches (the base has its own): damp green on the north side low down, paler
+    high up."""
     y = P[:, 1]
     col = np.ones((len(P), 3))
-    g = np.clip((0.55 - y) / 0.7, 0, 1)[:, None]                      # earth at the foot
-    col = col * (1 - g) + np.array([0.80, 0.74, 0.64]) * g
-    damp = np.clip(-N[:, 2] * 0.7 + 0.3, 0, 1) * np.clip(1.4 - y / 4.0, 0, 1)
-    if L.kind == 'limb':
-        damp = damp * 0.5 + np.clip(N[:, 1], 0, 1) * 0.35
+    damp = np.clip(-N[:, 2] * 0.7 + 0.3, 0, 1) * np.clip(1.4 - y / 6.0, 0, 1) * 0.5 + np.clip(N[:, 1], 0, 1) * 0.35
     col = col * (1 - 0.35 * damp[:, None]) + np.array([0.78, 0.86, 0.70]) * 0.35 * damp[:, None]
-    hi = np.clip((y - 8.0) / 8.0, 0, 1)[:, None]                      # high branches paler
+    hi = np.clip((y - 8.0) / 8.0, 0, 1)[:, None]
     col = col * (1 - hi * 0.3) + np.array([1.06, 1.04, 1.02]) * hi * 0.3
     return col
 
 
 def wood_ao(P, N, L):
-    y = P[:, 1]
     ao = np.ones(len(P))
-    if L.kind == 'trunk':
-        th = _theta(P[:, 0], P[:, 2])
-        fin = np.zeros(len(P))
-        for a, reach, w in BUTTRESS:
-            fin = np.maximum(fin, np.exp(-(_angdiff(th, a) / (w * 1.6)) ** 2))
-        low = np.exp(-np.maximum(y, 0) / 1.4)
-        ao -= 0.38 * (1 - fin) * low                                    # folds between the fins
-        a, h, depth, wa, wh = HOLLOW_AT
-        hk = np.exp(-(_angdiff(th, a) / (wa * 0.9)) ** 4 - ((y - h) / (wh * 0.9)) ** 4)
-        ao -= 0.6 * hk                                                  # the hollow
-        ao -= 0.3 * np.clip((y - 4.3) / 1.2, 0, 1)                      # the crotch
-    if L.kind in ('limb', 'branch'):
-        ao -= 0.18 * np.clip(-N[:, 1], 0, 1)
-        f = np.linalg.norm(P[:, [0, 2]], axis=1)
-        ao -= 0.25 * np.clip(1 - f / 3.5, 0, 1) * np.clip(-N[:, 1] + 0.5, 0, 1)
-    if L.kind == 'root':
-        ao -= 0.25 * np.clip(0.4 - y, 0, 1)
+    ao -= 0.18 * np.clip(-N[:, 1], 0, 1)
+    f = np.linalg.norm(P[:, [0, 2]], axis=1)
+    ao -= 0.2 * np.clip(1 - f / 4.5, 0, 1) * np.clip(-N[:, 1] + 0.5, 0, 1)
     return np.clip(ao, 0.2, 1)
 
 
 def wood_moss(P, N, L):
-    if L.kind == 'trunk':
-        return np.clip(0.25 + 0.5 * np.clip((P[:, 1] - 4.0) / 1.5, 0, 1) + 0.3 * np.clip(-N[:, 2], 0, 1), 0, 1)
     return np.full(len(P), L.moss)
 
 
@@ -303,19 +591,36 @@ def _tube_uv(info, n_rows, u_scale=0.5, v_div=32.0):
     return uv
 
 
-def shimenawa(trunk):
-    """A thick twisted straw rope around the trunk at ROPE_Y following its surface, sagging a little
-    in front, with a bundled knot and shide (zigzag paper) hanging in front."""
-    sp = trunk.spine
-    k = int(np.argmin(np.abs(sp.pos[:, 1] - ROPE_Y)))
-    c = sp.pos[k]
-    r0 = float(sp.rad[k])
+def surface_rho(base, y, theta):
+    """Distance from the trunk axis to the outermost surface of the blended base at height y."""
+    grid, F, trunk = base['grid'], base['F'], base['trunk']
+    cx, cz = trunk.axis_at(y)
+    rho = np.arange(0.5, 9.0, 0.02)
+    d = _dir(theta)
+    P = np.stack([cx + d[0] * rho, np.full(len(rho), y), cz + d[2] * rho], axis=1)
+    f = grid.sample(F, P)
+    inside = np.where(f < 0)[0]
+    if len(inside) == 0:
+        return float(trunk_R(theta, y))
+    i = int(inside[-1])
+    if i + 1 < len(rho):
+        a, b = f[i], f[i + 1]
+        return float(rho[i] + (rho[i + 1] - rho[i]) * a / (a - b))
+    return float(rho[i])
+
+
+def shimenawa(base):
+    """A thick twisted straw rope around the trunk at ROPE_Y, pressed onto the bark (over the
+    buttress ridges), sagging a little in front, with a bundled knot and shide hanging in front."""
+    trunk = base['trunk']
+    cx, cz = trunk.axis_at(ROPE_Y)
+    c = np.array([cx, ROPE_Y, cz])
     rope_r = 0.24
-    th = np.linspace(0, 2 * math.pi, 73)
+    th = np.linspace(0, 2 * math.pi, 97)
     pts = []
     for t in th:
-        rr = float(trunk_radius(np.array([t]), ROPE_Y, r0)[0]) + rope_r * 0.85
-        d = np.array([-math.sin(t), 0, -math.cos(t)])
+        rr = surface_rho(base, ROPE_Y, t) + rope_r * 0.8
+        d = _dir(t)
         sag = 0.22 * max(0.0, -math.cos(t)) ** 2
         pts.append(c + d * rr + np.array([0, -sag, 0]))
     spine = Spine(pts, [rope_r] * len(pts), step=0.3)
@@ -324,7 +629,7 @@ def shimenawa(trunk):
     rope = MeshData()
     rope.add(a['p'], a['n'], _tube_uv(info, len(a['p'])), a['idx'], uv2=np.tile([0.0, 0.0], (len(a['p']), 1)),
              col=np.ones((len(a['p']), 4)))
-    front_r = float(trunk_radius(np.array([math.pi]), ROPE_Y, r0)[0])
+    front_r = surface_rho(base, ROPE_Y - 0.24, math.pi)
     knot_c = c + np.array([0, -0.24, front_r + rope_r * 1.5])
     for dx, Ln in ((-0.22, 0.55), (0.18, 0.72)):                         # two tails hanging
         s2 = Spine([knot_c + [dx, 0.05, 0.02], knot_c + [dx * 1.3, -Ln * 0.5, 0.08], knot_c + [dx * 1.5, -Ln, 0.12]],
@@ -341,8 +646,8 @@ def shimenawa(trunk):
              col=np.ones((len(a3['p']), 4)))
     shide = MeshData()
     for ang in (math.pi - 0.62, math.pi - 0.31, math.pi + 0.31, math.pi + 0.62):
-        rr = float(trunk_radius(np.array([ang]), ROPE_Y, r0)[0]) + rope_r * 1.4
-        d = np.array([-math.sin(ang), 0, -math.cos(ang)])
+        rr = surface_rho(base, ROPE_Y - 0.3, ang) + rope_r * 1.4
+        d = _dir(ang)
         sag = 0.22 * max(0.0, -math.cos(ang)) ** 2
         shide.merge(zigzag(c + d * rr + np.array([0, -sag - rope_r * 0.6, 0]), d))
     for side in (-1, 1):
@@ -394,8 +699,12 @@ def rope_texture(seed=SEED):
 
 # ------------------------------------------------------------------------------- build
 def build(out):
+    from ..terrain import ground_fn
     R = rng(SEED)
-    limbs, named = skeleton(R)
+    ground, gnote = ground_fn('camphor')
+    M = masses()
+    base_md, base = base_mesh(R, M, ground)
+    limbs, named = skeleton(base['defs'])
     for key, n, fr, ln in (('E', 3, (0.55, 0.95), (2.4, 4.0)), ('W', 3, (0.55, 0.95), (2.4, 4.0)),
                            ('S', 2, (0.5, 0.9), (2.0, 3.2)), ('NW', 2, (0.5, 0.9), (2.4, 3.6)),
                            ('NE', 2, (0.5, 0.9), (2.4, 3.6)), ('N', 2, (0.5, 0.9), (2.4, 3.6)),
@@ -403,6 +712,7 @@ def build(out):
                            ('SWu', 2, (0.5, 0.9), (2.0, 3.0))):
         L = named[key]
         WD.build_limb(L)
+        _shift_v(L, L.tags['s0'])
         for b in WD.offshoots(L, R, n, frac_range=fr, length=ln, radius_k=(0.4, 0.6), up_bias=0.45, name=key + 'b',
                               min_r=0.06, moss=0.15, segs=3):
             b.n_around = 7
@@ -411,17 +721,20 @@ def build(out):
     for L in limbs:
         if L.spine is None:
             WD.build_limb(L)
+            if 's0' in L.tags:
+                _shift_v(L, L.tags['s0'])
     a = out.asset(NAME, 'trees')
-    bark_res = a.texture('bark', WD.bark_texture(SEED, size=256))
+    bark_res = a.texture('bark', WD.bark_texture(SEED, size=256, ridge=('#6c6458', '#7b7365', '#8a8272'), lip='#999080',
+                                                 fissure='#433b35', deep='#312b27'))
     m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0, 'cutaway': True},
                         textures={'albedo_tex': bark_res})
-    M = masses()
 
     def ao_fn(P, N, L):
-        # baked AO: the folds and crotches, times how much sky the bark sees past the crown
+        # baked AO: undersides and the inner limbs, times how much sky the bark sees past the crown
         return wood_ao(P, N, L) * (0.45 + 0.55 * CD.sky_visibility(P, N, M, n_rays=16))
     wood = WD.wood_mesh(limbs, tex_size=256, colour_fn=wood_colour, ao_fn=ao_fn, moss_fn=wood_moss)
-    rope, shide = shimenawa(limbs[0])
+    wood.merge(base_md)
+    rope, shide = shimenawa(base)
     rope_res = a.texture('rope', rope_texture())
     m_rope = a.material('rope', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0},
                         textures={'albedo_tex': rope_res})
@@ -447,14 +760,55 @@ def build(out):
         {'name': 'Wood', 'type': 'mesh', 'mesh': wood_mesh},
         {'name': 'Leaves', 'type': 'mesh', 'mesh': leaf_mesh, 'extra_cull_margin': 4.0},
     ], meta={'w3a_kind': 'tree', 'w3a_species': 'camphor'})
+    # the half-faded tree (遠化): the crown and the wood above the shimenawa drained and lifted; what
+    # the rope protects (the trunk below it, the rope and the shide) keeps its colour
+    from ..props.kit import pale_colour
+    wa = wood.arrays()
+    t = np.clip((wa['p'][:, 1] - (ROPE_Y + 0.15)) / 0.6, 0, 1)[:, None]
+    col_far = wa['col'].copy()
+    col_far[:, :3] = wa['col'][:, :3] * (1 - t) + pale_colour(wa['col'][:, :3]) * t
+    wood_far = MeshData()
+    wood_far.add(wa['p'], wa['n'], wa['uv'], wa['idx'], uv2=wa['uv2'], col=col_far)
+    la = leaf_md.arrays()
+    leaf_far = MeshData()
+    lcol = la['col'].copy()
+    lcol[:, :3] = pale_colour(la['col'][:, :3] * 0.8) / 0.8
+    leaf_far.add(la['p'], la['n'], la['uv'], la['idx'], uv2=la['uv2'], col=np.clip(lcol, 0, 1), cus=la['cus'])
+    bark_far = a.texture('bark_far', pale_colour(WD.bark_texture(SEED, size=256, ridge=('#6c6458', '#7b7365', '#8a8272'),
+                                                                 lip='#999080', fissure='#433b35', deep='#312b27') / 255.0) * 255.0)
+    m_bark_far = a.material('bark_far', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0, 'cutaway': True},
+                            textures={'albedo_tex': bark_far})
+    # the far bark texture applies above the rope only: split the wood by height
+    lo_idx = wa['idx'][np.max(wa['p'][wa['idx']][:, :, 1], axis=1) < ROPE_Y + 0.4]
+    hi_idx = wa['idx'][np.max(wa['p'][wa['idx']][:, :, 1], axis=1) >= ROPE_Y + 0.4]
+    w_lo, w_hi = MeshData(), MeshData()
+    w_lo.add(wa['p'], wa['n'], wa['uv'], lo_idx, uv2=wa['uv2'], col=col_far)
+    w_hi.add(wa['p'], wa['n'], wa['uv'], hi_idx, uv2=wa['uv2'], col=col_far)
+    wood_far_mesh = a.mesh('wood_far', [(m_bark, w_lo), (m_bark_far, w_hi), (m_rope, rope), (m_paper, shide)])
+    leaf_far_mesh = a.mesh('leaves_far', [(m_leaf, leaf_far)], custom_aabb=[[-20, 4, -20], [40, 20, 40]])
+    a.scene([
+        {'name': 'Wood', 'type': 'mesh', 'mesh': wood_far_mesh},
+        {'name': 'Leaves', 'type': 'mesh', 'mesh': leaf_far_mesh, 'extra_cull_margin': 4.0},
+    ], meta={'w3a_kind': 'tree', 'w3a_species': 'camphor', 'w3a_far': True}, key='far')
+    foot = [[0.0, 0.0, 3.6]]
+    for r in base['roots']:                     # where a root stands higher than her shin
+        for s_ in np.arange(0.0, r.s[-1], 1.0):
+            j = int(np.searchsorted(r.s, s_))
+            q = r.Q[min(j, len(r.Q) - 1)]
+            top = q[1] + r.r[min(j, len(r.r) - 1)] * r.sv[min(j, len(r.sv) - 1)] - float(ground(q[0], q[2]))
+            if top > 0.45 and np.hypot(q[0], q[2]) > 3.4:
+                foot.append([round(float(q[0]), 2), round(float(q[2]), 2), round(float(r.r[min(j, len(r.r) - 1)] * 1.05), 2)])
     a.catalog = {
         'category': 'tree',
-        'footprint': [[0.0, 0.0, 3.3], [3.4, 0.4, 1.0], [-3.4, 0.2, 1.0], [0.3, 3.4, 1.0], [-0.3, -3.4, 1.0]],
+        'footprint': foot,
         'height': 21.5,
         'crown': {'centre': [0.0, 13.0, 0.5], 'radius': 17.0, 'base': 7.0},
         'tags': ['landmark', 'climbable', 'sacred'],
-        'anchors': {'shimenawa_front': [0.0, ROPE_Y - 0.2, 3.3]},
-        'notes': '御神木. Trunk 6.5 m across, buttresses to ~9.5 m, low limbs reach 16.5 m. Shimenawa at %.2f m.' % ROPE_Y,
+        'variants': {'far': 'res://world3d/assets/trees/camphor_great/camphor_great_far.tscn'},
+        'anchors': {'shimenawa_front': [0.0, ROPE_Y - 0.2, round(surface_rho(base, ROPE_Y, math.pi) + 0.3, 2)]},
+        'notes': ('御神木. Trunk 6.5 m across; buttress roots fitted to the ground of the ' + gnote +
+                  ' (do not rotate; rebuild after the terrain changes); low limbs reach 16.5 m. Shimenawa at %.2f m.' % ROPE_Y),
     }
     nt = len(wood.arrays()['idx']) + len(rope.arrays()['idx']) + len(shide.arrays()['idx'])
-    return {'cards': len(cards), 'wood_tris': nt, 'leaf_tris': len(cards) * 2, 'atlas': list(atlas.shape[:2])}
+    return {'cards': len(cards), 'wood_tris': nt, 'leaf_tris': len(cards) * 2, 'atlas': list(atlas.shape[:2]),
+            **base['stats']}

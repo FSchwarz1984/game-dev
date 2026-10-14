@@ -11,8 +11,8 @@ render_mode world_vertex_coords, ambient_light_disabled, specular_disabled, fog_
 stencil_mode write, compare_always, 1;
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
-uniform sampler2D m0 : filter_nearest, repeat_disable;     // grass, dirt, gravel, rock
-uniform sampler2D m1 : filter_nearest, repeat_disable;     // moss, litter, bank, paddy
+uniform sampler2D m0 : filter_linear, repeat_disable;      // grass, dirt, gravel, rock
+uniform sampler2D m1 : filter_linear, repeat_disable;      // moss, litter, bank, paddy
 uniform sampler2D m2 : filter_linear, repeat_disable;      // ao, puddle, wear, flowers
 uniform sampler2D m3 : filter_linear, repeat_disable;      // litter kind, dryness, tufts, slope/90
 uniform sampler2D palette : filter_nearest;                 // 8 tones x 16 rows, sRGB
@@ -54,20 +54,21 @@ ivec2 splat_texel(vec2 xz) {
 	return ivec2(floor((xz - splat_origin) / splat_cell));
 }
 
-// the dominant material at a world point seen through texel cell c (jitter keyed on c)
+// The dominant material at a world point seen through texel cell c. The weights are sampled
+// smoothly; a fine two-scale noise keyed on the texel lattice breaks every border into a band a few
+// pixels wide (organic, finely broken edges, never big hard blobs).
 int material_at(vec2 xz, vec2 c) {
-	vec2 jit = (vec2(w3_vnoise(c * 0.23), w3_vnoise(c * 0.23 + 19.7)) - 0.5) * 0.75;
-	ivec2 st = splat_texel(xz + jit);
-	vec4 a = texelFetch(m0, st, 0);
-	vec4 b = texelFetch(m1, st, 0);
+	vec2 uv = (xz - splat_origin) / splat_cell / splat_size;
+	vec4 a = texture(m0, uv);
+	vec4 b = texture(m1, uv);
 	float w[8] = float[8](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a);
 	int best = 0;
 	float bw = -1.0;
 	for (int k = 0; k < 8; k++) {
 		float wk = w[k];
-		if (wk > 0.02) {
-			// clumps: mixed ground breaks into patches, not salt and pepper
-			wk += (w3_vnoise(c / 9.0 + float(k) * 13.1) - 0.5) * 0.34;
+		if (wk > 0.01) {
+			float fine = w3_vnoise(c / 2.3 + float(k) * 7.7) * 0.65 + w3_hash(c + float(k) * 3.1) * 0.35;
+			wk += (fine - 0.5) * 0.28;
 		}
 		if (wk > bw) {
 			bw = wk;
@@ -87,24 +88,25 @@ vec3 accent(int i) {
 	return w3_srgb_to_linear(c);
 }
 
-// glyph set and density for a material (and the extras at its anchor)
-vec3 glyph_set(int mat, vec4 e2, vec4 e3, float h) {
+// glyph set and density for a material (and the extras at its anchor); gc = the glyph's cell
+vec3 glyph_set(int mat, vec4 e2, vec4 e3, float h, vec2 gc) {
 	// returns (start, count, density)
 	if (mat == 0) {
-		float fl = e2.a;
-		if (fl > 0.05 && h < fl * 0.12) return vec3(g_flowers, 0.7);
-		return vec3(g_grass, 0.18 + 0.5 * e3.b);
+		// flowers only in small, sparse clusters
+		float cl = w3_vnoise(gc / 3.0 + 31.0);
+		if (e2.a > 0.05 && cl > 0.72 && h < e2.a * 0.9) return vec3(g_flowers, 0.85);
+		return vec3(g_grass, 0.3 + 0.55 * e3.b);
 	}
-	if (mat == 1) return vec3(g_dirt, 0.22 + 0.15 * (1.0 - e2.b));
+	if (mat == 1) return vec3(g_dirt, 0.12 + 0.55 * (1.0 - e2.b));       // pebbles gather at the edges
 	if (mat == 2) return vec3(g_gravel, 0.85);
-	if (mat == 3) return vec3(g_rock, 0.4);
-	if (mat == 4) return vec3(g_moss, 0.5);
+	if (mat == 3) return vec3(g_rock, 0.45);
+	if (mat == 4) return vec3(g_moss, 0.55);
 	if (mat == 5) {
 		if (e3.r > 0.75) return vec3(g_bamboo, 0.7);
 		if (e3.r > 0.25) return vec3(g_needles, 0.8);
-		return vec3(g_litter, 0.85);
+		return vec3(g_litter, 0.9);
 	}
-	if (mat == 6) return vec3(g_bank, 0.35);
+	if (mat == 6) return vec3(g_bank, 0.4);
 	return vec3(0.0, 0.0, 0.0);
 }
 
@@ -120,18 +122,24 @@ void fragment() {
 	// (the 2D lesson: several overlapping patch systems read as camouflage)
 	float macro = w3_fbm(v_wp.xz / 7.5) * 2.6 - 1.3;
 	// whole steps; the dither only lives in a narrow seam at each step (no screen-door fields)
-	float mstep = floor(macro + 0.5 + (w3_bayer4(cell) - 0.5) * 0.22);
+	// seams are broken by a scattered stipple (organic), not an ordered dither (which draws
+	// checkered bands wherever the field changes slowly)
+	float stip = w3_hash(cell * 1.37 + 0.5) * 0.65 + w3_vnoise(cell / 1.8) * 0.35;
+	float mstep = floor(macro + 0.5 + (stip - 0.5) * 0.3);
 	float row;
 	float tone;
 	float porous = 0.8;
 	if (mat == 0) {
 		float dry = e3.g + (w3_fbm(v_wp.xz / 3.0 + 7.0) - 0.5) * 0.25;
-		row = dry > 0.5 + (w3_bayer4(cell + 2.0) - 0.5) * 0.18 ? 1.0 : 0.0;   // dry grass, dithered edge
+		row = dry > 0.5 + (stip - 0.5) * 0.2 ? 1.0 : 0.0;   // dry grass, stippled edge
 		tone = 3.6 + mstep;
+		// painted grain: single darker blades and a few lit ones scattered through the sward
+		float gr = w3_hash(cell * 0.73 + 17.0);
+		tone += gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0);
 		porous = 0.6;
 	} else if (mat == 1) {
 		row = 2.0;
-		tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + 0.3 + (w3_bayer4(cell) - 0.5) * 0.2);
+		tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + 0.3 + (stip - 0.5) * 0.25);
 		porous = 1.0;
 	} else if (mat == 2) {
 		row = 3.0;
@@ -182,7 +190,7 @@ void fragment() {
 			// the anchor's world point: left by d.x px, down (south on the ground) by d.y px
 			vec2 axz = v_wp.xz + vec2(-d.x / w3_view.x, d.y / (w3_view.x * w3_view.y));
 			int amat = material_at(axz, anchor);
-			vec3 gs = glyph_set(amat, e2, e3, w3_hash(gc + 5.1));
+			vec3 gs = glyph_set(amat, e2, e3, w3_hash(gc + 5.1), gc);
 			// glyphs gather in clumps with bare gaps between them
 			float clump = smoothstep(0.3, 0.72, w3_vnoise(gc / 2.6 + 4.0));
 			if (gs.y < 0.5 || hh > gs.z * (0.25 + 1.3 * clump)) continue;
@@ -217,20 +225,32 @@ void fragment() {
 	// ---- wetness and puddles
 	alb = w3_wetten(alb, porous);
 	float ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));
-	ao = floor(ao * 4.0 + 0.5 + (w3_bayer4(cell) - 0.5) * 0.3) / 4.0;
-	if (w3_wet > 0.25 && e2.g > 0.45 && (mat == 1 || mat == 2)) {
-		float ring = step(0.82, w3_vnoise(cell / 3.0 + w3_time * 0.4));
-		alb = mix(alb * 0.55, w3_sky * 0.8 + vec3(0.02), 0.55 * w3_wet) + ring * 0.04 * w3_wet;
+	ao = floor(ao * 4.0 + 0.5 + (w3_hash(cell * 0.91 + 3.3) - 0.5) * 0.35) / 4.0;
+	// puddles in the ruts and the low spots of paths: a darker mirror of the overcast sky with
+	// rings where the drops fall (only the deepest spots, so they stay small)
+	if (w3_wet > 0.25 && e2.g > 0.62 && (mat == 1 || mat == 2)) {
+		vec2 rc = floor(cell / 5.0);
+		float ph = fract(w3_time * 0.9 + w3_hash(rc) * 7.0);
+		vec2 c0 = (rc + vec2(w3_hash(rc + 1.3), w3_hash(rc + 2.7))) * 5.0;
+		float rr = length((cell - c0) * vec2(1.0, 1.6));
+		float ring = step(abs(rr - ph * 3.0), 0.5) * (1.0 - ph);
+		alb = mix(alb * 0.5, w3_sky * 0.42, 0.7 * w3_wet) + ring * 0.035 * w3_wet;
 	}
-	// sun flecks under canopies: where the canopy shades the ground, a drifting pattern of crisp
-	// light spots gets through (strong on the ground; characters only see the soft shade)
-	float can = e3.a;
+	// sun flecks in the shade of the canopies. The canopy map is read where the sun's ray through
+	// this point meets the crowns (about 11 m up), so the flecks fall inside the cast shade rather
+	// than under the trunks. Small crisp spots (pinhole images of the sun) in loose clusters, which
+	// wobble in place as the wind moves the leaves (strong on the ground; characters only see the
+	// soft shade).
+	vec3 sdir = normalize(w3_sun_dir);
+	vec2 proj = v_wp.xz + sdir.xz / max(sdir.y, 0.25) * 11.0;
+	float can = texture(m3, (proj - splat_origin) / splat_cell / splat_size).a;
 	v_fleck = 0.0;
-	if (can > 0.15) {
-		vec2 fq = v_wp.xz / 0.9 + vec2(w3_time * 0.05 * w3_wind.x, w3_time * 0.03);
-		float sway = sin(w3_time * 0.7 + v_wp.x * 0.13) * 0.18 * w3_wind.z;
-		float fn = w3_vnoise(fq + vec2(sway, 0.0)) * 0.62 + w3_vnoise(fq * 2.3 + vec2(-sway, 5.0)) * 0.38;
-		v_fleck = step(0.69 - (1.0 - can) * 0.12, fn);
+	if (can > 0.2 && w3_night < 0.5) {
+		float sway = sin(w3_time * 0.8 + w3_hash(floor(v_wp.xz / 1.5)) * 6.28) * 0.35 * w3_wind.z;
+		vec2 fq = v_wp.xz / 0.32 + vec2(sway, sway * 0.5);
+		float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
+		float cluster = w3_vnoise(v_wp.xz / 2.2 + 9.0);
+		v_fleck = step(0.73, fn) * step(0.42 + (1.0 - can) * 0.25, cluster);
 	}
 	v_alb = alb;
 	v_cell = cell;
@@ -241,7 +261,7 @@ void fragment() {
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		float ndl = dot(NORMAL, LIGHT);
-		float th = (w3_bayer4(v_cell) - 0.5) * 0.05;
+		float th = (w3_hash(v_cell * 1.13 + 7.1) - 0.5) * 0.06;
 		float lvl = ndl > 0.80 + th ? 1.0 : (ndl > 0.58 + th ? 0.86 : (ndl > 0.30 + th ? 0.68 : (ndl > 0.04 + th ? 0.5 : 0.0)));
 		float sh = step(0.5, ATTENUATION);
 		sh = max(sh, v_fleck * 0.85);

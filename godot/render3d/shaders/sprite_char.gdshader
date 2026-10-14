@@ -23,6 +23,10 @@ uniform float rim = 1.0;
 uniform float shadow_dim = 0.6;        // how dark a cast shadow makes her (1 = not at all)
 uniform vec4 flash = vec4(1.0, 1.0, 1.0, 0.0);   // rgb, amount (hit / pick-up flashes)
 uniform vec3 key_dir_view = vec3(-0.55, 0.60, 0.58);   // the 2D convention key light, view space
+uniform float sprite_pitch_deg = 39.33;                 // the pitch the sheets were rendered at
+uniform vec2 head_px = vec2(0.5, -35.0);                // this frame's head anchor (px from the pivot, y down)
+uniform vec2 pivot_px = vec2(32.0, 65.0);
+uniform float face_floor = 0.66;                        // brightness floor on her face under the brim
 
 varying vec3 v_wp;
 varying vec3 v_alb;
@@ -58,7 +62,15 @@ void fragment() {
 	}
 	vec3 nm = texelFetch(sheet_n, ti, 0).rgb * 2.0 - 1.0;
 	if (flip_h) nm.x = -nm.x;
-	NORMAL = normalize(vec3(nm.x, nm.y, max(nm.z, 0.15)));
+	// the sheet's normals live in the sprite camera's frame (x right, y up, z to the viewer at the
+	// sprite pitch): to world, then to this camera's view space
+	float sp = radians(sprite_pitch_deg);
+	vec3 nw = vec3(nm.x, nm.y * cos(sp) + nm.z * sin(sp), -nm.y * sin(sp) + nm.z * cos(sp));
+	NORMAL = normalize((VIEW_MATRIX * vec4(nw, 0.0)).xyz);
+	// the face: a floor of light under the hat's brim (she must read first in any light)
+	vec2 rel = vec2(tp.x - frame_rect.x, tp.y - frame_rect.y) - pivot_px;
+	if (flip_h) rel.x = -rel.x;
+	float face = 1.0 - smoothstep(4.0, 7.0, length((rel - head_px) * vec2(1.0, 1.15)));
 	vec3 alb = w3_srgb_to_linear(c.rgb);
 	alb = mix(alb, w3_srgb_to_linear(flash.rgb), flash.a);
 	// rim: an opaque texel whose neighbour away from the light is empty
@@ -66,7 +78,8 @@ void fragment() {
 	float edge_u = texelFetch(sheet, ti + ivec2(0, -1), 0).a;
 	float rimk = rim * (edge_r < 0.5 ? 1.0 : 0.0);
 	vec3 amb = mix(w3_ground, w3_sky, 0.62) * w3_shade_tint;
-	vec3 lum = max(amb, vec3(floor_light) * (0.6 + 0.4 * (1.0 - w3_night)));
+	float fl = mix(floor_light, face_floor, face);
+	vec3 lum = max(amb, vec3(fl) * (0.62 + 0.38 * (1.0 - w3_night)));
 	vec3 em = alb * lum;
 	em += rimk * alb * (w3_sky * 1.6 + vec3(0.04)) ;
 	em += (edge_u < 0.5 ? 1.0 : 0.0) * alb * w3_sky * 0.35 * rim;

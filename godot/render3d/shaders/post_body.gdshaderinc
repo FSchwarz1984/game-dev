@@ -44,13 +44,22 @@ void fragment() {
 
 	float far_n = max(max(l, r), max(u, d)) - c;      // > 0: a neighbour lies behind me
 	float sil = step(0.35, far_n);
+	// the neighbour behind: the line is a darker shade of whichever side is darker, so a pale object
+	// keeps its edge against a mid-tone ground (selective outline, never black)
+	vec2 behind = vec2(-px.x, 0.0);
+	float bd = l;
+	if (r > bd) { bd = r; behind = vec2(px.x, 0.0); }
+	if (u > bd) { bd = u; behind = vec2(0.0, -px.y); }
+	if (d > bd) { bd = d; behind = vec2(0.0, px.y); }
+	vec3 bcol = texture(screen_tex, uv + behind).rgb;
 #if OL_RIM
 	if (sil > 0.0) {
 		col = mix(col, vec3(1.0, 0.86, 0.55) * (0.6 + w3_luma(col) * 0.8), 0.85);
 	}
 #else
 	if (sil > 0.0) {
-		col = mix(col, col * OL_TINT, OL_SIL);
+		vec3 base = w3_luma(bcol) < w3_luma(col) ? mix(col, bcol, 0.6) : col;
+		col = mix(col, base * OL_TINT, OL_SIL);
 	} else if (OL_CREASE > 0.0) {
 		// only among neighbours on the same surface
 		float th = 0.25;

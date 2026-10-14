@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/trees/kare/kare_b_wood.res" id="1"]
+
+[node name="KareB" type="Node3D" unique_id=1017965598]
+
+[node name="Wood" type="MeshInstance3D" parent="." unique_id=945301223]
+mesh = ExtResource("1")

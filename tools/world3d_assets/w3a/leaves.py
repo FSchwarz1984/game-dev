@@ -501,7 +501,7 @@ def fern_clump(W, H, seed, n_fronds=None):
     return c.finish()
 
 
-def grass_clump(W, H, seed, n=None, arch=0.9, plume=False, plume_col=None):
+def grass_clump(W, H, seed, n=None, arch=0.9, plume=False, plume_col=None, thick=1):
     """Susuki: long arching blades from a tuft; optional drooping plumes on tall stalks (RGB
     plumes when plume_col is given)."""
     R = rng(seed)
@@ -520,7 +520,10 @@ def grass_clump(W, H, seed, n=None, arch=0.9, plume=False, plume_col=None):
             a += arch * 0.03 * (1 if side >= 0 else -1) * t
             x += math.cos(a)
             y += math.sin(a)
-            c.put(x, y, TOP if (t > 0.2 and R.uniform() < 0.35) else BODY, d)
+            v = TOP if (t > 0.2 and R.uniform() < 0.35) else BODY
+            c.put(x, y, v, d)
+            if thick > 1 and t < 0.8:
+                c.put(x + (1 if side >= 0 else -1), y, BODY, d - 0.001)
     if plume:
         for p in range(int(R.integers(3, 6))):
             a = -math.pi / 2 + R.normal(0, 0.25)
@@ -538,4 +541,28 @@ def grass_clump(W, H, seed, n=None, arch=0.9, plume=False, plume_col=None):
                 col = np.array(plume_col[0 if k % 3 == 0 else 1]) / 255.0
                 c.line(x, y, x + math.cos(fa) * fl, y + math.sin(fa) * fl, 1.0, 6.0, col)
     c.sep(R, 0.3)
+    return c.finish()
+
+
+def pine_tufts(W, H, seed, n=None):
+    """Red pine needles: a few tufts, each a fan of short straight needles radiating up and out from
+    a dark base, tips lighter; gaps between the tufts (not a continuous bar)."""
+    R = rng(seed)
+    c = Canvas(W, H)
+    n = n or int(R.integers(2, 5))
+    xs = np.sort(R.uniform(W * 0.18, W * 0.82, n))
+    for i, x0 in enumerate(xs):
+        y0 = H - 1.5 - R.uniform(0, H * 0.25)
+        k = int(R.integers(10, 16))
+        spread = R.uniform(1.1, 1.5)
+        for j in range(k):
+            a = -math.pi / 2 + (j / (k - 1) - 0.5) * 2 * spread + R.normal(0, 0.06)
+            L = R.uniform(3.0, 5.5) * (1.0 - 0.25 * abs(j / (k - 1) - 0.5))
+            x, y = x0 + R.normal(0, 0.4), y0
+            steps = int(L * 1.5) + 1
+            for s in range(steps):
+                t = s / steps
+                px, py = x + math.cos(a) * L * t, y + math.sin(a) * L * t
+                v = TOP if t > 0.6 and math.sin(a) < -0.3 else (BODY if t > 0.2 else SEP)
+                c.put(px, py, v, i + t * 0.1)
     return c.finish()

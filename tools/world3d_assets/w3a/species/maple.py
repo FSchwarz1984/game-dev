@@ -19,7 +19,7 @@ SEED = 7301
 NAME = 'maple'
 
 GREEN = ('#6b8a43', '#7e9a49', '#58773f')
-RED = ('#a8452e', '#bd5a34', '#8a3528')
+RED = ('#a3412c', '#b5552f', '#86352a')
 VARIANTS = [  # key, height, stems, spread, palette, seed
     ('a', 7.0, 3, 4.2, GREEN, 1),
     ('b', 5.5, 2, 3.4, GREEN, 2),
@@ -32,7 +32,7 @@ VARIANTS = [  # key, height, stems, spread, palette, seed
 def tiles():
     S = SEED
     specs = {
-        'mass': [(LV.star_leaves, dict(W=int(16 + (i % 3) * 3), H=int(12 + (i % 2) * 3), seed=S + i)) for i in range(10)],
+        'mass': [(LV.star_leaves, dict(W=int(16 + (i % 3) * 3), H=int(12 + (i % 2) * 3), seed=S + i, airy=0.55)) for i in range(10)],
         'small': [(LV.star_leaves, dict(W=12, H=10, seed=S + 50 + i, airy=0.5)) for i in range(4)],
         'interior': [(LV.star_leaves, dict(W=16, H=12, seed=S + 80 + i, airy=0.6)) for i in range(2)],
     }
@@ -65,7 +65,7 @@ def variant(key, H, stems, spread, pal, vs):
             limbs.append(WD.Limb(f's{s}b{k}', bp, [rr * 0.6, rr * 0.4, 0.03], kind='branch', n_around=5,
                                  step_fn=lambda f_: 0.5))
             lr = bl * R.uniform(0.75, 1.0)
-            masses.append(CD.Mass(bp[-1] + np.array([0, 0.15, 0]), (lr, 0.45, lr * 0.85), yaw=-baz, flat=0.7,
+            masses.append(CD.Mass(bp[-1] + np.array([0, 0.15, 0]), (lr, 0.32, lr * 0.85), yaw=-baz, flat=0.8,
                                   seed=SEED + vs * 100 + s * 10 + k, clumps=0.0, tiles='mass', interior=False, lump=0.1))
         top = stem.spine.pos[-1]
         masses.append(CD.Mass(top + np.array([0, 0.1, 0]), (spread * 0.32, 0.55, spread * 0.3), flat=0.7,
@@ -74,8 +74,8 @@ def variant(key, H, stems, spread, pal, vs):
     span = max(np.max([np.linalg.norm((m.c - cc)[[0, 2]]) + m.r[0] for m in masses]), 1.5)
     crown_kw = dict(centre=tuple(cc), radii=(span, H * 0.3, span),
                     base_tint=TR.tint_for(pal[0]), young_tint=TR.tint_for(pal[1]), old_tint=TR.tint_for(pal[2]),
-                    overlap=1.2, fill_density=1.0, clump_overlap=1.0, interior_frac=0.0, spray_rate=0.0,
-                    env_k=0.3, up_bias=0.45, flex_r=span, max_cards=480)
+                    overlap=0.85, fill_density=0.7, clump_overlap=1.0, interior_frac=0.0, spray_rate=0.0,
+                    env_k=0.3, up_bias=0.45, flex_r=span, max_cards=360)
     cat = {'category': 'tree', 'species': 'japanese maple' + (' (red)' if pal is RED else ''),
            'footprint': [[0.0, 0.0, 0.35]], 'height': H,
            'crown': {'centre': [float(cc[0]), float(cc[1]), float(cc[2])], 'radius': float(span), 'base': float(H * 0.35)},

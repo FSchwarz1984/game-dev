@@ -25,14 +25,14 @@ ROWS = {
     # name: (L*, C*, hue deg) of the middle tone (index 3.5); albedos, the light adds its own warmth
     "grass": (34.0, 19.0, 128.0),
     "grass_dry": (40.0, 19.0, 104.0),
-    "dirt": (41.0, 12.0, 68.0),
-    "gravel": (46.0, 6.0, 72.0),
-    "rock": (42.0, 5.0, 220.0),
-    "moss": (31.0, 24.0, 124.0),
-    "litter": (31.0, 12.0, 66.0),
-    "needles": (31.0, 14.0, 56.0),
+    "dirt": (38.0, 9.0, 74.0),
+    "gravel": (42.0, 5.0, 80.0),
+    "rock": (38.0, 7.0, 68.0),     # warm grey; the shade turns it violet
+    "moss": (31.0, 19.0, 126.0),
+    "litter": (34.0, 10.0, 84.0),
+    "needles": (33.0, 10.0, 72.0),
     "bamboo_litter": (45.0, 12.0, 86.0),
-    "bank": (36.0, 15.0, 58.0),
+    "bank": (35.0, 11.0, 70.0),
     "paddy": (30.0, 11.0, 96.0),
 }
 ROW_INDEX = {k: i for i, k in enumerate(ROWS)}
@@ -279,8 +279,8 @@ SETS = {
     "gravel": [("pebble", 4), ("stone", 3), ("stone_big", 1)],
     "rock": [("rock_crack", 2), ("strata", 3), ("lichen", 2), ("lichen_o", 1), ("rock_chip", 2)],
     "moss": [("moss_bump", 3), ("moss_small", 4), ("spore", 2)],
-    "litter": [("leaf_b", 4), ("leaf_c", 4), ("leaf_a", 2), ("leaf_red", 1)],
-    "needles": [("needles", 3), ("needles_b", 3)],
+    "litter": [("leaf_b", 4), ("leaf_c", 4), ("leaf_a", 2), ("leaf_red", 1), ("twig", 1)],
+    "needles": [("needles", 3), ("needles_b", 3), ("twig", 1)],
     "bamboo_litter": [("bamboo_leaf", 4), ("twig", 1)],
     "bank": [("bank_crumb", 3), ("bank_line", 2), ("root", 2), ("pebble", 1)],
 }

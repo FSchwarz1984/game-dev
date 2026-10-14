@@ -29,8 +29,8 @@ VARIANTS = [  # key, height, base radius, lean x, lean z, branches, seed
 def tiles():
     S = SEED
     specs = {
-        'mass': [(LV.pine_pad, dict(W=int(16 + (i % 4) * 2), H=int(8 + (i % 3)), seed=S + i)) for i in range(10)],
-        'small': [(LV.pine_pad, dict(W=12, H=7, seed=S + 50 + i)) for i in range(4)],
+        'mass': [(LV.pine_tufts, dict(W=int(16 + (i % 4) * 2), H=int(9 + (i % 3)), seed=S + i)) for i in range(10)],
+        'small': [(LV.pine_tufts, dict(W=12, H=8, seed=S + 50 + i, n=2)) for i in range(4)],
         'interior': [(LV.pine_pad, dict(W=18, H=9, seed=S + 80 + i)) for i in range(2)],
     }
     return FO.build_tiles(specs)
@@ -61,14 +61,14 @@ def variant(key, H, r0, lx, lz, nbr, vs):
                              step_fn=lambda f_: 0.55))
         end = path[-1]
         pr = (1.6 + 1.2 * (1.1 - f)) * R.uniform(0.85, 1.15)
-        masses.append(CD.Mass(end + np.array([0, 0.25, 0]), (pr, 0.42 + 0.1 * pr, pr * 0.8), yaw=-az, flat=0.85,
+        masses.append(CD.Mass(end + np.array([0, 0.2, 0]), (pr, 0.3 + 0.06 * pr, pr * 0.8), yaw=-az, flat=0.9,
                               seed=SEED + vs * 100 + b, clumps=0.0, tiles='mass', interior=False, lump=0.08))
         if pr > 1.8 and R.uniform() < 0.7:          # a second, smaller plate along the branch
             mid = path[-2]
-            masses.append(CD.Mass(mid + np.array([0, 0.35, 0]), (pr * 0.6, 0.4, pr * 0.5), yaw=-az + 0.4, flat=0.85,
+            masses.append(CD.Mass(mid + np.array([0, 0.3, 0]), (pr * 0.6, 0.3, pr * 0.5), yaw=-az + 0.4, flat=0.9,
                                   seed=SEED + vs * 100 + 50 + b, clumps=0.0, tiles='mass', interior=False))
     topp = sp.pos[-1]
-    masses.append(CD.Mass(topp + np.array([0, 0.3, 0]), (1.4, 0.55, 1.2), flat=0.8, seed=SEED + vs * 100 + 99,
+    masses.append(CD.Mass(topp + np.array([0, 0.25, 0]), (1.4, 0.4, 1.2), flat=0.85, seed=SEED + vs * 100 + 99,
                           clumps=0.0, tiles='mass', interior=False))
     cc = np.mean([m.c for m in masses], axis=0)
     span = max(np.max([np.linalg.norm((m.c - cc)[[0, 2]]) + m.r[0] for m in masses]), 2.0)

@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/props/straw_sheaves/straw_sheaves_far_mesh.res" id="1"]
+
+[node name="StrawSheavesFar" type="Node3D" unique_id=1686380209]
+metadata/w3a_kind = "props"
+metadata/w3a_far = true
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
+mesh = ExtResource("1")

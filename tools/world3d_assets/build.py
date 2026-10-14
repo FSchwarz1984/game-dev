@@ -41,6 +41,17 @@ ASSETS = os.environ.get('W3A_ASSETS', os.path.join(REPO, 'godot', 'world3d', 'as
 GENERATORS = [
     'w3a.species.camphor',
     'w3a.species.sugi',
+    'w3a.species.pine',
+    'w3a.species.maple',
+    'w3a.species.kaki',
+    'w3a.species.plants',
+    'w3a.species.broadleaf',
+    'w3a.props.lights',
+    'w3a.props.graves',
+    'w3a.props.dosojin',
+    'w3a.props.shrine',
+    'w3a.props.hut',
+    'w3a.props.dressing',
 ]
 
 

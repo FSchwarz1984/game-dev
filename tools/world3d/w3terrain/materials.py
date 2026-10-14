@@ -26,8 +26,10 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     n3 = noise.fbm(Xs / 15.0, Zs / 15.0, 3, seed + 103)
 
     # --- rock: steep ground, the spur, the ravine, the spring face; outcrops on rough slopes
-    rock = geom.smoothstep(37.0, 47.0, slope + (n1 - 0.5) * 8.0)
-    rock = np.maximum(rock, F["spur_rock"] * geom.smoothstep(24.0, 34.0, slope + (n1 - 0.5) * 10))
+    # (soil holds on slopes up to about 40 degrees here; bare rock only where it is steeper, or where
+    # the spur's bedrock breaks through in patches, never as a continuous band)
+    rock = geom.smoothstep(41.0, 50.0, slope + (n1 - 0.5) * 8.0)
+    rock = np.maximum(rock, F["spur_rock"] * geom.smoothstep(30.0, 40.0, slope + (n1 - 0.5) * 10) * geom.smoothstep(0.45, 0.6, n2))
     rock = np.maximum(rock, F["lookout_top"])
     rock = np.maximum(rock, F["spring_face"])
     rough = noise.ridged(Xs / 11.0, Zs / 11.0, 3, seed + 104)
@@ -68,8 +70,11 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
 
     # --- leaf litter under the canopies (camphor leaves, cedar needles, bamboo leaves)
     canopy = F["canopy"]
-    litter = geom.smoothstep(0.45, 0.95, canopy + (n1 - 0.5) * 0.6 + (n2 - 0.5) * 0.35)
-    W["litter"] = 0.85 * litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.4)
+    n0 = noise.fbm(Xs / 0.9, Zs / 0.9, 2, seed + 100)
+    litter = geom.smoothstep(0.42, 1.1, canopy + (n1 - 0.5) * 0.7 + (n0 - 0.5) * 0.45 + (n2 - 0.5) * 0.35)
+    W["litter"] = 0.66 * litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.3)
+    # under the canopy the grass thins and moss creeps in among the leaves
+    W["moss"] = np.maximum(W["moss"], canopy * geom.smoothstep(0.5, 0.68, n1) * 0.55 * (1.0 - dirt))
 
     W["paddy"] = F["paddy"]
 
@@ -86,6 +91,18 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     hb = ndimage.gaussian_filter(Hs, 4.0 / cell_s)
     concave = np.clip((hb - Hs) * 0.9, 0.0, 0.45)
     ao = 1.0 - concave - 0.25 * F["trunk_k"]
+    # contact shadows: the ground darkens where rocks sit on it
+    for p in placements:
+        if p["kind"] not in ("outcrop", "boulder", "rock_slab"):
+            continue
+        r = 0.5 * max(float(p.get("sx", 1.0)), float(p.get("sz", 1.0))) if "sx" in p else 0.45 * float(p.get("scale", 1.0))
+        cx, cz = p["x"], p["z"]
+        i0 = max(int((cx - r - 1.5 - Xs[0, 0]) / cell_s), 0); i1 = min(int((cx + r + 1.5 - Xs[0, 0]) / cell_s) + 1, Hs.shape[1])
+        j0 = max(int((cz - r - 1.5 - Zs[0, 0]) / cell_s), 0); j1 = min(int((cz + r + 1.5 - Zs[0, 0]) / cell_s) + 1, Hs.shape[0])
+        if i1 <= i0 or j1 <= j0:
+            continue
+        d = np.hypot(Xs[j0:j1, i0:i1] - cx, Zs[j0:j1, i0:i1] - cz)
+        ao[j0:j1, i0:i1] *= 1.0 - 0.42 * geom.smoothstep(r + 0.9, r * 0.7, d)
     ao = np.clip(ao, 0.45, 1.0)
     hb2 = ndimage.gaussian_filter(Hs, 1.2 / cell_s)
     puddle = geom.smoothstep(0.015, 0.06, hb2 - Hs) * np.maximum(W["dirt"], W["gravel"]) * geom.smoothstep(12.0, 6.0, slope)

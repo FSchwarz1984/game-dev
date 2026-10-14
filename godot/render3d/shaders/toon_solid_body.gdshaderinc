@@ -41,7 +41,8 @@ void vertex() {
 
 void fragment() {
 	vec2 cell = w3_ptex(v_wp);
-	if (cutaway && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
+	// (never in the shadow pass: the cut-away is for the eye, the shadow stays whole)
+	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
 		discard;
 	}
 	vec3 wn = normalize(v_wn);

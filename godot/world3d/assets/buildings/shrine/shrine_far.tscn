@@ -1,0 +1,17 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/buildings/shrine/shrine_far_mesh.res" id="1"]
+[ext_resource type="ArrayMesh" path="res://world3d/assets/buildings/shrine/shrine_eavebeam_far.res" id="2"]
+
+[node name="ShrineFar" type="Node3D" unique_id=1560353951]
+metadata/w3a_kind = "buildings"
+metadata/w3a_far = true
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
+mesh = ExtResource("1")
+
+[node name="EaveBeam" type="MeshInstance3D" parent="." unique_id=1269832347]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2, 1.52)
+mesh = ExtResource("2")
+metadata/w3a_far_mesh = "res://world3d/assets/buildings/shrine/shrine_eavebeam_far.res"
+metadata/w3a_mesh = "res://world3d/assets/buildings/shrine/shrine_eavebeam.res"

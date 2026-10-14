@@ -38,33 +38,33 @@ void fragment() {
 	float depth = max(v_wp.y - bottom.y, 0.0);
 	vec2 flow = vec2(cos(v_kind.y), sin(v_kind.y));
 	float moving = kind > 1.5 && kind < 2.5 ? 1.0 : 0.0;
-	// ripple field in screen-texel space (stable), combed along the flow in the stream
-	vec2 q = cell / vec2(9.0, 5.0);
-	vec2 fq = vec2(dot(cell, vec2(flow.y, -flow.x)) / 3.0, dot(cell, flow) / 14.0);
-	float rip = mix(w3_vnoise(q + vec2(t * 0.35, t * 0.2)), w3_vnoise(fq - vec2(0.0, t * 1.6)), moving);
-	// refraction: whole-texel offsets
-	vec2 off = floor((vec2(rip, w3_vnoise(q * 1.3 + 4.0 + t * 0.3)) - 0.5) * 2.4 * clamp(depth * 3.0, 0.0, 1.0) + 0.5);
+	// calm refraction: the bed shows through, shifted by at most a pixel, slowly
+	vec2 q = cell / vec2(11.0, 7.0);
+	float wob = w3_vnoise(q + vec2(t * 0.12, t * 0.07));
+	vec2 off = floor((vec2(wob, w3_vnoise(q * 1.3 + 4.0 + t * 0.1)) - 0.5) * 1.6 * clamp(depth * 3.0, 0.0, 1.0) + 0.5);
 	vec3 under = texture(screen_tex, SCREEN_UV + off / VIEWPORT_SIZE).rgb;
-	float dk = smoothstep(0.0, 0.9, depth);
-	vec3 body = mix(shallow_col, deep_col, dk) * (w3_sky * 1.3 + w3_sun * 0.55);
-	float a = clamp(0.42 + dk * 0.5 + moving * 0.12, 0.0, 0.9);
+	// depth in three calm bands (rim, middle, deep), dithered only at their seams
+	float dq = floor(clamp(depth / 0.55, 0.0, 1.0) * 2.0 + 0.5 + (w3_bayer4(cell) - 0.5) * 0.35) / 2.0;
+	vec3 body = mix(shallow_col, deep_col, dq) * (w3_sky * 1.3 + w3_sun * 0.55);
+	float a = 0.4 + dq * 0.45 + moving * 0.08;
 	vec3 col = mix(under, body, a);
-	// sky in the surface, a little stronger where it is calm
-	float sky_k = (0.05 + 0.08 * dk) * (1.0 - moving * 0.4);
-	col = mix(col, w3_sky * 1.25 + w3_fog_col * 0.2, sky_k);
-	// light bands of the ripples (crisp, never smooth)
-	float band = step(0.68, rip) * step(rip, 0.74);
-	col += band * (w3_sky * 0.25 + w3_sun * 0.18);
-	// flow lines in the stream
-	float streak = step(0.84, w3_vnoise(vec2(fq.x * 2.0, fq.y * 0.7 - t * 2.4)));
-	col = mix(col, col * 1.35 + vec3(0.02), streak * moving * 0.7);
-	// foam where it is shallow (banks, stones), breaking and breathing
-	float lap = 0.035 + 0.02 * sin(t * 1.4 + w3_vnoise(cell / 6.0) * 6.0);
-	float foam = (1.0 - step(lap, depth)) * step(0.66, w3_vnoise(cell / 2.0 + vec2(t * 0.8 * (moving + 0.2), 0.0)));
-	col = mix(col, vec3(0.72, 0.78, 0.78) * (w3_sky * 0.6 + w3_sun * 0.6 + 0.1), foam * 0.6);
-	// sun glints on crests (bloom a little)
-	float glint = step(0.996, w3_hash(cell + floor(t * 3.0) * 7.31)) * step(0.55, rip) * (1.0 - w3_night * 0.7);
-	col += glint * w3_sun * 1.3;
+	// a hint of sky, stronger where it is deep and calm
+	col = mix(col, w3_sky * 1.2 + w3_fog_col * 0.2, (0.04 + 0.07 * dq) * (1.0 - moving * 0.5));
+	// a few highlights: short dashes of sky light drifting slowly on calm water
+	vec2 hc = floor(cell / vec2(7.0, 3.0));
+	float hl = step(0.93, w3_hash(hc + floor(t * 0.25 + w3_hash(hc) * 4.0) * 3.1));
+	float dash = hl * step(abs(mod(cell.x, 7.0) - 3.0), 1.5) * step(mod(cell.y, 3.0), 0.5);
+	col += dash * (w3_sky * 0.32 + w3_sun * 0.22) * (1.0 - moving * 0.4);
+	// flow lines in the stream (and where the pool spills into it), combed downstream
+	vec2 fq = vec2(dot(cell, vec2(flow.y, -flow.x)) / 2.5, dot(cell, flow) / 9.0);
+	float streak = step(0.82, w3_vnoise(vec2(fq.x, fq.y - t * 2.2)));
+	col = mix(col, col * 1.3 + vec3(0.025), streak * moving * 0.75);
+	// a thin broken line of foam where moving water meets stones and banks
+	float foam = (1.0 - step(0.03, depth)) * step(0.55, w3_vnoise(cell / 1.5 + vec2(t * 1.5, 0.0))) * moving;
+	col = mix(col, vec3(0.74, 0.8, 0.8) * (w3_sky * 0.6 + w3_sun * 0.6 + 0.1), foam * 0.6);
+	// sun glints, rare
+	float glint = step(0.997, w3_hash(cell + floor(t * 2.0) * 7.31)) * (1.0 - w3_night * 0.7) * (0.4 + 0.6 * moving);
+	col += glint * w3_sun * 1.2;
 	// rain rings
 	if (w3_wet > 0.05) {
 		vec2 rc = floor(cell / 11.0);

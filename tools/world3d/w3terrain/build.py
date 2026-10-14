@@ -186,6 +186,9 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     F["trunk_k"] = geom.smoothstep(4.0, 1.5, np.hypot(Xs - M["camphor"][0], Zs - M["camphor"][1]))
     canopy = np.zeros_like(Hs)
     kind = np.zeros_like(Hs)
+    # crowns are not discs: a lobed outline per tree and a fine noise that frays the rim
+    fray = noise.fbm(Xs / 1.4, Zs / 1.4, 2, int(L["seed"]) + 77) - 0.5
+    lob_rng = np.random.default_rng(int(L["seed"]) + 78)
     for p in plc:
         r = placement.CANOPY_R.get(p["kind"], 0.0) * p.get("scale", 1.0)
         if r <= 0:
@@ -200,7 +203,10 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
             continue
         sub_x = Xs[j0:j1, i0:i1]
         sub_z = Zs[j0:j1, i0:i1]
-        d = np.hypot(sub_x - cx, sub_z - cz) / r
+        ph = lob_rng.uniform(0, 2 * np.pi, 3)
+        ang = np.arctan2(sub_z - cz, sub_x - cx)
+        lobes = 1.0 + 0.16 * np.sin(3 * ang + ph[0]) + 0.1 * np.sin(5 * ang + ph[1]) + 0.06 * np.sin(2 * ang + ph[2])
+        d = np.hypot(sub_x - cx, sub_z - cz) / (r * lobes) + fray[j0:j1, i0:i1] * 0.45
         k = geom.smoothstep(1.15, 0.45, d) * (1.4 if p["kind"] == "camphor" else 1.0)
         canopy[j0:j1, i0:i1] = np.maximum(canopy[j0:j1, i0:i1], k)
         lk = {"cedar": 0.5, "pine": 0.5, "bamboo": 1.0}.get(p["kind"], 0.0)
@@ -261,5 +267,9 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
         h=h, X=X, Z=Z, x0=x0, z0=z0, cell=cell, nx=nx, nz=nz, walk=walk, water_h=water_h, water_k=water_k,
         flow=flow, mats=mats, cs=cs, Hs=Hs, placements=plc, road=(RP, rprof), paths=path_fields, walls=walls,
         steps=step_info, pool_surf=pool_surf, stream=(SP, sfloor), slope=slope))
-    log("done", f"{time.time() - t0:.1f}s", info)
+    log("exported", f"{time.time() - t0:.1f}s", info)
+    # ---------------- the land around the region, for the view from the lookout
+    from . import vista
+    vinfo = vista.write(L, out_godot, out_tmp, dict(h=h, x0=x0, z0=z0, cell=cell, nx=nx, nz=nz))
+    log("done", f"{time.time() - t0:.1f}s", "vista", vinfo)
     return info

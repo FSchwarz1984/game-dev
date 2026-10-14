@@ -18,3 +18,4 @@ shader_parameter/emission_color = null
 shader_parameter/emission_energy = null
 shader_parameter/emission_at_night = null
 shader_parameter/cutaway = null
+shader_parameter/cutaway_scale = null

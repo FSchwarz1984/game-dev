@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/objects/backpack_frame/backpack_frame_far_mesh.res" id="1"]
+
+[node name="BackpackFrameFar" type="Node3D" unique_id=933807063]
+metadata/w3a_kind = "objects"
+metadata/w3a_far = true
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
+mesh = ExtResource("1")

@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/plants/fern/fern_b_leaves.res" id="1"]
+
+[node name="FernB" type="Node3D" unique_id=682255923]
+
+[node name="Leaves" type="MeshInstance3D" parent="." unique_id=263299009]
+extra_cull_margin = 1.0
+mesh = ExtResource("1")

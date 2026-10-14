@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://c8e1sitkyka1e"
+path="res://.godot/imported/vista_mat.png-093c020ec73f1915c4520dc1bcd6038b.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/vista_mat.png"
+dest_files=["res://.godot/imported/vista_mat.png-093c020ec73f1915c4520dc1bcd6038b.image"]
+
+[params]
+

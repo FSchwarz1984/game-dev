@@ -33,7 +33,10 @@ func build(t: Terrain3D) -> void:
 	var z1 := z0 + (terrain.nz - 1) * terrain.cell
 	var noise := FastNoiseLite.new()
 	noise.seed = 77
-	noise.frequency = 0.22
+	noise.frequency = 0.085
+	var edge := FastNoiseLite.new()
+	edge.seed = 78
+	edge.frequency = 0.45
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 404
 	var chunks := {}
@@ -52,8 +55,10 @@ func build(t: Terrain3D) -> void:
 			var c3 := m3.get_pixel(si, sj)
 			var grass := c0.r
 			var dens := c3.b
-			var clump := noise.get_noise_2d(px, pz) * 0.5 + 0.5
-			var p := grass * (0.08 + 0.8 * dens) * smoothstep(0.38, 0.82, clump) * 1.1 * (1.0 - c3.a * 0.6)
+			# massing: big clumps with bare ground between them (negative space), ragged edges
+			var clump := noise.get_noise_2d(px, pz) * 0.5 + 0.5 + edge.get_noise_2d(px, pz) * 0.12
+			var mass := smoothstep(0.5, 0.64, clump)
+			var p := grass * (0.03 + 0.95 * mass * (0.45 + 0.55 * dens)) * (1.0 - c3.a * 0.55)
 			var moss := c1.r
 			var fern := moss * 0.35 + (c3.a * 0.25 if c1.g > 0.3 else 0.0)
 			if rng.randf() < p and grass > 0.55 and terrain.walkable(px, pz):
@@ -67,9 +72,13 @@ func build(t: Terrain3D) -> void:
 						cellv = [7, 8, 9][rng.randi() % 3]
 					elif dry:
 						cellv = [10, 2, 3, 4][rng.randi() % 4] if r < 0.5 else [0, 1][rng.randi() % 2]
+					elif mass > 0.85 and r < 0.55:
+						cellv = [2, 3, 4, 5][rng.randi() % 4]          # the heart of a clump grows tall
+					elif mass < 0.3:
+						cellv = [0, 1, 6][rng.randi() % 3]             # singles in the open stay short
 					else:
-						cellv = [0, 1, 2, 3, 4, 5, 6][mini(int(r * r * 7.0 + dens * 2.0), 6)]
-					_add(chunks, px, pz, cellv, 1.0 if dry else 0.0, rng.randf_range(0.2, 1.1) + (clump - 0.5) * 0.6, 0.8 if cellv in [4, 5] else 0.5)
+						cellv = [0, 1, 2, 3, 6][rng.randi() % 5]
+					_add(chunks, px, pz, cellv, 1.0 if dry else 0.0, rng.randf_range(-0.6, 0.3) + mass * 0.25, 0.8 if cellv in [4, 5] else 0.5)
 			elif rng.randf() < fern * 0.5 and terrain.walkable(px, pz) and terrain.water_at(px, pz)["kind"] == 0:
 				_add(chunks, px, pz, 11, 5.0 if moss > 0.4 else 0.0, rng.randf_range(-0.6, 0.3), 0.5)
 			x += STEP

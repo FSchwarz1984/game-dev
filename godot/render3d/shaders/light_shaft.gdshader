@@ -28,9 +28,11 @@ void fragment() {
 	float across = 1.0 - abs(v_uv.x - 0.5) * 2.0;
 	float along = smoothstep(0.0, 0.25, v_uv.y) * (1.0 - smoothstep(0.55, 1.0, v_uv.y));
 	float breath = 0.75 + 0.25 * sin(w3_time * 0.6 + v_cus.w);
-	float sun_up = smoothstep(0.22, 0.42, w3_sun_dir.y) * (1.0 - smoothstep(0.8, 0.95, w3_sun_dir.y)) * (1.0 - w3_night) * (1.0 - w3_wet);
-	float a = smoothstep(0.0, 0.7, across) * along * breath * v_cus.z * sun_up;
-	float aq = floor(a * 5.0 + w3_bayer4(cell)) / 5.0;
+	// strongest when the sun is low (dawn, late afternoon), gone at noon and at night
+	float low = smoothstep(0.16, 0.32, w3_sun_dir.y) * (1.0 - smoothstep(0.5, 0.72, w3_sun_dir.y));
+	float sun_up = low * (1.0 - w3_night) * (1.0 - w3_wet);
+	float a = across * across * along * breath * v_cus.z * sun_up;
+	float aq = floor(a * 4.0 + w3_bayer4(cell) * 0.999) / 4.0;
 	if (aq <= 0.0) discard;
-	ALBEDO = w3_sun * vec3(1.0, 0.95, 0.8) * aq * 0.16;
+	ALBEDO = w3_sun * vec3(1.0, 0.94, 0.78) * aq * 0.11;
 }

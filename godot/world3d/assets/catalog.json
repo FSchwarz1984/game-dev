@@ -1,33 +1,345 @@
 {
  "version": 1,
  "assets": {
+  "ajisai_blue": {
+   "category": "shrub",
+   "species": "hydrangea",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.7200000000000001
+    ]
+   ],
+   "height": 1.3,
+   "crown": {
+    "centre": [
+     -0.07672337418894336,
+     0.6282497197282583,
+     0.060757328851674654
+    ],
+    "radius": 1.1195657730951825,
+    "base": 0.1
+   },
+   "tags": [
+    "shrub",
+    "flower"
+   ],
+   "anchors": {},
+   "notes": "紫陽花, blue flowers.",
+   "scene": "res://world3d/assets/trees/ajisai/ajisai_blue.tscn"
+  },
+  "ajisai_dusty": {
+   "category": "shrub",
+   "species": "hydrangea",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.8
+    ]
+   ],
+   "height": 1.4,
+   "crown": {
+    "centre": [
+     -0.006604050591151887,
+     0.7473705754488306,
+     -0.04072856878559198
+    ],
+    "radius": 1.1103472170748891,
+    "base": 0.1
+   },
+   "tags": [
+    "shrub",
+    "flower"
+   ],
+   "anchors": {},
+   "notes": "紫陽花, dusty flowers.",
+   "scene": "res://world3d/assets/trees/ajisai/ajisai_dusty.tscn"
+  },
+  "ajisai_violet": {
+   "category": "shrub",
+   "species": "hydrangea",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.6000000000000001
+    ]
+   ],
+   "height": 1.1,
+   "crown": {
+    "centre": [
+     -0.065995534033547,
+     0.5414791872608182,
+     -0.06645203393892106
+    ],
+    "radius": 0.9674331689859059,
+    "base": 0.1
+   },
+   "tags": [
+    "shrub",
+    "flower"
+   ],
+   "anchors": {},
+   "notes": "紫陽花, violet flowers.",
+   "scene": "res://world3d/assets/trees/ajisai/ajisai_violet.tscn"
+  },
+  "backpack_frame": {
+   "footprint": [],
+   "tags": [
+    "pickup",
+    "story"
+   ],
+   "notes": "背負子, the old backpack frame (1.05 m), upright; origin at its feet.",
+   "anchors": {
+    "carry": [
+     0.0,
+     0.6,
+     -0.05
+    ]
+   },
+   "category": "objects",
+   "variants": {
+    "far": "res://world3d/assets/objects/backpack_frame/backpack_frame_far.tscn"
+   },
+   "height": 1.05,
+   "size": [
+    0.5,
+    1.05,
+    0.37
+   ],
+   "scene": "res://world3d/assets/objects/backpack_frame/backpack_frame.tscn"
+  },
+  "basket_flat": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.3
+    ]
+   ],
+   "tags": [
+    "pickup"
+   ],
+   "notes": "Flat basket (笊) with a few greens.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/basket_flat/basket_flat_far.tscn"
+   },
+   "height": 0.13,
+   "size": [
+    0.66,
+    0.13,
+    0.66
+   ],
+   "scene": "res://world3d/assets/props/basket_flat/basket_flat.tscn"
+  },
+  "basket_tall": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.3
+    ]
+   ],
+   "tags": [
+    "interact"
+   ],
+   "notes": "Carrying basket (背負い籠), 0.62 m.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/basket_tall/basket_tall_far.tscn"
+   },
+   "height": 0.63,
+   "size": [
+    0.54,
+    0.63,
+    0.61
+   ],
+   "scene": "res://world3d/assets/props/basket_tall/basket_tall.tscn"
+  },
+  "buna_a": {
+   "category": "tree",
+   "species": "beech",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "height": 15.0,
+   "crown": {
+    "centre": [
+     -0.6582799798624637,
+     10.759603575676845,
+     -0.6048343587570466
+    ],
+    "radius": 7.1493537030762555,
+    "base": 6.75
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "ブナ 15 m.",
+   "scene": "res://world3d/assets/trees/buna/buna_a.tscn"
+  },
+  "buna_b": {
+   "category": "tree",
+   "species": "beech",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "height": 11.0,
+   "crown": {
+    "centre": [
+     -0.9316493388047961,
+     8.143377190756981,
+     0.8299010769410292
+    ],
+    "radius": 5.361802103570492,
+    "base": 4.95
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "ブナ 11 m.",
+   "scene": "res://world3d/assets/trees/buna/buna_b.tscn"
+  },
+  "buna_c": {
+   "category": "tree",
+   "species": "beech",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "height": 17.0,
+   "crown": {
+    "centre": [
+     -0.9602913148767817,
+     12.780308492439264,
+     0.9401475038726946
+    ],
+    "radius": 8.394370308821529,
+    "base": 7.65
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "ブナ 17 m.",
+   "scene": "res://world3d/assets/trees/buna/buna_c.tscn"
+  },
   "camphor_great": {
    "category": "tree",
    "footprint": [
     [
      0.0,
      0.0,
-     3.3
+     3.6
     ],
     [
-     3.4,
-     0.4,
-     1.0
+     -1.26,
+     -3.99,
+     0.89
     ],
     [
-     -3.4,
-     0.2,
-     1.0
+     -1.54,
+     -4.89,
+     0.7
     ],
     [
-     0.3,
-     3.4,
-     1.0
+     -3.41,
+     -1.75,
+     1.03
     ],
     [
-     -0.3,
-     -3.4,
-     1.0
+     -4.2,
+     -2.2,
+     0.83
+    ],
+    [
+     -3.97,
+     1.2,
+     0.76
+    ],
+    [
+     -4.89,
+     1.49,
+     0.58
+    ],
+    [
+     -2.34,
+     3.25,
+     0.94
+    ],
+    [
+     -2.8,
+     3.83,
+     0.78
+    ],
+    [
+     0.7,
+     3.78,
+     0.66
+    ],
+    [
+     2.59,
+     2.43,
+     1.04
+    ],
+    [
+     3.05,
+     2.84,
+     1.01
+    ],
+    [
+     3.56,
+     3.27,
+     0.86
+    ],
+    [
+     4.29,
+     3.9,
+     0.66
+    ],
+    [
+     4.02,
+     3.68,
+     0.52
+    ],
+    [
+     3.82,
+     0.21,
+     0.97
+    ],
+    [
+     4.68,
+     0.27,
+     0.79
+    ],
+    [
+     3.04,
+     -2.84,
+     0.83
+    ],
+    [
+     3.74,
+     -3.5,
+     0.64
     ]
    ],
    "height": 21.5,
@@ -45,15 +357,1624 @@
     "climbable",
     "sacred"
    ],
+   "variants": {
+    "far": "res://world3d/assets/trees/camphor_great/camphor_great_far.tscn"
+   },
    "anchors": {
     "shimenawa_front": [
      0.0,
-     2.15,
-     3.3
+     2.25,
+     3.52
     ]
    },
-   "notes": "御神木. Trunk 6.5 m across, buttresses to ~9.5 m, low limbs reach 16.5 m. Shimenawa at 2.35 m.",
+   "notes": "御神木. Trunk 6.5 m across; buttress roots fitted to the ground of the saddle terrain at marker 'camphor' (0.0, 0.0), origin height 0.106 (do not rotate; rebuild after the terrain changes); low limbs reach 16.5 m. Shimenawa at 2.45 m.",
    "scene": "res://world3d/assets/trees/camphor_great/camphor_great.tscn"
+  },
+  "dosojin": {
+   "footprint": [
+    [
+     -0.4,
+     0.0,
+     0.42
+    ],
+    [
+     0.4,
+     0.0,
+     0.42
+    ],
+    [
+     0.0,
+     0.52,
+     0.42
+    ]
+   ],
+   "tags": [
+    "interact",
+    "stone",
+    "sacred"
+   ],
+   "notes": "Two stone figures, the right one under her wide hat (斗笠); a dish with two white dango on the ledge before them. Nodes Dango_0 / Dango_1 can be hidden or faded (meta w3a_far_mesh).",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     1.25
+    ],
+    "dango": [
+     [
+      -0.06,
+      0.196,
+      0.52
+     ],
+     [
+      0.07,
+      0.196,
+      0.54
+     ]
+    ],
+    "hat": [
+     0.41,
+     0.97,
+     -0.02
+    ]
+   },
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/dosojin/dosojin_far.tscn"
+   },
+   "height": 0.96,
+   "size": [
+    1.68,
+    0.99,
+    1.19
+   ],
+   "scene": "res://world3d/assets/props/dosojin/dosojin.tscn"
+  },
+  "fallen_branch": {
+   "footprint": [],
+   "tags": [
+    "pickup",
+    "wood"
+   ],
+   "notes": "A fallen branch, 2.8 m, a few dead leaves on it.",
+   "anchors": {
+    "take": [
+     0.0,
+     0.1,
+     0.0
+    ]
+   },
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/fallen_branch/fallen_branch_far.tscn"
+   },
+   "height": 0.39,
+   "size": [
+    2.79,
+    0.37,
+    0.89
+   ],
+   "scene": "res://world3d/assets/props/fallen_branch/fallen_branch.tscn"
+  },
+  "fence_bamboo": {
+   "footprint": [
+    [
+     -1.0,
+     0.0,
+     0.12
+    ],
+    [
+     0.0,
+     0.0,
+     0.12
+    ],
+    [
+     1.0,
+     0.0,
+     0.12
+    ]
+   ],
+   "tags": [
+    "fence"
+   ],
+   "notes": "Bamboo lattice fence (四つ目垣), 2 m segment along x; segments join end to end.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/fence_bamboo/fence_bamboo_far.tscn"
+   },
+   "height": 1.05,
+   "size": [
+    2.16,
+    1.2,
+    0.1
+   ],
+   "scene": "res://world3d/assets/props/fence_bamboo/fence_bamboo.tscn"
+  },
+  "fence_rail": {
+   "footprint": [
+    [
+     -1.0,
+     0.0,
+     0.12
+    ],
+    [
+     0.0,
+     0.0,
+     0.12
+    ],
+    [
+     1.0,
+     0.0,
+     0.12
+    ]
+   ],
+   "tags": [
+    "fence"
+   ],
+   "notes": "Old post-and-rail fence, 2 m segment along x; segments join end to end.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/fence_rail/fence_rail_far.tscn"
+   },
+   "height": 0.91,
+   "size": [
+    2.2,
+    1.02,
+    0.16
+   ],
+   "scene": "res://world3d/assets/props/fence_rail/fence_rail.tscn"
+  },
+  "fern_a": {
+   "category": "plant",
+   "species": "fern",
+   "footprint": [],
+   "height": 0.9,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "羊歯 clump (card sprites).",
+   "scene": "res://world3d/assets/plants/fern/fern_a.tscn"
+  },
+  "fern_b": {
+   "category": "plant",
+   "species": "fern",
+   "footprint": [],
+   "height": 0.9,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "羊歯 clump (card sprites).",
+   "scene": "res://world3d/assets/plants/fern/fern_b.tscn"
+  },
+  "fern_c": {
+   "category": "plant",
+   "species": "fern",
+   "footprint": [],
+   "height": 0.9,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "羊歯 clump (card sprites).",
+   "scene": "res://world3d/assets/plants/fern/fern_c.tscn"
+  },
+  "fern_d": {
+   "category": "plant",
+   "species": "fern",
+   "footprint": [],
+   "height": 0.9,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "羊歯 clump (card sprites).",
+   "scene": "res://world3d/assets/plants/fern/fern_d.tscn"
+  },
+  "graves": {
+   "footprint": [
+    [
+     -4.61,
+     -0.0,
+     0.3
+    ],
+    [
+     -3.37,
+     -0.0,
+     0.3
+    ],
+    [
+     -2.28,
+     -0.11,
+     0.3
+    ],
+    [
+     -1.18,
+     0.04,
+     0.3
+    ],
+    [
+     -0.01,
+     -0.04,
+     0.3
+    ],
+    [
+     1.15,
+     -0.07,
+     0.3
+    ],
+    [
+     2.25,
+     -0.0,
+     0.3
+    ],
+    [
+     3.36,
+     0.0,
+     0.3
+    ],
+    [
+     4.67,
+     0.04,
+     0.3
+    ]
+   ],
+   "tags": [
+    "interact",
+    "stone",
+    "graves"
+   ],
+   "notes": "The nine nameless graves (無縁墓) in a row 9.2 m long on their bench, origin at the graves marker. anchors.hook_0..9: where the ten paper lanterns (lights/lantern_paper, anchors.hang) hang.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/graves/graves_far.tscn"
+   },
+   "anchors": {
+    "hook": [
+     [
+      -4.182,
+      1.234,
+      0.197
+     ],
+     [
+      -2.975,
+      1.178,
+      0.197
+     ],
+     [
+      -1.845,
+      1.116,
+      0.087
+     ],
+     [
+      -0.773,
+      1.118,
+      0.243
+     ],
+     [
+      0.401,
+      1.206,
+      0.156
+     ],
+     [
+      1.556,
+      1.152,
+      0.135
+     ],
+     [
+      2.65,
+      1.111,
+      0.198
+     ],
+     [
+      3.792,
+      1.26,
+      0.201
+     ],
+     [
+      5.093,
+      1.232,
+      0.239
+     ],
+     [
+      5.346,
+      1.43,
+      0.25
+     ]
+    ]
+   },
+   "height": 1.51,
+   "size": [
+    10.22,
+    1.61,
+    0.72
+   ],
+   "scene": "res://world3d/assets/props/graves/graves.tscn"
+  },
+  "hut": {
+   "footprint": [
+    [
+     -1.4,
+     0.0,
+     2.0
+    ],
+    [
+     1.4,
+     0.0,
+     2.0
+    ],
+    [
+     0.0,
+     -0.6,
+     2.0
+    ],
+    [
+     2.25,
+     2.2,
+     0.55
+    ]
+   ],
+   "tags": [
+    "building",
+    "interact",
+    "home"
+   ],
+   "notes": "Thatched hut, Q proportion: walls 5.6 x 3.8 m, roof 7.3 x 5.7 m, ridge 5.7 m, eave underside 2.3 m, door 0.98 x 1.82 m. Nodes: Door (slides open toward -x by 0.9 m), DoorBar (lift away to unbar), BackpackFrame (the old frame; the same object is objects/backpack_frame). The roof material stipples away over her.",
+   "anchors": {
+    "door": [
+     -0.87,
+     0.0,
+     3.0
+    ],
+    "interact": [
+     -0.87,
+     0.0,
+     2.9
+    ],
+    "door_open_offset": [
+     -0.9,
+     0.0,
+     0.0
+    ],
+    "firewood": [
+     2.25,
+     0.4,
+     2.1999999999999997
+    ],
+    "tub": [
+     -0.05,
+     0.3,
+     2.35
+    ],
+    "backpack_frame": [
+     -2.2,
+     0.0,
+     2.28
+    ]
+   },
+   "category": "buildings",
+   "variants": {
+    "far": "res://world3d/assets/buildings/hut/hut_far.tscn"
+   },
+   "height": 5.89,
+   "size": [
+    7.35,
+    5.99,
+    5.75
+   ],
+   "scene": "res://world3d/assets/buildings/hut/hut.tscn"
+  },
+  "kakehi": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "tags": [
+    "interact",
+    "water"
+   ],
+   "notes": "Bamboo water spout (筧) carrying the spring into a stone basin; the pipe starts 2.4 m behind (-z) at the spring.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.75
+    ],
+    "spout": [
+     0.0,
+     0.8,
+     -0.12
+    ],
+    "water": [
+     0.0,
+     0.5,
+     0.0
+    ]
+   },
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/kakehi/kakehi_far.tscn"
+   },
+   "height": 0.96,
+   "size": [
+    0.87,
+    1.06,
+    2.71
+   ],
+   "scene": "res://world3d/assets/props/kakehi/kakehi.tscn"
+  },
+  "kaki_a": {
+   "category": "tree",
+   "species": "persimmon",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.32
+    ]
+   ],
+   "height": 7.5,
+   "crown": {
+    "centre": [
+     0.2969533337378506,
+     3.6290016611925244,
+     0.37302561248940097
+    ],
+    "radius": 5.910882483453619,
+    "base": 2.4
+   },
+   "tags": [
+    "tree",
+    "broadleaf",
+    "fruit"
+   ],
+   "anchors": {
+    "fruit": [
+     [
+      1.695,
+      3.02,
+      0.519
+     ],
+     [
+      0.934,
+      3.05,
+      -1.29
+     ],
+     [
+      2.406,
+      3.448,
+      0.213
+     ],
+     [
+      -0.018,
+      5.503,
+      4.44
+     ],
+     [
+      0.301,
+      5.135,
+      4.684
+     ],
+     [
+      2.349,
+      2.699,
+      -0.591
+     ],
+     [
+      -1.193,
+      4.026,
+      -2.999
+     ],
+     [
+      0.495,
+      2.73,
+      -0.598
+     ],
+     [
+      1.72,
+      4.539,
+      1.534
+     ],
+     [
+      1.886,
+      2.532,
+      0.422
+     ],
+     [
+      1.869,
+      5.419,
+      3.459
+     ],
+     [
+      -1.02,
+      4.373,
+      -3.445
+     ],
+     [
+      0.61,
+      4.791,
+      -3.533
+     ],
+     [
+      1.28,
+      4.694,
+      4.51
+     ],
+     [
+      -0.152,
+      3.513,
+      -0.618
+     ],
+     [
+      2.889,
+      2.656,
+      -0.045
+     ],
+     [
+      -0.724,
+      4.599,
+      4.41
+     ],
+     [
+      2.532,
+      3.545,
+      -0.508
+     ],
+     [
+      0.285,
+      3.982,
+      4.444
+     ],
+     [
+      1.692,
+      3.649,
+      2.567
+     ],
+     [
+      0.67,
+      3.324,
+      -0.948
+     ],
+     [
+      -2.592,
+      3.749,
+      4.648
+     ],
+     [
+      4.816,
+      3.42,
+      -0.752
+     ],
+     [
+      -3.045,
+      4.648,
+      3.675
+     ],
+     [
+      -0.514,
+      4.101,
+      2.151
+     ],
+     [
+      -0.874,
+      5.699,
+      2.797
+     ]
+    ]
+   },
+   "notes": "柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.",
+   "scene": "res://world3d/assets/trees/kaki/kaki_a.tscn"
+  },
+  "kaki_b": {
+   "category": "tree",
+   "species": "persimmon",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.32
+    ]
+   ],
+   "height": 6.0,
+   "crown": {
+    "centre": [
+     -0.9664252061557418,
+     4.026943884628147,
+     -0.6255233007925214
+    ],
+    "radius": 2.727409350568665,
+    "base": 1.92
+   },
+   "tags": [
+    "tree",
+    "broadleaf",
+    "fruit"
+   ],
+   "anchors": {
+    "fruit": [
+     [
+      0.709,
+      5.148,
+      0.782
+     ],
+     [
+      -3.029,
+      5.534,
+      -1.25
+     ],
+     [
+      -1.388,
+      5.505,
+      -1.162
+     ],
+     [
+      -1.986,
+      5.441,
+      -0.842
+     ],
+     [
+      -2.504,
+      5.433,
+      -1.692
+     ],
+     [
+      -2.276,
+      4.806,
+      -0.462
+     ],
+     [
+      0.626,
+      3.156,
+      0.428
+     ],
+     [
+      -0.187,
+      3.155,
+      -0.283
+     ],
+     [
+      -1.859,
+      3.432,
+      -0.305
+     ],
+     [
+      0.909,
+      4.912,
+      0.983
+     ],
+     [
+      -0.234,
+      3.255,
+      -0.256
+     ],
+     [
+      -2.971,
+      5.131,
+      -0.255
+     ],
+     [
+      -1.614,
+      3.551,
+      -0.084
+     ],
+     [
+      0.384,
+      3.038,
+      0.76
+     ],
+     [
+      -0.359,
+      3.458,
+      0.816
+     ],
+     [
+      -0.181,
+      4.611,
+      1.626
+     ],
+     [
+      -2.335,
+      5.523,
+      -1.336
+     ],
+     [
+      0.497,
+      5.117,
+      1.139
+     ]
+    ]
+   },
+   "notes": "柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.",
+   "scene": "res://world3d/assets/trees/kaki/kaki_b.tscn"
+  },
+  "kaki_c": {
+   "category": "tree",
+   "species": "persimmon",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.32
+    ]
+   ],
+   "height": 8.5,
+   "crown": {
+    "centre": [
+     0.7047255541376185,
+     5.672842724965387,
+     0.33632789889353615
+    ],
+    "radius": 4.853133921302695,
+    "base": 2.72
+   },
+   "tags": [
+    "tree",
+    "broadleaf",
+    "fruit"
+   ],
+   "anchors": {
+    "fruit": [
+     [
+      1.711,
+      7.644,
+      2.538
+     ],
+     [
+      2.449,
+      4.988,
+      1.032
+     ],
+     [
+      -1.635,
+      7.08,
+      -0.049
+     ],
+     [
+      1.01,
+      7.271,
+      1.716
+     ],
+     [
+      -1.102,
+      6.879,
+      2.444
+     ],
+     [
+      -0.475,
+      4.649,
+      -0.615
+     ],
+     [
+      3.055,
+      8.262,
+      0.745
+     ],
+     [
+      1.69,
+      8.314,
+      0.606
+     ],
+     [
+      1.786,
+      5.212,
+      2.441
+     ],
+     [
+      2.227,
+      5.473,
+      0.558
+     ],
+     [
+      2.04,
+      7.38,
+      0.304
+     ],
+     [
+      1.546,
+      5.229,
+      1.264
+     ],
+     [
+      1.848,
+      4.477,
+      2.918
+     ],
+     [
+      3.846,
+      7.272,
+      1.397
+     ],
+     [
+      2.545,
+      7.882,
+      1.859
+     ],
+     [
+      -1.322,
+      4.51,
+      0.637
+     ],
+     [
+      1.595,
+      4.859,
+      2.884
+     ],
+     [
+      -0.596,
+      4.751,
+      -0.293
+     ],
+     [
+      2.22,
+      8.38,
+      0.399
+     ],
+     [
+      1.517,
+      5.527,
+      1.697
+     ],
+     [
+      2.05,
+      7.017,
+      0.299
+     ],
+     [
+      1.112,
+      5.64,
+      -0.199
+     ],
+     [
+      0.029,
+      6.032,
+      3.556
+     ],
+     [
+      1.73,
+      5.947,
+      0.156
+     ],
+     [
+      1.581,
+      5.623,
+      0.712
+     ],
+     [
+      -3.993,
+      5.896,
+      -0.031
+     ],
+     [
+      0.965,
+      5.518,
+      2.096
+     ],
+     [
+      2.086,
+      8.371,
+      -1.735
+     ],
+     [
+      1.359,
+      4.779,
+      1.431
+     ],
+     [
+      -0.748,
+      4.395,
+      0.6
+     ]
+    ]
+   },
+   "notes": "柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.",
+   "scene": "res://world3d/assets/trees/kaki/kaki_c.tscn"
+  },
+  "kare_a": {
+   "category": "tree",
+   "species": "dead",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "height": 8.0,
+   "crown": {},
+   "tags": [
+    "tree",
+    "choppable",
+    "dead"
+   ],
+   "anchors": {
+    "cut": [
+     0.0,
+     0.6,
+     0.35
+    ]
+   },
+   "notes": "枯れ木: a dead konara she may cut (the stump with the axe stands by it).",
+   "scene": "res://world3d/assets/trees/kare/kare_a.tscn"
+  },
+  "kare_b": {
+   "category": "tree",
+   "species": "dead",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "height": 6.0,
+   "crown": {},
+   "tags": [
+    "tree",
+    "choppable",
+    "dead"
+   ],
+   "anchors": {
+    "cut": [
+     0.0,
+     0.6,
+     0.35
+    ]
+   },
+   "notes": "枯れ木: a dead konara she may cut (the stump with the axe stands by it).",
+   "scene": "res://world3d/assets/trees/kare/kare_b.tscn"
+  },
+  "konara_a": {
+   "category": "tree",
+   "species": "konara",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "height": 12.0,
+   "crown": {
+    "centre": [
+     -1.7910647998148141,
+     8.119277823099889,
+     0.40504226411574173
+    ],
+    "radius": 5.933147783532231,
+    "base": 4.5600000000000005
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "コナラ 12 m.",
+   "scene": "res://world3d/assets/trees/konara/konara_a.tscn"
+  },
+  "konara_b": {
+   "category": "tree",
+   "species": "konara",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "height": 9.5,
+   "crown": {
+    "centre": [
+     0.09416304716096084,
+     6.274203253395183,
+     0.36815247384529215
+    ],
+    "radius": 5.301652907949159,
+    "base": 3.61
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "コナラ 10 m.",
+   "scene": "res://world3d/assets/trees/konara/konara_b.tscn"
+  },
+  "konara_c": {
+   "category": "tree",
+   "species": "konara",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.45
+    ]
+   ],
+   "height": 14.0,
+   "crown": {
+    "centre": [
+     -2.341327590226195,
+     9.87073451841593,
+     0.49777583621266874
+    ],
+    "radius": 8.65331049227174,
+    "base": 5.32
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "コナラ 14 m.",
+   "scene": "res://world3d/assets/trees/konara/konara_c.tscn"
+  },
+  "lantern_paper": {
+   "footprint": [],
+   "tags": [
+    "light",
+    "pickup",
+    "hang"
+   ],
+   "notes": "White chochin, 0.58 m with its loop; origin at the bottom rim, anchors.hang at the loop top. Ten of these hang on the graves' hooks (graves anchors.hook_*).",
+   "category": "lights",
+   "variants": {
+    "far": "res://world3d/assets/lights/lantern_paper/lantern_paper_far.tscn",
+    "lit": "res://world3d/assets/lights/lantern_paper/lantern_paper_lit.tscn"
+   },
+   "anchors": {
+    "light": [
+     0.0,
+     0.22,
+     0.0
+    ],
+    "hang": [
+     0.0,
+     0.58,
+     0.0
+    ]
+   },
+   "height": 0.59,
+   "size": [
+    0.33,
+    0.59,
+    0.32
+   ],
+   "scene": "res://world3d/assets/lights/lantern_paper/lantern_paper.tscn"
+  },
+  "maple_a": {
+   "category": "tree",
+   "species": "japanese maple",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.35
+    ]
+   ],
+   "height": 7.0,
+   "crown": {
+    "centre": [
+     -0.12483271322876027,
+     3.206592975866146,
+     0.6915076698319336
+    ],
+    "radius": 4.34816114687205,
+    "base": 2.4499999999999997
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "イロハモミジ, summer green",
+   "scene": "res://world3d/assets/trees/maple/maple_a.tscn"
+  },
+  "maple_b": {
+   "category": "tree",
+   "species": "japanese maple",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.35
+    ]
+   ],
+   "height": 5.5,
+   "crown": {
+    "centre": [
+     -0.547864152167081,
+     2.3279728756382503,
+     -0.027327997487300373
+    ],
+    "radius": 3.466615360437252,
+    "base": 1.9249999999999998
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "イロハモミジ, summer green",
+   "scene": "res://world3d/assets/trees/maple/maple_b.tscn"
+  },
+  "maple_c": {
+   "category": "tree",
+   "species": "japanese maple",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.35
+    ]
+   ],
+   "height": 8.0,
+   "crown": {
+    "centre": [
+     0.5405135263305055,
+     3.648456691286048,
+     -0.020053483962642688
+    ],
+    "radius": 5.5799726777549115,
+    "base": 2.8
+   },
+   "tags": [
+    "tree",
+    "broadleaf"
+   ],
+   "anchors": {},
+   "notes": "イロハモミジ, summer green",
+   "scene": "res://world3d/assets/trees/maple/maple_c.tscn"
+  },
+  "maple_red_a": {
+   "category": "tree",
+   "species": "japanese maple (red)",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.35
+    ]
+   ],
+   "height": 6.5,
+   "crown": {
+    "centre": [
+     -0.06878816162993845,
+     2.520287658835122,
+     0.7626724099881332
+    ],
+    "radius": 4.835093020300195,
+    "base": 2.275
+   },
+   "tags": [
+    "tree",
+    "accent"
+   ],
+   "anchors": {},
+   "notes": "イロハモミジ, red (accent)",
+   "scene": "res://world3d/assets/trees/maple/maple_red_a.tscn"
+  },
+  "maple_red_b": {
+   "category": "tree",
+   "species": "japanese maple (red)",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.35
+    ]
+   ],
+   "height": 5.0,
+   "crown": {
+    "centre": [
+     -0.012482798286025033,
+     2.165189610751521,
+     0.08279164006705984
+    ],
+    "radius": 3.8345373651286567,
+    "base": 1.75
+   },
+   "tags": [
+    "tree",
+    "accent"
+   ],
+   "anchors": {},
+   "notes": "イロハモミジ, red (accent)",
+   "scene": "res://world3d/assets/trees/maple/maple_red_b.tscn"
+  },
+  "offering_box": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.42
+    ]
+   ],
+   "tags": [
+    "interact"
+   ],
+   "notes": "Offering box before the shrine; anchors.glint: coins inside that catch the light.",
+   "anchors": {
+    "glint": [
+     0.0,
+     0.45,
+     0.0
+    ],
+    "interact": [
+     0.0,
+     0.0,
+     0.75
+    ]
+   },
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/offering_box/offering_box_far.tscn"
+   },
+   "height": 0.48,
+   "size": [
+    0.76,
+    0.48,
+    0.48
+   ],
+   "scene": "res://world3d/assets/props/offering_box/offering_box.tscn"
+  },
+  "pine_a": {
+   "category": "tree",
+   "species": "red pine",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.44200000000000006
+    ]
+   ],
+   "height": 13.0,
+   "crown": {
+    "centre": [
+     1.6466647301725863,
+     9.139322442216406,
+     -1.066799359507759
+    ],
+    "radius": 6.2327423323621245,
+    "base": 5.2
+   },
+   "tags": [
+    "tree",
+    "conifer"
+   ],
+   "anchors": {},
+   "notes": "赤松 13 m, layered plates.",
+   "scene": "res://world3d/assets/trees/pine/pine_a.tscn"
+  },
+  "pine_b": {
+   "category": "tree",
+   "species": "red pine",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.35100000000000003
+    ]
+   ],
+   "height": 10.0,
+   "crown": {
+    "centre": [
+     -1.0407348347825482,
+     6.674359126895295,
+     0.7559991541323667
+    ],
+    "radius": 5.320473052408078,
+    "base": 4.0
+   },
+   "tags": [
+    "tree",
+    "conifer"
+   ],
+   "anchors": {},
+   "notes": "赤松 10 m, layered plates.",
+   "scene": "res://world3d/assets/trees/pine/pine_b.tscn"
+  },
+  "pine_c": {
+   "category": "tree",
+   "species": "red pine",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.49400000000000005
+    ]
+   ],
+   "height": 15.0,
+   "crown": {
+    "centre": [
+     0.592098757290022,
+     10.427846625930584,
+     -0.2509590882433318
+    ],
+    "radius": 6.89875638424185,
+    "base": 6.0
+   },
+   "tags": [
+    "tree",
+    "conifer"
+   ],
+   "anchors": {},
+   "notes": "赤松 15 m, layered plates.",
+   "scene": "res://world3d/assets/trees/pine/pine_c.tscn"
+  },
+  "pine_d": {
+   "category": "tree",
+   "species": "red pine",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.28600000000000003
+    ]
+   ],
+   "height": 8.0,
+   "crown": {
+    "centre": [
+     -1.7680314756481463,
+     6.0919740329503975,
+     -0.14225973338794282
+    ],
+    "radius": 5.633921100871252,
+    "base": 3.2
+   },
+   "tags": [
+    "tree",
+    "conifer"
+   ],
+   "anchors": {},
+   "notes": "赤松 8 m, layered plates.",
+   "scene": "res://world3d/assets/trees/pine/pine_d.tscn"
+  },
+  "shrine": {
+   "footprint": [
+    [
+     0.0,
+     0.2,
+     1.2
+    ],
+    [
+     0.0,
+     1.4,
+     0.6
+    ]
+   ],
+   "tags": [
+    "interact",
+    "sacred",
+    "building"
+   ],
+   "notes": "Small gabled shrine on a stone base; the porch eave beam is the node EaveBeam (scene shrine). shrine_fallen: the beam lies across the porch step (node EaveBeam moved), a post leans, the eave sags. The beam alone: objects/shrine_beam.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     2.3
+    ],
+    "beam": [
+     0.0,
+     2.0,
+     1.52
+    ],
+    "beam_fallen": [
+     0.15,
+     0.48,
+     1.85
+    ]
+   },
+   "category": "buildings",
+   "variants": {
+    "far": "res://world3d/assets/buildings/shrine/shrine_far.tscn",
+    "fallen": "res://world3d/assets/buildings/shrine/shrine_fallen.tscn",
+    "fallen_far": "res://world3d/assets/buildings/shrine/shrine_fallen_far.tscn"
+   },
+   "height": 3.23,
+   "size": [
+    2.43,
+    3.24,
+    3.17
+   ],
+   "scene": "res://world3d/assets/buildings/shrine/shrine.tscn"
+  },
+  "shrine_beam": {
+   "footprint": [],
+   "tags": [
+    "interact",
+    "story"
+   ],
+   "notes": "The shrine porch eave beam alone (1.8 m), centred; for the fallen state place it at shrine anchors.beam_fallen (yaw 0.5 rad, roll 0.25 rad).",
+   "category": "objects",
+   "variants": {
+    "far": "res://world3d/assets/objects/shrine_beam/shrine_beam_far.tscn"
+   },
+   "height": 0.11,
+   "size": [
+    1.81,
+    0.19,
+    0.12
+   ],
+   "scene": "res://world3d/assets/objects/shrine_beam/shrine_beam.tscn"
+  },
+  "signpost": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.18
+    ]
+   ],
+   "tags": [
+    "interact",
+    "sign"
+   ],
+   "notes": "Wooden signpost with two blank arms (no text).",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/signpost/signpost_far.tscn"
+   },
+   "height": 1.72,
+   "size": [
+    1.32,
+    1.86,
+    0.38
+   ],
+   "scene": "res://world3d/assets/props/signpost/signpost.tscn"
+  },
+  "stone_lantern": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.32
+    ]
+   ],
+   "tags": [
+    "light",
+    "stone"
+   ],
+   "notes": "Kasuga-style stone lantern (simplified), 1.52 m; a pair flanks the shrine steps. Variants: lit (the fire box glows at dusk and night), far (faded).",
+   "category": "lights",
+   "variants": {
+    "far": "res://world3d/assets/lights/stone_lantern/stone_lantern_far.tscn",
+    "lit": "res://world3d/assets/lights/stone_lantern/stone_lantern_lit.tscn"
+   },
+   "anchors": {
+    "light": [
+     0.0,
+     0.995,
+     0.0
+    ]
+   },
+   "height": 1.52,
+   "size": [
+    0.92,
+    1.52,
+    0.82
+   ],
+   "scene": "res://world3d/assets/lights/stone_lantern/stone_lantern.tscn"
+  },
+  "stone_lantern_old": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.32
+    ]
+   ],
+   "tags": [
+    "light",
+    "stone"
+   ],
+   "notes": "Old weathered stone lantern, squat, leaning a little, mossy. Variants: lit (the fire box glows at dusk and night), far (faded).",
+   "category": "lights",
+   "variants": {
+    "far": "res://world3d/assets/lights/stone_lantern_old/stone_lantern_old_far.tscn",
+    "lit": "res://world3d/assets/lights/stone_lantern_old/stone_lantern_old_lit.tscn"
+   },
+   "anchors": {
+    "light": [
+     0.036664,
+     0.9166,
+     0.0
+    ]
+   },
+   "height": 1.44,
+   "size": [
+    0.93,
+    1.44,
+    0.82
+   ],
+   "scene": "res://world3d/assets/lights/stone_lantern_old/stone_lantern_old.tscn"
+  },
+  "straw_heap": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "tags": [
+    "pickup"
+   ],
+   "notes": "Straw bundles lying in a heap.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/straw_heap/straw_heap_far.tscn"
+   },
+   "height": 0.3,
+   "size": [
+    1.27,
+    0.29,
+    0.6
+   ],
+   "scene": "res://world3d/assets/props/straw_heap/straw_heap.tscn"
+  },
+  "straw_sheaves": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "tags": [
+    "pickup"
+   ],
+   "notes": "Three standing straw sheaves (藁束).",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/straw_sheaves/straw_sheaves_far.tscn"
+   },
+   "height": 0.97,
+   "size": [
+    1.3,
+    1.0,
+    0.6
+   ],
+   "scene": "res://world3d/assets/props/straw_sheaves/straw_sheaves.tscn"
+  },
+  "stump_axe": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.42
+    ]
+   ],
+   "tags": [
+    "interact"
+   ],
+   "notes": "A cut stump with an axe bitten into it, chips around (by the tree she may cut).",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.8
+    ],
+    "axe": [
+     -0.13,
+     0.65,
+     -0.16
+    ]
+   },
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/stump_axe/stump_axe_far.tscn"
+   },
+   "height": 0.87,
+   "size": [
+    1.15,
+    1.02,
+    1.15
+   ],
+   "scene": "res://world3d/assets/props/stump_axe/stump_axe.tscn"
   },
   "sugi_a": {
    "category": "tree",
@@ -194,6 +2115,398 @@
    "anchors": {},
    "notes": "杉 9 m, crown from 1.6 m.",
    "scene": "res://world3d/assets/trees/sugi/sugi_e.tscn"
+  },
+  "susuki_a": {
+   "category": "plant",
+   "species": "susuki",
+   "footprint": [],
+   "height": 1.5,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "薄 clump with silvery plumes (card sprites).",
+   "scene": "res://world3d/assets/plants/susuki/susuki_a.tscn"
+  },
+  "susuki_b": {
+   "category": "plant",
+   "species": "susuki",
+   "footprint": [],
+   "height": 1.5,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "薄 clump with silvery plumes (card sprites).",
+   "scene": "res://world3d/assets/plants/susuki/susuki_b.tscn"
+  },
+  "susuki_c": {
+   "category": "plant",
+   "species": "susuki",
+   "footprint": [],
+   "height": 1.5,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "薄 clump with silvery plumes (card sprites).",
+   "scene": "res://world3d/assets/plants/susuki/susuki_c.tscn"
+  },
+  "susuki_d": {
+   "category": "plant",
+   "species": "susuki",
+   "footprint": [],
+   "height": 1.5,
+   "tags": [
+    "plant"
+   ],
+   "anchors": {},
+   "notes": "薄 clump with silvery plumes (card sprites).",
+   "scene": "res://world3d/assets/plants/susuki/susuki_d.tscn"
+  },
+  "take_a": {
+   "category": "tree",
+   "species": "bamboo",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     1.24
+    ]
+   ],
+   "height": 12.0,
+   "crown": {
+    "centre": [
+     -0.32551370762687726,
+     7.121832589452938,
+     -0.6380351020935715
+    ],
+    "radius": 3.3881852817495783,
+    "base": 6.6000000000000005
+   },
+   "tags": [
+    "tree",
+    "bamboo",
+    "choppable"
+   ],
+   "anchors": {},
+   "notes": "Madake clump, 7 culms, 12 m.",
+   "scene": "res://world3d/assets/trees/take/take_a.tscn"
+  },
+  "take_b": {
+   "category": "tree",
+   "species": "bamboo",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     1.0
+    ]
+   ],
+   "height": 10.0,
+   "crown": {
+    "centre": [
+     -0.2798960708287241,
+     5.847298235472723,
+     0.02269006589966199
+    ],
+    "radius": 3.734781055459955,
+    "base": 5.5
+   },
+   "tags": [
+    "tree",
+    "bamboo",
+    "choppable"
+   ],
+   "anchors": {},
+   "notes": "Madake clump, 5 culms, 10 m.",
+   "scene": "res://world3d/assets/trees/take/take_b.tscn"
+  },
+  "take_c": {
+   "category": "tree",
+   "species": "bamboo",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     1.4800000000000002
+    ]
+   ],
+   "height": 13.5,
+   "crown": {
+    "centre": [
+     0.09380657829054592,
+     8.464227226086852,
+     -0.017932326027060387
+    ],
+    "radius": 4.82249019963408,
+    "base": 7.425000000000001
+   },
+   "tags": [
+    "tree",
+    "bamboo",
+    "choppable"
+   ],
+   "anchors": {},
+   "notes": "Madake clump, 9 culms, 14 m.",
+   "scene": "res://world3d/assets/trees/take/take_c.tscn"
+  },
+  "take_d": {
+   "category": "tree",
+   "species": "bamboo",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.76
+    ]
+   ],
+   "height": 8.0,
+   "crown": {
+    "centre": [
+     -0.3392002697770613,
+     4.585559043970369,
+     0.9255494043477839
+    ],
+    "radius": 2.228351018270294,
+    "base": 4.4
+   },
+   "tags": [
+    "tree",
+    "bamboo",
+    "choppable"
+   ],
+   "anchors": {},
+   "notes": "Madake clump, 3 culms, 8 m.",
+   "scene": "res://world3d/assets/trees/take/take_d.tscn"
+  },
+  "take_e": {
+   "category": "tree",
+   "species": "bamboo",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     1.16
+    ]
+   ],
+   "height": 11.0,
+   "crown": {
+    "centre": [
+     0.7035679381469184,
+     6.511012945411123,
+     0.3223253693599063
+    ],
+    "radius": 3.76262617681737,
+    "base": 6.050000000000001
+   },
+   "tags": [
+    "tree",
+    "bamboo",
+    "choppable"
+   ],
+   "anchors": {},
+   "notes": "Madake clump, 6 culms, 11 m.",
+   "scene": "res://world3d/assets/trees/take/take_e.tscn"
+  },
+  "tsubaki_a": {
+   "category": "shrub",
+   "species": "camellia",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.63
+    ]
+   ],
+   "height": 2.6,
+   "crown": {
+    "centre": [
+     -0.06486922713211947,
+     1.2730871735076235,
+     -0.05794171945802068
+    ],
+    "radius": 1.010315720698131,
+    "base": 0.3
+   },
+   "tags": [
+    "shrub",
+    "flower"
+   ],
+   "anchors": {},
+   "notes": "椿: dark glossy leaves, a few red flowers.",
+   "scene": "res://world3d/assets/trees/tsubaki/tsubaki_a.tscn"
+  },
+  "tsubaki_b": {
+   "category": "shrub",
+   "species": "camellia",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.5249999999999999
+    ]
+   ],
+   "height": 2.0,
+   "crown": {
+    "centre": [
+     0.0035854876916184045,
+     1.033521056649952,
+     0.022660345135921706
+    ],
+    "radius": 0.8733422341126116,
+    "base": 0.3
+   },
+   "tags": [
+    "shrub",
+    "flower"
+   ],
+   "anchors": {},
+   "notes": "椿: dark glossy leaves, a few red flowers.",
+   "scene": "res://world3d/assets/trees/tsubaki/tsubaki_b.tscn"
+  },
+  "tsutsuji_a": {
+   "category": "shrub",
+   "species": "azalea",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.6400000000000001
+    ]
+   ],
+   "height": 0.9,
+   "crown": {
+    "centre": [
+     -0.022776946882645005,
+     0.4589641771357285,
+     -0.02538562299451419
+    ],
+    "radius": 0.973515420642226,
+    "base": 0.1
+   },
+   "tags": [
+    "shrub"
+   ],
+   "anchors": {},
+   "notes": "つつじ mound (summer green).",
+   "scene": "res://world3d/assets/trees/tsutsuji/tsutsuji_a.tscn"
+  },
+  "tsutsuji_b": {
+   "category": "shrub",
+   "species": "azalea",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.48
+    ]
+   ],
+   "height": 0.7,
+   "crown": {
+    "centre": [
+     -0.003727194106642786,
+     0.36982388025016827,
+     0.007001294417929155
+    ],
+    "radius": 0.6720485661761695,
+    "base": 0.1
+   },
+   "tags": [
+    "shrub"
+   ],
+   "anchors": {},
+   "notes": "つつじ mound (summer green).",
+   "scene": "res://world3d/assets/trees/tsutsuji/tsutsuji_b.tscn"
+  },
+  "tsutsuji_c": {
+   "category": "shrub",
+   "species": "azalea",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.8
+    ]
+   ],
+   "height": 1.1,
+   "crown": {
+    "centre": [
+     -0.05069666679004539,
+     0.5534255300048708,
+     0.14235495553441524
+    ],
+    "radius": 1.191611028319996,
+    "base": 0.1
+   },
+   "tags": [
+    "shrub"
+   ],
+   "anchors": {},
+   "notes": "つつじ mound (summer green).",
+   "scene": "res://world3d/assets/trees/tsutsuji/tsutsuji_c.tscn"
+  },
+  "waymark": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.18
+    ]
+   ],
+   "tags": [
+    "interact",
+    "sign"
+   ],
+   "notes": "Stone waymark (道しるべ), blank, leaning.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/waymark/waymark_far.tscn"
+   },
+   "height": 1.0,
+   "size": [
+    0.25,
+    1.05,
+    0.24
+   ],
+   "scene": "res://world3d/assets/props/waymark/waymark.tscn"
+  },
+  "woodpile": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.95
+    ]
+   ],
+   "tags": [
+    "interact",
+    "wood"
+   ],
+   "notes": "Stacked split firewood (薪) between stakes under a board, 1.7 m long; split ends face front and back.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.75
+    ],
+    "take": [
+     0.0,
+     0.9,
+     0.25
+    ]
+   },
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/woodpile/woodpile_far.tscn"
+   },
+   "height": 1.26,
+   "size": [
+    2.05,
+    1.36,
+    0.7
+   ],
+   "scene": "res://world3d/assets/props/woodpile/woodpile.tscn"
   }
  }
 }

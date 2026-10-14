@@ -1,0 +1,21 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://render3d/shaders/toon_solid.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://world3d/assets/trees/tsutsuji/tsutsuji_bark.png" id="2"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1")
+shader_parameter/tint = null
+shader_parameter/albedo_mode = 1
+shader_parameter/albedo_tex = ExtResource("2")
+shader_parameter/screen_origin_px = null
+shader_parameter/lean = null
+shader_parameter/porosity = 0.8
+shader_parameter/dither = null
+shader_parameter/vertex_ao = null
+shader_parameter/emission_color = null
+shader_parameter/emission_energy = null
+shader_parameter/emission_at_night = null
+shader_parameter/cutaway = null
+shader_parameter/cutaway_scale = null

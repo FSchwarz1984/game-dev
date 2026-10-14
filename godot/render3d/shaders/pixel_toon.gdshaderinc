@@ -133,14 +133,57 @@ vec3 w3_srgb_to_linear(vec3 c) {
 float w3_luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
 
 // ------------------------------------------------------------------------------------------------
+// Oklab (Bjorn Ottosson, 2020), a perceptual colour space: used for the painter's shadow colour.
+vec3 w3_lin_to_oklab(vec3 c) {
+	vec3 lms = vec3(
+		0.4122214708 * c.r + 0.5363325363 * c.g + 0.0514459929 * c.b,
+		0.2119034982 * c.r + 0.6806995451 * c.g + 0.1073969566 * c.b,
+		0.0883024619 * c.r + 0.2817188376 * c.g + 0.6299787005 * c.b);
+	lms = pow(max(lms, vec3(0.0)), vec3(1.0 / 3.0));
+	return vec3(
+		0.2104542553 * lms.x + 0.7936177850 * lms.y - 0.0040720468 * lms.z,
+		1.9779984951 * lms.x - 2.4285922050 * lms.y + 0.4505937099 * lms.z,
+		0.0259040371 * lms.x + 0.7827717662 * lms.y - 0.8086757660 * lms.z);
+}
+vec3 w3_oklab_to_lin(vec3 L) {
+	vec3 lms = vec3(
+		L.x + 0.3963377774 * L.y + 0.2158037573 * L.z,
+		L.x - 0.1055613458 * L.y - 0.0638541728 * L.z,
+		L.x - 0.0894841775 * L.y - 1.2914855480 * L.z);
+	lms = lms * lms * lms;
+	return vec3(
+		 4.0767416621 * lms.x - 3.3077115913 * lms.y + 0.2309699292 * lms.z,
+		-1.2684380046 * lms.x + 2.6097574011 * lms.y - 0.3413193965 * lms.z,
+		-0.0041960863 * lms.x - 0.7034186147 * lms.y + 1.7076147010 * lms.z);
+}
+// The painter's shadow colour of an albedo: its hue turns toward blue-violet by up to `turn` radians
+// (warm browns through red-violet, greens toward blue-green), its chroma is kept (so it reads richer
+// as it darkens instead of going grey), and greys pick up a little slate. Lightness is unchanged.
+vec3 w3_shadow_hue(vec3 albedo, float turn) {
+	vec3 lab = w3_lin_to_oklab(albedo);
+	float C = length(lab.yz);
+	float h = atan(lab.z, lab.y);
+	const float TARGET = -1.66;                    // Oklab hue of blue-violet (about 265 degrees)
+	float d = mod(TARGET - h + W3_PI, 2.0 * W3_PI) - W3_PI;
+	h += clamp(d, -turn, turn);
+	vec2 ab = vec2(cos(h), sin(h)) * (C * 1.15 + 0.006) + vec2(cos(TARGET), sin(TARGET)) * 0.005;
+	return max(w3_oklab_to_lin(vec3(lab.x, ab)), vec3(0.0));
+}
+
+// ------------------------------------------------------------------------------------------------
 // toon light model
 // Ambient (goes to EMISSION in fragment): hemisphere sky/ground by the world normal, quantised to
-// three steps so rounded forms stay flat-shaded; shadowed surfaces shift cool (w3_shade_tint).
+// three steps so rounded forms stay flat-shaded. The shade is painted, not physically filtered: the
+// ambient's brightness, only a third of its colour (a blue sky multiplied into a warm albedo would
+// grey it), and a hue turn toward the cool side that keeps chroma (w3_shadow_hue), plus the global
+// w3_shade_tint.
 vec3 w3_ambient(vec3 albedo, vec3 world_n, float ao) {
 	float up = world_n.y * 0.5 + 0.5;
 	up = floor(up * 3.0 + 0.5) / 3.0;
 	vec3 amb = mix(w3_ground, w3_sky, up);
-	return albedo * w3_shade_tint * amb * ao;
+	float lum = max(w3_luma(amb), 1e-4);
+	vec3 amb_tint = mix(vec3(1.0), amb / lum, 0.2) * w3_shade_tint;
+	return w3_shadow_hue(albedo, 0.38) * lum * amb_tint * ao;
 }
 // Sun / moon (call in light() for LIGHT_IS_DIRECTIONAL): two lit bands and a crisp shadow edge.
 // dither: 0 for characters and painted cards, 1 lets the band edges dither on world-anchored cells.
@@ -156,7 +199,10 @@ vec3 w3_sun_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuation
 vec3 w3_point_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuation, vec2 cell, float dither) {
 	float ndl = max(dot(n, l), 0.0) * 0.6 + 0.4;
 	float a = attenuation * ndl;
-	float q = floor(a * 4.0 + mix(0.5, w3_bayer4(cell), dither)) / 4.0;
+	// rings in whole steps; the dither lives only in a narrow seam at each step and is scattered,
+	// not ordered (an ordered dither over a slow falloff draws wide checkered bands)
+	float sc = w3_hash(cell * 1.31 + 2.7) * 0.7 + w3_vnoise(cell / 1.9) * 0.3;
+	float q = floor(a * 4.0 + 0.5 + (sc - 0.5) * 0.32 * dither) / 4.0;
 	return albedo * light_col / W3_PI * q;
 }
 // Wet surfaces darken; porosity 0 (glazed tile, metal) .. 1 (soil, wood, thatch)
@@ -189,11 +235,15 @@ vec3 w3_pattern(vec3 col, float id, float amount, vec3 wp, vec3 wn, vec2 cell) {
 		float strand = w3_hash(vec2(cell.x, floor(cell.y / 5.0)));
 		col *= 0.8 + strand * 0.32;
 		if (mod(cell.y, 6.0) < 1.0) col *= 0.78;
-	} else if (p == 4) {            // stone: soft blotches, a few cracks, moss in clumps where it faces up
-		float bl = w3_vnoise(cell / 6.0);
-		col *= 0.95 + bl * 0.1;
-		if (w3_hash(floor(cell / vec2(3.0, 2.0)) + 5.0) > 0.95) col *= 0.78;
-		if (wn.y > 0.78 && w3_vnoise(cell / 7.0 + 9.0) > 0.68 - amount * 0.22) col = mix(col, vec3(0.065, 0.098, 0.023), 0.75);
+	} else if (p == 4) {            // stone: speckle, organic cracks (noise iso-lines), lit edges, tidy moss on the tops
+		float bl = w3_vnoise(cell / 9.0);
+		col *= 0.95 + floor(bl * 3.0) * 0.04;
+		col *= (r < 0.1 ? 0.88 : (r > 0.94 ? 1.08 : 1.0));
+		float cr = abs(w3_vnoise(cell / 7.0 + 13.0) - 0.5);
+		if (cr < 0.022) col *= 0.62;
+		float cr2 = abs(w3_vnoise(cell / 4.0 + 41.0) - 0.5);
+		if (cr2 < 0.015 && wn.y < 0.6) col *= 0.75;
+		if (wn.y > 0.86 && w3_vnoise(cell / 4.5 + 9.0) > 0.7 - amount * 0.2) col = mix(col, vec3(0.065, 0.098, 0.023), 0.8);
 	} else if (p == 5) {            // roof tiles (kawara): rows across, joints
 		if (mod(cell.y, 4.0) < 1.0) col *= 0.7;
 		col *= 0.9 + w3_hash(vec2(floor(cell.x / 3.0), floor(cell.y / 4.0))) * 0.16;

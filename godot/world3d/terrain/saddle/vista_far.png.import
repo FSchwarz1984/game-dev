@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://chit331yegmvb"
+path="res://.godot/imported/vista_far.png-ab09fd2b4a450a3b998845f7e0a991cd.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/vista_far.png"
+dest_files=["res://.godot/imported/vista_far.png-ab09fd2b4a450a3b998845f7e0a991cd.image"]
+
+[params]
+

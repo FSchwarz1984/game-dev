@@ -21,7 +21,8 @@ var pos := Vector3.ZERO            # feet, world
 var vel := Vector3.ZERO
 var facing := 0                    # index into VIEWS8
 var speed := 0.0                   # measured ground speed, m/s (smoothed)
-var base_speed := 3.4
+var base_speed := 2.4               # carrying a load she walks (the sprite cycle's own pace)
+var sprite_dir := "res://world3d/sprites"
 var anim := "idle"
 var anim_t := 0.0
 var running := false
@@ -38,8 +39,8 @@ func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> vo
 	var fsize := Vector2i(meta["frame"][0], meta["frame"][1])
 	var piv := Vector2i(meta["pivot"][0], meta["pivot"][1])
 	var file: String = sheet["file"]
-	sprite.setup(CharSprite3D.pixel_texture("res://art/sprites/%s.png" % file),
-		CharSprite3D.pixel_texture("res://art/sprites/%s_n.png" % file), fsize, piv)
+	sprite.setup(CharSprite3D.pixel_texture("%s/%s.png" % [sprite_dir, file]),
+		CharSprite3D.pixel_texture("%s/%s_n.png" % [sprite_dir, file]), fsize, piv, float(chars.get("_sprite_pitch_deg", 39.33)))
 	add_child(sprite)
 
 
@@ -126,7 +127,11 @@ func _apply() -> void:
 	var info: Dictionary = views.get(view, views.values()[0])
 	var n := int(info["frames"])
 	var f := int(floor(anim_t)) % maxi(1, n)
-	sprite.show_frame(f, int(info["row"]), flip)
+	var head := Vector2(0.5, -35.0)
+	var anchors: Array = info.get("anchors", [])
+	if f < anchors.size() and (anchors[f] as Dictionary).has("head"):
+		head = Vector2(anchors[f]["head"][0], anchors[f]["head"][1])
+	sprite.show_frame(int(info.get("col", 0)) + f, int(info["row"]), flip, head)
 
 
 ## Her chest, for the camera and the canopy cut-away.

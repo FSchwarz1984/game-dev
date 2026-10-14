@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/lights/lantern_paper/lantern_paper_far_mesh.res" id="1"]
+
+[node name="LanternPaperFar" type="Node3D" unique_id=716054688]
+metadata/w3a_kind = "lights"
+metadata/w3a_far = true
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
+mesh = ExtResource("1")
+
+[node name="light" type="Marker3D" parent="." unique_id=1778433450]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.22, 0)
+
+[node name="hang" type="Marker3D" parent="." unique_id=446464993]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.58, 0)

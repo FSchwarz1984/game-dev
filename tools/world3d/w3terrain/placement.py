@@ -75,6 +75,26 @@ def place(L, ctx, rng):
                 return False
         return True
 
+    # sight lines: in the 3/4 view a tree of height H hides the ground up to about 1.2 H metres
+    # north of its foot, so no tall tree stands just south of the places the player looks at
+    # (the yard, the shrine, the graves, the lookout, the spring pool). The canopy cut-away only
+    # thins what is right around her; it cannot rescue a home hidden behind a pine.
+    keep_areas = []
+    for pd in L["pads"]:
+        c, sz = pd["centre"], pd["size"]
+        keep_areas.append((c[0] - sz[0] * 0.5, c[0] + sz[0] * 0.5, c[1] + sz[1] * 0.5))
+    keep_areas.append((-10.0, 10.0, 10.8))            # the path in front of the great tree
+    sp = M["spring"]
+    keep_areas.append((sp[0] - 4.0, sp[0] + 4.0, sp[1] + 2.0))
+    TREE_H = {"cedar": 18.0, "pine": 11.0, "maple": 7.0, "beech": 9.0, "broadleaf": 8.0, "bamboo": 9.0}
+
+    def clear_view(x, z, kind, r=3.0):
+        H = TREE_H.get(kind, 0.0)
+        for ax0, ax1, az in keep_areas:
+            if ax0 - r - 1.0 <= x <= ax1 + r + 1.0 and az - 0.5 <= z <= az + 1.22 * H:
+                return False
+        return True
+
     # the great camphor and the named trees
     out.append({"kind": "camphor", "x": M["camphor"][0], "z": M["camphor"][1], "rot": 0.4, "scale": 1.0, "variant": 0})
     out.append({"kind": "persimmon", "x": M["persimmon"][0], "z": M["persimmon"][1], "rot": 1.1, "scale": 1.0, "variant": 0})
@@ -84,7 +104,7 @@ def place(L, ctx, rng):
     def cedar_ok(x, z):
         if not ctx["in_zone"]("cedar", x, z):
             return False
-        if ctx["slope_deg"](x, z) > 38 or not keep_clear(x, z, 2.5):
+        if ctx["slope_deg"](x, z) > 38 or not keep_clear(x, z, 2.5) or not clear_view(x, z, "cedar", 2.6):
             return False
         return noise.fbm(np.array(x / 18.0), np.array(z / 18.0), 3, 5) > 0.36
     for p in poisson(rng, (b[0], b[1], b[2], -38.0), 3.4, cedar_ok):
@@ -96,6 +116,8 @@ def place(L, ctx, rng):
             return False
         if ctx["slope_deg"](x, z) > 34 or not keep_clear(x, z, 2.6) or not far_from_markers(x, z, 7.0):
             return False
+        if not clear_view(x, z, "broadleaf", 3.4):
+            return False
         n = noise.fbm(np.array(x / 22.0), np.array(z / 22.0), 3, 9)
         return n > 0.5 and ctx["height"](x, z) > -26.0
     for p in poisson(rng, (b[0], -36.0, b[2], 104.0), 6.5, broad_ok):
@@ -106,7 +128,7 @@ def place(L, ctx, rng):
     def pine_ok(x, z):
         sp = np.asarray(L["spur"]["axis"])
         d = min(np.hypot(x - q[0], z - q[1]) for q in sp)
-        if d > 7.0 or ctx["slope_deg"](x, z) > 40 or not keep_clear(x, z, 1.6):
+        if d > 7.0 or ctx["slope_deg"](x, z) > 40 or not keep_clear(x, z, 1.6) or not clear_view(x, z, "pine", 5.0):
             return False
         return np.hypot(x - M["lookout"][0], z - M["lookout"][1]) > 4.0
     for p in poisson(rng, (-34.0, 8.0, -8.0, 46.0), 5.5, pine_ok)[:7]:
@@ -114,7 +136,7 @@ def place(L, ctx, rng):
 
     # bamboo clumps on the east shoulder
     def bamboo_ok(x, z):
-        return ctx["in_zone"]("bamboo", x, z) and ctx["slope_deg"](x, z) < 36 and keep_clear(x, z, 1.8)
+        return ctx["in_zone"]("bamboo", x, z) and ctx["slope_deg"](x, z) < 36 and keep_clear(x, z, 1.8) and clear_view(x, z, "bamboo", 1.6)
     for p in poisson(rng, (30.0, -28.0, 72.0, 18.0), 1.9, bamboo_ok):
         out.append({"kind": "bamboo", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.15)), "variant": int(rng.integers(0, 8))})
 
@@ -155,11 +177,12 @@ def place(L, ctx, rng):
     # the face behind the spring: slabs along it
     F = np.asarray(L["spring"]["rock_face"], np.float64)
     from .geom import resample_polyline
-    Pf, _ = resample_polyline(F, 1.3)
-    for q in Pf:
-        out.append({"kind": "rock_slab", "x": float(q[0]), "z": float(q[1] - 0.6), "rot": float(rng.uniform(-0.3, 0.3)),
-                    "sx": float(rng.uniform(1.3, 2.0)), "sy": float(rng.uniform(1.6, 2.4)), "sz": float(rng.uniform(0.9, 1.3)), "sink": 0.25,
-                    "variant": int(rng.integers(0, 16))})
+    Pf, _ = resample_polyline(F, 2.3)
+    for k, q in enumerate(Pf):
+        big = k % 2 == 0
+        out.append({"kind": "rock_slab", "x": float(q[0] + rng.uniform(-0.3, 0.3)), "z": float(q[1] - (0.9 if big else 0.4)), "rot": float(rng.uniform(-0.5, 0.5)),
+                    "sx": float(rng.uniform(1.5, 2.1) if big else rng.uniform(0.9, 1.3)), "sy": float(rng.uniform(1.8, 2.6) if big else rng.uniform(0.9, 1.4)),
+                    "sz": float(rng.uniform(1.0, 1.4)), "sink": 0.3, "variant": int(rng.integers(0, 16))})
     # the lookout: its tip is ringed by big rocks below the standing place
     lk = np.asarray(M["lookout"], np.float64)
     for k in range(9):
