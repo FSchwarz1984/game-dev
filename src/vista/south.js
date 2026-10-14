@@ -124,7 +124,7 @@ export function* southGen(W, H, seed) {
     }
     return best ? [best.x, best.y] : null;
   };
-  const spread = W * 0.21;                       // places this far either side of the column: the lines rise steeply
+  const spread = W * 0.24;                       // places this far either side of the column: the lines rise steeply
   const near = p => p && Math.abs(p[0] - colX) < spread * 1.08;
   const hamletAt = (side, k) => {
     const cands = [];
@@ -608,7 +608,7 @@ export function* southGen(W, H, seed) {
 
 // ---------------------------------------------------------------- rising
 
-const PACE = 1.45;            // seconds between two lights of one procession (rise animated over ~30 s)
+const PACE = 1.25;            // seconds between two lights of one procession (rise animated over ~30 s)
 const SPEED = 6.5;            // px per second along the path: a walking pace, seen from the pass
 const MERGE = 14;             // px after the join over which a light fades into the column
 const PADDY_LIGHT = [255, 226, 178];
