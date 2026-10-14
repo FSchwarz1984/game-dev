@@ -71,6 +71,8 @@ export class Highlighter {
     this.target = null;
     this.hulls = [];
     this.sprites = [];
+    this.anchor = new THREE.Vector3();
+    this.ringOffset = new THREE.Vector3();
     this.time = 0;
     this.hullGeometries = new WeakMap();
     this.current = new THREE.Color();
@@ -139,6 +141,9 @@ export class Highlighter {
     }
     const r = radius + 0.5;
     this.ring.position.y = baseY + 0.04;
+    // moving targets (a wandering yokai, a carried log) keep their ring under them
+    object.getWorldPosition(this.anchor);
+    this.ringOffset.set(this.ring.position.x - this.anchor.x, 0, this.ring.position.z - this.anchor.z);
     this.ring.scale.set(r * 2, 1, r * 2);
     this.ring.material.uniforms.uTexels.value = Math.round(r * 2 * 16); // 16 texels per metre
     this.ring.visible = true;
@@ -169,6 +174,9 @@ export class Highlighter {
 
   update(dt, renderer) {
     if (!this.target) return;
+    this.target.getWorldPosition(this.anchor);
+    this.ring.position.x = this.anchor.x + this.ringOffset.x;
+    this.ring.position.z = this.anchor.z + this.ringOffset.z;
     this.time += dt;
     const pulse = this.pulseSpeed > 0 ? 0.5 + 0.5 * Math.sin(this.time * this.pulseSpeed) : 1;
     this.current.copy(this.color).multiplyScalar(0.75 + 0.25 * pulse);

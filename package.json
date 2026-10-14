@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.2.0",
   "type": "module",
-  "description": "HD-2D render foundation (gray-box) for the browser adventure game.",
+  "description": "Browser HD-2D adventure: playable gray box (G3) on the HD-2D render foundation.",
   "scripts": {
     "dev": "node tools/dev.mjs",
     "build": "node tools/build.mjs",

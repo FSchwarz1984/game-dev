@@ -63,17 +63,24 @@ export class Actions {
       </div>`;
     this.root.appendChild(pad);
     injectStyle();
-    // Layout: the five quality keys on a quarter arc around the context button (left → up),
-    // the three secondary keys on an outer arc. The radius follows the screen width so the
-    // cluster stays out of the joystick area (left 40%) on a 390 px portrait phone.
+    // Layout: the five quality keys on a 108° arc around the context button (from just below
+    // horizontal-left to just right of vertical), radius following the screen width, with at least
+    // 6 px between keys; the secondary keys in a column on the right edge above the arc, or in a
+    // row along the bottom on short (landscape) screens. Everything stays in the right half, so
+    // the left half is the stick's.
     const layout = () => {
-      const R = Math.max(84, Math.min(112, innerWidth * 0.24)), cx = 42, cy = 42;
+      const R = Math.max(112, Math.min(130, innerWidth * 0.3)), cx = 42, cy = 42;
       const place = (el, a, r, half) => {
         el.style.right = (cx - half - Math.cos(a) * r).toFixed(1) + 'px';
         el.style.bottom = (cy - half + Math.sin(a) * r).toFixed(1) + 'px';
       };
-      pad.querySelectorAll('.act-q').forEach((b, i) => place(b, Math.PI - i * Math.PI / 8, R, 26));
-      pad.querySelectorAll('.act-o').forEach((b, i) => place(b, Math.PI * (11 / 12 - i / 4), R + 62, 24));
+      pad.querySelectorAll('.act-q').forEach((b, i) => place(b, (190 - i * 27) * Math.PI / 180, R, 26));
+      const short = innerHeight < 520;
+      pad.querySelectorAll('.act-o').forEach((b, i) => {
+        const along = (cx + R + 56 + i * 60 - 24).toFixed(1) + 'px';
+        b.style.right = short ? along : '0px';
+        b.style.bottom = short ? '0px' : along;
+      });
     };
     layout();
     addEventListener('resize', layout);

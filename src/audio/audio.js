@@ -16,6 +16,8 @@ let ctx = null, ready = false, SR = 44100, timer = 0;
 const TICK_MS = 25;
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 const lerp = (a, b, t) => a + (b - a) * t;
+// ?audiodebug=1 reports errors that are otherwise swallowed (the game must never stop for audio).
+const AUDIO_DEBUG = typeof location !== "undefined" && /[?&]audiodebug=1/.test(location.search);
 const rnd = (a = 0, b = 1) => a + Math.random() * (b - a);
 const rint = (a, b) => Math.floor(rnd(a, b + 1));
 const pick = (a) => a[(Math.random() * a.length) | 0];
@@ -227,7 +229,7 @@ function play(pool, fn) {
   P.n++;
   const v = Object.create(VP);
   v.ns = []; v.end = ctx.currentTime; v.pool = P; v.done = false;
-  try { fn(v); } catch (e) { /* ignore */ }
+  try { fn(v); } catch (e) { if (AUDIO_DEBUG) console.error('sfx voice', e); }
   reap(v);
   return true;
 }
@@ -1782,7 +1784,7 @@ function duck(amount, secs) {
     if (hold > 0) p.setTargetAtTime(1, t + hold, 0.35);
   }
 }
-const guard = (fn) => (...a) => { if (!ready) return; try { fn(...a); } catch (e) { /* never throw */ } };
+const guard = (fn) => (...a) => { if (!ready) return; try { fn(...a); } catch (e) { if (AUDIO_DEBUG) console.error('audio', e); } };
 const api = {
   init() { try { return init(); } catch (e) { return false; } },
   resume: guard(resume),

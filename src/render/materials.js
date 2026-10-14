@@ -104,17 +104,40 @@ diffuseColor.rgb *= envTex.rgb * envShade;
 #endif
 `;
 
+// Sun shadows on a surface never fall below this fraction of full sun (interactables must stay
+// readable in deep shade: v0.1 post-mortem). The directional-light shadow line of three's
+// lights_fragment_begin is rewritten; if a three update changes that line the patch is skipped.
+const SHADOW_LINE = 'directLight.color *= ( directLight.visible && receiveShadow ) ? getShadow( directionalShadowMap';
+const SHADOW_PATCHABLE = THREE.ShaderChunk.lights_fragment_begin.includes(SHADOW_LINE);
+const floorShadows = fragmentShader => fragmentShader.replace('#include <lights_fragment_begin>', THREE.ShaderChunk.lights_fragment_begin.replace(
+  SHADOW_LINE, 'directLight.color *= ( directLight.visible && receiveShadow ) ? SHADOW_FLOOR + ( 1.0 - SHADOW_FLOOR ) * getShadow( directionalShadowMap'));
+
+/** Give any lit material (Lambert, Phong, Standard) a shadow floor; returns the material. */
+export function withShadowFloor(material, floor = 0.5) {
+  if (!SHADOW_PATCHABLE || floor <= 0) return material;
+  material.defines = { ...(material.defines || {}), SHADOW_FLOOR: floor.toFixed(3) };
+  const prev = material.onBeforeCompile;
+  material.onBeforeCompile = (shader, renderer) => {
+    if (prev) prev.call(material, shader, renderer);
+    shader.fragmentShader = floorShadows(shader.fragmentShader);
+  };
+  const key = material.customProgramCacheKey.bind(material);
+  material.customProgramCacheKey = () => key() + '|floor' + floor;
+  return material;
+}
+
 /**
  * Environment master material. Geometry needs aLayer (vec2: surface layer, lip layer or -1) and
- * vertex colours (tint x AO); aTop with `lip`, aWind with `wind`.
+ * vertex colours (tint x AO); aTop with `lip`, aWind with `wind`. shadowFloor > 0: see above.
  */
-export function createEnvMaterial(layers, { occluder = false, wind = false, lip = false, variation = false } = {}) {
+export function createEnvMaterial(layers, { occluder = false, wind = false, lip = false, variation = false, shadowFloor = 0 } = {}) {
   const m = new THREE.MeshLambertMaterial({ vertexColors: true });
   m.defines = {};
   if (occluder) m.defines.OCCLUDER = '';
   if (wind) m.defines.ENV_WIND = '';
   if (lip) m.defines.ENV_LIP = '';
   if (variation) m.defines.ENV_VARIATION = '';
+  if (shadowFloor > 0 && SHADOW_PATCHABLE) m.defines.SHADOW_FLOOR = shadowFloor.toFixed(3);
   m.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, { uLayers: { value: layers }, uTime: shared.uTime, uWind: shared.uWind }, cutoutUniforms());
     shader.vertexShader = shader.vertexShader
@@ -127,8 +150,9 @@ export function createEnvMaterial(layers, { occluder = false, wind = false, lip 
           if (occlusionCut(vViewPosition.z, vRest.y)) discard;
         #endif`)
       .replace('#include <map_fragment>', ENV_MAP);
+    if (m.defines.SHADOW_FLOOR) shader.fragmentShader = floorShadows(shader.fragmentShader);
   };
-  m.customProgramCacheKey = () => 'env:' + Object.keys(m.defines).sort().join(',');
+  m.customProgramCacheKey = () => 'env:' + Object.entries(m.defines).map(([k, v]) => k + '=' + v).sort().join(',');
   return m;
 }
 

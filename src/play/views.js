@@ -6,7 +6,7 @@
 
 import * as THREE from 'three';
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { createEnvMaterial, UPRIGHT_QUAD } from '../render/materials.js';
+import { createEnvMaterial, withShadowFloor, UPRIGHT_QUAD } from '../render/materials.js';
 import { createSprite } from '../render/sprites.js';
 import { pixelTexture } from '../render/textures.js';
 import { approach } from '../core/math.js';
@@ -17,12 +17,14 @@ import { stateOf } from '../game/qualities.js';
 import { CELL, fireSheet, cropSheet, weedsSheet, shideSprite, iceTexture, glowSprite, onibiSheet } from './art.js';
 
 const TAU = Math.PI * 2;
+const SHADE_FLOOR = 0.5;
 
 /** Builds and updates one view per simulation entity; views come and go with the entities. */
 export class StationViews {
   constructor({ scene, sim, terrain, layers, propsGroup, fx, sound }) {
     Object.assign(this, { scene, sim, terrain, fx, sound });
-    this.solid = createEnvMaterial(layers);
+    // interactables keep at least half of the sun in shade (readable under the canopy)
+    this.solid = createEnvMaterial(layers, { shadowFloor: SHADE_FLOOR });
     this.layerCanvases = terrainLayers();
     this.props = propsGroup;
     this.views = new Map();
@@ -41,7 +43,7 @@ export class StationViews {
     const key = layer + ':' + tint;
     if (!this.lambert[key]) {
       const t = crisp(pixelTexture(this.layerCanvases[layer], { repeat: true }));
-      this.lambert[key] = new THREE.MeshLambertMaterial({ map: t, color: tint });
+      this.lambert[key] = withShadowFloor(new THREE.MeshLambertMaterial({ map: t, color: tint }), SHADE_FLOOR);
     }
     return this.lambert[key];
   }
@@ -108,6 +110,7 @@ export class StationViews {
     // the boulder already exists as a prop; this view only moves it
     const m = this.props.getObjectByName('boulder');
     if (!m) return null;
+    m.material = this.solid;
     const baseY = m.position.y, baseRot = m.rotation.clone();
     return {
       root: m, hl: m, own: false, lift: 0,
@@ -147,6 +150,7 @@ export class StationViews {
     root.add(ropeMesh);
     for (const [x, sy, z] of shide) {
       const s = this.sprite(this.tex.shide, 1, [0.16, 0.32], 'prop', 16, 32);
+      s.castShadow = false;
       s.position.set(x - e.x, sy - y, z - e.z);
       root.add(s);
     }
@@ -200,37 +204,37 @@ export class StationViews {
   make_bridge(e) {
     const root = new THREE.Group();
     const r = e.rect;
-    const w = r.x1 - r.x0, len = r.z1 - r.z0, deckY = 0.06;
+    const w = r.x1 - r.x0, len = r.z1 - r.z0, deckY = 0.06, n = 9;
     root.position.set(e.x, 0, (r.z0 + r.z1) / 2);
     const rot = this.mat(L.PLANK, 0x9a9a78);
-    const planks = [];
-    const n = 9;
-    for (let i = 0; i < n; i++) {
-      const p = this.mesh(new THREE.BoxGeometry(w, 0.07, len / n - 0.06), rot);
-      p.position.set((i % 3 - 1) * 0.03, deckY, -len / 2 + (i + 0.5) * len / n);
-      p.rotation.y = (i % 2 ? 1 : -1) * 0.03;
-      root.add(p); planks.push(p);
-    }
-    root.add(this.mesh(merge([
-      env(post(0.09, 0.08, 1.2, -w / 2, WATER_Y - 0.6, -len / 2 + 0.6), { layer: L.DARKWOOD, tint: 0x8a8a70 }),
-      env(post(0.09, 0.08, 1.2, w / 2, WATER_Y - 0.6, -len / 2 + 0.6), { layer: L.DARKWOOD, tint: 0x8a8a70 }),
-      env(post(0.09, 0.08, 1.2, -w / 2, WATER_Y - 0.6, len / 2 - 0.6), { layer: L.DARKWOOD, tint: 0x8a8a70 }),
-      env(post(0.09, 0.08, 1.2, w / 2, WATER_Y - 0.6, len / 2 - 0.6), { layer: L.DARKWOOD, tint: 0x8a8a70 }),
-    ]), this.solid));
+    const plankGeo = i => new THREE.BoxGeometry(w, 0.07, len / n - 0.06).rotateY((i % 2 ? 1 : -1) * 0.03).translate((i % 3 - 1) * 0.03, deckY, -len / 2 + (i + 0.5) * len / n);
+    // intact: one draw for the whole deck
+    const deck = this.mesh(merge(Array.from({ length: n }, (_, i) => plankGeo(i))), rot);
+    root.add(deck);
+    root.add(this.mesh(merge([[-1, -1], [1, -1], [-1, 1], [1, 1]].map(([sx, sz]) =>
+      env(post(0.09, 0.08, 1.2, sx * w / 2, WATER_Y - 0.6, sz * (len / 2 - 0.6)), { layer: L.DARKWOOD, tint: 0x8a8a70 }))), this.solid));
     const self = this;
+    let planks = null;
     return {
-      root, hl: planks[4], fallen: false,
+      root, hl: deck,
       sync(e, dt) {
-        if (e.state.broken && !this.fallen) {
-          this.fallen = true;
-          planks.forEach((p, i) => { if (i >= 2 && i <= 6) p.userData.fall = { v: 0, spin: (Math.random() - 0.5) * 3 }; });
+        if (e.state.broken && !planks) {
+          // the middle gives way: the deck becomes loose planks, five of them fall and drift off
+          deck.visible = false;
+          planks = Array.from({ length: n }, (_, i) => {
+            const p = self.mesh(plankGeo(i), rot);
+            if (i >= 2 && i <= 6) p.userData.fall = { v: 0, spin: (Math.random() - 0.5) * 3 };
+            root.add(p);
+            return p;
+          });
           self.fx?.ring(new THREE.Vector3(e.x, WATER_Y + 0.05, (r.z0 + r.z1) / 2), 0xbfe6ff, 2.2);
         }
+        if (!planks) return;
         for (const p of planks) {
           const f = p.userData.fall;
           if (!f) continue;
-          if (p.position.y > WATER_Y - 0.2) { f.v += 9.8 * dt; p.position.y -= f.v * dt; p.rotation.x += f.spin * dt; }
-          else { p.position.y = WATER_Y - 0.05 + Math.sin(self.time * 2 + p.id) * 0.02; p.position.z += dt * 0.25; } // floats off downstream
+          if (p.position.y > WATER_Y - 0.25) { f.v += 9.8 * dt; p.position.y -= f.v * dt; p.rotation.x += f.spin * dt; }
+          else { p.position.y = WATER_Y - 0.3 + Math.sin(self.time * 2 + p.id) * 0.02; p.position.z += dt * 0.25; p.castShadow = false; }
         }
       },
     };
@@ -290,6 +294,7 @@ export class StationViews {
   make_lantern(e) {
     const g = this.props.getObjectByName('stone-lantern');
     if (!g) return null;
+    if (g.children[0]) g.children[0].material = this.solid;
     const flame = g.children[1] || null;   // the paper window above the stone (props.js)
     const halo = this.glow(0xffd889, 1.6);
     halo.position.set(g.position.x, g.position.y + 1.27, g.position.z);
@@ -383,13 +388,13 @@ export class StationViews {
   make_weeds(e) {
     const root = new THREE.Group();
     root.position.set(e.x, this.ground(e.x, e.z), e.z);
-    const tufts = [];
-    for (let i = 0; i < 7; i++) {
-      const a = i * 2.4, r = i === 0 ? 0 : 0.35 + (i % 3) * 0.18;
-      const s = this.sprite(this.tex.weeds, 3, [0.85, 0.85]);
-      s.position.set(Math.cos(a) * r, -0.02, Math.sin(a) * r * 0.8);
-      root.add(s); tufts.push(s);
-    }
+    const tufts = [[-0.25, -0.2, 1.25], [0.3, 0.25, 1.1]].map(([x, z, k]) => {
+      const s = this.sprite(this.tex.weeds, 3, [1.1 * k, 1.1 * k]);
+      s.position.set(x, -0.02, z);
+      s.userData.k = k;
+      root.add(s);
+      return s;
+    });
     const flame = this.glow(0xff7a30, 2.4);
     flame.position.y = 0.5;
     root.add(flame);
@@ -400,8 +405,9 @@ export class StationViews {
         this.h = approach(this.h, v <= 0 ? 0.35 : 0.5 + Math.min(v, 4) * 0.16, 3, dt);
         const frame = burning ? 1 : v <= 0 ? 2 : 0;
         tufts.forEach((s, i) => {
-          s.userData.sprite.setFrame(frame, 0, i % 2 === 1);
-          s.scale.set(0.85, 0.85 * (frame === 2 ? 1 : this.h), 1);
+          const k = s.userData.k;
+          s.userData.sprite.setFrame(frame, 0, i === 1);
+          s.scale.set(1.1 * k, 1.1 * k * (frame === 2 ? 1 : this.h), 1);
         });
         flame.visible = burning;
         flame.material.opacity = 0.6 + 0.3 * Math.sin(t * 17);
@@ -440,9 +446,8 @@ export class StationViews {
 
   make_log(e) {
     const m = this.mesh(new THREE.CylinderGeometry(0.19, 0.21, 1.5, 9).rotateZ(Math.PI / 2), this.mat(L.BARK, 0xd8c0a0));
-    const ends = this.mesh(merge([new THREE.CircleGeometry(0.19, 9).rotateY(Math.PI / 2).translate(0.751, 0, 0), new THREE.CircleGeometry(0.21, 9).rotateY(-Math.PI / 2).translate(-0.751, 0, 0)]), this.mat(L.PLANK, 0xf0d8a8));
     const root = new THREE.Group();
-    root.add(m, ends);
+    root.add(m);
     root.rotation.y = (e.id * 1.7) % Math.PI;
     const self = this;
     return {
@@ -478,31 +483,19 @@ export class StationViews {
       ...[[-1, -0.8], [1, -0.8], [-1, 0.8], [1, 0.8]].map(([x, z]) => env(post(0.05, 0.05, 0.7, x * 1.05, 0, z * 1.0, 5), { layer: L.DARKWOOD })),
     ]), this.solid);
     root.add(pallet);
-    const pile = new THREE.Group();
-    root.add(pile);
-    const logMat = this.mat(L.BARK, 0xd8c0a0), stoneMat = this.mat(L.GRANITE, 0xd0ccc4);
-    const logGeo = new THREE.CylinderGeometry(0.17, 0.19, 1.4, 8).rotateX(Math.PI / 2), stoneGeo = new THREE.DodecahedronGeometry(0.26).scale(1.1, 0.8, 1);
+    const LOG_SLOTS = [[-0.9, 0.2], [-0.45, 0.2], [0, 0.2], [-0.67, 0.52], [-0.22, 0.52], [-0.45, 0.84]];
+    const STONE_SLOTS = [[0.55, 0.3, -0.5], [0.55, 0.3, 0], [0.55, 0.3, 0.5], [0.8, 0.62, -0.25], [0.8, 0.62, 0.25], [0.7, 0.9, 0]];
+    const logs = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.17, 0.19, 1.4, 8).rotateX(Math.PI / 2), this.mat(L.BARK, 0xd8c0a0), LOG_SLOTS.length);
+    const stones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.26).scale(1.1, 0.8, 1), this.mat(L.GRANITE, 0xd0ccc4), STONE_SLOTS.length);
+    for (const im of [logs, stones]) { im.castShadow = im.receiveShadow = true; im.count = 0; root.add(im); }
+    const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), one = new THREE.Vector3(1, 1, 1), p = new THREE.Vector3();
+    LOG_SLOTS.forEach(([x, y], i) => logs.setMatrixAt(i, m4.compose(p.set(x, y, 0), q, one)));
+    STONE_SLOTS.forEach(([x, y, z], i) => stones.setMatrixAt(i, m4.compose(p.set(x, y, z), q.setFromAxisAngle(p.set(0, 1, 0).normalize(), i), one)));
     return {
-      root, hl: pallet, key: '',
+      root, hl: pallet,
       sync(e) {
-        const key = e.store.log + ':' + e.store.stone;
-        if (key === this.key) return;
-        this.key = key;
-        pile.clear();
-        const slots = [[-0.45, 0.3], [0, 0.3], [0.45, 0.3], [-0.22, 0.62], [0.22, 0.62], [0, 0.94]];
-        for (let i = 0; i < Math.min(e.store.log, slots.length); i++) {
-          const m = new THREE.Mesh(logGeo, logMat);
-          m.castShadow = m.receiveShadow = true;
-          m.position.set(-0.45 + slots[i][0], slots[i][1] - 0.1, 0);
-          pile.add(m);
-        }
-        for (let i = 0; i < Math.min(e.store.stone, 6); i++) {
-          const m = new THREE.Mesh(stoneGeo, stoneMat);
-          m.castShadow = m.receiveShadow = true;
-          m.position.set(0.7, 0.3 + Math.floor(i / 3) * 0.4, -0.5 + (i % 3) * 0.5);
-          m.rotation.y = i;
-          pile.add(m);
-        }
+        logs.count = Math.min(e.store.log, LOG_SLOTS.length);
+        stones.count = Math.min(e.store.stone, STONE_SLOTS.length);
       },
     };
   }
@@ -517,51 +510,45 @@ export class StationViews {
     const ropes = [[0, -H * 1.1, H * 2.2, 0.04], [0, H * 1.1, H * 2.2, 0.04], [-H * 1.1, 0, 0.04, H * 2.2], [H * 1.1, 0, 0.04, H * 2.2]]
       .map(([x, z, w, d]) => env(box(w, 0.03, d, x, 0.5, z), { layer: L.THATCH, tint: 0xfff2d0 }));
     const marker = this.mesh(merge([...stakes, ...ropes]), this.solid);
+    const stage = (geos, opt) => { const m = this.mesh(merge(geos), this.solid, opt); m.visible = false; root.add(m); return m; };
+    const cleared = stage([env(box(H * 2.1, 0.04, H * 2.1), { layer: L.EARTH, tint: 0xd8b890 })], { cast: false });
+    const stones = stage(corners.map(([x, z]) => env(box(0.42, 0.24, 0.42, x, 0, z), { layer: L.GRANITE })));
+    const pillars = stage(corners.map(([x, z]) => env(box(0.2, 2.2, 0.2, x, 0.24, z), { layer: L.DARKWOOD, tint: 0xf0c898 })));
+    const beamGeos = [
+      box(H * 2 + 0.4, 0.18, 0.2, 0, 2.44, -H), box(H * 2 + 0.4, 0.18, 0.2, 0, 2.44, H),
+      box(0.2, 0.18, H * 2 + 0.4, -H, 2.62, 0), box(0.2, 0.18, H * 2 + 0.4, H, 2.62, 0),
+      box(0.16, 0.6, 0.16, 0, 2.62, 0), box(H * 2 + 0.6, 0.2, 0.22, 0, 3.2, 0),
+    ].map(g => env(g, { layer: L.DARKWOOD, tint: 0xf0c898 }));
+    const perBeam = beamGeos[0].index.count;
+    const beams = stage(beamGeos);
     root.add(marker);
-
-    const part = (geo, layer, tint) => { const m = this.mesh(geo, this.mat(layer, tint)); root.add(m); return m; };
-    const cleared = part(new THREE.BoxGeometry(H * 2.1, 0.04, H * 2.1).translate(0, 0.02, 0), L.EARTH, 0xb89870);
-    const stones = corners.map(([x, z]) => part(new THREE.BoxGeometry(0.42, 0.24, 0.42).translate(0, 0.12, 0), L.GRANITE).translateX(x).translateZ(z));
-    const pillars = corners.map(([x, z]) => part(new THREE.BoxGeometry(0.2, 2.2, 0.2).translate(0, 1.1, 0), L.DARKWOOD, 0xd8b088).translateX(x).translateY(0.24).translateZ(z));
-    const beams = [
-      part(new THREE.BoxGeometry(H * 2 + 0.4, 0.18, 0.2).translate(0, 2.5, -H), L.DARKWOOD, 0xd8b088),
-      part(new THREE.BoxGeometry(H * 2 + 0.4, 0.18, 0.2).translate(0, 2.5, H), L.DARKWOOD, 0xd8b088),
-      part(new THREE.BoxGeometry(0.2, 0.18, H * 2 + 0.4).translate(-H, 2.62, 0), L.DARKWOOD, 0xd8b088),
-      part(new THREE.BoxGeometry(0.2, 0.18, H * 2 + 0.4).translate(H, 2.62, 0), L.DARKWOOD, 0xd8b088),
-      part(new THREE.BoxGeometry(0.16, 0.6, 0.16).translate(0, 2.95, 0), L.DARKWOOD, 0xd8b088),
-      part(new THREE.BoxGeometry(H * 2 + 0.6, 0.2, 0.22).translate(0, 3.3, 0), L.DARKWOOD, 0xe8c090),
-    ];
     const gohei = this.sprite(this.tex.shide, 1, [0.3, 0.6], 'prop', 16, 32);
-    gohei.position.y = 3.4;
+    gohei.castShadow = false;
+    gohei.position.y = 3.3;
     root.add(gohei);
-    // delivered materials waiting to be used, beside the footprint
-    const waiting = new THREE.Group();
-    waiting.position.set(H + 0.9, 0, 0);
-    root.add(waiting);
-    const logMat = this.mat(L.BARK, 0xd8c0a0), stoneMat = this.mat(L.GRANITE, 0xd0ccc4);
-    const logGeo = new THREE.CylinderGeometry(0.17, 0.19, 1.3, 8).rotateX(Math.PI / 2), stoneGeo = new THREE.DodecahedronGeometry(0.24).scale(1.1, 0.8, 1);
+    // delivered materials waiting to be used, beside the footprint (instanced: one draw each)
+    const waitLogs = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.17, 0.19, 1.3, 8).rotateX(Math.PI / 2), this.mat(L.BARK, 0xd8c0a0), 4);
+    const waitStones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.24).scale(1.1, 0.8, 1), this.mat(L.GRANITE, 0xd0ccc4), 4);
+    const m4 = new THREE.Matrix4();
+    for (let i = 0; i < 4; i++) { waitLogs.setMatrixAt(i, m4.makeTranslation(H + 0.9, 0.18 + i * 0.36, 0)); waitStones.setMatrixAt(i, m4.makeTranslation(H + 1.0, 0.18, -0.9 + i * 0.5)); }
+    for (const im of [waitLogs, waitStones]) { im.castShadow = true; im.count = 0; root.add(im); }
 
     const stageIndex = id => e.site.stages.findIndex(s => s.id === id);
-    const grow = (meshes, k) => meshes.forEach(m => { m.visible = k > 0.01; m.scale.y = Math.max(0.01, k); });
     return {
-      root, hl: marker, key: '',
+      root, hl: marker,
       sync(e) {
         const site = e.site, idx = site.index;
         const progress = id => { const i = stageIndex(id); return i < 0 ? 0 : i < idx ? 1 : i === idx ? site.labour : 0; };
-        cleared.visible = progress('clear') > 0.01; cleared.scale.set(Math.max(0.05, progress('clear')), 1, Math.max(0.05, progress('clear')));
-        grow(stones, progress('stones'));
-        grow(pillars, progress('pillars'));
-        const b = progress('beam');
-        beams.forEach((m, i) => { m.visible = b > i / beams.length; });
+        const c = progress('clear');
+        cleared.visible = c > 0.01; cleared.scale.set(Math.max(0.05, c), 1, Math.max(0.05, c));
+        for (const [m, k] of [[stones, progress('stones')], [pillars, progress('pillars')]]) { m.visible = k > 0.01; m.scale.y = Math.max(0.01, k); }
+        const b = Math.ceil(progress('beam') * beamGeos.length);
+        beams.visible = b > 0;
+        beams.geometry.setDrawRange(0, b * perBeam);
         gohei.visible = site.complete;
         const got = site.stage ? site.stage.got : {};
-        const key = JSON.stringify(got) + idx;
-        if (key !== this.key) {
-          this.key = key;
-          waiting.clear();
-          for (let i = 0; i < (got.log || 0); i++) { const m = new THREE.Mesh(logGeo, logMat); m.castShadow = true; m.position.set(0, 0.18 + i * 0.36, 0); waiting.add(m); }
-          for (let i = 0; i < (got.stone || 0); i++) { const m = new THREE.Mesh(stoneGeo, stoneMat); m.castShadow = true; m.position.set(0.1, 0.18, -0.9 + i * 0.5); waiting.add(m); }
-        }
+        waitLogs.count = Math.min(4, got.log || 0);
+        waitStones.count = Math.min(4, got.stone || 0);
       },
     };
   }
@@ -571,6 +558,7 @@ export class StationViews {
   make_shrine(e) {
     // the shrine is a prop; add the shimenawa that marks it as the one thing nothing can be taken from
     const shrine = this.props.getObjectByName('shrine') || null;
+    if (shrine?.children[0]) shrine.children[0].material = this.solid;
     const y = this.ground(e.x, e.z + 1.2);
     const root = new THREE.Group();
     root.position.set(e.x, y, e.z + 0.95);
@@ -580,6 +568,7 @@ export class StationViews {
     root.add(rope);
     for (const x of [-0.5, 0, 0.5]) {
       const s = this.sprite(this.tex.shide, 1, [0.18, 0.36], 'prop', 16, 32);
+      s.castShadow = false;
       s.position.set(x, 1.25 - Math.sin((x + 1) / 2 * Math.PI) * 0.16 - 0.4, 0.02);
       root.add(s);
     }
