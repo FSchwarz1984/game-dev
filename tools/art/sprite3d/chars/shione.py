@@ -150,17 +150,25 @@ class Shione(Model):
             for j in range(4):
                 S += [box(f'{nm}{j}', (0.6, 0.95, 0.14), 'red', round_=0.1, at=(0, -0.85, 0), part='stail')]
         # hakama: plum, pleated, to the ankles; a narrow front slit shows the pink inner layer
-        hz = 7.2
+        L = ctx.get('hem_len', 1.0)
+        if ctx.get('pooled'):
+            # kneeling / sitting: the hakama pools round her hips down to the ground
+            p = bw['pelvis'][:3, 3]
+            top = p[1] + 1.6
+            bw['hem0'] = G.M4(np.eye(3), (p[0], top, p[2] + 0.6))
+            L = top / 14.4
+        hz = 7.2 * L
+        hem_r = 5.6 + (1.0 - L) * 6.0
         hk = dict(part='hakama', group='hakama', k=0.0)
-        for cut in ((-1, -0.05, 0, -0.75), (1, -0.05, 0, -0.75), (0, 0, 1, 0.3)):
-            S += [skirt('hem0', hz, 5.6, 3.1, 'plum', sx=1.0, sz=0.8, wave=(0.35, 7, 0.2), flare=(0.28, 13, 0.0),
+        for cut in ((-1, -0.05 / L, 0, -0.75), (1, -0.05 / L, 0, -0.75), (0, 0, 1, 0.3)):
+            S += [skirt('hem0', hz, hem_r, 3.1, 'plum', sx=1.0, sz=0.8, wave=(0.35, 7, 0.2), flare=(0.28, 13, 0.0),
                         round_=0.4, at=(0, -hz, 0), cut=cut, **hk)]
-        S += [skirt('hem0', hz - 0.2, 4.6, 2.7, 'pink', sx=1.0, sz=0.82, wave=(0.2, 5, 0.0), round_=0.3,
+        S += [skirt('hem0', hz - 0.2, hem_r - 1.0, 2.7, 'pink', sx=1.0, sz=0.82, wave=(0.2, 5, 0.0), round_=0.3,
                     at=(0, -hz - 0.1, 0), part='inner')]
         # legs (hidden by the hakama, but they shape the hem) and boots
         for s, sx in (('L', 1), ('R', -1)):
-            S += [rcone('thigh' + s, (0, 0, 0), (0, -6.6, 0), 1.7, 1.4, 'white', part='leg' + s),
-                  rcone('shin' + s, (0, 0.2, 0), (0, -6.2, 0.1), 1.3, 1.0, 'white', part='leg' + s),
+            S += [rcone('thigh' + s, (0, 0, 0), (0, -6.6, 0), 1.75, 1.5, 'plum', part='leg' + s),
+                  rcone('shin' + s, (0, 0.2, 0), (0, -6.2, 0.1), 1.45, 1.15, 'plum', part='leg' + s),
                   box('foot' + s, (1.05, 0.95, 1.65), 'white', round_=0.7, at=(0, -0.38, 0.45), part='boot' + s,
                       bands=[(1, -1.0, -0.62, 'sole')]),
                   cyl('foot' + s, 0.6, 1.1, 'white', round_=0.3, at=(0, 0.55, 0.05), part='boot' + s)]
@@ -217,8 +225,20 @@ D8, D4 = ('front', 'front_right', 'right', 'back_right', 'back', 'back_left', 'l
 SHEETS = {'main': None}
 _ALL = tuple(SHEETS)
 _M = Shione()
+import shione_acts as T  # noqa: E402
+
+F4 = ('front', 'right', 'back', 'left')
+
+
+def _a(fn, fps, loop, views, sheets=_ALL):
+    return {'make': fn, 'fps': fps, 'loop': loop, 'views': views, 'sheets': sheets}
+
+
 ANIMS = {
     'idle': A.idle_spec(6, D8, _ALL),
     'walk': A.with_speed(A.loco_spec('walk', 8, 12, D8, _ALL, wind=0.10), _M),
     'run': dict(A.with_speed(A.loco_spec('run', 8, 15, D8, _ALL, wind=0.22), _M), **{'from': 3.9}),
+    'sit': _a(T.sit, 3, True, F4),
+    'kneel': _a(T.kneel, 3, True, F4),
+    'bow': _a(T.bow, 6, False, F4),
 }

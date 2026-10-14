@@ -101,8 +101,18 @@ export function bakeTitle(o = {}) {
     gr2.addColorStop(0, 'rgba(120,138,190,0.035)'); gr2.addColorStop(1, 'rgba(120,138,190,0)');
     pg.fillStyle = gr2; pg.fillRect(0, YH - 6, Wc, Hc - YH + 6);
   }
-  // pool into both: the sky rows just over the horizon and the ground
-  for (const c of [skyC, back]) { const g2 = ctx2d(c); g2.globalCompositeOperation = c === back ? 'source-atop' : 'lighter'; g2.drawImage(pool, 0, 0); g2.globalCompositeOperation = 'source-over'; }
+  // the pool is added (JS 'lighter' onto the opaque back): onto the sky as a canvas op, onto the
+  // ground layer by hand where there is ground (it is a separate layer: the moon goes between them)
+  { const g2 = ctx2d(skyC); g2.globalCompositeOperation = 'lighter'; g2.drawImage(pool, 0, 0); g2.globalCompositeOperation = 'source-over'; }
+  {
+    const P = pg.getImageData(0, 0, Wc, Hc).data, B = bg.getImageData(0, 0, Wc, Hc), D = B.data;
+    for (let i = 0; i < D.length; i += 4) {
+      if (D[i + 3] < 255 || !P[i + 3]) continue;
+      const a = P[i + 3] / 255;
+      D[i] = Math.min(255, D[i] + P[i] * a); D[i + 1] = Math.min(255, D[i + 1] + P[i + 1] * a); D[i + 2] = Math.min(255, D[i + 2] + P[i + 2] * a);
+    }
+    bg.putImageData(B, 0, 0);
+  }
   // the moon: a disc with maria, a stepped halo (top group)
   const mr = moon.r, hr = mr * 5;
   const moonImg = new Uint8Array((hr * 2 + 1) * (hr * 2 + 1) * 4), mw = hr * 2 + 1;

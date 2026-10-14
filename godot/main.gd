@@ -34,7 +34,7 @@ func _ready() -> void:
 	world = World.new()
 	stage.world_root.add_child(world)
 	world.setup(stage, field)
-	var region := world.load_region("test")
+	var region := world.load_region(_region_id())
 	var spawn: Dictionary = region.def.get("spawn", {})
 	field.player.x = float(spawn.get("x", 0.0))
 	field.player.z = float(spawn.get("z", 0.0))
@@ -70,6 +70,15 @@ func _ready() -> void:
 	DebugBridge.attach(self)
 	print("BOOT_OK region=%s profile=%s scheme=%s font=%s touch_ui=%s" % [region.id, GameState.setting("body_profile"),
 		GameState.setting("control_scheme"), GameState.setting("font_theme"), GameState.touch_ui_on()])
+
+
+## The region to load: "test" (the internal test region), or another id given on the command line
+## for checking (`-- --region=home_saddle`); not saved.
+func _region_id() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--region="):
+			return a.trim_prefix("--region=")
+	return "test"
 
 
 func _exit_tree() -> void:

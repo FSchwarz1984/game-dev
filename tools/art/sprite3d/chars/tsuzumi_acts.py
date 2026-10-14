@@ -84,8 +84,9 @@ def look_up(m, view):
 def bow(m, view):
     """A deep, formal bow: hands together in front of the thighs."""
     r = rest(m)
-    hands = Po.arms(L=dict(swing=14, out=-8, elbow=12), R=dict(swing=14, out=-8, elbow=12))
     def b(k):
+        sw = 14 - 0.75 * (38 * k)
+        hands = Po.arms(L=dict(swing=sw, out=-8, elbow=12), R=dict(swing=sw, out=-8, elbow=12))
         return Po.merged(r, hands, {'spine': (24 * k, 0, 0), 'chest': (14 * k, 0, 0), 'head': (12 * k, 0, 0),
                                     'neck': (4 * k, 0, 0)})
     seq = [(b(0.2), {}), (b(0.6), {'expr': 'down'}), (b(1.0), {'expr': 'blink'}), (b(1.0), {'expr': 'blink'}),
@@ -118,7 +119,7 @@ def grounded(m, pose):
     return Po.place(m, pose, np.eye(3))
 
 
-SIT = {'coat_len': 0.55}
+SIT = {'coat_pooled': True}
 
 
 def asleep(m, view):
@@ -166,7 +167,7 @@ def stand_up_ground(m, view):
                        {'spine': (28, 0, 0), 'chest': (8, 0, 0)}, Po.arms(L=dict(swing=30, out=10, elbow=20), R=dict(swing=30, out=10, elbow=20)))
     half = Po.merged(rest(m), Po.legs_ik(P, {'L': (1.0, 0, 0), 'R': (-0.8, 0, 8)}, pelvis_y=P['hip'] - 2.4),
                      {'spine': (12, 0, 0)})
-    seq = [(knees, dict(SIT)), (crouch, {'coat_len': 0.8}), (half, {}), (rest(m), {})]
+    seq = [(knees, dict(SIT)), (crouch, {}), (half, {}), (rest(m), {})]
     return _f(m, seq)
 
 

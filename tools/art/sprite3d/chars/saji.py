@@ -113,10 +113,11 @@ class Saji(Model):
         S = self.head_shapes(ctx)
         if ctx.get('beam'):
             # the fallen eave beam across her hips, as an occluder only: her sprite gets holes where
-            # the world's beam (2 m x 0.4 m x 0.3 m, centred on her 'hip' anchor, lying across her)
-            # is in front of her; the world draws the beam first and her sprite over it
-            S += [box('pelvis', (20.0, 1.6, 3.6), 'skin', round_=0.5, at=(0, 0.0, 1.0), occluder=True,
-                      R=G.Rx(90), part='beam')]
+            # the world's beam is in front of her; the world draws the beam first and her sprite
+            # over it. Contract (docs/knowledge/20-sprites.md): 2 m long across her body, 0.3 m wide,
+            # 0.3 m tall, resting on the ground, centred on her 'hip' anchor.
+            bw['beam'] = self.beam_frame(bw)
+            S += self.beam_shapes(occluder=True)
         # neck, kimono top, capelet, bell
         S += [rcone('neck', (0, -0.4, 0), (0, 1.6, 0), 0.95, 0.9, 'skin', part='neck'),
               ell('spine', (2.45, 2.2, 1.85), 'plum', at=(0, 0.7, 0.05), part='torso', group='torso', k=1.0),
@@ -153,6 +154,13 @@ class Saji(Model):
                   ell('hand' + s, (0.72, 0.85, 0.72), 'skin', at=(0, -0.35, 0.15), part='hand' + s)]
         return S
 
+    def beam_frame(self, bw):
+        p = bw['pelvis'][:3, 3]
+        return G.M4(np.eye(3), (p[0], 3.0, p[2]))
+
+    def beam_shapes(self, occluder=True, mat='skin'):
+        return [box('beam', (20.0, 3.0, 3.0), mat, round_=0.6, occluder=occluder, part='beam')]
+
     # ------------------------------------------------------------------ face
     def features(self, ctx):
         def on_face(x, y):
@@ -175,8 +183,11 @@ class Saji(Model):
                         blush=True, skin_ids=skin)
 
     def anchors(self, ctx):
-        return {'hand': ('handL', (0, -0.6, 0)), 'handR': ('handR', (0, -0.6, 0)), 'head': ('head', (0, 11.0, 0)),
-                'seat': ('pelvis', (0, -1.6, -0.4)), 'hip': ('pelvis', (0, 0.0, 0.0))}
+        a = {'hand': ('handL', (0, -0.6, 0)), 'handR': ('handR', (0, -0.6, 0)), 'head': ('head', (0, 11.0, 0)),
+             'seat': ('pelvis', (0, -1.6, -0.4))}
+        if ctx.get('beam'):
+            a['hip'] = ('beam', (0, -3.0, 0))      # the beam's centre on the ground
+        return a
 
 
 # =============================================================================================

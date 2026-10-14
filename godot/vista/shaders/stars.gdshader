@@ -9,6 +9,10 @@ render_mode blend_disabled, skip_vertex_transform;
 
 uniform float t;
 uniform float stars = 1.0;      // env.stars
+uniform bool sky_from_tex = false;                                  // tower, title: a baked sky
+uniform sampler2D sky_tex : filter_nearest, repeat_disable;
+uniform float fade_y0 = 0.0;    // with a baked sky: the fade toward its horizon (smooth(y0, y1, y))
+uniform float fade_y1 = -36.0;
 
 varying flat vec4 v_c;          // colour (sRGB 0..1), alpha
 varying flat float v_flare;
@@ -20,7 +24,7 @@ void vertex() {
 	float ph = MODEL_MATRIX[1].x, sp = MODEL_MATRIX[1].y, mag = MODEL_MATRIX[2].x, tw = MODEL_MATRIX[2].y;
 	vec2 world = MODEL_MATRIX[3].xy;
 	float sa = mag < 0.5 ? 0.32 : mag < 1.5 ? 0.55 : mag < 2.5 ? 0.8 : 1.0;
-	float fade = smoothj(horizon, horizon - 36.0, pos.y);
+	float fade = sky_from_tex ? smoothj(fade_y0, fade_y1, pos.y) : smoothj(horizon, horizon - 36.0, pos.y);
 	float a = sa * fade;
 	float flare = 0.0;
 	bool show = a > 0.02;
@@ -51,5 +55,6 @@ void fragment() {
 		if (abs(d.x) + abs(d.y) != 1.0) discard;
 		a *= 0.4;
 	}
-	COLOR = vec4(lin255(mix(sky_px(p), v_c.rgb * 255.0, clamp(a, 0.0, 1.0))), 1.0);
+	vec3 sky = sky_from_tex ? texelFetch(sky_tex, ivec2(p), 0).rgb * 255.0 : sky_px(p);
+	COLOR = vec4(lin255(mix(sky, v_c.rgb * 255.0, clamp(a, 0.0, 1.0))), 1.0);
 }

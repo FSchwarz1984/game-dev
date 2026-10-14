@@ -203,11 +203,21 @@ class Tsuzumi(Model):
             S += [box(f'sash{j}', (0.62, 0.86, 0.14), 'red', round_=0.1, at=(0, -0.75, 0), part='sash')]
         # haori: an open coat on the coat chain; left, right and back pieces leave the front open
         coat = dict(part='coat', group='coat', k=0.0)
-        # sitting and lying fold the long coat: it pools around her hips instead of trailing
-        hz = 5.6 * ctx.get('coat_len', 1.0)
-        hem_r = 5.4 + (1.0 - ctx.get('coat_len', 1.0)) * 3.0
+        # sitting and lying: the long coat pools round her hips down to the ground instead of trailing
+        L = 1.0
+        if ctx.get('coat_pooled'):
+            c = bw['chest'] @ np.array([0, 0.6, 0, 1.0])
+            p = bw['pelvis'][:3, 3]
+            top = max(c[1], p[1] + 2.0)
+            # the coat hangs from the chest; when she lies back it lies along the ground from her hips
+            if c[1] - p[1] < 2.0:
+                top = p[1] + 2.0
+            bw['coat0'] = G.M4(np.eye(3), (p[0], top, p[2] - 0.4))
+            L = max(0.25, top / 11.2)
+        hz = 5.6 * L
+        hem_r = 5.4 + (1.0 - L) * 4.0
         g = 1.6
-        for cut in ((-1, -0.107 / ctx.get('coat_len', 1.0), 0, -g), (1, -0.107 / ctx.get('coat_len', 1.0), 0, -g), (0, 0, 1, 0.2)):
+        for cut in ((-1, -0.107 / L, 0, -g), (1, -0.107 / L, 0, -g), (0, 0, 1, 0.2)):
             S += [skirt('coat0', hz, hem_r, 3.3, 'white', sx=1.0, sz=0.78, wave=(1.0, -6, 0.3), flare=(0.25, 7, 0.0),
                         round_=0.4, at=(0, -hz, 0), cut=cut, **coat)]
         # trousers and boots
