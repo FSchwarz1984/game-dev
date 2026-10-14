@@ -929,6 +929,7 @@ SFX.heartbeat = (o, sp, t) => play("sfx", (v) => {
    AMBIENCE — breathing forest beds + scheduled creatures (update-driven)
    ===================================================================== */
 const AMB = { on: false, act: 1, wet: 0, gust: 0.6, nextGust: 0, nextLeaf: 0, nextWander: 0 };
+const MUTED = new Set(); // synthesized creatures and beds replaced by recordings
 let ambIn, ambLP, ambG, ambWIn, ambWLP, ambWG;
 const W = {}, LV = {}, SS = {}, ST = {}, FA = {}, RN = {}, BEDS = {}, ACT = {}, PEND = [];
 function bed(name, specs) { BEDS[name] = { specs, srcs: [], live: false, idle: 0 }; }
@@ -943,6 +944,7 @@ function startLoop(sp) {
 // Beds run only while wanted: sources start on demand and stop after 4 s of silence.
 function bedWant(name, lvl, dt) {
   const b = BEDS[name];
+  if (MUTED.has(name)) lvl = 0;
   if (lvl > 0.0006) {
     b.idle = 0; b.live = true;
     for (let i = 0; i < b.specs.length; i++) if (!b.srcs[i]) b.srcs[i] = startLoop(b.specs[i]);
@@ -1039,6 +1041,7 @@ function dayW(h, a, b, f) {
 }
 // Fire event fn at Poisson rate (per s), respecting a per-kind concurrency cap.
 function maybe(k, rate, dt, t, fn, max) {
+  if (MUTED.has(k)) return; // played from a field recording instead (src/audio/field.js)
   if (!(rate > 0) || Math.random() >= rate * dt) return;
   const a = ACT[k] || (ACT[k] = []);
   for (let i = a.length - 1; i >= 0; i--) if (a[i] < t) a.splice(i, 1);
@@ -1841,6 +1844,13 @@ const api = {
   }),
   stinger: guard((name) => { const f = STING[name]; if (f) f(ctx.currentTime + 0.02, stingStrip()); }),
   duck: guard(duck),
+  // For the field-recording layer (src/audio/field.js): the context, the ambience inputs that
+  // pass through the nearness filter (dry and room), the world state, and which synthesized
+  // creatures / beds to silence because a recording now plays them.
+  context: () => ctx,
+  ambBus: () => (ready ? BUS.ambx : null),
+  state: () => ({ tod: S.tod, near: S.near, wind: S.wind, rain: S.rain, water: S.water, fall: S.fall, cinematic: S.cinematic, indoor: S.indoor, biome: { ...S.biome }, act: AMB.act }),
+  mute: (names, on = true) => { for (const n of [].concat(names)) { if (on) MUTED.add(n); else MUTED.delete(n); } },
 };
 return api;
 })();
