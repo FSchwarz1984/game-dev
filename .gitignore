@@ -17,3 +17,6 @@ tools/flora/out/
 
 # vista generator intermediates (finished assets live in godot/vista)
 tools/vista/out/
+
+# props generator intermediates (finished assets live in godot/art/props)
+tools/props/out/
