@@ -264,6 +264,14 @@ export async function createStage({ root, field, vistaView, onProgress = null })
       stage._dt = dt;
     },
 
+    /** The checking tools tick without drawing: still move the camera, the particles and the fades. */
+    advance(dt) {
+      if (!R.env || vstate) return;
+      R.t += dt; R.updateCamera(dt);
+      R.fx.update(dt, R.env, R.view);
+      R.updateFades(dt);
+    },
+
     render() {
       const dt = stage._dt ?? 1 / 60;
       if (vstate) { VV.draw(dt); return; }

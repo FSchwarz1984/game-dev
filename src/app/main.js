@@ -111,6 +111,7 @@ export async function boot(app) {
     D.tick(dt);
     story.update(dt * (D.rate || 1));
     stage.update(dt);
+    if (params.manual) stage.advance?.(dt);
     hud.update(dt);
     if (audioOn) {
       AU.update(dt, { tod: G.hour ?? 12, listener: { x: f.player.x * PX, y: f.player.z * PX }, near: stage.nearness?.() ?? 1, cinematic: D.busy, wind: 0.3, biome: stage.biome?.() });

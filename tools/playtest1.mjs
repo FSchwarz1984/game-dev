@@ -35,8 +35,7 @@ const log = (...a) => console.log(`[${mode}]`, ...a);
 let shotN = 0;
 async function shot(name) {
   await page.waitForTimeout(900);            // let CSS fades and cards settle (they run on the wall clock)
-  // the camera eases only when frames are drawn; ticks here draw nothing, so settle it first
-  await page.evaluate(() => { window.APP.G.stage.R.camera.snap(); window.APP.render(); });
+  await page.evaluate(() => window.APP.render());
   await page.waitForTimeout(60);
   const f = path.join(out, `${String(++shotN).padStart(2, '0')}-${name}.png`);
   await page.screenshot({ path: f });
@@ -199,7 +198,7 @@ async function dayOneRun() {
   await ticks(90); await shot('waking');
   await until(s => s.control, 'control on day 1');
   await shot('morning');
-  await walk(P.hutDoor, 0.4); await face('hut'); await contextKey();
+  await walk([P.hutDoor[0], P.hutDoor[1] + 1.9], 0.4); await face('hut'); await contextKey();   // the far hut keeps her a step away
   await until(s => s.dlg, 'hut line'); await shot('hut');
   await until(s => s.control && !s.busy, 'beam falls');
   await walk([P.beam[0], P.beam[1] + 1.6], 0.4);
@@ -216,7 +215,7 @@ async function dayOneRun() {
   await face('frame'); await contextKey();
   await until(s => s.dlg, 'Saji moves in'); await shot('saji-rides');
   await until(s => s.control && !s.busy, 'setting out');
-  await walk([P.eastExit.x0 + 1, P.dosojinStand[1]], 0.6);
+  await walk([119.2, P.dosojinStand[1]], 0.6);
   await until(s => s.saved && s.saved.includes('end'), 'end card', 3000);
   await shot('end');
 }

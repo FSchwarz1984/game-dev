@@ -489,7 +489,7 @@ export async function day1(G) {
   // passing the statues: the dango she left is pale now. Saji names it; nobody explains.
   // (Only if she passes them: the way out never depends on it.)
   const statues = f.zone({ ...P.dosojinZone, id: 'dosojin2' });
-  const exit = f.zone({ ...P.eastExit, id: 'leave' });
+  const exit = f.zone({ ...(P.leave || P.eastExit), id: 'leave' });
   let passed = false;
   const offStatues = G.on(e => {
     if (e.type !== 'enter' || e.zone !== 'dosojin2' || passed) return;
