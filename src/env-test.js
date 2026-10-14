@@ -9,12 +9,14 @@
      ?lanterns=1     bon lanterns hung and lit at the graves (evening/night also light the hut and
                      give her a carried lantern; ?carry=1 forces the carried lantern)
      ?frames=N       set window.DONE after N frames  ?pause=1  freeze time
+     ?ph=1           the placeholder character instead of her sprite sheet (src/art)
    Keys: WASD/arrows walk, T cycles the time, F toggles day-1, L lanterns.
    window.ENV exposes {R, map, actor, setTime, shot, walkTo} for scripted shots.
    ===================================================================== */
 import { Renderer } from './gfx/renderer.js';
 import { createHomeMap } from './env/home.js';
 import { buildPlaceholderSheet } from './env/actor.js';
+import { TSUZUMI, frameAt } from './art/characters.js';
 
 const qs = new URLSearchParams(location.search);
 const app = document.getElementById('app') || document.body;
@@ -23,16 +25,27 @@ Object.assign(cv.style, { width: '100%', height: '100%', display: 'block', image
 const hud = document.createElement('pre'); Object.assign(hud.style, { position: 'fixed', left: '6px', top: '4px', margin: 0, color: '#e8eee0', font: '11px/1.3 monospace', textShadow: '0 1px 2px #000', pointerEvents: 'none', display: qs.get('hud') === '0' ? 'none' : 'block' });
 app.appendChild(hud);
 
-function boot() {
+const loadImg = url => new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = url; });
+/** her sprite sheet (src/art, the character agent's work) when it loads; the placeholder otherwise or with ?ph=1 */
+async function sheetOf() {
+  if (qs.get('ph') !== '1') try {
+    const sh = TSUZUMI && TSUZUMI.sheets.load; if (sh && sh.albedo) { const [a, n] = await Promise.all([loadImg(sh.albedo), loadImg(sh.normal)]); return { real: true, a, n }; }
+  } catch (e) { console.warn('character sheet not loaded, using the placeholder', e); }
+  return { real: false };
+}
+
+async function boot() {
+  const SH = await sheetOf();
   const t0 = performance.now();
   const map = createHomeMap({});
   const bakeMs = performance.now() - t0;
   const R = new Renderer(cv, { quality: qs.get('q') || 'auto', preserve: qs.has('shotmode') });
   R.loadMap(map);
   const S = buildPlaceholderSheet();
-  R.loadSheet('tsuzumi', S.albedo, S.normal);
+  if (SH.real) R.loadSheet('tsuzumi', SH.a, SH.n); else R.loadSheet('tsuzumi', S.albedo, S.normal);
+  const anchor = SH.real ? [TSUZUMI.pivot.x, TSUZUMI.pivot.y] : S.anchor;
   const sp = map.spawn; const pos = { x: +(qs.get('x') ?? sp.x), z: +(qs.get('z') ?? sp.z) };
-  const actor = R.addActor('tsuzumi', { x: pos.x, z: pos.z, y: map.heightAt(pos.x, pos.z), frame: S.anims.idle_s[0], anchor: S.anchor, slot: 0 });
+  const actor = R.addActor('tsuzumi', { x: pos.x, z: pos.z, y: map.heightAt(pos.x, pos.z), frame: S.anims.idle_s[0], anchor, slot: 0 });
   const tq = qs.get('t'); let hour = tq == null ? 17.6 : isNaN(+tq) ? ({ dusk: 17.6, night: 21, morning: 7, noon: 12.5, evening: 18.4 })[tq] ?? 17.6 : +tq;
   R.setTime(hour);
   const st = { dir: 's', anim: 0, follow: true };
@@ -73,9 +86,14 @@ function boot() {
       actor.y = map.heightAt(actor.x, actor.z);
       st.dir = Math.abs(mx) > Math.abs(mz) ? (mx > 0 ? 'e' : 'w') : (mz > 0 ? 's' : 'n');
     }
-    st.anim += dt * (moving ? 8 : 0);
-    const d = st.dir === 'w' ? 'e' : st.dir; const A = S.anims[(moving ? 'walk_' : 'idle_') + d];
-    actor.frame = A[Math.floor(st.anim) % A.length]; actor.flip = st.dir === 'w';
+    st.anim += dt * (moving ? 8 : 0); st.t = (st.t || 0) + (pause ? 0 : dt);
+    if (SH.real) {
+      const f = frameAt(TSUZUMI, 'load', moving ? 'walk' : 'idle', { s: 'down', n: 'up', e: 'right', w: 'left' }[st.dir], st.t);
+      if (f) { actor.frame = [f.sx, f.sy, f.sw, f.sh]; actor.flip = !!f.mirror; }
+    } else {
+      const d = st.dir === 'w' ? 'e' : st.dir; const A = S.anims[(moving ? 'walk_' : 'idle_') + d];
+      actor.frame = A[Math.floor(st.anim) % A.length]; actor.flip = st.dir === 'w';
+    }
     R.setFocus(actor.x, actor.z, actor.y);
     if (ENV.carry) ENV.carry.set({ x: actor.x + (actor.flip ? 0.25 : -0.25), z: actor.z - 0.15, y: actor.y + 1.7 });
     if (st.follow) R.setCamera({ x: actor.x, z: actor.z, y: actor.y, lift: 0.9 }, 5);
@@ -88,4 +106,4 @@ function boot() {
   window.READY = true;
   requestAnimationFrame(tick);
 }
-try { boot(); } catch (e) { console.error(e && e.stack || e); document.title = 'ERR ' + e.message; window.DONE = true; window.ERR = String(e && e.stack || e); }
+boot().catch(e => { console.error(e && e.stack || e); document.title = 'ERR ' + e.message; window.DONE = true; window.ERR = String(e && e.stack || e); });

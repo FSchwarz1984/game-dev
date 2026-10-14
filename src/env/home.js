@@ -271,7 +271,9 @@ function populate(K) {
   const fill = (x0, x1, z0, z1, h, n) => {
     for (let k = 0, c = 0; k < n * 40 && c < n; k++) {
       const x = R.range(x0, x1), z = R.range(z0, z1);
-      if (Math.abs(T.heightAt(x, z) - h) > 0.1 || !ground(x, z, 1.25) || !free(x, z, 0.75)) continue;
+      if (Math.abs(T.heightAt(x, z) - h) > 0.1 || !ground(x, z, 0.5) || !free(x, z, 0.75)) continue;
+      let road = false; for (const [dx, dz] of [[1.1, 0], [-1.1, 0], [0, 1.1], [0, -1.1], [0.8, 0.8], [-0.8, 0.8], [0.8, -0.8], [-0.8, -0.8]]) { const t = T.topAt(x + dx, z + dz); if (t === TM.PATH || t === TM.STEP || t === TM.PAVE) road = true; }
+      if (road) continue;
       const sunny = fbm(x * 0.15, z * 0.15, 2, 77) > 0.52;
       place(R.pick(sunny ? ['susuki0', 'susuki1', 'susuki3', 'sasa1', 'azalea2', 'fern2'] : ['sasa0', 'sasa1', 'sasa2', 'fern0', 'fern1', 'fern3', 'azalea0', 'camellia2']), x, z, { flip: R() < 0.5 });
       keep.push([x, z, 0.75]); c++;

@@ -275,9 +275,9 @@ vec3 farLook(vec3 col, float F){
   // the thing keeps its shapes, it only stands one step back)
   if(F<=0.) return col;
   float l=lum(col);
-  vec3 pale=mix(uFarCol*.56, uFarCol*1.06, smoothstep(0.,.8,l));
-  pale=mix(pale, mix(vec3(l),col,.25)*.45+uFarCol*.55, .3);
-  return mix(col, pale, clamp(F,0.,1.)*.86);
+  vec3 pale=mix(uFarCol*.48, uFarCol*.95, smoothstep(0.,.8,l));
+  pale=mix(pale, mix(vec3(l),col,.3)*.5+uFarCol*.45, .32);
+  return mix(col, pale, clamp(F,0.,1.)*.82);
 }
 vec3 atmos(vec3 col, vec3 P, vec2 f, bool isChar, float vis){
   // mist: a thin veil everywhere, thick in the hollows (and far below the rims); lit where the sun reaches it

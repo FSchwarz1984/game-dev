@@ -30,6 +30,8 @@ export const SHOTS = {
   'graves-night': [D720, 'shot=graves&t=21&lanterns=1'],
   'dosojin-dusk': [D720, 'shot=dosojin&t=17.8'],
   'eastroad-morning': [D720, 'shot=eastRoad&t=7&day1=1'],
+  'clearing-morning': [D720, 'x=47&z=41&t=7&day1=1'],
+  'clearing-noon': [D720, 'x=47&z=41&t=12.5'],
   'lookout-dusk': [D720, 'shot=lookout&t=18.2'],
   'tower-night': [D720, 'shot=tower&t=21'],
   'waterfall-noon': [D720, 'shot=waterfall&t=12.5'],
