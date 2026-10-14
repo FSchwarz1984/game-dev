@@ -10,3 +10,7 @@ __pycache__/
 # Godot: editor cache and local exports (never committed)
 godot/.godot/
 godot/export/
+
+# Generator intermediates (rebuilt by tools/terrain and tools/flora); finished assets live in godot/
+tools/terrain/out/
+tools/flora/out/
