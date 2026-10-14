@@ -37,6 +37,7 @@ export function* paintBackdropG(o = {}) {
     }
     tops.push(top);
     for (let x = 0; x < W; x++) for (let y = Math.max(0, Math.floor(top[x])); y < H; y++) {
+      if (y === Math.max(0, Math.floor(top[x])) && (x & 255) === 255) yield;
       const k = (y - top[x]) / 60; const shade = clamp(1 - k * 0.25, 0.7, 1) * (li >= 3 && hash2(x >> 1, y >> 1, li) < 0.1 ? 0.9 : 1);
       put(x, y, g.map(v => v * shade), dep + (1 - dep) * clamp(k * 0.1, 0, 0.2));
     }

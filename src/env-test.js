@@ -11,11 +11,12 @@
      ?frames=N       set window.DONE after N frames  ?pause=1  freeze time
      ?ph=1           the placeholder character instead of her sprite sheet (src/art)
      ?cam=x,z,y      a fixed camera target (metres)
+     ?async=1        bake with createHomeMapAsync (window.BAKE: frames, maxGap, longestSlice)
    Keys: WASD/arrows walk, T cycles the time, F toggles day-1, L lanterns.
    window.ENV exposes {R, map, actor, setTime, shot, walkTo} for scripted shots.
    ===================================================================== */
 import { Renderer } from './gfx/renderer.js';
-import { createHomeMap } from './env/home.js';
+import { createHomeMap, createHomeMapAsync } from './env/home.js';
 import { buildPlaceholderSheet } from './env/actor.js';
 import { TSUZUMI, frameAt } from './art/characters.js';
 
@@ -38,7 +39,14 @@ async function sheetOf() {
 async function boot() {
   const SH = await sheetOf();
   const t0 = performance.now();
-  const map = createHomeMap({});
+  let map;
+  if (qs.get('async') === '1') {
+    // the non-blocking bake: count animation frames and the longest gap between them while it runs
+    const B = window.BAKE = { frames: 0, maxGap: 0, last: performance.now(), progress: [] };
+    let on = true; const tick = now => { if (!on) return; B.maxGap = Math.max(B.maxGap, now - B.last); B.last = now; B.frames++; requestAnimationFrame(tick); }; requestAnimationFrame(tick);
+    map = await createHomeMapAsync({ onProgress: (k, label) => { B.progress.push(Math.round(k * 100)); document.title = 'baking ' + Math.round(k * 100) + '% ' + label; } });
+    on = false; B.ms = performance.now() - t0; B.longestSlice = map.bakeSlices.longestMs; B.slow = map.bakeSlices.slowSteps;
+  } else map = createHomeMap({});
   const bakeMs = performance.now() - t0;
   const R = new Renderer(cv, { quality: qs.get('q') || 'auto', preserve: qs.has('shotmode') });
   R.loadMap(map);

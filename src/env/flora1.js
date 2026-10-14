@@ -62,15 +62,18 @@ export function clump(s, cx, cy, rx, ry, z0, rr, o = {}) {
     pts.push({ x: cx + x, y: cy + y + droop * u * u * ry * 0.35, r: cell * R.range(0.62, 0.86), t: R(), d });
   }
   if (!pts.length) pts.push({ x: cx, y: cy, r: Math.max(rx, ry), t: 0.5, d: 0 });
-  // bucket the cells on a coarse grid so each pixel only tests its neighbours (v0.1 tested them all)
-  const G = Math.max(2, cell * 1.2), grid = new Map(), key = (i, j) => i * 73856 + j;
-  for (const p of pts) { const k = key(Math.floor(p.x / G), Math.floor(p.y / G)); if (!grid.has(k)) grid.set(k, []); grid.get(k).push(p); }
   const x0 = Math.floor(cx - rx - cell * 2), x1 = Math.ceil(cx + rx + cell * 2), y0 = Math.floor(cy - ry - cell * 2), y1 = Math.ceil(cy + ry + cell * 2 + droop * ry * 0.4);
+  // bucket the cells on a coarse grid (typed arrays, counting sort) so each pixel only tests its neighbours
+  const G = Math.max(2, cell * 1.2), gx0 = Math.floor(x0 / G) - 2, gy0 = Math.floor(y0 / G) - 2, gw = Math.floor(x1 / G) - gx0 + 3, gh = Math.floor(y1 / G) - gy0 + 3;
+  const cnt = new Int32Array(gw * gh + 1), order = new Int32Array(pts.length), cellOf = new Int32Array(pts.length);
+  pts.forEach((p, k) => { const gi = clamp(Math.floor(p.x / G) - gx0, 0, gw - 1), gj = clamp(Math.floor(p.y / G) - gy0, 0, gh - 1); cellOf[k] = gj * gw + gi; cnt[cellOf[k] + 1]++; });
+  for (let k = 1; k <= gw * gh; k++) cnt[k] += cnt[k - 1];
+  const fillAt = cnt.slice(); pts.forEach((p, k) => { order[fillAt[cellOf[k]]++] = k; });
   for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
     let b1 = null, d1 = 1e9, d2 = 1e9;
-    const gi = Math.floor((x + 0.5) / G), gj = Math.floor((y + 0.5) / G);
-    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const L = grid.get(key(gi + i, gj + j)); if (!L) continue;
-      for (const p of L) { const d = hyp(x + 0.5 - p.x, (y + 0.5 - p.y) * 1.15) / p.r; if (d < d1) { d2 = d1; d1 = d; b1 = p; } else if (d < d2) d2 = d; } }
+    const gi = Math.floor((x + 0.5) / G) - gx0, gj = Math.floor((y + 0.5) / G) - gy0;
+    for (let j = gj - 1; j <= gj + 1; j++) { if (j < 0 || j >= gh) continue; for (let i = gi - 1; i <= gi + 1; i++) { if (i < 0 || i >= gw) continue; const c = j * gw + i;
+      for (let q = cnt[c]; q < cnt[c + 1]; q++) { const p = pts[order[q]]; const dx = x + 0.5 - p.x, dy = (y + 0.5 - p.y) * 1.15, d = Math.sqrt(dx * dx + dy * dy) / p.r; if (d < d1) { d2 = d1; d1 = d; b1 = p; } else if (d < d2) d2 = d; } } }
     if (!b1 || d1 > 1) continue;
     const u = (x + 0.5 - cx) / rx, v = (y + 0.5 - cy) / ry, D = Math.min(1, Math.sqrt(u * u + v * v));
     const dome = Math.sqrt(Math.max(0, 1 - D * D));

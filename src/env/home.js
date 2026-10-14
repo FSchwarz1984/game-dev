@@ -33,7 +33,7 @@
    ===================================================================== */
 import { MapKit } from './mapkit.js';
 import { Terrain, PPM } from './terrain.js';
-import { TM, WM } from './groundmat.js';
+import { TM, WM, noiseG } from './groundmat.js';
 import { RNG, hash2, fbm, clamp, drain } from './core.js';
 import * as F from './flora.js';
 import * as V from './flora1.js';
@@ -69,48 +69,48 @@ export const ROAD = {
 /** the terrain layout as a generator (yields between primitives); layoutTerrain(T) runs it at once */
 export function layoutTerrain(T) { return drain(layoutTerrainG(T)); }
 export function* layoutTerrainG(T) {
-  const L = (poly, Z, o) => T.level(poly, Z, o);
+  const L = (poly, Z, o) => T.levelG(poly, Z, o); // (each level is filled in row bands: `yield* L(…)`)
   // base: the saddle (0 m), sun-bleached meadow
-  L([[-8, -8], [130, -8], [130, 108], [-8, 108]], 0, { raw: true, top: TM.MEADOW, wall: WM.ROCK, pa: 60, pb: 110 }); yield 0.02;
+  yield* L([[-8, -8], [130, -8], [130, 108], [-8, 108]], 0, { raw: true, top: TM.MEADOW, wall: WM.ROCK, pa: 60, pb: 110 }); yield 0.02;
   // west: the stream valley in two steps
-  L([[-8, 3], [20.5, 5.5], [21.8, 16], [20.2, 25], [19.4, 33], [18.2, 39.6], [-8, 41]], -1.5, { top: TM.GRASS, wall: WM.EARTH, seed: 21, amp: 0.7, pb: 140 }); yield;
-  L([[-8, 40.4], [16.4, 39.8], [15.2, 47], [12.5, 55], [8.5, 63], [-8, 66]], -3, { top: TM.GRASS, wall: WM.ROCK, seed: 23, amp: 0.6, pb: 120 }); yield;
+  yield* L([[-8, 3], [20.5, 5.5], [21.8, 16], [20.2, 25], [19.4, 33], [18.2, 39.6], [-8, 41]], -1.5, { top: TM.GRASS, wall: WM.EARTH, seed: 21, amp: 0.7, pb: 140 }); yield;
+  yield* L([[-8, 40.4], [16.4, 39.8], [15.2, 47], [12.5, 55], [8.5, 63], [-8, 66]], -3, { top: TM.GRASS, wall: WM.ROCK, seed: 23, amp: 0.6, pb: 120 }); yield;
   // the drop toward the plain (south): a steep wooded mountainside in 3 m steps below the rims
   for (const sl of SLOPES) for (const [k, h] of sl.steps.entries()) {
     const off = sl.dz * k, rim = sl.rim.map(([x, z]) => [x, z + off + (k ? (hash2(Math.round(x), k, 5) - 0.5) * 0.8 : 0)]);
-    L([...rim, [sl.rim[sl.rim.length - 1][0], 108], [sl.rim[0][0], 108]], h, { top: TM.FLOOR, wall: k % 2 ? WM.EARTH : WM.MOSSROCK, seed: 31 + k * 7 + sl.seed, amp: 0.5, scale: 2.6, pb: 150 });
+    yield* L([...rim, [sl.rim[sl.rim.length - 1][0], 108], [sl.rim[0][0], 108]], h, { top: TM.FLOOR, wall: k % 2 ? WM.EARTH : WM.MOSSROCK, seed: 31 + k * 7 + sl.seed, amp: 0.5, scale: 2.6, pb: 150 });
     yield 0.05;
   }
   // north-west: the cliff the waterfall pours over (+8 m), upper wood on top
-  L([[-8, -8], [47, -8], [45.5, 1.5], [41, 3.4], [35.5, 3.9], [29.5, 4.3], [21.5, 4.6], [15, 3.5], [8, 4.4], [2, 3.2], [-8, 4]], 8, { top: TM.FLOOR, wall: WM.ROCK, seed: 41, amp: 0.45, scale: 2.5, pb: 160 }); yield;
+  yield* L([[-8, -8], [47, -8], [45.5, 1.5], [41, 3.4], [35.5, 3.9], [29.5, 4.3], [21.5, 4.6], [15, 3.5], [8, 4.4], [2, 3.2], [-8, 4]], 8, { top: TM.FLOOR, wall: WM.ROCK, seed: 41, amp: 0.45, scale: 2.5, pb: 160 }); yield;
   // north wood behind the camphor (+1.5 m, an earth bank)
-  L([[44, -8], [80, -8], [79, 6], [74, 10.5], [66, 12.5], [58, 13.8], [50, 13.2], [46, 10], [44.5, 4]], 1.5, { top: TM.FLOOR, wall: WM.EARTH, seed: 43, amp: 0.6, pb: 180 }); yield;
+  yield* L([[44, -8], [80, -8], [79, 6], [74, 10.5], [66, 12.5], [58, 13.8], [50, 13.2], [46, 10], [44.5, 4]], 1.5, { top: TM.FLOOR, wall: WM.EARTH, seed: 43, amp: 0.6, pb: 180 }); yield;
   // north-east terrace (+3 m): the path toward the temple; the ridge beyond opens to the summit
-  L([[73.5, 8], [80, 6.5], [95, 7.5], [108, 6.2], [130, 7], [130, 26.5], [114, 25.6], [100, 26.8], [90, 25.4], [82.5, 24.3], [77.5, 21.5], [74.5, 15]], 3, { top: TM.GRASS, wall: WM.MOSSROCK, seed: 47, amp: 0.55, scale: 2.5, pa: 30, pb: 90 }); yield;
+  yield* L([[73.5, 8], [80, 6.5], [95, 7.5], [108, 6.2], [130, 7], [130, 26.5], [114, 25.6], [100, 26.8], [90, 25.4], [82.5, 24.3], [77.5, 21.5], [74.5, 15]], 3, { top: TM.GRASS, wall: WM.MOSSROCK, seed: 47, amp: 0.55, scale: 2.5, pa: 30, pb: 90 }); yield;
   // beyond the NE ridge: nothing is painted, the backdrop (summit, tower) shows
-  T.level([[74, -8], [130, -8], [130, 7.4], [108, 6.6], [95, 7.9], [80, 6.9], [73.8, 8.4]], 3, { top: TM.NONE, seed: 47, amp: 0.4, scale: 2.2 }); yield 0.1;
+  yield* T.levelG([[74, -8], [130, -8], [130, 7.4], [108, 6.6], [95, 7.9], [80, 6.9], [73.8, 8.4]], 3, { top: TM.NONE, seed: 47, amp: 0.4, scale: 2.2 }); yield 0.1;
   // the switchback hillside: three levels whose edges run diagonally and curve with the legs of the road;
   // the banks between them change width along their length (wide in the west, narrow at the hairpins)
-  L([[64.5, 58.6], [70, 57.8], [78, 57.4], [86, 57.6], [94, 58.2], [104, 58.6], [114, 59.6], [122, 60.4], [130, 60.8], [130, 64.6], [124, 65.2], [116, 65.9], [108, 66.2], [100, 66.6], [92, 67.0], [84, 67.4], [74, 66.5], [66, 65.2], [64.6, 62]], -1.5,
+  yield* L([[64.5, 58.6], [70, 57.8], [78, 57.4], [86, 57.6], [94, 58.2], [104, 58.6], [114, 59.6], [122, 60.4], [130, 60.8], [130, 64.6], [124, 65.2], [116, 65.9], [108, 66.2], [100, 66.6], [92, 67.0], [84, 67.4], [74, 66.5], [66, 65.2], [64.6, 62]], -1.5,
     { top: TM.GRASS, wall: WM.EARTH, seed: 51, amp: 0.6, scale: 2.6, pa: 80, pb: 60 }); yield;
-  L([[64.6, 64.6], [74, 66.0], [84, 66.9], [92, 66.5], [100, 66.1], [108, 65.7], [116, 65.4], [124, 64.7], [130, 64.2], [130, 69.4], [120, 70.0], [112, 71.2], [104, 72.8], [96, 74.4], [88, 75.0], [76, 75.2], [64.6, 73.8]], -3,
+  yield* L([[64.6, 64.6], [74, 66.0], [84, 66.9], [92, 66.5], [100, 66.1], [108, 65.7], [116, 65.4], [124, 64.7], [130, 64.2], [130, 69.4], [120, 70.0], [112, 71.2], [104, 72.8], [96, 74.4], [88, 75.0], [76, 75.2], [64.6, 73.8]], -3,
     { top: TM.GRASS, wall: WM.EARTH, seed: 53, amp: 0.6, scale: 2.6, pa: 80, pb: 50 }); yield;
-  L([[62.4, 73.2], [76, 74.7], [88, 74.5], [96, 73.9], [104, 72.3], [112, 70.7], [120, 69.5], [130, 69.0], [130, 75.2], [120, 75.4], [110, 76.9], [100, 78.3], [90, 79.2], [76, 79.4], [62.6, 78.4]], -4.5,
+  yield* L([[62.4, 73.2], [76, 74.7], [88, 74.5], [96, 73.9], [104, 72.3], [112, 70.7], [120, 69.5], [130, 69.0], [130, 75.2], [120, 75.4], [110, 76.9], [100, 78.3], [90, 79.2], [76, 79.4], [62.6, 78.4]], -4.5,
     { top: TM.GRASS, wall: WM.MOSSROCK, seed: 55, amp: 0.5, scale: 2.6, pa: 80, pb: 70 }); yield 0.15;
   // dry-stone walls where a leg runs along an edge or a flight lands; the rest are grassy earth banks
-  T.zone([[63, 50], [96, 50], [96, 58.9], [63, 58.9]], { wall: WM.STONEWALL, raw: true });        // behind the graves, round the top flight
-  T.zone([[106, 64.0], [126, 64.0], [126, 67.4], [106, 67.4]], { wall: WM.STONEWALL, raw: true });   // under the east hairpin
-  T.zone([[88, 72.0], [104, 72.0], [104, 76.0], [88, 76.0]], { wall: WM.STONEWALL, raw: true });    // under the west hairpin
+  yield* T.zoneG([[63, 50], [96, 50], [96, 58.9], [63, 58.9]], { wall: WM.STONEWALL, raw: true });        // behind the graves, round the top flight
+  yield* T.zoneG([[106, 64.0], [126, 64.0], [126, 67.4], [106, 67.4]], { wall: WM.STONEWALL, raw: true });   // under the east hairpin
+  yield* T.zoneG([[88, 72.0], [104, 72.0], [104, 76.0], [88, 76.0]], { wall: WM.STONEWALL, raw: true });    // under the west hairpin
   // material zones
-  T.zone([[33, 25], [44, 22.5], [58, 23], [68, 27.5], [70, 36], [66, 45], [56, 49.5], [42, 48.5], [33, 42], [31, 33]], { top: TM.CLEAR, pa: 110, only: [TM.MEADOW], seed: 61, amp: 1.2 }); yield;
-  T.zone([[40.5, 22.5], [49, 20.5], [58, 22], [61.5, 27.5], [60.8, 33.5], [55, 31], [50, 30.6], [45, 31], [39, 31.5]], { top: TM.MOSS, pa: 60, only: [TM.CLEAR, TM.MEADOW], seed: 63, amp: 0.8 });
+  yield* T.zoneG([[33, 25], [44, 22.5], [58, 23], [68, 27.5], [70, 36], [66, 45], [56, 49.5], [42, 48.5], [33, 42], [31, 33]], { top: TM.CLEAR, pa: 110, only: [TM.MEADOW], seed: 61, amp: 1.2 }); yield;
+  yield* T.zoneG([[40.5, 22.5], [49, 20.5], [58, 22], [61.5, 27.5], [60.8, 33.5], [55, 31], [50, 30.6], [45, 31], [39, 31.5]], { top: TM.MOSS, pa: 60, only: [TM.CLEAR, TM.MEADOW], seed: 63, amp: 0.8 });
   // worn earth before the hut door and along the way to the shrine (she walks here every day)
-  T.zone(Terrain.ell(41.6, 36.0, 4.6, 2.0, 20), { top: TM.CLEAR, pa: 250, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 64, amp: 0.6, scale: 1.4 });
-  T.zone([[44, 35.2], [52, 35.4], [57.6, 35.0], [58.4, 36.6], [52, 37.0], [44, 37.2]], { top: TM.CLEAR, pa: 230, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 65, amp: 0.5, scale: 1.2 });
-  T.zone([[65.5, 57.9], [74, 57.6], [81.5, 57.9], [82.4, 60.2], [80.6, 62.6], [73, 62.2], [66.4, 62.7]], { top: TM.MOSS, pa: 90, only: [TM.GRASS], seed: 69, amp: 0.7, scale: 1.6 }); // graves terrace
-  T.zone([[18, 6], [33, 5], [34, 13], [26, 15.5], [19, 14]], { top: TM.MOSS, pa: 40, only: [TM.MEADOW, TM.GRASS], seed: 65 }); // around the pool
-  T.zone([[18, 14], [24, 15], [21, 40], [16, 40]], { top: TM.GRASS, pb: 60, only: [TM.MEADOW], seed: 66 });
-  T.zone([[44, 13], [80, 12], [80, 17], [44, 18]], { top: TM.FLOOR, pb: 140, only: [TM.MEADOW, TM.CLEAR], seed: 67, amp: 1.6 }); yield 0.2; // litter under the north side of the crown
+  yield* T.zoneG(Terrain.ell(41.4, 35.9, 3.2, 1.4, 20), { top: TM.CLEAR, pa: 240, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 64, amp: 0.5, scale: 1.2 });
+  yield* T.zoneG([[44, 35.5], [52, 35.7], [57.4, 35.3], [58.0, 36.3], [52, 36.6], [44, 36.7]], { top: TM.CLEAR, pa: 200, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 65, amp: 0.4, scale: 1.0 });
+  yield* T.zoneG([[65.5, 57.9], [74, 57.6], [81.5, 57.9], [82.4, 60.2], [80.6, 62.6], [73, 62.2], [66.4, 62.7]], { top: TM.MOSS, pa: 90, only: [TM.GRASS], seed: 69, amp: 0.7, scale: 1.6 }); // graves terrace
+  yield* T.zoneG([[18, 6], [33, 5], [34, 13], [26, 15.5], [19, 14]], { top: TM.MOSS, pa: 40, only: [TM.MEADOW, TM.GRASS], seed: 65 }); // around the pool
+  yield* T.zoneG([[18, 14], [24, 15], [21, 40], [16, 40]], { top: TM.GRASS, pb: 60, only: [TM.MEADOW], seed: 66 });
+  yield* T.zoneG([[44, 13], [80, 12], [80, 17], [44, 18]], { top: TM.FLOOR, pb: 140, only: [TM.MEADOW, TM.CLEAR], seed: 67, amp: 1.6 }); yield 0.2; // litter under the north side of the crown
   // the old highway: narrow worn legs (2 m), the saddle stretch paved (石畳)
   T.road(ROAD.A, 2.0, { mat: TM.PATH, rut: 150, edge: 0.75 }); yield;
   T.road(ROAD.B, 1.9, { mat: TM.PATH, rut: 140, edge: 0.7 }); yield;
@@ -203,8 +203,9 @@ const AVOID = new Set([TM.PATH, TM.PAVE, TM.STEP, TM.ROOT, TM.BED]);
 function* populateG(K) {
   const T = K.T, R = RNG(2026);
   registerSprites(K);
-  // the heavy painters first, each in small steps
-  for (const n of ['camphorTrunk', ...LOBES.map(l => l[0])]) { yield* K.rectG(n); yield 0.34; }
+  // paint every sprite up front, one per step (the trunk and the lobes in several steps each), so no
+  // placement below has to paint a batch of them at once
+  for (const n of Object.keys(K.painters)) { yield* K.rectG(n); yield 0.32 + 0.06 * (Object.keys(K.atlas.rects).length / Object.keys(K.painters).length); }
   const keep = []; // keep-out discs (metres)
   const free = (x, z, r) => { for (const k of keep) if (Math.hypot(k[0] - x, k[1] - z) < k[2] + r) return false; return true; };
   const ground = (x, z, m = 0.6) => { // not on roads, steps, roots or water, and not on a cliff lip
@@ -215,7 +216,7 @@ function* populateG(K) {
   const place = (name, x, z, o = {}) => { const s = K.place(name, x, z, o); if (o.keep) keep.push([x, z, o.keep]); return s; };
   // ---- the great camphor
   const [tx, tz] = HOME.trunk;
-  place('camphorTrunk', tx, tz + 2.45, { name: 'camphorTrunk', keep: 6 });
+  place('camphorTrunk', tx, tz + 2.45, { name: 'camphorTrunk', keep: 3.8 });
   K.colliders.push({ type: 'circle', x: tx, z: tz, r: 3.4 });
   ROOTS.forEach((r, i) => { place('camphorRoot' + i, tx + r[0], tz + r[1], { name: 'camphorRoot' + i }); if (r[4] > 20) K.colliders.push({ type: 'circle', x: tx + r[0] + Math.cos(r[2]) * 0.9, z: tz + r[1] + Math.sin(r[2]) * 0.9, r: 0.55 }); });
   const lobes = LOBES.map(l => { place(l[0], tx + l[1], tz + l[2], { y: l[3], name: l[0] }); return l[0]; });
@@ -291,7 +292,11 @@ function* populateG(K) {
   // the north wood behind the camphor and the north-east ridge (the tower window over x 92–110 stays open)
   for (const [x, z, r, n, sp] of [[64, 2, 6, 6, CEDARS], [74, 4, 4, 3, MIXED], [80, 13, 3.5, 3, CEDARS], [116, 11, 5, 4, MIXED], [125, 19, 4, 3, CEDARS], [86, 22, 2, 1, OPEN], [113, 22, 2, 1, OPEN]]) { grove(x, z, r, n, sp, { force: x < 82 }); yield; }
   // around the camphor: camellias and hydrangeas in its shade, a red maple at the edge of the clearing
-  for (const [n, x, z] of [['camellia0', 34.8, 31.8], ['camellia1', 36.4, 27.4], ['hydrangea1', 61.6, 33.9], ['camellia2', 63.2, 29.4], ['azalea1', 56.4, 25.4], ['azalea0', 35.4, 36.6], ['mapleRed0', 31.2, 12.6], ['maple2', 12.6, 20.6]]) if (ground(x, z)) place(n, x, z, { keep: 1.2, collide: n.startsWith('maple') ? 0.45 : undefined });
+  for (const [n, x, z] of [['camellia0', 34.8, 31.8], ['camellia1', 36.4, 27.4], ['hydrangea1', 61.6, 33.9], ['camellia2', 63.2, 29.4], ['azalea1', 56.4, 25.4], ['azalea0', 35.4, 36.6], ['mapleRed0', 31.2, 12.6], ['maple2', 12.6, 20.6],
+    // by the shrine: the red maple the owner liked in v0.1, hydrangeas at its foot, a second stone lantern's worth of camellia
+    ['mapleRed1', 65.2, 30.6], ['hydrangea0', 63.6, 32.2], ['hydrangea2', 60.2, 35.2], ['fern2', 59.2, 32.0], ['camellia3', 54.0, 34.6], ['lily0', 66.4, 34.0], ['susuki3', 68.6, 37.2],
+    // the clearing's north-east and north-west rims under the crown: shrubs, ferns, a small layered pine
+    ['azalea2', 58.8, 24.2], ['fern0', 57.0, 26.6], ['mapleS0', 62.4, 22.6], ['camellia0', 61.2, 26.2], ['fern3', 42.6, 24.0], ['hydrangea1', 38.4, 25.6], ['sasa2', 44.6, 22.8]]) if (ground(x, z)) place(n, x, z, { keep: 1.0, collide: n.startsWith('maple') ? 0.45 : undefined });
   // the open saddle east of the clearing: scattered pines in ones and twos, a cedar stand closing the east edge
   for (const [x, z, r, n, sp] of [[98.6, 38.4, 2.5, 2, OPEN], [109.4, 47.6, 2, 1, OPEN], [92.2, 29.6, 2, 1, OPEN], [86, 47, 2, 1, OPEN], [124, 35, 4, 4, CEDARS], [123.5, 50, 4, 3, CEDARS], [104, 54, 2.5, 2, MIXED]]) { grove(x, z, r, n, sp, { force: x > 120 }); yield; }
   yield 0.6;
@@ -335,14 +340,19 @@ function* populateG(K) {
   // undergrowth: ferns and sasa in the shade, susuki and lilies on the open saddle, moss at the roots' feet
   const under = (names, n, test, sp = 1.2) => { let c = 0; for (let k = 0; k < n * 30 && c < n; k++) { const x = R.range(-4, 124), z = R.range(4, 74); if (!test(x, z)) continue; if (!ground(x, z, 0.45) || !free(x, z, sp)) continue; place(R.pick(names), x, z, { flip: R() < 0.5 }); keep.push([x, z, sp * 0.8]); c++; } };
   const shade = (x, z) => Math.hypot(x - tx, (z - tz) * 1.2) < 16 || x < 22 || (x > 74 && z < 26);
-  under(['fern0', 'fern1', 'fern2', 'fern3', 'sasa0', 'sasa1', 'mushroom0', 'mushroom1'], 70, (x, z) => shade(x, z) && fbm(x * 0.12, z * 0.12, 2, 5) > 0.45, 1.3); yield;
+  under(['fern0', 'fern1', 'fern2', 'fern3', 'sasa0', 'sasa1'], 70, (x, z) => shade(x, z) && fbm(x * 0.12, z * 0.12, 2, 5) > 0.45, 1.3); yield;
+  under(['mushroom0', 'mushroom1'], 6, (x, z) => (x < 18 && z > 8 && z < 56) || (x > 50 && x < 78 && z < 11), 3); yield;
   under(['susuki0', 'susuki1', 'susuki2', 'susuki3', 'susuki4'], 54, (x, z) => x > 70 && z > 27 && z < 57 && fbm(x * 0.1, z * 0.1, 2, 7) > 0.48, 1.4); yield;
   under(['lily0', 'lily1', 'dayflower0', 'dayflower1'], 16, (x, z) => x > 64 && z > 28 && z < 56, 2.5);
+  // the clearing's edges and the roots: ferns hugging the trunk's foot, dayflowers in the damp, a few lilies in the light
+  under(['fern0', 'fern1', 'fern2', 'fern3', 'moss0', 'moss1'], 26, (x, z) => { const d = Math.hypot(x - tx, (z - tz) * 1.25); return d > 4.2 && d < 9; }, 0.9); yield;
+  under(['dayflower0', 'dayflower1', 'fern1', 'sasa1'], 22, (x, z) => (x > 30 && x < 70 && z > 22 && z < 50) && Math.hypot(x - tx, z - tz) > 8, 1.6);
+  under(['lily0', 'lily1', 'susuki1', 'hydrangea0'], 10, (x, z) => x > 54 && x < 76 && z > 36 && z < 52, 2.4);
   under(['moss0', 'moss1', 'moss2'], 24, (x, z) => Math.hypot(x - tx, z - tz) < 11 || (x < 34 && z < 16), 0.9);
   under(['hydrangea0', 'hydrangea1'], 5, (x, z) => x < 22 && z > 12 && z < 40, 2.5);
   under(['rock0', 'rock1', 'rock2', 'rock3'], 22, () => true, 2); yield 0.75;
   // grass tufts (sway, cast no shadow): dense in the meadow, thin in the clearing, none on roads
-  for (let k = 0, c = 0; k < 60000 && c < 5200; k++) {
+  for (let k = 0, c = 0; k < 90000 && c < 8200; k++) {
     if ((k & 1023) === 1023) yield;
     const x = R.range(-5, 125), z = R.range(-2, 79); const t = T.topAt(x, z);
     if (!(t === TM.GRASS || t === TM.MEADOW || t === TM.CLEAR || t === TM.MOSS)) continue;
@@ -435,10 +445,12 @@ export function hangLanterns(R, map, lit = true) {
    o.free (default true) drops the bake buffers; o.populate(K) adds things.
    --------------------------------------------------------------------- */
 function* homeG(o = {}) {
+  yield* noiseG();
   const K = new MapKit({
     painted: { x0: -6, z0: -4, x1: 126, z1: 92 }, playable: { x0: 0, z0: 0, x1: 120, z1: 86 }, seed: 7,
     mistZ: 0, edgeFar: 0.65,
   });
+  yield 0.01;
   yield* layoutTerrainG(K.T);
   yield* populateG(K);
   if (o.populate) o.populate(K);
@@ -453,12 +465,12 @@ function* homeG(o = {}) {
 export function createHomeMap(o = {}) { return drain(homeG(o)); }
 export async function createHomeMapAsync(o = {}) {
   const g = homeG(o), slice = o.sliceMs ?? 20, now = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
-  let prog = 0, longest = 0;
+  let prog = 0, longest = 0; const slow = [];
   for (;;) {
     const t0 = now(); let r;
-    do { r = g.next(); if (typeof r.value === 'number') prog = Math.max(prog, r.value); } while (!r.done && now() - t0 < slice);
+    do { const s0 = now(); r = g.next(); if (typeof r.value === 'number') prog = Math.max(prog, r.value); const ds = now() - s0; if (ds > 30 && slow.length < 40) slow.push([Math.round(ds), Math.round(prog * 1000) / 1000]); } while (!r.done && now() - t0 < slice);
     longest = Math.max(longest, now() - t0);
-    if (r.done) { r.value.bakeSlices = { longestMs: Math.round(longest) }; if (o.onProgress) o.onProgress(1, 'done'); return r.value; }
+    if (r.done) { r.value.bakeSlices = { longestMs: Math.round(longest), slowSteps: slow }; if (o.onProgress) o.onProgress(1, 'done'); return r.value; }
     if (o.onProgress) o.onProgress(prog, prog < 0.3 ? 'terrain' : prog < 0.9 ? 'plants' : 'paint');
     await new Promise(res => setTimeout(res, 0));
   }

@@ -63,11 +63,13 @@ export class Terrain {
     return out;
   }
   /** scanline fill of a px polygon over the world raster; fn(i, X, Y) */
-  fill(poly, fn) {
+  fill(poly, fn) { return drain(this.fillG(poly, fn)); }
+  *fillG(poly, fn) {
     let y0 = 1e9, y1 = -1e9; for (const p of poly) { if (p[1] < y0) y0 = p[1]; if (p[1] > y1) y1 = p[1]; }
     y0 = Math.max(this.oy, Math.floor(y0)); y1 = Math.min(this.oy + this.H - 1, Math.ceil(y1));
     const xs = [];
     for (let Y = y0; Y <= y1; Y++) {
+      if ((Y & 255) === 255) yield;
       const py = Y + 0.5; xs.length = 0;
       for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
         const a = poly[i], b = poly[j];
@@ -109,19 +111,21 @@ export class Terrain {
 
   /* ---------------- layout primitives (metres) ---------------- */
   /** a flat level: everything inside the ragged contour gets height Z (m) */
-  level(polyM, Zm, o = {}) {
+  level(polyM, Zm, o = {}) { return drain(this.levelG(polyM, Zm, o)); }
+  *levelG(polyM, Zm, o = {}) {
     const poly = o.raw ? polyM.map(p => [p[0] * PPM, p[1] * PPM]) : this.ragged(polyM, o.amp ?? 0.5, o.scale ?? 3, o.seed ?? 7, o.fine ?? 0.12);
     const z = Math.round(Zm * PPM * ZS);
-    this.fill(poly, i => {
+    yield* this.fillG(poly, i => {
       this.Z[i] = z; if (o.top != null) this.top[i] = o.top; if (o.wall != null) this.wallK[i] = o.wall;
       if (o.pa != null) this.pa[i] = o.pa; if (o.pb != null) this.pb[i] = o.pb;
     });
     return poly;
   }
   /** change only the top material / paint params inside a contour */
-  zone(polyM, o = {}) {
+  zone(polyM, o = {}) { return drain(this.zoneG(polyM, o)); }
+  *zoneG(polyM, o = {}) {
     const poly = o.raw ? polyM.map(p => [p[0] * PPM, p[1] * PPM]) : this.ragged(polyM, o.amp ?? 0.6, o.scale ?? 2.5, o.seed ?? 11, o.fine ?? 0.2);
-    this.fill(poly, i => {
+    yield* this.fillG(poly, i => {
       if (o.only && !o.only.includes(this.top[i])) return;
       if (o.top != null) this.top[i] = o.top; if (o.pa != null) this.pa[i] = o.pa; if (o.pb != null) this.pb[i] = o.pb; if (o.wall != null) this.wallK[i] = o.wall;
     });
@@ -217,75 +221,86 @@ export class Terrain {
     const t0 = Date.now();
     const W = this.W, H = this.H, Z = this.Z;
     // screen rows: row = Y − Z − rowMin
-    let zmax = -1e9, zmin = 1e9; for (let i = 0; i < Z.length; i++) { const z = Z[i]; if (z > zmax) zmax = z; if (z < zmin) zmin = z; }
+    let zmax = -1e9, zmin = 1e9;
+    for (let y = 0; y < H; y++) { if ((y & 511) === 511) yield 0.3; for (let i = y * W, e = i + W; i < e; i++) { const z = Z[i]; if (z > zmax) zmax = z; if (z < zmin) zmin = z; } }
     zmax = Math.ceil(zmax / ZS) + 2; zmin = Math.floor(zmin / ZS) - 2;
     const rowMin = this.oy - zmax, rows = H + zmax - zmin + 4; this.rowMin = rowMin; this.rows = rows;
     const n = W * rows;
-    const alb = this.alb = new Uint8ClampedArray(n * 4), nrm = this.nrm = new Int8Array(n * 2), sz = this.sz = new Int16Array(n), sm = this.sm = new Uint8Array(n), sf = this.sf = new Uint8Array(n);
-    sz.fill(-32768);
+    const alb = this.alb = new Uint8ClampedArray(n * 4); yield 0.3;
+    const nrm = this.nrm = new Int8Array(n * 2), sz = this.sz = new Int16Array(n), sm = this.sm = new Uint8Array(n), sf = this.sf = new Uint8Array(n); yield 0.3;
+    sz.fill(-32768); yield 0.3;
     // blurred height for face orientation
     const Zb = yield* boxBlurG(Z, W, H, 7);
     const LX = -0.99, LY = 0.11; // horizontal part of the top-left light (world)
     const N = noise();
+    const ctx = { Zb, N, LX, LY, rowMin, rows, alb, sf, n };
     for (let x = 0; x < W; x++) {
       if ((x & 7) === 7) yield x / W * 0.9;
-      const X = x + this.ox; let prev = null, footAO = 0, lip = -1;
-      for (let y = 0; y < H; y++) {
-        const Y = y + this.oy, i = y * W + x, zq = Z[i], zi = Math.round(zq / ZS);
-        if (this.top[i] === TM.NONE) { prev = null; lip = -1; continue; }
-        const row = Y - zi - rowMin;
-        // ---- the face below the previous top (height dropped going south)
-        if (prev !== null && prev > zi) {
-          const iu = i - W; const kind = this.wallK[iu], topU = this.top[iu];
-          const Hh = prev - zi; const r0 = Y - prev - rowMin;
-          // face orientation from the blurred height field
-          const gx = (Zb[Math.min(W - 1, x + 4) + Math.max(0, y - 4) * W] - Zb[Math.max(0, x - 4) + Math.max(0, y - 4) * W]) / 8;
-          const gy = (Zb[x + Math.min(H - 1, y + 2) * W] - Zb[x + Math.max(0, y - 6) * W]) / 8;
-          let nx = -gx, ny = -gy; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl; if (ny < 0.15) { ny = 0.15; const l2 = Math.hypot(nx, ny); nx /= l2; ny /= l2; }
-          const lit = nx * LX + ny * LY;
-          const over = (topU === TM.GRASS || topU === TM.MEADOW || topU === TM.CLEAR || topU === TM.MOSS) ? overhang(X) : (topU === TM.FLOOR || topU === TM.NEEDLE) ? overhang(X) >> 1 : 0;
-          for (let r = r0, k = 0; r < row; r++, k++) {
-            if (r < 0 || r >= rows) continue;
-            const h = Hh - k - 1; // height above the foot
-            const j = r * W + x;
-            if (k < over && Hh > 6) { // grass/moss hanging over the lip
-              if (topU === TM.MOSS) moss(X, Y - 1, x, r, 0.3); else grass(X, Y - 1, x, r, 0.3, 0.6, 0);
-              const dk = 0.86 - k * 0.07; OUT[0] *= dk; OUT[1] *= dk; OUT[2] *= dk; OUT[3] = nx * 0.5; OUT[4] = ny * 0.5; OUT[6] = FLAG.WALL;
-            } else if (Hh <= 6 && kind !== WM.RISER && kind !== WM.BARK && (topU === TM.GRASS || topU === TM.MEADOW || topU === TM.CLEAR)) {
-              // a small bank: a grassy slope, not a cliff
-              grass(X, Y - 1 + k, x, r, 0.2, 0.6, 0); const dk = 0.8 - k * 0.04; OUT[0] *= dk; OUT[1] *= dk; OUT[2] *= dk; OUT[3] = nx * 0.4; OUT[4] = 0.4; OUT[6] = FLAG.WALL;
-            } else if (kind === WM.RISER) {
-              wall(WM.RISER, X, this.a1[iu] + this.a0[iu] * 37, prev - k, h, Hh, x, r, lit);
-            } else if (kind === WM.BARK) {
-              wall(WM.BARK, X, this.a0[iu] * 3 + x, prev - k, h, Hh, x, r, lit);
-            } else {
-              wall(kind, X, X, prev - k + 400, h, Hh, x, r, lit);
-              if (kind !== WM.STONEWALL && h < 3 && hash2(X, h, 97) < 0.3) { OUT[0] *= 0.8; OUT[1] *= 0.82; OUT[2] *= 0.85; }
-            }
-            this._put(j, OUT, Y - 0.5, prev - k - 0.5, nx, ny);
-          }
-          footAO = Math.min(7, 2 + Hh / 6);
-          if (lip >= 0 && lip < n) { // the lit lip of the level above
-            const q = lip * 4; alb[q] = Math.min(255, alb[q] * 1.12 + 6); alb[q + 1] = Math.min(255, alb[q + 1] * 1.12 + 6); alb[q + 2] = Math.min(255, alb[q + 2] * 1.06 + 3); sf[lip] |= FLAG.LIP;
-          }
-        }
-        // ---- the top surface
-        if (row >= 0 && row < rows) {
-          // ragged material borders (v0.1): the material is looked up a couple of pixels away along a
-          // fine noise, on the same level only — so every border between grass, moss, earth and road frays
-          const jx = Math.round((N.cl.sample(x * 0.84, row * 0.84) - 0.5) * 4.2), jy = Math.round((N.cl2.sample(x * 0.84 + 9, row * 0.84) - 0.5) * 4.2);
-          let i2 = i; if ((jx || jy) && this.inb(X + jx, Y + jy)) { const k2 = i + jy * W + jx; if (Z[k2] === zq && this.top[k2] !== TM.NONE && this.top[k2] !== TM.STEP && this.top[i] !== TM.STEP) i2 = k2; }
-          this._top(i2, X, Y, x, row);
-          if (footAO > 0) { const k = 1 - footAO * 0.055; OUT[0] *= k; OUT[1] *= k; OUT[2] *= k * 1.02; footAO -= 1; }
-          const j = row * W + x; this._put(j, OUT, Y, zi, OUT[3], OUT[4]);
-          lip = j;
-        }
-        prev = zi;
-      }
+      this._paintColumn(x, ctx);
     }
     yield* this._sideEdgesG();
     this.paintMs = Date.now() - t0;
     return this;
+  }
+  /** one column of the painter, north to south (a plain method: the hot loop stays out of the generator) */
+  _paintColumn(x, ctx) {
+    const W = this.W, H = this.H, Z = this.Z, { Zb, N, LX, LY, rowMin, rows, alb, sf, n } = ctx;
+    const X = x + this.ox; let prev = null, footAO = 0, lip = -1;
+    for (let y = 0; y < H; y++) {
+      const Y = y + this.oy, i = y * W + x, zq = Z[i], zi = Math.round(zq / ZS);
+      if (this.top[i] === TM.NONE) { prev = null; lip = -1; continue; }
+      const row = Y - zi - rowMin;
+      // ---- the face below the previous top (height dropped going south)
+      if (prev !== null && prev > zi) {
+        const iu = i - W; const kind = this.wallK[iu], topU = this.top[iu];
+        const Hh = prev - zi; const r0 = Y - prev - rowMin;
+        // face orientation from the blurred height field
+        const gx = (Zb[Math.min(W - 1, x + 4) + Math.max(0, y - 4) * W] - Zb[Math.max(0, x - 4) + Math.max(0, y - 4) * W]) / 8;
+        const gy = (Zb[x + Math.min(H - 1, y + 2) * W] - Zb[x + Math.max(0, y - 6) * W]) / 8;
+        let nx = -gx, ny = -gy; const nl = Math.hypot(nx, ny) || 1; nx /= nl; ny /= nl; if (ny < 0.15) { ny = 0.15; const l2 = Math.hypot(nx, ny); nx /= l2; ny /= l2; }
+        const lit = nx * LX + ny * LY;
+        const over = (topU === TM.GRASS || topU === TM.MEADOW || topU === TM.CLEAR || topU === TM.MOSS) ? overhang(X) : (topU === TM.FLOOR || topU === TM.NEEDLE) ? overhang(X) >> 1 : 0;
+        for (let r = r0, k = 0; r < row; r++, k++) {
+          if (r < 0 || r >= rows) continue;
+          const h = Hh - k - 1; // height above the foot
+          const j = r * W + x;
+          if (k < over && Hh > 6) { // grass/moss hanging over the lip
+            if (topU === TM.MOSS) moss(X, Y - 1, x, r, 0.3); else grass(X, Y - 1, x, r, 0.3, 0.6, 0);
+            const dk = 0.86 - k * 0.07; OUT[0] *= dk; OUT[1] *= dk; OUT[2] *= dk; OUT[3] = nx * 0.5; OUT[4] = ny * 0.5; OUT[6] = FLAG.WALL;
+          } else if (Hh <= 6 && kind !== WM.RISER && kind !== WM.BARK && (topU === TM.GRASS || topU === TM.MEADOW || topU === TM.CLEAR)) {
+            // a small bank: a grassy slope, not a cliff
+            grass(X, Y - 1 + k, x, r, 0.2, 0.6, 0); const dk = 0.8 - k * 0.04; OUT[0] *= dk; OUT[1] *= dk; OUT[2] *= dk; OUT[3] = nx * 0.4; OUT[4] = 0.4; OUT[6] = FLAG.WALL;
+          } else if (kind === WM.RISER) {
+            wall(WM.RISER, X, this.a1[iu] + this.a0[iu] * 37, prev - k, h, Hh, x, r, lit);
+          } else if (kind === WM.BARK) {
+            wall(WM.BARK, X, this.a0[iu] * 3 + x, prev - k, h, Hh, x, r, lit);
+          } else {
+            wall(kind, X, X, prev - k + 400, h, Hh, x, r, lit);
+            if (kind !== WM.STONEWALL && h < 3 && hash2(X, h, 97) < 0.3) { OUT[0] *= 0.8; OUT[1] *= 0.82; OUT[2] *= 0.85; }
+          }
+          this._put(j, OUT, Y - 0.5, prev - k - 0.5, nx, ny);
+        }
+        footAO = Math.min(7, 2 + Hh / 6);
+        if (lip >= 0 && lip < n) { // the lit lip of the level above
+          const q = lip * 4; alb[q] = Math.min(255, alb[q] * 1.12 + 6); alb[q + 1] = Math.min(255, alb[q + 1] * 1.12 + 6); alb[q + 2] = Math.min(255, alb[q + 2] * 1.06 + 3); sf[lip] |= FLAG.LIP;
+        }
+      }
+      // ---- the top surface
+      if (row >= 0 && row < rows) {
+        // ragged material borders (v0.1): the material is looked up a couple of pixels away along a
+        // fine noise, on the same level only — so every border between grass, moss, earth and road frays
+        let i2 = i; const tp = this.top[i];
+        if (x > 2 && y > 2 && x < W - 3 && y < H - 3 && tp !== TM.STEP && (this.top[i - 3] !== tp || this.top[i + 3] !== tp || this.top[i - 3 * W] !== tp || this.top[i + 3 * W] !== tp)) { // only near a border
+          const jx = Math.round((N.cl.sample(x * 0.84, row * 0.84) - 0.5) * 4.2), jy = Math.round((N.cl2.sample(x * 0.84 + 9, row * 0.84) - 0.5) * 4.2);
+          if (jx || jy) { const k2 = i + jy * W + jx; if (Z[k2] === zq && this.top[k2] !== TM.NONE && this.top[k2] !== TM.STEP) i2 = k2; }
+        }
+        this._top(i2, X, Y, x, row);
+        if (footAO > 0) { const k = 1 - footAO * 0.055; OUT[0] *= k; OUT[1] *= k; OUT[2] *= k * 1.02; footAO -= 1; }
+        const j = row * W + x; this._put(j, OUT, Y, zi, OUT[3], OUT[4]);
+        lip = j;
+      }
+      prev = zi;
+    }
   }
   _top(i, X, Y, x, y) {
     const t = this.top[i], pa = this.pa[i] / 255, pb = this.pb[i] / 255;

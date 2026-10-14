@@ -293,7 +293,7 @@ vec3 atmos(vec3 col, vec3 P, vec2 f, bool isChar, float vis){
       float sv=(sc.x<0.||sc.x>1.||sc.y<0.||sc.y>1.)?1.:texture(uShM,vec3(sc.xy,sc.z-.002)); acc+=sv; }
     acc/=max(1.,float(n));
     float sh=acc;
-    col+=uSunCol*vec3(1.,.88,.7)*sh*uShafts*(uMist.a*.35+.05)*(isChar?.5:1.); }
+    col+=uSunCol*vec3(1.,.9,.72)*sh*uShafts*(uMist.a*.55+.07)*(isChar?.5:1.); }
   col=mix(col, mistC, clamp(mist,0.,.85));
   return col;
 }
@@ -502,7 +502,7 @@ void main(){
   if(gk>0.){ vec3 cg=c;
     cg=mix(cg, vec3(cg.r*.9, cg.g*.84+cg.b*.1, cg.b+(cg.g-cg.b)*.5), uGreen.x);
     cg=mix(cg, vec3(lum(cg)), uGreen.y);
-    cg=mix(cg, cg*vec3(1.05,.94,.8), uGreen.z);
+    { float lg=dot(cg,vec3(.38,.5,.12)); cg=mix(cg, vec3(lg*1.03,lg*.97,lg*.7), uGreen.z*.55); } // lime → olive: a warm, drained green
     c=mix(c,cg,gk); }
   float l=lum(c);
   c=mix(vec3(l),c,uSat);

@@ -14,7 +14,7 @@
    The meadow keeps v0.1's terrainFS structure (big patches → clumps →
    blade marks, dry patches, flowers), which is where its mood lived.
    ===================================================================== */
-import { clamp, hashi, hash2, NoiseTile, bayer, ramp, hexRGB } from './core.js';
+import { clamp, hashi, hash2, NoiseTile, bayer, ramp, hexRGB, drain } from './core.js';
 import { PAL } from './palette.js';
 import { MAT } from './paint.js';
 
@@ -28,17 +28,18 @@ export const FLAG = { WALL: 1, BLADE: 2, LIP: 4, WET: 8, STEP: 16, EDGE: 32 };
 export const OUT = new Float32Array(8);
 
 let NZ = null;
-export function noise() {
+export function noise() { return NZ || drain(noiseG()); }
+/** build the noise tiles one by one (a generator, for the async bake) */
+export function* noiseG() {
   if (NZ) return NZ;
-  NZ = {
-    big: new NoiseTile(256, 4, 11, 4),   // ~64-texel features at octave 0
-    mid: new NoiseTile(256, 3, 23, 8),
-    cl: new NoiseTile(256, 1, 37, 64),   // 4-texel value noise
-    cl2: new NoiseTile(256, 1, 41, 64),
-    warp: new NoiseTile(256, 3, 53, 4),
-    fine: new NoiseTile(256, 2, 61, 32),
-  };
-  return NZ;
+  const z = {};
+  z.big = new NoiseTile(256, 4, 11, 4); yield;   // ~64-texel features at octave 0
+  z.mid = new NoiseTile(256, 3, 23, 8); yield;
+  z.cl = new NoiseTile(256, 1, 37, 64); yield;   // 4-texel value noise
+  z.cl2 = new NoiseTile(256, 1, 41, 64); yield;
+  z.warp = new NoiseTile(256, 3, 53, 4); yield;
+  z.fine = new NoiseTile(256, 2, 61, 32);
+  NZ = z; return NZ;
 }
 
 /* ---------------- grass ramps (dark → light), built from v0.1's terrain colours ---------------- */
@@ -114,23 +115,28 @@ export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0)
   const cl = N.cl.sample(x * 0.8, y * 0.8) * 0.6 + N.cl2.sample(x * 1.9 + 5, y * 1.9) * 0.4, r = hash2(x, y, 3);
   const hue = sst(0.35, 0.75, big);
   let t = mid * 0.45 + cl * 0.55; t = 0.5 + (t - 0.5) * (1 - calm * 0.25);
-  const dark = mix3(GV.d0, GV.d1, hue), lite = mix3(GV.l0, GV.l1, hue);
-  let c = t < 0.4 ? dark : t < 0.62 ? mix3(GV.m0, GV.m1, hue) : lite, flags = 0;
+  // (scalar maths throughout: this runs for millions of pixels, so no little arrays)
+  const dr = GV.d0[0] + (GV.d1[0] - GV.d0[0]) * hue, dg = GV.d0[1] + (GV.d1[1] - GV.d0[1]) * hue, db = GV.d0[2] + (GV.d1[2] - GV.d0[2]) * hue;
+  const lr = GV.l0[0] + (GV.l1[0] - GV.l0[0]) * hue, lg = GV.l0[1] + (GV.l1[1] - GV.l0[1]) * hue, lb = GV.l0[2] + (GV.l1[2] - GV.l0[2]) * hue;
+  let cr, cg, cb, flags = 0;
+  if (t < 0.4) { cr = dr; cg = dg; cb = db; }
+  else if (t < 0.62) { cr = GV.m0[0] + (GV.m1[0] - GV.m0[0]) * hue; cg = GV.m0[1] + (GV.m1[1] - GV.m0[1]) * hue; cb = GV.m0[2] + (GV.m1[2] - GV.m0[2]) * hue; }
+  else { cr = lr; cg = lg; cb = lb; }
   // blade highlights only on the lit tops of clumps, crevices only in the hollows
   const blade = hash2(x, y >> 1, 7) > 0.84 + calm * 0.1;
-  if (t > 0.5 && blade) { c = mix3(lite, GV.blade, 0.5); flags |= FLAG.BLADE; }
-  if (t < 0.45 && r < 0.07 * (1 - calm * 0.6)) c = [dark[0] * 0.82, dark[1] * 0.82, dark[2] * 0.82];
+  if (t > 0.5 && blade) { cr = (lr + GV.blade[0]) * 0.5; cg = (lg + GV.blade[1]) * 0.5; cb = (lb + GV.blade[2]) * 0.5; flags |= FLAG.BLADE; }
+  if (t < 0.45 && r < 0.07 * (1 - calm * 0.6)) { cr = dr * 0.82; cg = dg * 0.82; cb = db * 0.82; }
   // dry and olive patches where the slow field is high (the sun-bleached saddle)
   const dk = sst(0.6, 0.82, big + (1 - moist) * 0.28 + dry * 0.22) * 0.6;
-  if (dk > 0) c = mix3(c, mix3(GV.dry, GV.olive, mid), dk);
+  if (dk > 0) { const pr = GV.dry[0] + (GV.olive[0] - GV.dry[0]) * mid, pg = GV.dry[1] + (GV.olive[1] - GV.dry[1]) * mid, pb = GV.dry[2] + (GV.olive[2] - GV.dry[2]) * mid; cr += (pr - cr) * dk; cg += (pg - cg) * dk; cb += (pb - cb) * dk; }
   // clover: scattered trefoils in patches (jittered in their cells, never a lattice), now and then a white head
   const cv = N.warp.sample(X * 0.3 + 170, Y * 0.3 + 40);
   if (cv > 0.68 && calm < 0.7) {
     const cx = Math.floor(X / 6), cy = Math.floor(Y / 5), ch = hashi(cx, cy, 91);
     if ((ch & 255) < (cv - 0.66) * 700) {
       const ox = X - cx * 6 - 1 - ((ch >> 8) & 3), oy = Y - cy * 5 - 1 - ((ch >> 14) & 3);
-      if ((ox === 0 && oy === -1) || (Math.abs(ox) === 1 && oy === 0)) c = mix3(GV.m1, GV.l1, 0.45 + ((ch >> 10) & 3) * 0.1);
-      else if (ox === 0 && oy === 0) c = ((ch >> 12) & 3) === 0 ? [226, 220, 210] : GV.m0;
+      if ((ox === 0 && oy === -1) || (Math.abs(ox) === 1 && oy === 0)) { const k = 0.45 + ((ch >> 10) & 3) * 0.1; cr = GV.m1[0] + (GV.l1[0] - GV.m1[0]) * k; cg = GV.m1[1] + (GV.l1[1] - GV.m1[1]) * k; cb = GV.m1[2] + (GV.l1[2] - GV.m1[2]) * k; }
+      else if (ox === 0 && oy === 0) { if (((ch >> 12) & 3) === 0) { cr = 226; cg = 220; cb = 210; } else { cr = GV.m0[0]; cg = GV.m0[1]; cb = GV.m0[2]; } }
     }
   }
   // wildflowers: clustered in patches, 2 px with a darker pixel under
@@ -141,17 +147,18 @@ export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0)
       if ((fh & 255) < (patch - th) * 700) {
         const ox = X - fx * 5 - ((fh >> 8) & 3), oy = Y - fy * 4 - ((fh >> 10) & 1), q = (fh >> 12) & 15;
         const fc = FLW[q < 6 ? 0 : q < 10 ? 1 : q < 13 ? 2 : q < 15 ? 3 : 4];
-        if (oy === 0 && (ox === 0 || ox === 1)) { c = ox === 0 ? fc : [fc[0] * 0.82, fc[1] * 0.8, fc[2] * 0.86]; flags |= FLAG.BLADE; }
-        else if (oy === 1 && ox === 0) c = dark;
+        if (oy === 0 && ox === 0) { cr = fc[0]; cg = fc[1]; cb = fc[2]; flags |= FLAG.BLADE; }
+        else if (oy === 0 && ox === 1) { cr = fc[0] * 0.82; cg = fc[1] * 0.8; cb = fc[2] * 0.86; flags |= FLAG.BLADE; }
+        else if (oy === 1 && ox === 0) { cr = dr; cg = dg; cb = db; }
       }
     }
   }
-  OUT[0] = c[0]; OUT[1] = c[1]; OUT[2] = c[2];
+  OUT[0] = cr; OUT[1] = cg; OUT[2] = cb;
   OUT[3] = (cl - 0.5) * 0.5; OUT[4] = (t - 0.5) * 0.7 + (blade ? 0.15 : 0); OUT[5] = MAT.GRASS; OUT[6] = flags;
 }
 
 /* ---------------- yard / worn earth (v0.1 pathCol): trodden earth in three tones, pebbles, a few fallen leaves ---------------- */
-const YARD = [[119, 108, 75], [139, 129, 96], [158, 147, 122], [139, 139, 139]];
+const YARD = [[98, 86, 62], [114, 101, 74], [130, 117, 89], [124, 122, 116]];
 export function yard(X, Y, x, y, leaves = 0.3) {
   const N = NZ, r = hash2(x, y, 85), big = N.mid.sample(X * 1.2, Y * 1.2);
   const v = r * 0.5 + big * 0.5;
