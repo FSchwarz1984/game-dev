@@ -132,7 +132,8 @@ func _quad() -> ArrayMesh:
 	arr[Mesh.ARRAY_NORMAL] = nrm
 	arr[Mesh.ARRAY_TEX_UV] = uv
 	arr[Mesh.ARRAY_TEX_UV2] = uv2
-	arr[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 1, 2, 0, 2, 3])
+	# clockwise on screen: Godot's front face (corners: bottom-left, bottom-right, top-right, top-left)
+	arr[Mesh.ARRAY_INDEX] = PackedInt32Array([0, 2, 1, 0, 3, 2])
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	return m

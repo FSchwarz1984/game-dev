@@ -28,11 +28,17 @@ uniform float cutaway_scale = 1.0;                // big canopies: the renderer 
 uniform float shadow_shrink = 1.08;               // cards cast slightly smaller shadows (sun flecks)
 uniform float shadow_sieve = 0.03;                // and let this share of their texels through
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;
+uniform float far : hint_range(0.0, 1.0) = 0.0;   // 遠化: 0 near .. 1 lost its qualities (pale, flat)
+// big crowns: light that reaches the shaded side anyway (sky through the gaps, bounce from the ground),
+// as a share of the sun, so a crown seen from its shaded side keeps its masses instead of turning into
+// a black lid
+uniform float shade_fill : hint_range(0.0, 1.0) = 0.0;
 
 varying vec3 v_wp;
 varying vec3 v_wn;
 varying vec3 v_alb;
 varying vec2 v_cell;
+varying float v_fill;
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -89,11 +95,15 @@ void fragment() {
 	vec3 alb = w3_srgb_to_linear(COLOR.rgb * tx.rgb) * tint.rgb;
 	alb *= (w3_hash(cell) < 0.08 ? 0.94 : 1.0);
 	alb = w3_wetten(alb, porosity);
+	alb = w3_far(alb, far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
-	v_alb = alb;
+	v_alb = alb * w3_far_light(far);
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
-	EMISSION = w3_ambient(alb, wn, ao);
+	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far);
+	// for the fill in light(): how much the card faces the sky, in three steps, times its AO
+	v_fill = floor((wn.y * 0.5 + 0.5) * 3.0 + 0.5) / 3.0 * 0.55 + 0.45;
+	v_fill *= ao;
 }
 
 void light() {
@@ -102,6 +112,11 @@ void light() {
 		float ndl = dot(NORMAL, LIGHT);
 		if (hi_band > 0.0 && ndl > 0.8 && ATTENUATION > 0.5) {
 			c *= mix(vec3(1.0), vec3(1.22, 1.18, 1.02), hi_band);
+		}
+		// the fill where the sun does not reach (its own shade or the crown's shadow): the masses keep
+		// a hierarchy (tops lighter, undersides darker) instead of one dark lid
+		if (shade_fill > 0.0 && (ndl < 0.06 || ATTENUATION < 0.5)) {
+			c += v_alb * LIGHT_COLOR / W3_PI * shade_fill * v_fill;
 		}
 		DIFFUSE_LIGHT += c;
 	} else {

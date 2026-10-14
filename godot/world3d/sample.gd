@@ -351,6 +351,8 @@ func _scale_cutaway(n: Node, k: float) -> void:
 				# small sun flecks the ground draws (toon_terrain), not as big holes
 				(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.3)
 				(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.0)
+				# seen from its shaded side at midday: keep the masses, not a black lid
+				(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.42)
 	for c in n.get_children():
 		_scale_cutaway(c, k)
 
@@ -364,6 +366,7 @@ func _solid_cutaway(n: Node, k: float) -> void:
 			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("toon_solid"):
 				(m as ShaderMaterial).set_shader_parameter("cutaway", true)
 				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
+				(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.3)
 	for c in n.get_children():
 		_solid_cutaway(c, k)
 

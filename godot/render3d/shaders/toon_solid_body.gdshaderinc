@@ -18,6 +18,8 @@ uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;  // use COLOR.a as ambient
 uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;                    // > 1 blooms (only light sources)
 uniform float emission_at_night : hint_range(0.0, 1.0) = 0.0;  // 1: emission follows w3_night
+uniform float far : hint_range(0.0, 1.0) = 0.0;         // 遠化: 0 near .. 1 lost its qualities (pale, flat)
+uniform float shade_fill : hint_range(0.0, 1.0) = 0.0;  // share of the sun that still reaches its shade (big trunks under a crown)
 uniform bool cutaway = false;                           // stipple out where it hides her (roofs)
 uniform float cutaway_scale = 1.0;
 
@@ -56,17 +58,21 @@ void fragment() {
 	}
 	alb = w3_pattern(alb, UV2.x, UV2.y, v_wp, wn, cell);
 	alb = w3_wetten(alb, porosity);
+	alb = w3_far(alb, far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
-	v_alb = alb;
+	v_alb = alb * w3_far_light(far);
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
-	vec3 em = emission_color * emission_energy * mix(1.0, w3_night, emission_at_night);
-	EMISSION = w3_ambient(alb, wn, ao) + em;
+	vec3 em = emission_color * emission_energy * mix(1.0, w3_night, emission_at_night) * (1.0 - far);
+	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + em;
 }
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		DIFFUSE_LIGHT += w3_sun_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, dither);
+		if (shade_fill > 0.0 && (dot(NORMAL, LIGHT) < 0.06 || ATTENUATION < 0.5)) {
+			DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * shade_fill;
+		}
 	} else {
 		DIFFUSE_LIGHT += w3_point_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, dither);
 	}

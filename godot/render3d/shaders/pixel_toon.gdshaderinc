@@ -165,6 +165,9 @@ vec3 w3_shadow_hue(vec3 albedo, float turn) {
 	float h = atan(lab.z, lab.y);
 	const float TARGET = -1.66;                    // Oklab hue of blue-violet (about 265 degrees)
 	float d = mod(TARGET - h + W3_PI, 2.0 * W3_PI) - W3_PI;
+	// quiet colours (packed earth, stone, wood) turn only a little: their shade stays their own
+	// colour, a touch cooler, instead of going red-violet
+	turn *= smoothstep(0.025, 0.075, C);
 	h += clamp(d, -turn, turn);
 	vec2 ab = vec2(cos(h), sin(h)) * (C * 1.15 + 0.006) + vec2(cos(TARGET), sin(TARGET)) * 0.005;
 	return max(w3_oklab_to_lin(vec3(lab.x, ab)), vec3(0.0));
@@ -205,6 +208,17 @@ vec3 w3_point_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuati
 	float q = floor(a * 4.0 + 0.5 + (sc - 0.5) * 0.32 * dither) / 4.0;
 	return albedo * light_col / W3_PI * q;
 }
+// 遠化 (far, 0..1): a thing that has lost its qualities looks far: pale, nearly grey, a little cool,
+// lifted toward the haze. Materials also flatten their light by the same amount (w3_far_light).
+vec3 w3_far(vec3 albedo, float k) {
+	if (k <= 0.0) return albedo;
+	float l = w3_luma(albedo);
+	vec3 pale = mix(vec3(l) * vec3(0.95, 0.98, 1.05), vec3(0.6, 0.62, 0.67), 0.45);
+	return mix(albedo, pale, clamp(k, 0.0, 1.0) * 0.85);
+}
+// the light's share left to a faded thing (its shading flattens: shade lifted, sun weakened)
+float w3_far_light(float k) { return mix(1.0, 0.55, clamp(k, 0.0, 1.0)); }
+float w3_far_fill(float k) { return mix(1.0, 1.6, clamp(k, 0.0, 1.0)); }
 // Wet surfaces darken; porosity 0 (glazed tile, metal) .. 1 (soil, wood, thatch)
 vec3 w3_wetten(vec3 albedo, float porosity) {
 	return albedo * mix(1.0, 0.62, w3_wet * porosity);

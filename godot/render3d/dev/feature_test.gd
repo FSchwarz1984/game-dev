@@ -195,7 +195,7 @@ func _card_crown(centre: Vector3, radii: Vector3, count: int) -> ArrayMesh:
 			uv2s.append(corners[k])
 			cust.append_array([anchor.x, anchor.y, anchor.z, flex])
 			cols.append(Color(1, 1, 1, lerpf(0.65, 1.0, d.y * 0.5 + 0.5)))
-		idx.append_array([base, base + 1, base + 2, base, base + 2, base + 3])
+		idx.append_array([base, base + 2, base + 1, base, base + 3, base + 2])
 	var arr := []
 	arr.resize(Mesh.ARRAY_MAX)
 	arr[Mesh.ARRAY_VERTEX] = verts

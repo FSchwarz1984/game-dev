@@ -86,6 +86,8 @@ def place(L, ctx, rng):
     keep_areas.append((-10.0, 10.0, 10.8))            # the path in front of the great tree
     sp = M["spring"]
     keep_areas.append((sp[0] - 4.0, sp[0] + 4.0, sp[1] + 2.0))
+    dj = M["dosojin"]
+    keep_areas.append((dj[0] - 2.5, dj[0] + 2.5, dj[1] + 1.2))     # the dosojin (0.8 m tall: easily lost)
     TREE_H = {"cedar": 18.0, "pine": 11.0, "maple": 7.0, "beech": 9.0, "broadleaf": 8.0, "bamboo": 9.0}
 
     def clear_view(x, z, kind, r=3.0):
@@ -145,7 +147,7 @@ def place(L, ctx, rng):
         pd = ctx["path_dist"](x, z)
         if pd < 1.6 or pd > 7.0 or ctx["pad_dist"](x, z) < 1.0 or ctx["water_dist"](x, z) < 1.0:
             return False
-        if ctx["slope_deg"](x, z) > 33 or not far_from_markers(x, z, 3.0):
+        if ctx["slope_deg"](x, z) > 33 or not far_from_markers(x, z, 4.5):
             return False
         return noise.fbm(np.array(x / 7.0), np.array(z / 7.0), 2, 13) > 0.48
     for p in poisson(rng, (b[0], -40.0, b[2], 100.0), 3.0, shrub_ok):
