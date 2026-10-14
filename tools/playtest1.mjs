@@ -249,8 +249,14 @@ async function dayOneRun() {
   await until(s => s.control && !s.busy, 'setting out');
   // down the switchbacks the way she came: the road's own points, saddle to the east entrance
   const road = await page.evaluate(() => window.APP.G.stage.map.objects.road.path);
-  for (const [x, z] of [...road].reverse()) { if (x > 119) break; await walk([x, z], 1.2); }
-  await walk([119.2, P.dosojinStand[1]], 0.6);
+  for (const [x, z] of [...road].reverse()) {
+    if (x > 119) break;
+    const s = await state();
+    if (!s.control && s.busy) break;            // the way out has already begun (the statues, the end)
+    await walk([x, z], 1.2);
+  }
+  const s0 = await state();
+  if (s0.control) await walk([119.2, P.dosojinStand[1]], 0.6);
   await until(s => s.saved && s.saved.includes('end'), 'end card', 3000);
   await shot('end');
 }
