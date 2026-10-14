@@ -26,6 +26,7 @@ const result = await build({
   legalComments: 'none',
   write: false,
   logLevel: 'warning',
+  loader: { '.png': 'dataurl', '.webp': 'dataurl' }, // art assets ship inside the single-file build
 });
 const js = asciiJS(result.outputFiles[0].text).replace(/<\/script/gi, '<\\/script');
 
