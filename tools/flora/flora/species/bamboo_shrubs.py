@@ -135,25 +135,25 @@ def hydrangea(name, seed):
         cand = np.nonzero((pl.c_pos[:, 1] > 0.45) & (pl.c_pos[:, 2] > -0.2))[0]
         if not len(cand):
             return
-        n = hr.int(5, 8)
+        n = hr.int(4, 7)
         chosen = []
-        for _ in range(n * 4):
+        for _ in range(n * 6):
             i = int(hr.pick(cand))
             c = pl.c_pos[i]
-            if all(np.linalg.norm(c - q) > 0.28 for q in chosen):
+            if all(np.linalg.norm(c - q) > 0.40 for q in chosen):
                 chosen.append(c)
             if len(chosen) >= n:
                 break
         for c in chosen:
             mi = int(pl.c_mass[np.argmin(np.linalg.norm(pl.c_pos - c, axis=1))])
             d = normalize(c - pl.masses[mi]['c'])
-            P = c + d * 0.06
+            P = c + d * 0.10
             mat = hr.pick(pick)
-            rr = hr.range(0.17, 0.22)
+            rr = hr.range(0.22, 0.29)
             # a head is a tight dome of florets: draw it as small clumps so it is not a smooth ball
-            k = 12
-            q = P[None, :] + hr.g.normal(scale=rr * 0.40, size=(k, 3)) * np.array([1, 0.7, 1])
-            R.ellipsoids(cv, pl.D(q), np.tile([[rr * 0.55, rr * 0.5, rr * 0.55 * pl.kz]], (k, 1)), R.PART_DETAIL, mat,
+            k = 18
+            q = P[None, :] + hr.g.normal(scale=rr * 0.42, size=(k, 3)) * np.array([1, 0.7, 1])
+            R.ellipsoids(cv, pl.D(q), np.tile([[rr * 0.50, rr * 0.45, rr * 0.50 * pl.kz]], (k, 1)), R.PART_DETAIL, mat,
                          mass=mi, nkz=pl.kz, bumps=np.tile([[5, 0.2, 0.0, 0.7]], (k, 1)))
     p.details.append(flowers)
     return p
