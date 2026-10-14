@@ -376,15 +376,16 @@ export function higanbana(seed, n = 0) {
 /* ---------------- new: 女郎花 (ominaeshi) — thin stems, flat-topped sprays of tiny yellow flowers ---------------- */
 export function ominaeshi(seed) {
   const R = RNG(seed * 47 + 9), W = 18, H = 30, s = new SB(W, H), by = H - 1, ns = R.int(2, 3);
-  const Y = ramp('#e2c43a', 4, { lo: 0.45, hi: 0.3, hueShift: 0.02 });
+  const Y = ramp('#cfae3e', 4, { lo: 0.42, hi: 0.24, hueShift: 0.02 });
   for (let k = 0; k < ns; k++) {
     const x0 = W / 2 + R.range(-3, 3), x1 = x0 + R.range(-3, 3), top = R.int(4, 10);
     PX.stroke(x0, by, x1, top + 2, 0.55, 0.45, (x, y, t) => s.pz(x, y, V1.fern[t > 0.6 ? 3 : 2], 1 + t, { m: MAT.LEAF, b: 1 }));
     for (let j = 0; j < 2; j++) { const yy = by - 5 - j * 5, d = j % 2 ? 1 : -1; PX.stroke(x0 + (x1 - x0) * (1 - yy / by), yy, x0 + d * 4, yy - 2, 0.9, 0.2, (x, y) => s.pz(x, y, V1.fern[2], 1.5, { m: MAT.LEAF, b: 1 })); }
-    // the flat spray: a few pixels wide, two tall, lit on the upper left
+    // the flat spray of tiny florets: dotted, two rows, lit on the upper left, on a fan of short stalks
     const w = R.int(3, 5);
-    for (let dx = -w; dx <= w; dx++) for (let dy = -1; dy <= 0; dy++) { if (Math.abs(dx) === w && dy === -1) continue; if (R() < 0.12) continue;
-      s.pz(x1 + dx, top + dy, Y[clamp(Math.round(2.4 - dy * 0.6 - dx / w * 0.8 + (R() - 0.5)), 0, 3)], 6 + (k & 1), { m: MAT.PETAL, b: 3 }); }
+    for (const dx of [-Math.ceil(w / 2), 0, Math.ceil(w / 2)]) s.pz(x1 + dx * 0.6, top + 1, V1.fern[2], 5, { m: MAT.LEAF, b: 1 });
+    for (let dx = -w; dx <= w; dx++) for (let dy = -1; dy <= 0; dy++) { if (Math.abs(dx) === w && dy === -1) continue; if (R() < 0.22) continue;
+      s.pz(x1 + dx, top + dy, Y[clamp(Math.round(2.2 + (dy < 0 ? 0.7 : -0.3) - dx / w * 0.7 + (R() - 0.5) * 0.8), 0, 3)], 6 + (k & 1), { m: MAT.PETAL, b: 3 }); }
   }
   POST.outline(s, { k: 0.8 }); POST.normals(s, 1);
   return { s, meta: { ax: W / 2, ay: by + 1, sway: 1.1, shadow: 0, foliage: true, kind: 'under' } };

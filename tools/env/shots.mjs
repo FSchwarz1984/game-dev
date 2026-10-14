@@ -45,6 +45,18 @@ export const SHOTS = {
   'portrait-saddle': [PORT, 'shot=saddle&t=17.6&q=mid'],
   'landscape-path': [LAND, 'shot=path&t=12.5&q=mid'],
   'landscape-saddle': [LAND, 'shot=saddle&t=7&day1=1&q=mid'],
+  // the clearing as she plays it: her by the hut path, the roots, the frame, the shrine and its beam in one frame
+  'clearing-wide-morning': [D720, 'x=46.6&z=35.2&cam=50,33,0&t=7&day1=1'],
+  'clearing-wide-dusk': [D720, 'x=46.6&z=35.2&cam=50,33,0&t=17.6'],
+  'landscape-clearing': [LAND, 'x=46.6&z=35.2&cam=50,33,0&t=7&day1=1&q=mid'],
+  // the shrine's fallen eave beam and what stands behind it (she waits beside it)
+  'beam-morning': [D720, 'x=57.4&z=36.6&cam=59.5,34.6,0&t=7&day1=1'],
+  'landscape-beam': [LAND, 'x=57.4&z=36.6&cam=59.5,34.6,0&t=7&day1=1&q=mid'],
+  // the road's dirt in the morning light (pebbles), on the switchbacks and the east road
+  'path-morning': [D720, 'shot=path&t=7&day1=1'],
+  // the stone flights on the switchbacks and up to the graves terrace
+  'stairs-noon': [D720, 'x=97&z=77&cam=95.5,73.5,-3.5&t=12.5'],
+  'stairs2-noon': [D720, 'x=88&z=61&cam=86,58,-0.8&t=12.5'],
   'clearing-dusk': [D720, 'cam=50,36.5,0&t=17.6'],
   'clearing-morning2': [D720, 'cam=50,36.5,0&t=7&day1=1'],
   'dbg-vis': [D720, 'shot=saddle&t=12.5&debug=1'],

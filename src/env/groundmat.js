@@ -171,22 +171,80 @@ export function yard(X, Y, x, y, leaves = 0.3) {
 }
 
 /* ---------------- clearing under the great tree: a patchwork, calm enough for the actors to pop ----------------
-   moss rings round the roots, worn bare earth where she walks, lawn in lusher and shorter stretches with
-   clover, and ground decals: fallen camphor leaves and twigs drifting out from the roots (thinning with
-   distance), a few half-buried stones. The borders fray at the pixel scale. LITTER is the trunk (world px). */
-export const LITTER = { x: 1000, y: 540, r: 240 };
-export function setLitter(x, y, r) { LITTER.x = x; LITTER.y = y; LITTER.r = r; }
+   Not one lawn but stretches of several (each ~2–4 m, borders frayed at the pixel scale, values kept close so
+   nothing shouts): lush dark lawn in the damp, ordinary lawn, short sun-bleached lawn, dense clover patches;
+   a moss ring round the roots, cushioned rather than felt; worn bare earth only where she walks (the zones'
+   pa, see home.js), broken into scuffs with grass islands; and ground decals: fallen camphor leaves and twigs
+   drifting out from the roots (thinning with distance), a few half-buried stones. LITTER is the trunk
+   (world px), ring the moss ring's radius as a fraction of r. */
+export const LITTER = { x: 1000, y: 540, r: 240, ring: 0.6 };
+export function setLitter(x, y, r, ring = 0.6) { LITTER.x = x; LITTER.y = y; LITTER.r = r; LITTER.ring = ring; }
 const LEAF = [[66, 96, 48], [146, 146, 66], [140, 78, 50], [170, 134, 86]], TWIG = [[84, 64, 48], [120, 96, 70]];
 export function clearing(X, Y, x, y, wear = 0.3) {
   const N = NZ;
   const dT = Math.hypot(X - LITTER.x, (Y - LITTER.y) * 1.25) / LITTER.r;      // 0 at the trunk → 1 where the litter thins out
-  const rag = (N.cl.sample(x * 1.3, y * 1.3) - 0.5) * 0.12, patch = N.warp.sample(X * 0.5, Y * 0.5), mid = N.mid.sample(X * 1.1, Y * 1.1);
-  if (dT < 0.34 + rag + (patch - 0.5) * 0.14) { moss(X, Y, x, y, 0.12); decals(X, Y, x, y, dT, 1); return; }   // the moss ring at the roots
-  const w = patch * 0.6 + mid * 0.4 + wear * 0.3 - 0.18 + rag;
-  if (w > 0.6) { yard(X, Y, x, y, 0.45); decals(X, Y, x, y, dT, 0.6); return; }                                 // worn bare earth
-  if (w < 0.4) { moss(X, Y, x, y, 0.25); decals(X, Y, x, y, dT, 0.9); return; }                                 // moss in the hollows
-  grass(X, Y, x, y, 0.42 + (patch - 0.5) * 0.4, 0.8, 0.26);                                                     // lawn: lush and short stretches, clover, flowers
+  const fray = N.cl.sample(x * 1.3, y * 1.3) - 0.5;                            // pixel-scale fray of every border
+  const pA = N.warp.sample(X * 0.9 + 57, Y * 0.9 + 13) * 0.65 + N.big.sample(X * 0.55 + 21, Y * 0.55 + 90) * 0.35;   // lawn kinds (~3 m)
+  const pB = N.mid.sample(X * 1.3 + 11, Y * 1.3 + 7);                          // scuffs, ring fingers (~1 m)
+  // worn bare earth where she walks, in scuffs with grass islands; a thin margin of sparse blades
+  const pC = N.fine.sample(X * 1.4 + 70, Y * 1.4 + 3);
+  const bare = (wear - 0.75) * 3.2 + (pB - 0.5) * 0.9 + (pC - 0.5) * 0.7 + fray * 0.4;
+  // the moss ring at the roots: damp and shaded, its edge wandering out in fingers (her ways cross it)
+  const ring = LITTER.ring + (pA - 0.5) * 0.3 + (pB - 0.5) * 0.2 + fray * 0.1;
+  if (dT < ring && bare <= 0) { mossRing(X, Y, x, y, dT / ring); decals(X, Y, x, y, dT, 1); return; }
+  if (bare > 0) {
+    yard(X, Y, x, y, 0.2); OUT[0] *= 0.95; OUT[1] *= 0.91; OUT[2] *= 0.86;   // trodden: a touch darker and warmer than the dusty yard
+    if (bare < 0.12 && hash2(x, y >> 1, 143) < 0.42 - bare * 3) { OUT[0] = 86; OUT[1] = 112; OUT[2] = 56; OUT[5] = MAT.GRASS; OUT[4] = 0.2; }
+    decals(X, Y, x, y, dT, 0.7); return;
+  }
+  // dense clover in patches (~2 m)
+  const dth = bayer(x, y) - 0.5;                                                // v0.1's dithered transitions between stretches
+  const cv = N.warp.sample(X * 1.5 + 170, Y * 1.5 + 40) + fray * 0.06 + dth * 0.2;
+  if (cv > 0.7) { clover(X, Y, x, y, cv - 0.7); decals(X, Y, x, y, dT, 0.7); return; }
+  // lawn: one painter (v0.1's clumps, at 60 % of their contrast), the stretches told apart by a small
+  // step in value and hue: damp and dark, ordinary, short and sun-bleached
+  grass(X, Y, x, y, 0.35, 0.8, 0.18);
+  const kA = pA + fray * 0.06 + dth * 0.3, B = kA < 0.4 ? LAWN[0] : kA < 0.58 ? LAWN[1] : LAWN[2];
+  OUT[0] = B[0] + (OUT[0] - 84) * 0.6; OUT[1] = B[1] + (OUT[1] - 122) * 0.6; OUT[2] = B[2] + (OUT[2] - 52) * 0.6;
+  if (bare > -0.14) { const k = 0.88 - bare * 0.85; OUT[0] *= k; OUT[1] *= k; OUT[2] *= k; }   // the trampled verge along her ways reads darker
   decals(X, Y, x, y, dT, 0.8);
+}
+const LAWN = [[68, 102, 56], [82, 114, 56], [99, 116, 62]];
+/* moss round the roots: soft cushions (the nearest of jittered cell centres; two cell sizes, by a slow field, so
+   no tiling shows), each lit on its upper left, some divided by a darker crevice; darker toward the trunk;
+   grass poking through at the ring's edge */
+function mossRing(X, Y, x, y, d) {
+  moss(X, Y, x, y, 0.3 - d * 0.25);
+  const big = NZ.fine.sample(X * 0.45 + 13, Y * 0.45) > 0.5, cw = big ? 9 : 6, ch = big ? 6 : 4, sd = big ? 157 : 159;
+  const cx = Math.floor(X / cw), cy = Math.floor(Y / ch);
+  let d1 = 1e9, d2 = 1e9, bx = 0, by = 0, bh = 0;
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const h = hashi(cx + i, cy + j, sd), px = (cx + i) * cw + (h & 15) / 15 * (cw - 1), py = (cy + j) * ch + ((h >> 4) & 15) / 15 * (ch - 1);
+    const ex = (X + 0.5 - px) / 1.3, ey = Y + 0.5 - py, dd = ex * ex + ey * ey;
+    if (dd < d1) { d2 = d1; d1 = dd; bx = ex; by = ey; bh = h; } else if (dd < d2) d2 = dd;
+  }
+  const crev = Math.sqrt(d2) - Math.sqrt(d1), side = bx + by * 1.2;
+  const k = crev < 0.55 && (bh >> 9 & 3) ? 0.86 : side < -1.8 ? 1.1 : side > 2.2 ? 0.93 : 1;
+  OUT[0] *= k; OUT[1] *= k; OUT[2] *= k * (k < 1 ? 1.03 : 0.98);
+  OUT[3] = clamp(bx * 0.16, -0.4, 0.4); OUT[4] = clamp(-by * 0.2, -0.4, 0.4);
+  // the ring's outer edge thins into the lawn: grass blades poking through
+  if (d > 0.8 && hash2(x, y >> 1, 147) < (d - 0.8) * 1.6) { OUT[0] = 92; OUT[1] = 120; OUT[2] = 58; OUT[5] = MAT.GRASS; OUT[4] = 0.25; }
+}
+/* clover: trefoils on a darker blue-green ground, the upper-left leaf lit, now and then a white head */
+const CLV = { ground: [58, 92, 60], gap: [50, 80, 52], leaf: [[74, 108, 64], [88, 122, 72], [102, 134, 80]], head: [[222, 218, 204], [190, 182, 168]] };
+function clover(X, Y, x, y, k) {
+  const r = hash2(x, y, 152);
+  set(r < 0.2 ? CLV.gap : CLV.ground); OUT[3] = (r - 0.5) * 0.2; OUT[4] = -0.05; OUT[5] = MAT.GRASS; OUT[6] = 0;
+  const cx = Math.floor(X / 5), cy = Math.floor(Y / 4), h = hashi(cx, cy, 151);
+  if ((h & 255) >= 120 + k * 400) return;
+  const ox = X - cx * 5 - 1 - (h >> 8 & 3) % 3, oy = Y - cy * 4 - 1 - (h >> 11 & 1);
+  const head = ((h >> 12) & 15) === 0;
+  if (head && oy === -1 && (ox === 0 || ox === 1)) { set(CLV.head[ox]); OUT[4] = 0.3; OUT[6] = FLAG.BLADE; return; }
+  if (head && oy === 0 && ox === 0) { set(CLV.head[1], 0.8); return; }
+  if (ox === 0 && oy === -1) { set(CLV.leaf[2]); OUT[3] = -0.1; OUT[4] = 0.35; }
+  else if (ox === -1 && oy === 0) { set(CLV.leaf[1]); OUT[3] = -0.3; OUT[4] = 0.1; }
+  else if (ox === 1 && oy === 0) { set(CLV.leaf[0]); OUT[3] = 0.3; OUT[4] = 0.05; }
+  else if (ox === 0 && oy === 0) { set(CLV.leaf[0], 0.85); }
 }
 function decals(X, Y, x, y, dT, k) {
   // fallen leaves (2 px: glossy, yellowing, old red, dry) and twigs, dense under the crown, thinning outward
@@ -206,13 +264,15 @@ function decals(X, Y, x, y, dT, k) {
       }
     }
   }
-  // half-buried stones: a lit top-left, a shadow tucked under the lower edge
+  // half-buried stones: a lit top-left, a little moss on the shaded side, a shadow tucked under the lower edge
   const sx = Math.floor(X / 23), sy = Math.floor(Y / 17), sh = hashi(sx, sy, 137);
-  if ((sh & 255) < 10 * k) {
-    const cxs = sx * 23 + 5 + ((sh >> 8) & 11), cys = sy * 17 + 5 + ((sh >> 12) & 7), rx = 2 + ((sh >> 16) & 3), ry = 1.3 + ((sh >> 18) & 1) * 0.9;
+  if ((sh & 255) < (8 + clamp(1 - dT, 0, 1) * 14) * k) {   // more of them in the moss by the roots
+    const cxs = sx * 23 + 6 + ((sh >> 8) & 7), cys = sy * 17 + 5 + ((sh >> 12) & 7), rx = 2.5 + ((sh >> 16) & 3) * 0.8, ry = 1.6 + ((sh >> 18) & 1) * 0.8;
     const u = (X + 0.5 - cxs) / rx, v = (Y + 0.5 - cys) / ry, d = u * u + v * v;
-    if (d < 1) { set(PAL.stoneWarm[clamp(Math.round(3.6 - u * 1.3 - v * 1.6), 1, 6)]); OUT[3] = u * 0.5; OUT[4] = -v * 0.5; OUT[5] = MAT.STONE; OUT[6] = 0; }
-    else if (d < 1.9 && v > 0.2) { OUT[0] *= 0.74; OUT[1] *= 0.74; OUT[2] *= 0.78; }
+    if (d < 1) {
+      set(PAL.stoneWarm[clamp(Math.round(3.6 - u * 1.3 - v * 1.6), 1, 6)]); OUT[3] = u * 0.5; OUT[4] = -v * 0.5; OUT[5] = MAT.STONE; OUT[6] = 0;
+      if (u > 0.3 && v > 0.1 && hash2(X, Y, 139) < 0.5) { set(MV[1]); OUT[5] = MAT.MOSS; }
+    } else if (d < 1.9 && v > 0.2) { OUT[0] *= 0.74; OUT[1] *= 0.74; OUT[2] *= 0.78; }
   }
 }
 

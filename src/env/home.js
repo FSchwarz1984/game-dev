@@ -104,14 +104,25 @@ export function* layoutTerrainG(T) {
   // material zones
   yield* T.zoneG([[33, 25], [44, 22.5], [58, 23], [68, 27.5], [70, 36], [66, 45], [56, 49.5], [42, 48.5], [33, 42], [31, 33]], { top: TM.CLEAR, pa: 110, only: [TM.MEADOW], seed: 61, amp: 1.2 }); yield;
   // (the moss ring round the roots, the fallen leaves and twigs are painted by the clearing itself: setLitter)
-  setLitter(50 * PPM, 28.6 * PPM, 10 * PPM);
+  setLitter(50 * PPM, 28 * PPM, 10 * PPM, 0.62);
   yield* T.zoneG([[40.5, 21.5], [49, 19.5], [58, 21], [61.5, 25.5], [56, 24.2], [50, 23.6], [44, 24.4]], { top: TM.MOSS, pa: 60, only: [TM.CLEAR, TM.MEADOW], seed: 63, amp: 0.8 });
   // worn earth before the hut door and along the way to the shrine (she walks here every day)
   yield* T.zoneG(Terrain.ell(41.4, 35.9, 3.2, 1.4, 20), { top: TM.CLEAR, pa: 240, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 64, amp: 0.5, scale: 1.2 });
-  yield* T.zoneG([[44, 35.5], [52, 35.7], [57.4, 35.3], [58.0, 36.3], [52, 36.6], [44, 36.7]], { top: TM.CLEAR, pa: 200, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 65, amp: 0.4, scale: 1.0 });
-  // her daily ways, worn into the lawn in patches: hut door → her load at the roots, the roots → the shrine
-  yield* T.zoneG([[41.6, 35.2], [44.2, 33.4], [46.8, 32.0], [47.8, 32.8], [45.0, 34.4], [42.6, 36.0]], { top: TM.CLEAR, pa: 220, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 71, amp: 0.35, scale: 0.9 });
-  yield* T.zoneG([[51.6, 32.0], [54.6, 32.4], [57.0, 33.9], [56.6, 34.9], [54.0, 33.6], [51.4, 33.0]], { top: TM.CLEAR, pa: 220, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 72, amp: 0.35, scale: 0.9 });
+  // her daily ways, worn into the lawn: the dooryard → the shrine, the door → her load at the roots, the
+  // roots → the shrine. Each is a scuffed band (pa 196: earth in patches) round a trodden core (pa 236);
+  // groundmat.clearing() turns pa into bare earth
+  const WAYS = [
+    [[44, 35.4], [52, 35.6], [57.4, 35.2], [58.1, 36.4], [52, 36.8], [44, 36.9]],
+    [[41.4, 35.3], [44.2, 33.3], [46.8, 31.8], [48.0, 32.8], [45.0, 34.6], [42.6, 36.2]],
+    [[51.4, 31.9], [54.6, 32.2], [57.2, 33.8], [56.7, 35.0], [54.0, 33.8], [51.2, 33.1]],
+  ];
+  const CORES = [
+    [[44, 35.85], [52, 35.95], [57.6, 35.65], [57.7, 36.05], [52, 36.35], [44, 36.4]],
+    [[42.2, 35.3], [44.6, 33.8], [46.9, 32.4], [47.3, 32.8], [45.0, 34.2], [42.6, 35.7]],
+    [[51.8, 32.4], [54.5, 32.8], [56.8, 34.1], [56.6, 34.5], [54.2, 33.3], [51.7, 32.8]],
+  ];
+  for (let k = 0; k < 3; k++) yield* T.zoneG(WAYS[k], { top: TM.CLEAR, pa: 196, only: [TM.CLEAR, TM.MEADOW, TM.MOSS], seed: 71 + k, amp: 0.35, scale: 0.9 });
+  for (let k = 0; k < 3; k++) yield* T.zoneG(CORES[k], { top: TM.CLEAR, pa: 236, only: [TM.CLEAR], seed: 75 + k, amp: 0.25, scale: 0.7 });
   yield* T.zoneG([[65.5, 57.9], [74, 57.6], [81.5, 57.9], [82.4, 60.2], [80.6, 62.6], [73, 62.2], [66.4, 62.7]], { top: TM.MOSS, pa: 90, only: [TM.GRASS], seed: 69, amp: 0.7, scale: 1.6 }); // graves terrace
   yield* T.zoneG([[18, 6], [33, 5], [34, 13], [26, 15.5], [19, 14]], { top: TM.MOSS, pa: 40, only: [TM.MEADOW, TM.GRASS], seed: 65 }); // around the pool
   yield* T.zoneG([[18, 14], [24, 15], [21, 40], [16, 40]], { top: TM.GRASS, pb: 60, only: [TM.MEADOW], seed: 66 });
@@ -354,9 +365,25 @@ function* populateG(K) {
   under(['fern0', 'fern1', 'fern2', 'fern3', 'moss0', 'moss1'], 26, (x, z) => { const d = Math.hypot(x - tx, (z - tz) * 1.25); return d > 4.2 && d < 9; }, 0.9); yield;
   under(['dayflower0', 'dayflower1', 'fern1', 'sasa1'], 22, (x, z) => (x > 30 && x < 70 && z > 22 && z < 50) && Math.hypot(x - tx, z - tz) > 8, 1.6);
   under(['lily0', 'lily1', 'susuki1', 'hydrangea0'], 10, (x, z) => x > 54 && x < 76 && z > 36 && z < 52, 2.4);
-  // the clearing's late-summer flowers (tiny, no colliders): 露草 in the damp by the roots and the hut, a few 女郎花 in the sun
-  under(['dayflower0', 'dayflower1'], 16, (x, z) => { const d = Math.hypot(x - tx, (z - tz) * 1.25); return (d > 5 && d < 12 && z > 26) || Math.hypot(x - 40.8, z - 35.5) < 4.5; }, 1.1); yield;
-  under(['ominaeshi0', 'ominaeshi1', 'ominaeshi2'], 7, (x, z) => x > 33 && x < 68 && z > 34 && z < 48 && Math.hypot(x - tx, z - tz) > 9, 2.2);
+  // the clearing's late-summer flowers: 露草 in the damp by the roots and the hut, a few 女郎花 in the sun.
+  // Tiny sprites without colliders, sampled in their own box on their own RNG (so nothing else on the map
+  // moves), kept off the trunk, its roots, the hut, her worn ways and any small sprite already there
+  const R2 = RNG(4711), worn = (x, z) => T.pa[T.idx(Math.floor(x * PPM), Math.floor(z * PPM))] >= 190;
+  const onRoot = (x, z) => ROOTS.some(r => { const ax = tx + r[0], az = tz + r[1], L = r[3] / PPM, ux = Math.cos(r[2]), uz = Math.sin(r[2]); const t = clamp(((x - ax) * ux + (z - az) * uz) / L, 0, 1); return Math.hypot(x - ax - ux * L * t, z - az - uz * L * t) < 0.75; });
+  const bloom = (names, n, [x0, x1, z0, z1], test) => {
+    for (let k = 0, c = 0; k < n * 80 && c < n; k++) {
+      const x = R2.range(x0, x1), z = R2.range(z0, z1);
+      if (!test(x, z) || !ground(x, z, 0.3) || Math.hypot(x - tx, z - tz) < 3.9 || onRoot(x, z)) continue;
+      if (x > 37.6 && x < 44 && z > 30.5 && z < 34.7) continue;                                  // the hut
+      if (worn(x, z) && T.topAt(x, z) === TM.CLEAR) continue;                                     // her worn ways
+      if (keep.some(q => q[2] <= 2 && Math.hypot(q[0] - x, q[1] - z) < q[2] + 0.35)) continue;   // (the hut's and the trunk's keeps are the boxes above)
+      place(names[(c + k) % names.length], x, z, { flip: R2() < 0.5 }); keep.push([x, z, 0.45]); c++;
+    }
+  };
+  bloom(['dayflower0', 'dayflower1'], 14, [38, 62, 26, 41], (x, z) => { const d = Math.hypot(x - tx, (z - tz) * 1.25); return (d > 4.5 && d < 11 && z > 27) || Math.hypot(x - 41.5, z - 36) < 3.5; });
+  const rim = (x, z) => Math.hypot((x - 50) / 13, (z - 35) / 7.5) > 0.6 && Math.hypot(x - tx, z - tz) > 7.5;
+  bloom(['ominaeshi0', 'ominaeshi1'], 2, [35, 40, 35, 41], rim); bloom(['ominaeshi2', 'ominaeshi0'], 2, [44, 56, 38, 42], rim);
+  bloom(['ominaeshi1', 'ominaeshi2', 'ominaeshi0'], 3, [59, 66, 27, 40], rim); yield;
   under(['moss0', 'moss1', 'moss2'], 24, (x, z) => Math.hypot(x - tx, z - tz) < 11 || (x < 34 && z < 16), 0.9);
   under(['hydrangea0', 'hydrangea1'], 5, (x, z) => x < 22 && z > 12 && z < 40, 2.5);
   under(['rock0', 'rock1', 'rock2', 'rock3'], 22, () => true, 2); yield 0.75;
@@ -368,7 +395,15 @@ function* populateG(K) {
     const dens = fbm(x * 0.09, z * 0.09, 3, 41) * (t === TM.MEADOW ? 1.25 : t === TM.CLEAR ? 0.45 : t === TM.MOSS ? 0.3 : 0.9);
     if (R() > dens * 1.3 - 0.25) continue; if (T.waterAt(x, z)) continue;
     const n = t === TM.MEADOW && R() < 0.15 ? 'tuft' + R.int(4, 7) : 'tuft' + R.int(0, 3);
-    K.place(n, x, z, { flip: R() < 0.5 }); c++;
+    const flip = R() < 0.5;   // (drawn either way, so the sequence, and every tuft elsewhere, stays as it was)
+    if (!(t === TM.CLEAR && worn(x, z))) K.place(n, x, z, { flip }); c++;
+  }
+  // a few more in the clearing's lawn, on their own RNG (not on her worn ways)
+  for (let k = 0, c = 0; k < 6000 && c < 120; k++) {
+    const x = R2.range(31, 70), z = R2.range(22, 50);
+    if (T.topAt(x, z) !== TM.CLEAR || worn(x, z) || Math.hypot(x - tx, z - tz) < 4.2) continue;
+    if (R2() > fbm(x * 0.09, z * 0.09, 3, 41) * 0.75) continue;
+    K.place('tuft' + R2.int(0, 3), x, z, { flip: R2() < 0.5 }); c++;
   }
   // the sprites the lead's scripts swap or add (keep them in the atlas)
   for (const n of ['hutLit', 'bonLantern', 'bonLanternLit', 'dango1', 'dangoPale', 'tuft7', 'shrineIntact']) { yield* K.rectG(n); }
