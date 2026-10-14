@@ -375,7 +375,7 @@ export async function day1(G) {
   if (!shrineZone.inside && Math.hypot(f.player.x - (P.shrineZone.x ?? 1e9), f.player.z - (P.shrineZone.z ?? 1e9)) >= (P.shrineZone.r ?? 0)) await once(G, e => e.type === 'enter' && e.zone === 'shrine');
   await cut(G, async () => {
     D.shot('shrine', { speed: 1.4 });
-    await D.say(S('救命！压扁了！要变成座敷饼了！'), T('……座敷童子？'), S('看什么看！抬啊！'));
+    await D.say(S('救命！压扁了！要变成座敷饼了！'), T('……座敷童子？'), S('看什么看，背箱的！抬啊！'));
   });
 
   // she tries to lift it; the bell; the beam's weight shows
@@ -490,7 +490,7 @@ export async function day1(G) {
   f.zones.splice(f.zones.indexOf(blockEast), 1);
   G.hud.tip('east', '往东：九十九折宿', null);
 
-  // passing the statues: the dango she left is pale now. Nobody says anything.
+  // passing the statues: the dango she left is pale now. Saji names it; nobody explains.
   // (Only if she passes them: the way out never depends on it.)
   const statues = f.zone({ ...P.dosojinZone, id: 'dosojin2' });
   const exit = f.zone({ ...P.eastExit, id: 'leave' });
@@ -502,7 +502,9 @@ export async function day1(G) {
     cut(G, async () => {
       D.face('tsuzumi', faceTo(her, P.dosojin));
       D.shot('dosojin', { speed: 1.2 });
-      await D.wait(2.2);
+      await D.wait(1.6);
+      await D.say(S('……团子大人。'));   // the one she left on the plate has gone pale
+      await D.wait(0.8);
     });
   });
   await once(G, e => e.type === 'enter' && e.zone === 'leave');

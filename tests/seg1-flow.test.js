@@ -158,7 +158,7 @@ test('segment 1 plays through from the road to the end card', async () => {
   // the beam falls on Saji
   await B.until(() => G.log.includes('beamFall'), 60);
   await B.walk([6, 2.0], 0.3);
-  await B.until(() => G.log.includes('saji:看什么看！抬啊！'));
+  await B.until(() => G.log.includes('saji:看什么看，背箱的！抬啊！'));
   const beam = f.get('beam');
   assert.equal(await B.press(beam), '抬');
   await B.until(() => G.hud.unlocked.has('w'));
@@ -200,7 +200,7 @@ test('if she gives the beam its weight back, Saji objects, and she can still fin
   await B.control();
   await B.until(() => G.log.includes('beamFall'), 80);
   await B.walk([6, 2.0], 0.3);
-  await B.until(() => G.log.includes('saji:看什么看！抬啊！'));
+  await B.until(() => G.log.includes('saji:看什么看，背箱的！抬啊！'));
   const beam = f.get('beam');
   await B.press(beam);
   await B.until(() => G.hud.unlocked.has('w'));
