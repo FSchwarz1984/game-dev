@@ -1,0 +1,181 @@
+[gd_resource type="Resource" script_class="BodyRules" format=3]
+
+[ext_resource type="Script" path="res://systems/body_rules.gd" id="1_body"]
+
+[resource]
+script = ExtResource("1_body")
+active_profile = "draft"
+profiles = {
+"draft": {
+"label": "菅笠之身（草案，待批准）",
+"source": "docs/design/body-effects-draft.md; prototype numbers from docs/knowledge/12 §2.1",
+"natural": {
+"h": 1,
+"l": 1,
+"s": 1,
+"v": 1,
+"w": 1
+},
+"capacity": 1,
+"capacity_max": 2,
+"regen_delay": 9.0,
+"regen_interval": 3.0,
+"regen_from": "air",
+"over_natural_cap": 2,
+"base_speed": 3.4,
+"accel": 0.0,
+"integrity_max": 5,
+"burn_interval": 1.1,
+"wet_rates": {
+"deep": 1.4,
+"dry": 0.05,
+"dry_sun": 0.12,
+"shallow": 0.5
+},
+"states": {
+"w": {
+"given": {
+"speed_mul": 0.85,
+"accel": 5.5,
+"hover_m": 0.3,
+"hover_bob": 0.04,
+"wind_mul": 2.8,
+"floats": true,
+"can_dodge": false,
+"presses_plates": false,
+"blown_by_gust": true,
+"motes": "#efe6d2",
+"step_volume": 0.6
+},
+"extra": {
+"speed_mul": 0.7,
+"wind_mul": 0.0,
+"sinks": true,
+"fall_mul": 2.5,
+"presses_plates": true,
+"breaks_rotten": true,
+"push_strength": 2,
+"flattens_grass": true,
+"squash": 0.08,
+"step_dust": true,
+"step_pitch": 0.7,
+"step_extra": "thud"
+},
+"extra2": {
+"speed_mul": 0.55,
+"push_strength": 3,
+"squash": 0.12
+}
+},
+"h": {
+"given": {
+"freezes_water": true,
+"damage_mul": 1.5,
+"outline": "#a8d8ff",
+"frost": 1.0,
+"breath": true
+},
+"extra": {
+"ignite_after": 3.5,
+"ignites_grass": true,
+"melts_ice": true,
+"dry_rate_add": 0.5,
+"outline": "#ff8a4a",
+"ember": 1.0,
+"glow_color": "#ff8a4a",
+"glow_radius": 0.8,
+"sparks": true
+},
+"extra2": {
+"ignite_after": 1.2
+}
+},
+"l": {
+"given": {
+"seen_mul": 0.18,
+"darken": 0.45,
+"dark_spot": true
+},
+"extra": {
+"glow_radius": 3.2,
+"glow_color": "#ffe08a",
+"reveals_hidden": true,
+"seen_mul": 4.0,
+"outline": "#ffe08a"
+},
+"extra2": {
+"glow_radius": 5.6
+}
+},
+"s": {
+"given": {
+"step_volume": 0.0,
+"heard_mul": 0.25,
+"motes": "#9a9aa0"
+},
+"extra": {
+"step_volume": 2.0,
+"step_extra": "drum",
+"heard_mul": 2.5,
+"sound_ring": 1.4,
+"rings_bells": true,
+"scares_animals": true
+},
+"extra2": {
+"sound_ring": 2.8,
+"heard_mul": 3.5
+}
+},
+"v": {
+"given": {
+"life_sense_mul": 0.0,
+"damage_mul": 1.5,
+"tint": "#b8b4a8"
+},
+"extra": {
+"footprint_flowers": true,
+"heal_rate": 0.05,
+"attracts_insects": true
+}
+}
+}
+},
+"legacy": {
+"label": "JS 第一段（本性 重2 熱1 光0 音1 生3，容量 3）",
+"source": "src/game/field.js",
+"natural": {
+"h": 1,
+"l": 0,
+"s": 1,
+"v": 3,
+"w": 2
+},
+"capacity": 3,
+"capacity_max": 3,
+"regen_delay": 0.0,
+"regen_interval": 0.0,
+"regen_from": "air",
+"over_natural_cap": -1,
+"base_speed": 3.4,
+"accel": 0.0,
+"integrity_max": 5,
+"burn_interval": 1.1,
+"wet_rates": {
+"deep": 1.4,
+"dry": 0.05,
+"dry_sun": 0.12,
+"shallow": 0.5
+},
+"states": {
+"w": {
+"given": {
+"speed_mul": 1.2,
+"floats": true
+},
+"extra": {
+"speed_mul": 0.7
+}
+}
+}
+}
+}

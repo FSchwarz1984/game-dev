@@ -1,0 +1,20 @@
+Fonts of the Godot project (both under the SIL Open Font License 1.1; the licence texts are next to
+them). Fetched and prepared by tools/godot/fetch_fonts.py on 2026-10-14.
+
+fusion-pixel-12px-proportional-zh_hans.woff2
+  Fusion Pixel Font (缝合像素字体), 12px Proportional, zh_hans glyph forms, font version 2024.05.12,
+  copyright (c) 2022 TakWolf, Reserved Font Name "Fusion Pixel".
+  Upstream: https://github.com/TakWolf/fusion-pixel-font
+  Obtained unchanged from the npm package @fontsource/fusion-pixel-12px-proportional-sc@5.3.0
+  (file package/files/fusion-pixel-12px-proportional-sc-latin-400-normal.woff2; despite the file
+  name it is the whole font: 31,345 code points, 17,573 CJK ideographs, kana including ゞ and 々).
+  GitHub release assets are blocked in the build container, which is why npm was used.
+  Licence: OFL-fusion-pixel.txt
+
+noto-serif-sc-subset.woff2
+  Noto Serif CJK SC Regular (Google / Adobe), Reserved Font Name "Source".
+  Upstream: https://github.com/notofonts/noto-cjk, commit f8d157532fbfaeda587e826d4cd5b21a49186f7c,
+  file Serif/SubsetOTF/SC/NotoSerifSC-Regular.otf.
+  Modified: subset with fontTools to ASCII, Latin-1, general punctuation, CJK symbols, kana,
+  full-width forms, all GB 2312 hanzi and JIS X 0208 level-1 kanji (9,620 glyphs); WOFF2.
+  Licence: OFL-noto-serif-cjk.txt
