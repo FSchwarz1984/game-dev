@@ -95,7 +95,8 @@ export class CloudDeck {
     const D = new Float32Array(w * h), PX = new Float32Array(w * h), PZ = new Float32Array(w * h);
     for (let y = 0; y < Math.min(h, yb); y++) {
       const Z = f * Hc / Math.max(1, yh - y);
-      const fade = smooth(yb, yb - 26, y);         // thin out toward the horizon
+      // thin out toward the horizon, and end before the rows get so foreshortened that a bank is a line
+      const fade = smooth(yb, yb - 26, y) * smooth(38, 26, Z);
       for (let x = 0; x < w; x++) {
         const X = (x + 0.5 - cx) * Z / f;
         // banks elongated across the view; detail octaves dropped with distance (no speckle)

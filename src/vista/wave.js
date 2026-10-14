@@ -122,17 +122,17 @@ export class Wave {
     // the foot of the curtain: a low glow, short
     for (let si = 0; si < ns; si++) {
       const i = strips[si], x = i % W, y = (i / W) | 0, z = Z[i];
-      const hh = clamp(Math.round(f * 0.03 / z), 1, 8);
-      AB.strip(x, y, hh, CURTAIN, clamp(alpha * (0.06 + 0.22 * smooth(22, 3, z)), 0, 1));
+      const hh = clamp(Math.round(f * 0.06 / z * (0.7 + 0.6 * vnoise(x * 0.13, t * 0.5, 31))), 2, 16);
+      AB.strip(x, y, hh, CURTAIN, clamp(alpha * (0.16 + 0.24 * smooth(22, 3, z)), 0, 1));
     }
     // new motes, many: the curtain is thick at its foot
-    const want = Math.min(48, Math.round(ns * 0.05 * Math.min(2, dt * 60)) + 1);
+    const want = Math.min(60, Math.round(ns * 0.07 * Math.min(2, dt * 60)) + 1);
     for (let n = 0; n < want && ns; n++) {
       const i = strips[Math.floor(R() * ns)], y = (i / W) | 0, z = Z[i];
       const hg = 1 - (y - yl) * z / f;                         // the ground's height there
       const life = 1.2 + R() * 2.6;
       this.motes.push({ X: X[i] + (R() - 0.5) * z * 0.004, Z: z * (1 - R() * 0.01), hg, H: R() * 0.004 * z,
-        vH: (0.006 + R() * 0.02) * Math.sqrt(z), vZ: -(0.03 + R() * 0.06) * z, vX: (R() - 0.5) * 0.02 * z, life, age: 0 });
+        vH: (3 + R() * 9) * z / f, vZ: -(0.04 + R() * 0.07) * z, vX: (R() - 0.5) * 0.03 * z, life, age: 0 });
     }
     const keep = [], mc = MOTE;
     for (const m of this.motes) {
@@ -146,7 +146,7 @@ export class Wave {
       const zg = Z[yi * W + xi];
       if (zg && zg < m.Z * 0.85) continue;                    // behind nearer ground
       const u = m.age / m.life, sz = f * 0.006 / m.Z;
-      const a = alpha * smooth(0, 0.12, m.age) * Math.pow(1 - u, 1.3) * (0.35 + 0.65 * (1 - smooth(0, 0.6, u)));
+      const a = alpha * smooth(0, 0.1, m.age) * Math.pow(1 - u, 1.2) * (0.5 + 0.5 * (1 - smooth(0, 0.5, u)));
       const big = sz > 1.2 ? (sz > 2.4 ? 3 : 2) : 1;
       AB.px(x - (big >> 1), y - (big >> 1), mc, a * (big > 1 ? 0.8 : 1), big, big);
     }

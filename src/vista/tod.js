@@ -140,7 +140,7 @@ export function ghost(mat, i) {
   if (mat.water) c = scale3([0.6, 0.66, 0.76], 0.62 + (mat.refl ?? 0.6) * 0.4);   // the light of a sky that is not there
   else if (mat.rim) c = scale3(mat.albedo, 1.2);
   else c = scale3(mat.albedo, 0.66 + 0.42 * SUNLV[s] + 0.12 * SKYLV[k]);
-  const l = clamp(lum(c), 0, 1), L2 = 0.24 + 0.58 * Math.pow(l, 0.85);
+  const l = clamp(lum(c), 0, 1), L2 = 0.2 + 0.58 * Math.pow(l, 0.85);
   let out = mix3([L2 * 0.86, L2 * 0.92, L2 * 1.07], c, 0.1);
   if (h) out = mix3(out, GHOST_HAZE, HAZELV[h] * 0.6);
   return scale3(out, 255);
