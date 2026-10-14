@@ -4,7 +4,8 @@
 //   story UI and title (src/story/*), HUD (src/ui/hud.js), the renderer behind the stage
 //   adapter (src/app/stage.js), audio (src/audio/audio.js).
 // URL switches for checking: ?scene=prologue|day1 skips the title, ?fast=N runs the scene
-// clock N times faster, ?touch=1 forces the touch controls.
+// clock N times faster, ?touch=1 forces the touch controls, ?manual=1 hands the clock to a
+// checking tool (window.APP.tick / APP.render).
 
 import { params } from '../core/params.js';
 import { Input } from '../core/input.js';
@@ -89,7 +90,9 @@ export async function boot(app) {
     if (audioOn) AU.update(dt, { tod: G.hour ?? 12, listener: { x: f.player.x * PX, y: f.player.z * PX }, near: stage.nearness?.() ?? 1, cinematic: D.busy, wind: 0.3 });
   }
   window.APP.tick = tick;
-  requestAnimationFrame(frame);
+  window.APP.render = () => stage.render();
+  // ?manual=1: the checking tools drive the clock themselves (tick without drawing, draw on demand)
+  if (params.manual !== '1') requestAnimationFrame(frame);
 
   // ---- title → prologue → day 1 → end card → title
   const run = async from => {
