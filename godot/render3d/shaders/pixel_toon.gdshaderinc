@@ -25,6 +25,8 @@ global uniform vec4 w3_wind;        // xy: wind direction (x east, y south), z: 
 global uniform float w3_wet;        // rain wetness 0..1
 global uniform vec4 w3_player;      // xyz: her chest (world), w: cut-away radius in native px (0 = off)
 global uniform float w3_night;      // 0 day .. 1 night
+global uniform sampler2D w3_lamps;  // lamps (render3d/lamps.gd): row 0 xyz + reach, row 1 rgb * energy + on
+global uniform float w3_lamp_n;     // how many lamps are lit (texels in use)
 
 const float W3_PI = 3.14159265;
 
@@ -210,6 +212,34 @@ vec3 w3_point_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuati
 	float seam = a < 0.375 ? 0.14 : 0.32;
 	float q = floor(a * 4.0 + 0.5 + (sc - 0.5) * seam * dither) / 4.0;
 	return albedo * light_col / W3_PI * q;
+}
+// Lanterns and fires, lit by the renderer (render3d/lamps.gd): each lamp's light in four steps of
+// its own: a warm core (about 2700 K), then rings that fall off steeply and turn orange, the last
+// one only a breath above the dark (no visible edge). Surfaces facing the lamp take more of it.
+// Lamps combine by the brightest (not by adding), so a row of lanterns stays a row of pools with
+// darker gaps. Add the result to EMISSION in fragment(). dither 0: no seam stipple (characters).
+vec3 w3_lamp_light(vec3 albedo, vec3 wp, vec3 n, vec2 cell, float dither) {
+	int cnt = int(w3_lamp_n + 0.5);
+	if (cnt <= 0) return vec3(0.0);
+	vec3 best = vec3(0.0);
+	float sc = w3_hash(cell * 1.17 + 6.1) * 0.7 + w3_vnoise(cell / 2.1 + 2.0) * 0.3;
+	for (int i = 0; i < cnt; i++) {
+		vec4 a = texelFetch(w3_lamps, ivec2(i, 0), 0);
+		vec3 d = a.xyz - wp;
+		float dist = length(d);
+		if (dist >= a.w) continue;
+		vec4 c = texelFetch(w3_lamps, ivec2(i, 1), 0);
+		float f = 1.0 - dist / a.w;
+		float face = clamp(dot(n, d / max(dist, 1e-3)) * 0.7 + 0.3, 0.0, 1.0);
+		float v = f * mix(1.0, face, 0.8);
+		// steps 1 (core), 0.75, 0.5, 0.25 (rim); a narrow scattered seam between them
+		float q = floor(v * 4.0 + 0.5 + (sc - 0.5) * 0.3 * dither) / 4.0;
+		if (q <= 0.0) continue;
+		float inten = q * q * q;                                    // 1, 0.42, 0.125, 0.016
+		vec3 tint = mix(vec3(1.0, 0.45, 0.16), vec3(1.0, 0.80, 0.56), q * q);
+		best = max(best, c.rgb * tint * inten);
+	}
+	return albedo * best;
 }
 // 遠化 (far, 0..1): a thing that has lost its qualities looks far: pale, nearly grey, a little cool,
 // lifted toward the haze. Materials also flatten their light by the same amount (w3_far_light).

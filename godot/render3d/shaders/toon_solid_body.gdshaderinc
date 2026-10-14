@@ -24,6 +24,7 @@ uniform bool cutaway = false;                           // stipple out where it 
 uniform float cutaway_scale = 1.0;
 
 varying vec3 v_wp;
+varying vec3 v_wu;      // upright (un-leaned) world position: lamps light the real place
 varying vec3 v_wn;
 varying flat vec2 v_origin_px;
 varying vec3 v_alb;
@@ -32,6 +33,7 @@ varying vec2 v_cell;
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	vec3 wp = VERTEX;
+	v_wu = wp;
 	if (!IN_SHADOW_PASS) {
 		wp = w3_lean(wp, origin.y, lean);
 	}
@@ -64,7 +66,7 @@ void fragment() {
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
 	vec3 em = emission_color * emission_energy * mix(1.0, w3_night, emission_at_night) * (1.0 - far);
-	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + em;
+	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + em + w3_lamp_light(alb, v_wu, wn, cell, dither) * (1.0 - far * 0.6);
 }
 
 void light() {

@@ -35,6 +35,7 @@ uniform float far : hint_range(0.0, 1.0) = 0.0;   // 遠化: 0 near .. 1 lost it
 uniform float shade_fill : hint_range(0.0, 1.0) = 0.0;
 
 varying vec3 v_wp;
+varying vec3 v_wu;      // where the leaf really is (before lean and card layout): lamps light that
 varying vec3 v_wn;
 varying vec3 v_alb;
 varying vec2 v_cell;
@@ -68,6 +69,7 @@ void vertex() {
 	}
 	VERTEX = wp;
 	v_wp = wp;
+	v_wu = foliage_mode == 1 ? anchor : VERTEX;
 	v_wn = NORMAL;
 }
 
@@ -100,7 +102,7 @@ void fragment() {
 	v_alb = alb * w3_far_light(far);
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
-	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far);
+	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + w3_lamp_light(alb, v_wu, wn, cell, 1.0) * (1.0 - far * 0.6);
 	// for the fill in light(): how much the card faces the sky, in three steps, times its AO
 	v_fill = floor((wn.y * 0.5 + 0.5) * 3.0 + 0.5) / 3.0 * 0.55 + 0.45;
 	v_fill *= ao;

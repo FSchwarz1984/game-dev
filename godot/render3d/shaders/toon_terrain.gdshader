@@ -266,7 +266,7 @@ void fragment() {
 	v_alb = alb;
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
-	EMISSION = w3_ambient(alb, wn, ao);
+	EMISSION = w3_ambient(alb, wn, ao) + w3_lamp_light(alb, v_wp, wn, cell, 1.0);
 }
 
 void light() {

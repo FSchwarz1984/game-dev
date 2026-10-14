@@ -111,6 +111,14 @@ w3_night={
 "type": "float",
 "value": 0.0
 }
+w3_lamps={
+"type": "sampler2D",
+"value": ""
+}
+w3_lamp_n={
+"type": "float",
+"value": 0.0
+}
 w3_fog_col={
 "type": "vec3",
 "value": Vector3(0.6, 0.66, 0.72)
