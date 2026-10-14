@@ -74,6 +74,11 @@ func _setup_material(dir: String) -> void:
 		terrain_mat.set_shader_parameter(k, _image_texture(dir.path_join(k + ".png")))
 	terrain_mat.set_shader_parameter("palette", _image_texture(common.path_join("palette.png")))
 	terrain_mat.set_shader_parameter("glyphs", _image_texture(common.path_join("glyphs.png")))
+	terrain_mat.set_shader_parameter("water", _image_texture(dir.path_join("water.png")))
+	terrain_mat.set_shader_parameter("water_origin", origin)
+	terrain_mat.set_shader_parameter("water_cell", cell)
+	terrain_mat.set_shader_parameter("water_size", Vector2(nx, nz))
+	terrain_mat.set_shader_parameter("h_encode", Vector2(info["height"]["min"], info["height"]["range"]))
 	var sp: Dictionary = info["splat"]
 	terrain_mat.set_shader_parameter("splat_origin", origin)
 	terrain_mat.set_shader_parameter("splat_cell", float(sp["cell"]))

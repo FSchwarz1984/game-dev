@@ -94,7 +94,7 @@ func make_shape(seed: int, flat := 0.65, strata := 0.22, sharp := 0.35) -> Array
 		col = col.lerp(Color(0.40, 0.45, 0.47), clampf(-n.y, 0.0, 1.0) * 0.4)   # undersides bluer
 		var ao := clampf(0.55 + (ctr.y + 0.4) * 0.6, 0.5, 1.0)
 		col.a = ao
-		var moss := clampf((n.y - 0.55) * 2.2, 0.0, 1.0) * (0.5 + 0.5 * sin(ctr.x * 5.0 + ctr.z * 3.0 + float(seed)))
+		var moss := clampf((n.y - 0.7) * 2.0, 0.0, 1.0) * (0.35 + 0.35 * sin(ctr.x * 5.0 + ctr.z * 3.0 + float(seed)))
 		for p in [a, c, b]:
 			vs.append(p)
 			ns.append(n)

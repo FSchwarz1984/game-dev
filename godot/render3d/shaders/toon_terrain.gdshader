@@ -17,6 +17,11 @@ uniform sampler2D m2 : filter_linear, repeat_disable;      // ao, puddle, wear, 
 uniform sampler2D m3 : filter_linear, repeat_disable;      // litter kind, dryness, tufts, slope/90
 uniform sampler2D palette : filter_nearest;                 // 8 tones x 16 rows, sRGB
 uniform sampler2D glyphs : filter_nearest;                  // 16 x 16 glyphs of 8 x 8
+uniform sampler2D water : filter_nearest, repeat_disable;   // water surface (RG u16), kind (B)
+uniform vec2 water_origin = vec2(-80.0, -96.0);
+uniform float water_cell = 0.5;
+uniform vec2 water_size = vec2(321.0, 417.0);
+uniform vec2 h_encode = vec2(-44.0, 128.0);                // min, range
 uniform vec2 splat_origin = vec2(-80.0, -96.0);
 uniform float splat_cell = 0.25;
 uniform vec2 splat_size = vec2(641.0, 833.0);
@@ -201,6 +206,14 @@ void fragment() {
 		alb = pal(row, t);
 	}
 
+	// ---- under water: wet, dark, a little green (the stream bed, the pool's floor)
+	vec4 wt = texelFetch(water, ivec2(floor((v_wp.xz - water_origin) / water_cell + 0.5)), 0);
+	if (wt.b > 0.1) {
+		float wh = h_encode.x + (wt.r * 255.0 * 256.0 + wt.g * 255.0) / 65535.0 * h_encode.y;
+		if (v_wp.y < wh) {
+			alb *= vec3(0.42, 0.5, 0.46);
+		}
+	}
 	// ---- wetness and puddles
 	alb = w3_wetten(alb, porous);
 	float ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));

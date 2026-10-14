@@ -47,7 +47,7 @@ void fragment() {
 	vec3 under = texture(screen_tex, SCREEN_UV + off / VIEWPORT_SIZE).rgb;
 	float dk = smoothstep(0.0, 0.9, depth);
 	vec3 body = mix(shallow_col, deep_col, dk) * (w3_sky * 1.3 + w3_sun * 0.55);
-	float a = clamp(0.35 + dk * 0.55, 0.0, 0.9);
+	float a = clamp(0.42 + dk * 0.5 + moving * 0.12, 0.0, 0.9);
 	vec3 col = mix(under, body, a);
 	// sky in the surface, a little stronger where it is calm
 	float sky_k = (0.05 + 0.08 * dk) * (1.0 - moving * 0.4);
@@ -56,11 +56,11 @@ void fragment() {
 	float band = step(0.68, rip) * step(rip, 0.74);
 	col += band * (w3_sky * 0.25 + w3_sun * 0.18);
 	// flow lines in the stream
-	float streak = step(0.8, w3_vnoise(vec2(fq.x * 2.0, fq.y * 0.7 - t * 2.4)));
+	float streak = step(0.84, w3_vnoise(vec2(fq.x * 2.0, fq.y * 0.7 - t * 2.4)));
 	col = mix(col, col * 1.35 + vec3(0.02), streak * moving * 0.7);
 	// foam where it is shallow (banks, stones), breaking and breathing
 	float lap = 0.035 + 0.02 * sin(t * 1.4 + w3_vnoise(cell / 6.0) * 6.0);
-	float foam = (1.0 - step(lap, depth)) * step(0.58, w3_vnoise(cell / 2.0 + vec2(t * 0.8 * (moving + 0.2), 0.0)));
+	float foam = (1.0 - step(lap, depth)) * step(0.66, w3_vnoise(cell / 2.0 + vec2(t * 0.8 * (moving + 0.2), 0.0)));
 	col = mix(col, vec3(0.72, 0.78, 0.78) * (w3_sky * 0.6 + w3_sun * 0.6 + 0.1), foam * 0.6);
 	// sun glints on crests (bloom a little)
 	float glint = step(0.996, w3_hash(cell + floor(t * 3.0) * 7.31)) * step(0.55, rip) * (1.0 - w3_night * 0.7);

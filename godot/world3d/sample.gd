@@ -33,6 +33,7 @@ var route_i := 0
 var keys_down := {}
 var _haze_h := 0.0
 var atmos: W3Atmosphere
+var dressing: W3Dressing
 
 
 func _ready() -> void:
@@ -77,6 +78,11 @@ func _ready() -> void:
 	pv.world_root.add_child(grass)
 	grass.build(terrain)
 	print("GRASS tufts=", grass.count, " ms=", Time.get_ticks_msec() - g0)
+	dressing = W3Dressing.new()
+	dressing.name = "Dressing"
+	pv.world_root.add_child(dressing)
+	dressing.build(terrain)
+	dressing.set_time(env.hours)
 	atmos = W3Atmosphere.new()
 	atmos.name = "Atmosphere"
 	pv.world_root.add_child(atmos)
@@ -328,6 +334,8 @@ func _set_view(i: int) -> void:
 	if v.size() > 3:
 		env.rain = v[3]
 	env.set_time(v[2])
+	if dressing:
+		dressing.set_time(v[2])
 	pv.follow(_cam_target, {"cut": true})
 
 
