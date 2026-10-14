@@ -24,6 +24,7 @@ export function buildSkyShore(o) { return run(buildSkyShoreGen(o)); }
 
 export function* buildSkyShoreGen(o) {
   const { w, h, cx, yh, f, Hs, funnel: Fn } = o;
+  const vs = Hs / 9;                                  // vertical scale (the shore sits higher on taller frames)
   const R = rng(o.seed + 501);
   const towns = o.towns;
   const rivers = makeRivers(R, Fn);
@@ -44,25 +45,36 @@ export function* buildSkyShoreGen(o) {
     return best;
   };
   // groves: round clumps of trees hanging from the fields, thick around the villages (屋敷林)
-  const GC = 1.5;
+  const GC = 1.5, groveCells = new Map();
+  const groveCell = (i, j) => {
+    const key = i * 8192 + j;
+    let c = groveCells.get(key);
+    if (c !== undefined) return c;
+    const gx = (i + 0.2 + hash2(i, j, 71) * 0.6) * GC, gz = (j + 0.2 + hash2(i, j, 72) * 0.6) * GC;
+    let p = 0.1;
+    for (const t of towns) { const q = Math.hypot(gx - t.X, (gz - t.Z) * 0.8) / t.r; if (q < 2.6) p = Math.max(p, q > 1.1 ? 0.8 : 0.2); }
+    c = hash2(i, j, 73) > p ? null : { gx, gz, r2: (0.22 + hash2(i, j, 74) * 0.24) ** 2, hg: 0.2 + hash2(i, j, 75) * 0.16 };
+    groveCells.set(key, c);
+    return c;
+  };
   const groveAt = (X, Z) => {
     const ci = Math.floor(X / GC), cj = Math.floor(Z / GC);
     let best = 0;
     for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
-      const gx = (i + 0.2 + hash2(i, j, 71) * 0.6) * GC, gz = (j + 0.2 + hash2(i, j, 72) * 0.6) * GC;
-      let p = 0.16;
-      for (const t of towns) { const q = Math.hypot(gx - t.X, (gz - t.Z) * 0.8) / t.r; if (q < 2.6) p = Math.max(p, q > 1.1 ? 0.85 : 0.2); }
-      if (hash2(i, j, 73) > p) continue;
-      const r = 0.28 + hash2(i, j, 74) * 0.3, d2 = ((X - gx) ** 2 + (Z - gz) ** 2) / (r * r);
-      if (d2 < 1) best = Math.max(best, (0.22 + hash2(i, j, 75) * 0.2) * Math.sqrt(1 - d2));
+      const c = groveCell(i, j);
+      if (!c) continue;
+      const d2 = ((X - c.gx) ** 2 + (Z - c.gz) ** 2) / c.r2;
+      if (d2 < 1) { const v = c.hg * Math.sqrt(1 - d2); if (v > best) best = v; }
     }
     return best;
   };
-  // rounded hanging hills (wooded), mostly beyond the near fields; then the land's own far ranges
   // a band of rounded wooded hills across the land (its "near range"), a few knolls nearer
-  const hillAt = (X, Z) => Math.max(
-    smooth(0.36, 0.6, fbm(X * 0.06 + 3, Z * 0.05, 3, 83)) * smooth(43, 49, Z) * (1 - smooth(57, 63, Z)),
-    smooth(0.62, 0.8, fbm(X * 0.11 + 9, Z * 0.1, 2, 87)) * smooth(32, 38, Z));
+  const hillAt = (X, Z) => {
+    let a = 0, b = 0;
+    if (Z > 43 && Z < 63) a = smooth(0.36, 0.6, fbm(X * 0.06 + 3, Z * 0.05, 3, 83)) * smooth(43, 49, Z) * (1 - smooth(57, 63, Z));
+    if (Z > 32) b = smooth(0.62, 0.8, fbm(X * 0.11 + 9, Z * 0.1, 2, 87)) * smooth(32, 38, Z);
+    return a > b ? a : b;
+  };
   const depth = (X, Z) => {
     const flat = flatAt(X, Z);
     let d = 0.12 + 0.08 * fbm(X * 0.12, Z * 0.12, 2, 81);
@@ -72,18 +84,19 @@ export function* buildSkyShoreGen(o) {
     if (far > 0) d += (1 - flat) * far * (0.6 + Math.pow(ridged(X * 0.045 + 7, Z * 0.035, 3, 84), 1.4) * 4.2);
     const dr = riverAt(X, Z);
     if (dr < 0.9) d -= (0.9 - dr) * (0.1 + 0.6 * hl);   // valleys
+    d *= vs;                                          // its relief is as tall as the frame is (see Hs)
     if (Z < 58) d += groveAt(X, Z) * (1 - hl);
     const fx = X - Fn.X, fz = Z - Fn.Z, r = Math.hypot(fx, fz) / Fn.R;
     if (r < 1) d = Math.max(d, Fn.D * Math.pow(1 - r, 1.9));
     return Math.max(0.02, d);
   };
   const height = (X, Z) => Hs - depth(X, Z);
-  const m = yield* marchGen({ w, h, cx, yh, f, camY: 0, z0: 4, z1: 140, height, k: 0.013, ceiling: true });
+  const m = yield* marchGen({ w, h, cx, yh, f, camY: 0, z0: 4, z1: 140, height, k: 0.013, ceiling: true, chunk: 12 });
   const L = new IndexLayer(w, h);
   const Lt = norm3([-0.18, -0.85, -0.5]); // light from below (the plain's glow), a little from the left and toward us
   const hazeOf = Z => { let hz = 0; for (const zz of HAZE_Z) if (Z > zz) hz++; return hz; };
   for (let y = 0; y < h; y++) {
-   if ((y & 15) === 15) yield;
+   if ((y & 7) === 7) yield;
    for (let x = 0; x < w; x++) {
     const i = y * w + x;
     if (!m.mask[i]) continue;
@@ -106,9 +119,9 @@ export function* buildSkyShoreGen(o) {
       const fl = flatAt(X, Z), hl = hillAt(X, Z), gv = Z < 58 ? groveAt(X, Z) : 0;
       if (dr < rw) { mat = S.river; sun = 4 + (hash2(x, y, 3) < 0.3 ? 2 : 0); }
       else if (dr < rw + px * 1.1 && Z < 56) mat = S.bank;
-      else if (hl > 0.12 && hl < 0.42 && Z < 58 && nearTown(X, Z) && flatness > 0.5) {
+      else if (hl > 0.08 && hl < 0.5 && Z < 58 && nearTown(X, Z) && flatness > 0.45) {
         // terraces on the lower slopes by the villages: the contour lines of the hill, lit
-        const c = dd * 10 + vnoise(X * 0.4, Z * 0.4, 66) * 0.3;
+        const c = dd / vs * 10 + vnoise(X * 0.4, Z * 0.4, 66) * 0.3;
         mat = c - Math.floor(c) < 0.24 ? S.levee : S.field;
         if (mat === S.field) sun = 2 + 2 * (Math.floor(c) % 3);
       } else if (hl > 0.25 || gv > 0.04 || Z > 62 || flatness < 0.7) {
@@ -339,12 +352,12 @@ const BASE = {
   [S.rock]: [[30, 37, 60], [40, 48, 72], [50, 60, 84]],
   [S.field]: [[33, 42, 65], [40, 50, 73], [48, 59, 82]],
   [S.paddy]: [[46, 62, 86], [60, 80, 102], [78, 100, 120]],
-  [S.levee]: [[62, 82, 104], [76, 98, 118], [92, 116, 134]],
+  [S.levee]: [[74, 98, 118], [90, 116, 134], [108, 134, 150]],
   [S.town]: [[36, 42, 64], [42, 49, 70], [48, 56, 76]],
   [S.wall]: [[52, 62, 86], [70, 82, 104], [88, 100, 120]],
   [S.roof]: [[14, 19, 35], [22, 29, 48], [34, 44, 64]],
   [S.bank]: [[34, 44, 66], [40, 52, 74], [46, 60, 82]],
-  [S.river]: [[128, 152, 176], [152, 178, 200], [180, 206, 224]],
+  [S.river]: [[76, 98, 122], [90, 114, 138], [108, 134, 156]],
   [S.rim]: [[74, 102, 120], [92, 124, 140], [110, 144, 156]],
   [S.funnel]: [[20, 28, 50], [30, 42, 66], [44, 58, 82]],
   [S.funnelRim]: [[56, 80, 100], [68, 96, 114], [82, 112, 128]],

@@ -17,7 +17,7 @@
 //   tod:   17.5..21   south: 17.5 golden dusk -> ~18.6 sunset -> ~19.3 blue hour -> 20.5+ night
 //   pan:   0..1       south: the crane up out of the crown (0 = among the leaves, 1 = over the plain)
 //   rise:  0..1       south: the lights leave the plain in processions. 0.03 one light leaves the
-//                     headman's house alone, 0.11 another a bonfire; from 0.17 each place (the
+//                     headman's house alone, 0.11 another a bonfire; from 0.21 each place (the
 //                     headman's house, the bonfires, stretches of paddies, hamlets) sends its lights up
 //                     one after another, a steady queue on a gentle S-curve, into a faint column of
 //                     light over the town that goes up to the gate; its lamps go out from the edge in.

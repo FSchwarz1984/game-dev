@@ -17,6 +17,7 @@ import { clamp, run } from './util.js';
  *   height(X,Z) surface height
  *   gaps        optional [[za, zb]] ranges where the ground is flat (t = 0) and can be filled per row
  *   ceiling     true: the surface hangs from above (height = height above camera of the underside)
+ *   chunk       columns marched per generator step (default 32)
  * @returns {{ X: Float32Array, Z: Float32Array, mask: Uint8Array }}
  */
 export function march(o) { return run(marchGen(o)); }
@@ -25,8 +26,9 @@ export function* marchGen(o) {
   const { w, h, cx, yh, f, camY = 1, z0, z1, height, ceiling = false } = o;
   const k = o.k || 0.012, kFar = o.kFar || k, zFar = o.zFar ?? Infinity;
   const PX = new Float32Array(w * h), PZ = new Float32Array(w * h), M = new Uint8Array(w * h);
+  const chunk = o.chunk || 32;                    // columns per step of the generator
   for (let x = 0; x < w; x++) {
-    if ((x & 31) === 31) yield;
+    if (x % chunk === chunk - 1) yield;
     const dir = (x + 0.5 - cx) / f;
     let lim = ceiling ? 0 : h;          // first unwritten row (ground: rows above lim are free; ceiling: rows below)
     let pZ = z0, py = ceiling ? -1e9 : 1e9;

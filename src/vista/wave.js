@@ -126,13 +126,13 @@ export class Wave {
       AB.strip(x, y, hh, CURTAIN, clamp(alpha * (0.16 + 0.24 * smooth(22, 3, z)), 0, 1));
     }
     // new motes, many: the curtain is thick at its foot
-    const want = Math.min(60, Math.round(ns * 0.07 * Math.min(2, dt * 60)) + 1);
+    const want = Math.min(80, Math.round(ns * 0.1 * Math.min(2, dt * 60)) + 1);
     for (let n = 0; n < want && ns; n++) {
       const i = strips[Math.floor(R() * ns)], y = (i / W) | 0, z = Z[i];
       const hg = 1 - (y - yl) * z / f;                         // the ground's height there
-      const life = 1.2 + R() * 2.6;
+      const life = 0.45 + R() * R() * 1.6;                   // most die young, near the foot
       this.motes.push({ X: X[i] + (R() - 0.5) * z * 0.004, Z: z * (1 - R() * 0.01), hg, H: R() * 0.004 * z,
-        vH: (3 + R() * 9) * z / f, vZ: -(0.04 + R() * 0.07) * z, vX: (R() - 0.5) * 0.03 * z, life, age: 0 });
+        vH: (5 + R() * 11) * z / f, vZ: -(0.08 + R() * 0.12) * z, vX: (R() - 0.5) * 0.03 * z, life, age: 0 });
     }
     const keep = [], mc = MOTE;
     for (const m of this.motes) {

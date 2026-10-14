@@ -76,7 +76,7 @@ export function* southGen(W, H, seed) {
   lights.push(...paddyStars);
 
   // ---------------- the gate (funnel) and the sky shore
-  const Hs = 9 * Math.min(1, yh / 114), Zf = 21;   // lower on short frames, so a phone sees the same stretch of it
+  const Hs = 9 * yh / 114, Zf = 21;              // with the frame's height: every frame sees the same stretch of it
   const tipX = cx - Math.round(W * 0.05), tipY = Math.round(yh * 0.3) + padTop;
   const Fn = { X: (tipX - cx) * Zf / f, Z: Zf, D: Hs - (yl - tipY) * Zf / f, R: 6.5 };
   const towns = [
@@ -86,7 +86,7 @@ export function* southGen(W, H, seed) {
   ];
   const ringC = { X: (0.2 * W) * 31 / f, Z: 31, r: 0.95 };
   towns.push({ X: ringC.X, Z: ringC.Z, r: 2.0 });
-  const hazeEdgeY = yl - Math.round(clamp(yh * 0.36, 26, 58));
+  const hazeEdgeY = yl - Math.round(clamp(yh * 0.36, 26, 100));
   const shoreH = hazeEdgeY + 25;
   yield;
   const shore = yield* buildSkyShoreGen({ w: W, h: shoreH, cx, yh: yl, f, Hs, funnel: Fn, towns, hazeEdgeY, pagoda: { x: 0.64 }, seed });
@@ -110,6 +110,8 @@ export function* southGen(W, H, seed) {
   // stands over the town and goes up into the gate. The lamps of a place go out from its edge
   // inward while its procession leaves, the place itself last. Two lights go first, alone.
   const colX = T[0], colTop = T[1] + 2;
+  // a tall frame has longer paths: the lights go faster (same timing) and leave a little more often
+  const tall = Math.max(1, (yl - colTop) / 90), merge = MERGE * tall, speed = SPEED * tall;
   const projG = (X, Z) => [cx + f * X / Z, yl + f * (1 - ground.height(X, Z)) / Z];
   const visible = ([x, y]) => x > 6 && x < W - 6 && y > yl + 2 && y < gh - 2 && ground.Z[Math.round(y) * W + Math.round(x)] > 0;
   const fires = lights.filter(L => L.kind === 'bonfire' && L.river).sort((a, b2) => a.x - b2.x);
@@ -124,7 +126,7 @@ export function* southGen(W, H, seed) {
     }
     return best ? [best.x, best.y] : null;
   };
-  const spread = W * 0.24;                       // places this far either side of the column: the lines rise steeply
+  const spread = Math.min(W * 0.24, 104);        // places this far either side of the column: the lines rise steeply
   const near = p => p && Math.abs(p[0] - colX) < spread * 1.08;
   const hamletAt = (side, k) => {
     const cands = [];
@@ -144,12 +146,12 @@ export function* southGen(W, H, seed) {
     streams.push(S);
     return S;
   };
-  const sHead = addStream(projG(HEADMAN.X, HEADMAN.Z), 0.17, COL.window, 'window');
-  const sFireA = fires[0] ? addStream([fires[0].x, fires[0].y - 1], 0.2, COL.fire, 'fire') : null;
-  addStream(projG(TOWN.X, TOWN.Z + 0.4), 0.23, COL.window, 'window');
-  addStream(stretch(colX - spread, colX - 28), 0.26, PADDY_LIGHT, 'paddy');
-  for (const F of fires.slice(1)) addStream([F.x, F.y - 1], 0.29, COL.fire, 'fire');
-  addStream(stretch(colX + 28, colX + spread), 0.32, PADDY_LIGHT, 'paddy');
+  const sHead = addStream(projG(HEADMAN.X, HEADMAN.Z), 0.21, COL.window, 'window');
+  const sFireA = fires[0] ? addStream([fires[0].x, fires[0].y - 1], 0.24, COL.fire, 'fire') : null;
+  addStream(projG(TOWN.X, TOWN.Z + 0.4), 0.26, COL.window, 'window');
+  addStream(stretch(colX - spread, colX - 28), 0.28, PADDY_LIGHT, 'paddy');
+  for (const F of fires.slice(1)) addStream([F.x, F.y - 1], 0.3, COL.fire, 'fire');
+  addStream(stretch(colX + 28, colX + spread), 0.33, PADDY_LIGHT, 'paddy');
   addStream(hamletAt(-1, 0), 0.36, COL.window, 'window');
   addStream(hamletAt(1, 0), 0.4, COL.window, 'window');
   addStream(hamletAt(-1, 1), 0.44, COL.window, 'window');
@@ -161,11 +163,11 @@ export function* southGen(W, H, seed) {
     const mine = streams.filter(S => (S.sx - colX) * side >= 0 && !(side > 0 && S.sx - colX === 0)).sort((u, v) => Math.abs(u.sx - colX) - Math.abs(v.sx - colX));
     mine.forEach((S, i) => { S.rank = i; S.side = side; });
   }
-  const yJ0 = yl + 4;
+  const yJ0 = yl + 4, colH = yl - colTop, rankDy = Math.max(13, colH * 0.14);
   for (const S of streams) {
     const dx = S.sx - colX;
     S.jx = colX + (Math.abs(dx) > 3 ? S.side : 0);
-    S.jy = Math.min(S.sy - 16, yJ0 - S.rank * 13 - (S.side > 0 ? 6 : 0));
+    S.jy = Math.min(S.sy - 16, yJ0 - S.rank * rankDy - (S.side > 0 ? rankDy * 0.45 : 0));
     S.jy = Math.max(colTop + 14, Math.min(S.jy, S.sy - Math.abs(dx) * 1.1));
     const h = S.sy - S.jy;
     const bulge = (S.side || 1) * (6 + Math.abs(dx) * 0.25);   // out a little first, then in: an S
@@ -175,15 +177,23 @@ export function* southGen(W, H, seed) {
     extendPath(S.path, [[S.jx, S.jy], [colX, S.jy - 8], [colX, colTop]], 24);
     // one light every PACE seconds (at rise animated over ~30 s) between r0 and r1
     S.e = [];
-    for (let r = S.r0; r <= S.r1; r += PACE / 30) S.e.push(r);
+    for (let r = S.r0; r <= S.r1; r += PACE / Math.sqrt(tall) / 30) S.e.push(r);
     S.el = new Float32Array(S.e.length).fill(-1);
     S.ph = R() * TAU;
   }
   // the two that go first, alone: a window of the headman's house, then a light out of a bonfire
   const firstL = lights.find(L => L.kind === 'window' && Math.abs(L.X - HEADMAN.X) < 0.3 && Math.abs(L.Z - HEADMAN.Z) < 0.3);
   const solos = [];
-  if (sHead) solos.push({ S: sHead, r: 0.03, el: -1, base: COL.window, from: firstL });
-  if (sFireA) solos.push({ S: sFireA, r: 0.11, el: -1, base: COL.fire });
+  // their path: straight up out of the lit plain into the dark, then over to the column and up it
+  const soloPath = S => {
+    const yTop = yl - 14, jy = Math.max(colTop + 10, yl - 46);
+    const P = samplePath([[S.sx, S.sy], [S.sx, S.sy - (S.sy - yTop) * 0.5], [S.sx, yTop + 6], [S.sx, yTop]], 24);
+    extendPath(P, [[S.sx, yTop], [S.sx + (colX - S.sx) * 0.15, jy + 4], [colX, jy]], 24);
+    extendPath(P, [[colX, jy], [colX, (jy + colTop) / 2], [colX, colTop]], 16);
+    return P;
+  };
+  if (sHead) solos.push({ P: soloPath(sHead), r: 0.03, el: -1, base: COL.window, from: firstL });
+  if (sFireA) solos.push({ P: soloPath(sFireA), r: 0.11, el: -1, base: COL.fire });
   // every lamp belongs to the nearest place; they go out from its edge inward, the place itself last
   for (const L of lights) {
     let best = null, bd = 1e9;
@@ -259,35 +269,26 @@ export function* southGen(W, H, seed) {
     if (!c) { c = paintSky(W, gh, yl, S, envOf(k)); skyCache.set(k, c); if (skyCache.size > 3) skyCache.delete(skyCache.keys().next().value); }
     return c;
   };
-  const shoreOf = k => {
+  const shoreOf = k => shoreCache.get(k) || run(shoreGen(k));
+  // the sky shore's canvas for a time of day, in steps (prepared ahead of the reveal, a step a frame)
+  function* shoreGen(k) {
     let sc = shoreCache.get(k);
     if (sc) return sc;
     const env = envOf(k), hazeCol = skyAt(env, 0.3, 0.5);
-    // the land overhead is lit only near the horizon (by the plain's glow); far above, its underside
-    // goes dark, so a tall frame does not get a ceiling of rock pressing down
-    const raw = shore.layer.canvas('s' + k, skyShorePalette(mix3(hazeCol, [104, 128, 152], 0.7)));
+    const raw = yield* shore.layer.canvasGen('s' + k, skyShorePalette(mix3(hazeCol, [104, 128, 152], 0.7)), 36);
+    yield;
     sc = makeCanvas(W, raw.height); const sg = ctx2d(sc);
     sg.drawImage(raw, 0, 0);
-    const y1 = yl - Math.min(yh, 124) * 1.05, y0 = y1 - 46;
-    if (y1 > 0) {
-      const top = skyAt(env, 1, 0.5).map(v => Math.round(v * 1.25));
-      sg.globalCompositeOperation = 'source-atop';
-      for (let y = 0; y < Math.ceil(y1); y++) {
-        const a = 1 - smooth(y0, y1, y + 0.5);
-        if (a <= 0.004) continue;
-        sg.fillStyle = `rgba(${top[0]},${top[1]},${top[2]},${a.toFixed(3)})`;
-        sg.fillRect(0, y, W, 1);
-      }
-      sg.globalCompositeOperation = 'source-over';
-    }
+    yield;
     // its town lights, pre-rendered (static), faded with the land
     for (const L of shore.lights) {
-      const a = L.b * smooth(hazeEdgeY + 2, hazeEdgeY - 10, L.y) * smooth(y1 - 30, y1, L.y) * (1 - smooth(30, 75, L.Z) * 0.5);
+      const a = L.b * smooth(hazeEdgeY + 2, hazeEdgeY - 10, L.y) * (1 - smooth(30, 75, L.Z) * 0.5);
       if (a < 0.03) continue;
       if (L.win) { px(sg, L.x, L.y, COL.warmJade, a); glow(sg, L.x, L.y, 2, scale3(COL.warmJade, 0.3), a); continue; }
       px(sg, L.x, L.y, COL.jadeCore, a);
       if (L.b > 0.8 && L.Z < 50) glow(sg, L.x, L.y, 2, scale3(COL.jade, 0.35), a);
     }
+    yield;
     // the far edge dissolves into the cloud sea instead of ending on a line
     sg.globalCompositeOperation = 'destination-out';
     for (let y = hazeEdgeY + 10; y < sc.height; y++) {
@@ -305,8 +306,8 @@ export function* southGen(W, H, seed) {
     sg.globalCompositeOperation = 'source-over';
     shoreCache.set(k, sc); if (shoreCache.size > 2) shoreCache.delete(shoreCache.keys().next().value);
     return sc;
-  };
-  let wavePrep = null, deckPrep = null;
+  }
+  let wavePrep = null, deckPrep = null, shorePrep = null;
   function* waveBaseGen(k) {
     const nrm = ground.layer.pixels(groundPalOf(k)); yield;
     const e = envOf(k), far = ground.layer.pixels(palette(GROUND_MATS, envGOf(k), { haze: e.mist, far: true })); yield;
@@ -318,7 +319,7 @@ export function* southGen(W, H, seed) {
     yield* back.layer.canvasGen('f' + k, foliagePalOf(k)); yield;
     yield* frontC.layer.canvasGen('f' + k, foliagePalOf(k)); for (const sp of stir) sp.layer.canvas('f' + k, foliagePalOf(k)); yield;
     if (withNear) { yield* nearL.canvasGen('n' + k, foliagePalOf(k)); yield; }
-    if (withShore) { shoreOf(k); yield; }
+    if (withShore) { yield* shoreGen(k); yield; }
   }
   let vign = null, vignKey = '';
   const shot = {
@@ -354,7 +355,11 @@ export function* southGen(W, H, seed) {
         drawTwinklers(g, stars, t, env.stars, 0, oFar, fade);
       }
 
-      // the sky shore: materialises as the clouds part
+      // the sky shore: prepared a step a frame while the lights rise; materialises as the clouds part
+      if (!shoreCache.has(key) && reveal <= 0 && (rise > 0.2 || skyK > 0)) {
+        if (!shorePrep || shorePrep.key !== key) { shorePrep = shoreGen(key); shorePrep.key = key; }
+        if (shorePrep.next().done) shorePrep = null;
+      }
       if (reveal > 0) {
         const sc = shoreOf(key);
         g.globalAlpha = reveal; g.drawImage(sc, 0, oFar); g.globalAlpha = 1;
@@ -490,10 +495,16 @@ export function* southGen(W, H, seed) {
       for (let k = 0; k < E.length; k++) {
         const el = E[k];
         if (el < 0) continue;
-        const d = el * SPEED, past = d - S.join;
-        if (past > MERGE) continue;                               // gone into the column
+        const d = el * speed, past = d - S.join;
+        if (past > merge) {                                       // gone into the column: a faint spark goes on up it
+          if ((k & 1) || d > P.len) continue;
+          pathAt(P, d);
+          const a = 0.2 * (1 - smooth(P.len - 16, P.len, d)) * cover(PT[0], PT[1], closed);
+          if (a > 0.02) AB.px(PT[0], PT[1], COL.jadeCore, a);
+          continue;
+        }
         if (past > 0) feed++;
-        let a = smooth(0, 1.4, el) * (past > 0 ? 1 - smooth(0, MERGE, past) : 1);
+        let a = smooth(0, 1.4, el) * (past > 0 ? 1 - smooth(0, merge, past) : 1);
         pathAt(P, d);
         const x = PT[0] + Math.sin(el * 0.8 + k * 1.7 + S.ph) * 0.4 * (1 - smooth(-20, 0, past)), y = PT[1];
         a *= cover(x, y, closed);
@@ -502,7 +513,7 @@ export function* southGen(W, H, seed) {
     }
     for (const L of solos) {
       if (L.el < 0) continue;
-      const P = L.S.path, d = L.el * SPEED;
+      const P = L.P, d = L.el * speed * 1.5;
       if (d > P.len) continue;
       pathAt(P, d);
       const x = PT[0], y = PT[1];
@@ -524,12 +535,13 @@ export function* southGen(W, H, seed) {
     RC2[0] = RC[0] * 0.74; RC2[1] = RC[1] * 0.74; RC2[2] = RC[2] * 0.74;
     const xi = Math.round(x - 0.5), yi = Math.round(y - 0.5);
     RC3[0] = RC[0] * 0.3; RC3[1] = RC[1] * 0.3; RC3[2] = RC[2] * 0.3;
-    AB.glow2(xi, yi, solo ? 6 : 5, RC3, br);
-    for (let q = 1; q <= 2; q++) {
+    AB.glow2(xi, yi, solo ? 7 : 5, RC3, br * (solo ? 1.3 : 1));
+    const nt = solo ? 5 : 2;                         // a trail along its path (the first two: longer)
+    for (let q = 1; q <= nt; q++) {
       pathAt(P, d - q * 2.2);
-      AB.px(Math.round(PT[0] - 0.5), Math.round(PT[1] - 0.5) + 1, RC, br * (q === 1 ? 0.32 : 0.14), 2, 1);
+      AB.px(Math.round(PT[0] - 0.5), Math.round(PT[1] - 0.5) + 1, RC, br * (0.36 - q * (0.3 / nt)), 2, 1);
     }
-    AB.px(xi, yi, RC2, br, 2, 2);
+    AB.px(xi, yi, solo ? RC : RC2, br, 2, 2);
   }
 
   // the column: a soft, faint haze of light standing over the town, ripples running up it
@@ -610,7 +622,7 @@ export function* southGen(W, H, seed) {
 
 const PACE = 1.25;            // seconds between two lights of one procession (rise animated over ~30 s)
 const SPEED = 6.5;            // px per second along the path: a walking pace, seen from the pass
-const MERGE = 14;             // px after the join over which a light fades into the column
+const MERGE = 14;             // px after the join over which a light fades into the column (more on tall frames)
 const PADDY_LIGHT = [255, 226, 178];
 const RC = [0, 0, 0], RC2 = [0, 0, 0], RC3 = [0, 0, 0];
 
