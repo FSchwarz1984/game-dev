@@ -12,8 +12,9 @@
 # tools/godot/xvfb-playtest.sh. User arguments after "--":
 #   --shot=<png>  save the engine's own viewport capture at frame --shot-frame (default 120)
 #   --quit-secs=<n>  quit after n seconds and print FPS_AVG
-# export_presets.cfg gets Linux, Windows Desktop and Android presets pointing at the custom
-# templates in --templates (default $GODOT_OUT/templates = /home/user/godotengine/out/templates).
+# export_presets.cfg gets Linux, Windows Desktop and Android presets. They use the official templates
+# installed by setup-godot.sh (~/.local/share/godot/export_templates/4.7.2.stable); --templates DIR
+# points custom_template/* at source-built ones instead (build-templates.sh, fallback).
 # Needs Pillow, fontTools (pip install fonttools) and ffmpeg with libvorbis. Noto Sans CJK (OFL) is
 # taken from --noto, or sparse-cloned from github.com/notofonts/noto-cjk into
 # $GODOT_HOME/fonts/noto-cjk (two subset OTFs, about 13 MB).
@@ -124,6 +125,15 @@ func _process(delta: float) -> void:
 	dbg.text = "fps %d  pos %d,%d  %s  %s" % [Engine.get_frames_per_second(), hero.position.x, hero.position.y, RenderingServer.get_current_rendering_method(), _last]
 	if _shot != "" and _frame == _shot_frame:
 		var img := get_viewport().get_texture().get_image()
+		if get_viewport().use_hdr_2d:
+			# With 2D HDR the viewport texture holds linear (half-float) values; the window shows them
+			# converted to sRGB. Image.linear_to_srgb() only takes 8-bit data (banding), so convert
+			# per pixel in float.
+			img.convert(Image.FORMAT_RGBAF)
+			for y in img.get_height():
+				for x in img.get_width():
+					img.set_pixel(x, y, img.get_pixel(x, y).linear_to_srgb())
+			img.convert(Image.FORMAT_RGBA8)
 		var err := img.save_png(_shot)
 		print("SHOT %s %dx%d err=%d" % [_shot, img.get_width(), img.get_height(), err])
 	if _quit_secs > 0.0 and _elapsed >= _quit_secs:
@@ -398,6 +408,7 @@ run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/show_image=false
 boot_splash/bg_color=Color(0.07, 0.07, 0.09, 1)
+run/flush_stdout_on_print=true
 
 [display]
 
@@ -422,12 +433,14 @@ pointing/emulate_touch_from_mouse=true
 [internationalization]
 
 locale/include_text_server_data=true
+locale/line_breaking_strictness=3
 
 [rendering]
 
 renderer/rendering_method="forward_plus"
 renderer/rendering_method.mobile="mobile"
 textures/canvas_textures/default_texture_filter=0
+textures/vram_compression/import_etc2_astc=true
 2d/snap/snap_2d_transforms_to_pixel=true
 viewport/hdr_2d=true
 environment/defaults/default_clear_color=Color(0.1, 0.1, 0.12, 1)
@@ -448,8 +461,8 @@ export_path="export/linux/GodotToolchainTest.x86_64"
 
 [preset.0.options]
 
-custom_template/debug="@TEMPLATES@/linux_debug.x86_64"
-custom_template/release="@TEMPLATES@/linux_release.x86_64"
+custom_template/debug="@TDEBUG_linux@"
+custom_template/release="@TRELEASE_linux@"
 debug/export_console_wrapper=1
 binary_format/embed_pck=false
 texture_format/s3tc_bptc=true
@@ -471,8 +484,8 @@ export_path="export/windows/GodotToolchainTest.exe"
 
 [preset.1.options]
 
-custom_template/debug="@TEMPLATES@/windows_debug_x86_64.exe"
-custom_template/release="@TEMPLATES@/windows_release_x86_64.exe"
+custom_template/debug="@TDEBUG_windows@"
+custom_template/release="@TRELEASE_windows@"
 debug/export_console_wrapper=1
 binary_format/embed_pck=false
 texture_format/s3tc_bptc=true
@@ -499,8 +512,8 @@ export_path="export/android/GodotToolchainTest.apk"
 
 [preset.2.options]
 
-custom_template/debug="@TEMPLATES@/android_debug.apk"
-custom_template/release="@TEMPLATES@/android_release.apk"
+custom_template/debug="@TDEBUG_android@"
+custom_template/release="@TRELEASE_android@"
 gradle_build/use_gradle_build=false
 gradle_build/export_format=0
 architectures/armeabi-v7a=false
@@ -685,6 +698,18 @@ def subset_font(src, dst, text):
     subset.save_font(font, dst, opts)
 
 
+def presets(templates):
+    """Export presets; custom_template/* stay empty (official templates) unless a dir is given."""
+    names = {"linux": ("linux_release.x86_64", "linux_debug.x86_64"),
+             "windows": ("windows_release_x86_64.exe", "windows_debug_x86_64.exe"),
+             "android": ("android_release.apk", "android_debug.apk")}
+    text = EXPORT_PRESETS
+    for plat, (rel, dbg) in names.items():
+        text = text.replace(f"@TRELEASE_{plat}@", os.path.join(templates, rel) if templates else "")
+        text = text.replace(f"@TDEBUG_{plat}@", os.path.join(templates, dbg) if templates else "")
+    return text
+
+
 def arg(name, default=None):
     return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
 
@@ -695,7 +720,8 @@ def main():
         sys.exit(2)
     out = os.path.abspath(sys.argv[1])
     home = os.environ.get("GODOT_HOME", "/home/user/godotengine")
-    templates = os.path.abspath(arg("--templates", os.path.join(os.environ.get("GODOT_OUT", home + "/out"), "templates")))
+    templates = arg("--templates")
+    templates = os.path.abspath(templates) if templates else None
     noto = arg("--noto") or fetch_noto(os.path.join(home, "fonts", "noto-cjk"))
     for d in ("sprites", "tiles", "fonts", "sfx"):
         os.makedirs(os.path.join(out, d), exist_ok=True)
@@ -703,7 +729,7 @@ def main():
         "project.godot": PROJECT_GODOT,
         "main.gd": MAIN_GD,
         "main.tscn": MAIN_TSCN,
-        "export_presets.cfg": EXPORT_PRESETS.replace("@TEMPLATES@", templates),
+        "export_presets.cfg": presets(templates),
     }
     for name, text in files.items():
         with open(os.path.join(out, name), "w", encoding="utf-8", newline="\n") as f:

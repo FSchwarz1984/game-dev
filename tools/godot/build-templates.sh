@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
+# FALLBACK, not used by default: the toolchain uses the official, SHA512-verified templates from
+# setup-godot.sh (they also include ANGLE and Direct3D 12 on Windows, which this build cannot).
+# Use this only after modifying the engine. Never run here (written 2026-10-14, superseded the same
+# day by the official binaries), so treat it as an untested draft.
 # Builds export templates for the native targets and installs them under the official file names
-# in $GODOT_OUT/templates (default /home/user/godotengine/out/templates):
+# in $GODOT_OUT/templates (default /home/user/godotengine/out/templates); point an export preset's
+# custom_template/release and custom_template/debug at them:
 #   linux   -> linux_release.x86_64, linux_debug.x86_64          (for running exported builds here)
 #   windows -> windows_release_x86_64.exe, windows_debug_x86_64.exe and their _console.exe wrappers
 #              (cross-compiled with mingw-w64, posix threads: apt g++-mingw-w64-x86-64-posix)

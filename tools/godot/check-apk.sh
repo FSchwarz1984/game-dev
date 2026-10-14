@@ -9,9 +9,9 @@ APK="${1:?apk}"
 BT="$ANDROID_HOME/build-tools/36.1.0"
 echo "== size: $(size_of "$APK")"
 echo "== badging"
-"$BT/aapt2" dump badging "$APK" | grep -E "^(package|sdkVersion|targetSdkVersion|application-label|native-code|uses-feature|uses-permission|launchable-activity)" || true
+"$BT/aapt2" dump badging "$APK" 2>/dev/null | grep -E "^(package|sdkVersion|targetSdkVersion|application-label:|native-code|uses-feature|uses-permission|launchable-activity)" || true
 echo "== manifest (orientation 11 = userLandscape, 6 = sensorLandscape, 0 = landscape)"
-"$BT/aapt2" dump xmltree --file AndroidManifest.xml "$APK" \
+"$BT/aapt2" dump xmltree --file AndroidManifest.xml "$APK" 2>/dev/null \
   | grep -E -A1 "screenOrientation|vulkan|rendering.method|minSdkVersion|targetSdkVersion|E: (uses-feature|meta-data|activity)" \
   | grep -E "screenOrientation|vulkan|rendering|SdkVersion|android:name|android:value|android:required|android:version" | sed 's/^ */  /' | head -40
 echo "== largest entries"

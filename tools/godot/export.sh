@@ -26,6 +26,7 @@ export GODOT_ANDROID_KEYSTORE_RELEASE_USER="${GODOT_ANDROID_KEYSTORE_RELEASE_USE
 export GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD="${GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD:-android}"
 
 mkdir -p "$(dirname "$OUTFILE")"
+godot_editor_settings_android
 # Import first: a fresh checkout has no .godot/imported cache, and exporting before the import
 # has finished can miss resources.
 "$GODOT_BIN" --headless --path "$PROJ" --import
