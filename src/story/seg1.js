@@ -150,14 +150,15 @@ export async function prologue(G) {
     au.festival(0.4, { near: 0.8 }); // and the music starts again from another side, as if nothing happened
     await D.wait(1.6);
     D.face('tsuzumi', 'back');
-    D.shot('camphorFull', { speed: 0.6 });
-    await D.wait(3.2);
+    D.shot('saddle', { speed: 0.7 });           // up on the saddle, the camphor: where the music seems to come from
+    await D.wait(3.4);
   });
   blockDown.block = '囃子是从上面来的。';
 
   // ---- 3 the camphor: lean the load on the roots and climb
   const camphor = f.add({
-    id: 'camphor', kind: 'camphor', name: '大楠', x: P.camphor[0], z: P.camphor[1], r: 1.6, solid: true, priority: 1, sacred: true, q: { v: 9 },
+    // the trunk is several metres wide: the map blocks it; this only makes it choosable from its foot
+    id: 'camphor', kind: 'camphor', name: '大楠', x: P.camphor[0], z: P.camphor[1], r: P.camphorR || 3.4, priority: 1, sacred: true, q: { v: 9 },
     ctx: { label: () => '爬', run: () => { climb(G); return '爬'; } },
   });
   G.hud.tip('climb', G.touch ? '点右下角的大键：爬' : 'E：爬', camphor);
@@ -296,7 +297,7 @@ export async function day1(G) {
   const load = f.add({ id: 'load', kind: 'load', name: '货', x: P.loadSpot[0], z: P.loadSpot[1], r: 0.45, solid: true, deep: true });
   const frame = f.add({ id: 'frame', kind: 'frame', name: '旧背負子', x: P.frame[0], z: P.frame[1], r: 0.4, priority: 1, q: { w: 0 }, base: { w: 3 }, material: 'wood' });
   const shrine = f.add({ id: 'shrine', kind: 'shrine', name: '祠', x: P.shrine[0], z: P.shrine[1], r: 0.9, solid: true, sacred: true, priority: 0 });
-  f.add({ id: 'camphor', kind: 'camphor', name: '大楠', x: P.camphor[0], z: P.camphor[1], r: 1.6, solid: true, sacred: true, q: { v: 9 }, targetable: false });
+  f.add({ id: 'camphor', kind: 'camphor', name: '大楠', x: P.camphor[0], z: P.camphor[1], r: P.camphorR || 3.4, sacred: true, q: { v: 9 }, targetable: false });
   for (const [i, r] of P.rocks.entries()) f.add({ id: 'rock' + i, kind: 'rock', name: '石', x: r[0], z: r[1], r: 0.4, q: { w: 2 }, material: 'stone' });
   stage.prop('load').visible = true;
   stage.prop('lantern9').attachTo = 'load';

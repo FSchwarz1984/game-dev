@@ -54,7 +54,7 @@ export async function createStage({ root, field, vistaView, onProgress = null })
     dosojinZone: { x: 116.6, z: 71.2, r: 2.4 },
     graves: G9.map(g => [g.x, g.z]), gravesStand: O.graves.stand ? [O.graves.stand.x, O.graves.stand.z] : [82.2, 60.4],
     gravesZone: { x0: Math.min(...G9.map(g => g.x)) - 2, x1: Math.max(...G9.map(g => g.x)) + 3.2, z0: G9[0].z - 1.4, z1: G9[0].z + 3.0 },
-    camphor: [O.camphor.x, O.camphor.z], camphorFoot: [O.camphor.climb[0].x, O.camphor.climb[0].z + 0.5], loadSpot: [O.load.x, O.load.z],
+    camphor: [O.camphor.x, O.camphor.z], camphorR: O.camphor.r, camphorFoot: [O.camphor.climb[0].x, O.camphor.climb[0].z + 0.5], loadSpot: [O.load.x, O.load.z],
     wake: [O.load.x - 0.9, O.load.z + 0.8], hut: [O.hut.x, O.hut.z], hutDoor: [O.hut.door.x, O.hut.door.z + 0.9], frame: [O.oldBackFrame.x, O.oldBackFrame.z],
     shrine: [O.shrine.x, O.shrine.z], beam: [O.shrine.beam.x, O.shrine.beam.z], shrineZone: { x: O.shrine.beam.x - 0.6, z: O.shrine.beam.z + 0.8, r: 3.2 },
     rocks: [[53.2, 39.6], [46.1, 40.4]],
