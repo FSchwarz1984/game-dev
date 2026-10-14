@@ -71,58 +71,59 @@ qmq
 .qq..qq.
 q..qq..q
 
-== m_shout @ 39,54
-.qqqqqqqq.
-qyyyyyyyyq
-qmmmmmmmmq
-qmmmmmmmmq
-qmmnnnnmmq
-.qnnnnnnq.
-..qqqqqq..
+== m_shout @ 40,54
+.qqqqqq.
+qyyyyyyq
+qmmmmmmq
+qmmmmmmq
+qmnnnnmq
+.qnnnnq.
+..qqqq..
 
-== m_teeth @ 39,55
-.qqqqqqqq.
-qyyqyyqyyq
-qyyqyyqyyq
-qq......qq
+== m_teeth @ 40,55
+..qqqq..
+.qyyyyq.
+qmmmmmmq
+q......q
 
 # ---- tears: streams from each eye's outer corner down the cheek
-== tearN @ 22,45
-.cz.
-.cCz
-.cCz
-cCz.
-cCz.
-cCz.
-.cCz
-.cCz
-.cCz
-.zCCz
-.zCCz
-..zz.
+== tearN @ 23,45
+.cz..
+.cCz.
+.cCz.
+.cCz.
+..cCz
+..cCz
+..cCz
+...cCz
+...cCz
+...zCCz
+...zCCz
+....zz.
 
-== tearF @ 51,45
-.cz.
-.cCz
-.cCz
-..cCz
-..cCz
-..cCz
-.cCz
-.cCz
-.zCCz
-..zz.
+== tearF @ 50,45
+..cz.
+.cCz.
+.cCz.
+.cCz.
+.cCz.
+cCz..
+cCz..
+cCz..
+zCCz.
+zCCz.
+.zz..
 
 # ---- blush
 == blush @ 23,48
 .bbbbb.......................bbbb.
 bbbbbbb.....................bbbbbb
 
-== blush_hatch @ 22,47
-..p.p.p.........................p.p.p.
-.pbpbpb........................pbpbpb.
-pbpbpb........................pbpbpb..
-.p.p.p........................p.p.p...
+== blush_hatch @ 23,47
+..pbpbp........................pbpbp.
+.pbpbpb.......................pbpbpb.
+pbpbpb.......................pbpbpb..
+.p.p.p.......................p.p.p...
 
 # ---- sweat drop (temple, far side)
 == sweat @ 57,35
@@ -145,26 +146,27 @@ xXx.xXx
 .xx.xx.
 
 # ---- puffed cheek (pout): the far cheek bulges past the jaw line
-== puffF @ 50,48
-....tq..
-....ttq.
-...tttq.
-...tttq.
-...tttq.
-...ttq..
-..tttq..
-..ttq...
-.ttq....
-tqq.....
+== puffF @ 47,49
+.......stq.
+......sstq.
+.....ssstq.
+.....sstq..
+....ssstq..
+...ssstq...
+..ssstq....
+...stq.....
+..stq......
+.tq........
 
 == puffN @ 22,51
-.qt........
-.qtt.......
-..qss......
-..qsss.....
-...qsss....
-....qsss...
-......qqs..
+..qs...........
+..qss..........
+...qss.........
+....qss........
+.....qss.......
+......qqss.....
+........qqs....
+..........qqqq.
 
 # ======== eyes (house style, every character; iris colours come from each palette) ========
 # near eye = viewer's left (outer corner on the left), 11 px wide at x22; far eye = 9 px at x46. Rows 36-46.
@@ -282,7 +284,7 @@ kk.EllEEew.
 .kkkk....
 jkEEkkk..
 jvEEEEkkk
-.wEllE.kk
+.wEllEekk
 .wellEee.
 .weeEEee.
 .weeeEei.

@@ -139,6 +139,20 @@ func test_a_held_loop_ends_after_its_hold_and_a_pose_at_the_scenes_end() -> void
 	a.free()
 
 
+func test_the_vista_limb_poses_have_her_animations_from_behind() -> void:
+	# the tree-top vista asks for "sit", "stand" and "shout" (vista.gd set_pose) and shows her from
+	# behind; each must be a drawn animation, not a fallback to idle (knowledge/20 §6)
+	var a := Actor.new("tsuzumi")
+	a.face = "back"
+	for p in ["sit", "stand", "shout"]:
+		a.play(p, {"loop": true})
+		a.tick(DT)
+		eq(a.state_name(), "pose", "%s holds" % p)
+		check(a.anim_name.ends_with("_back"), "%s: %s is seen from behind" % [p, a.anim_name])
+		check(not a.anim_name.begins_with("idle"), "%s is drawn (%s)" % [p, a.anim_name])
+	a.free()
+
+
 func test_locomotion_follows_her_body() -> void:
 	var f := Field.new({"profile": TestCase.profile("draft")})
 	var a := Actor.new("tsuzumi", f.player)

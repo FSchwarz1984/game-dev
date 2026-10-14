@@ -132,26 +132,21 @@ abmba..
 """
 # flowers (accent colours), tiny and sparse
 G["daisy"] = """
-.W.
-WYW
-.Wm
-..1
+W.
+.m
 """
 G["yellow"] = """
-YY.
-Ya.
-.1.
+Y.
+.a
 """
 G["tsuyukusa"] = """
-B.B.
-.Bm.
-..1.
+B.
+Bm
 """
 G["nadeshiko"] = """
-P.P
-.P.
-.a.
-.1.
+.P
+P.
+.a
 """
 # stones and pebbles (light top-left, dark bottom-right)
 G["pebble"] = """

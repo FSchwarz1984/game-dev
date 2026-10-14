@@ -1,46 +1,66 @@
-# Saji's own parts. Same face geometry as the others. Brows lie over her spiky bangs (rows 30-34), drawn in the
-# hair's darkest red so they read on the red hair.
+# Saji's own parts. Same face geometry as the others. Her brows lie over the spiky bangs (rows 29-33): dark red
+# strokes on a clean one-pixel field of the hair's mid red, so the bangs' strand texture never tangles with them.
 
-== bN_neutral @ 23,32
-..OOOOO.
-OO.....O
+== bN_neutral @ 22,29
+..MMMMMM..
+.MMOOOOMM.
+.MOMMMMOM.
+.MM....MM.
 
-== bF_neutral @ 47,32
-.OOOO..
-O....OO
+== bF_neutral @ 46,29
+.MMMMMM..
+MMOOOOMM.
+MOMMMMOMM
+MM....MM.
 
-== bN_up @ 23,30
-..OOOO..
-.O....O.
-O.......
+== bN_up @ 22,28
+..MMMMMM..
+.MMOOOOMM.
+MMOMMMMOMM
+MOMM..MMOM
+MM......MM
 
-== bF_up @ 47,30
-..OOO..
-.O...O.
-......O
+== bF_up @ 46,28
+.MMMMMM..
+MMOOOOMM.
+MOMMMMOMM
+OMM..MMOM
+MM....MMM
 
-== bN_sad @ 23,31
-......OO
-....OO..
-.OOO....
+== bN_sad @ 22,29
+.....MMMM.
+...MMMOOMM
+.MMMOOMMM.
+MOOOMM....
+MMMM......
 
-== bF_sad @ 47,31
-OO.....
-..OO...
-....OOO
+== bF_sad @ 46,29
+MMMM.....
+MMOOMMM..
+.MMMOOMMM
+...MMMOOO
+.....MMMM
 
-== bN_angry @ 23,31
-OO......
-..OOO...
-.....OOO
+== bN_angry @ 22,29
+MMMM......
+MOOOMM....
+MMMMOOMMM.
+...MMMOOOM
+.....MMMMM
 
-== bF_angry @ 47,31
-.....OO
-..OOO..
-OO.....
+== bF_angry @ 46,29
+.....MMMM
+...MMOOOM
+.MMMOOMMM
+MOOOMMM..
+MMMMM....
 
-== bN_flat @ 23,32
-.OOOOOOO
+== bN_flat @ 22,30
+MMMMMMMMM.
+MOOOOOOOM.
+MMMMMMMMM.
 
-== bF_flat @ 47,32
-OOOOOO.
+== bF_flat @ 46,30
+.MMMMMMMM
+.MOOOOOOM
+.MMMMMMMM

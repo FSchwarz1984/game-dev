@@ -107,7 +107,7 @@ def ring_frames(tan, ref=None):
 
 
 def tube(spine: Spine, n_around=24, rfun=None, cap_start=False, cap_end=True, ref=None,
-         ring_offset=None, end_point=True, yscale=None):
+         ring_offset=None, end_point=True, yscale=None, u_mode='arc'):
     """Build a tube. rfun(theta (n,), k, frac, spine) -> radius (n,) for ring k; default circular.
     ring_offset(k, frac) -> extra world offset of the ring centre.
     Returns (MeshData, info) where info holds the grid (positions, normals, theta, s) for painting.
@@ -146,9 +146,17 @@ def tube(spine: Spine, n_around=24, rfun=None, cap_start=False, cap_end=True, re
     if bad.any():
         nrm[bad] = normalize(radial[bad] + 1e-9)
     NRM = np.concatenate([nrm, nrm[:, :1]], axis=1)
-    # UV: u = arc length around each ring; v = arc length along each column
-    seg_u = np.linalg.norm(np.diff(P, axis=1), axis=2)
-    U = np.concatenate([np.zeros((m, 1)), np.cumsum(seg_u, axis=1)], axis=1)
+    # UV: u around, v = arc length along each column.
+    #  u_mode 'arc':   u = arc length around each ring (exact density, lines spiral on a taper)
+    #  u_mode 'front': u = (theta - pi) * spine radius: zero at the front (theta = pi faces the
+    #                  camera), lines of constant u stay straight in front and fan out gently where
+    #                  the tube flares, like bark does; the seam is at the back
+    if u_mode == 'front':
+        thf = np.concatenate([th, [2 * math.pi]])
+        U = (thf[None, :] - math.pi) * spine.rad[:, None]
+    else:
+        seg_u = np.linalg.norm(np.diff(P, axis=1), axis=2)
+        U = np.concatenate([np.zeros((m, 1)), np.cumsum(seg_u, axis=1)], axis=1)
     seg_v = np.linalg.norm(np.diff(P, axis=0), axis=2)
     V = np.concatenate([np.zeros((1, n_around + 1)), np.cumsum(seg_v, axis=0)], axis=0)
     cols = n_around + 1

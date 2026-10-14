@@ -31,6 +31,7 @@ var blockers: Array = []
 var route: Array[Vector2] = []
 var route_i := 0
 var keys_down := {}
+var _haze_h := 0.0
 
 
 func _ready() -> void:
@@ -60,6 +61,11 @@ func _ready() -> void:
 	pv.world_root.add_child(props_root)
 	_load_catalog()
 	_place_props()
+	var rocks := W3Rocks.new()
+	rocks.name = "Rocks"
+	pv.world_root.add_child(rocks)
+	rocks.build(terrain, terrain.info["placements"])
+	blockers.append_array(rocks.blockers)
 	_spawn_characters()
 	focus = her.pos
 	if args.has("at"):
@@ -125,11 +131,33 @@ func _place_props() -> void:
 		if kind != "camphor":
 			inst.scale = Vector3.ONE * sc
 		props_root.add_child(inst)
+		if kind == "camphor":
+			_scale_cutaway(inst, 5.0)
 		for fp in a.get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, inst.rotation.y) * sc
 			blockers.append([pos + off, float(fp[2]) * sc])
 		n += 1
 	print("PROPS placed=", n)
+
+
+## Big canopies fade over a wide disc while she is under them (foreground that thins out).
+func _scale_cutaway(n: Node, k: float) -> void:
+	if n is GeometryInstance3D:
+		var gi := n as GeometryInstance3D
+		var mats: Array = []
+		if gi.material_override:
+			mats.append(gi.material_override)
+		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh:
+			var mesh := (gi as MeshInstance3D).mesh
+			for si in mesh.get_surface_count():
+				var sm := (gi as MeshInstance3D).get_active_material(si)
+				if sm:
+					mats.append(sm)
+		for m in mats:
+			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("foliage"):
+				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
+	for c in n.get_children():
+		_scale_cutaway(c, k)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -281,6 +309,9 @@ func _process(dt: float) -> void:
 	_follow_saji(dt)
 	_lay(her_shadow, her.pos)
 	_lay(saji_shadow, saji.pos)
+	# aerial perspective measured from her: the land that falls away below her hazes over
+	_haze_h = lerpf(_haze_h, her.pos.y, clampf(dt * 1.5, 0.0, 1.0)) if frame > 1 else her.pos.y
+	RenderingServer.global_shader_parameter_set("w3_haze", Vector4(_haze_h, 1.5, 34.0, 0.8))
 	var chest := her.chest()
 	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 26.0))
 	pv.update_camera(dt)

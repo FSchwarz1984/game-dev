@@ -24,6 +24,7 @@ uniform float wind_px = 1.0;                     // sway at flex 1, native px (k
 uniform float porosity : hint_range(0.0, 1.0) = 0.5;
 uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // sunlit rim band (lighter, warmer)
 uniform bool cutaway = true;
+uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 v_wp;
@@ -67,7 +68,7 @@ void fragment() {
 	if (tx.a < 0.5) {
 		discard;
 	}
-	if (cutaway && w3_cutaway(v_wp, cell)) {
+	if (cutaway && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
 		discard;
 	}
 	vec3 wn = normalize(v_wn);

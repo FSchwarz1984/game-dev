@@ -92,7 +92,8 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     water_k = np.where(pool_in, 1, water_k)
     # stream surface along its line, a little wider than the bed so the banks hide the edge
     sd2, sarc, ssurf = geom.polyline_field(X, Z, SP, sfloor - L["stream"]["depth"] * 0.45)
-    in_stream = (sd2 < L["stream"]["width"] * 0.5 + 0.9) & (~pool_in)
+    in_stream = (sd2 < L["stream"]["width"] * 0.5 + 0.3) & (~pool_in) & (h < ssurf + 0.02)
+    in_stream = ndimage.binary_dilation(in_stream, iterations=1) & (sd2 < L["stream"]["width"] * 0.5 + 0.9) & (~pool_in)
     water_h = np.where(in_stream, ssurf, water_h)
     water_k = np.where(in_stream, 2, water_k)
     # flow direction: along the stream's tangent at the nearest point
@@ -137,6 +138,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
         "height": grid_lookup(h), "slope_deg": grid_lookup(slope), "path_dist": grid_lookup(path_all),
         "pad_dist": grid_lookup(pad_all), "water_dist": grid_lookup(water_dist),
         "in_zone": lambda name, x, z: bool(grid_lookup(zones[name])(x, z)),
+        "aspect": grid_lookup(np.arctan2(-gx_, -gz_)),      # yaw facing downhill
     }
     plc = placement.place(L, ctx, rng)
     for p in plc:

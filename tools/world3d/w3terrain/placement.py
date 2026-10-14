@@ -141,6 +141,40 @@ def place(L, ctx, rng):
         return 14 < s < 44 and keep_clear(x, z, 1.4) and far_from_markers(x, z, 4.0) and noise.value(np.array(x / 9.0), np.array(z / 9.0), 21) > 0.55
     for p in poisson(rng, (b[0], b[1], b[2], b[3]), 4.5, rock_ok)[:160]:
         out.append({"kind": "boulder", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.5, 1.4)), "variant": int(rng.integers(0, 8))})
+    # rock outcrops where the ground is too steep to hold soil (the spur, the ravine head, banks)
+    def outcrop_ok(x, z):
+        sl = ctx["slope_deg"](x, z)
+        return sl > 33.0 and ctx["path_dist"](x, z) > 1.0 and ctx["pad_dist"](x, z) > 0.4 and ctx["water_dist"](x, z) > 0.6
+    for p in poisson(rng, (b[0], b[1], b[2], b[3]), 2.3, outcrop_ok)[:700]:
+        sl = ctx["slope_deg"](p[0], p[1])
+        k = np.clip((sl - 33.0) / 25.0, 0.0, 1.0)
+        size = 1.1 + 2.2 * k * rng.uniform(0.6, 1.0)
+        out.append({"kind": "outcrop", "x": float(p[0]), "z": float(p[1]), "rot": float(ctx["aspect"](p[0], p[1]) + rng.uniform(-0.5, 0.5)),
+                    "sx": float(size * rng.uniform(1.0, 1.5)), "sy": float(size * rng.uniform(0.55, 0.8)), "sz": float(size * rng.uniform(0.7, 1.0)),
+                    "sink": 0.42, "variant": int(rng.integers(0, 16))})
+    # the face behind the spring: slabs along it
+    F = np.asarray(L["spring"]["rock_face"], np.float64)
+    from .geom import resample_polyline
+    Pf, _ = resample_polyline(F, 1.3)
+    for q in Pf:
+        out.append({"kind": "rock_slab", "x": float(q[0]), "z": float(q[1] - 0.6), "rot": float(rng.uniform(-0.3, 0.3)),
+                    "sx": float(rng.uniform(1.3, 2.0)), "sy": float(rng.uniform(1.6, 2.4)), "sz": float(rng.uniform(0.9, 1.3)), "sink": 0.25,
+                    "variant": int(rng.integers(0, 16))})
+    # the lookout: its tip is ringed by big rocks below the standing place
+    lk = np.asarray(M["lookout"], np.float64)
+    for k in range(9):
+        a = -np.pi * 0.95 + k * (np.pi * 1.9 / 8.0) + rng.uniform(-0.15, 0.15)
+        r = rng.uniform(2.6, 3.6)
+        x, z = lk[0] + np.cos(a) * r, lk[1] + np.sin(a) * r * 0.85 + 0.6
+        if z < lk[1] - 1.2:
+            continue
+        sz = rng.uniform(1.8, 2.8)
+        out.append({"kind": "outcrop", "x": float(x), "z": float(z), "rot": float(a + np.pi * 0.5), "sx": float(sz * 1.3), "sy": float(sz * 0.9), "sz": float(sz),
+                    "sink": 0.55, "variant": int(rng.integers(0, 16))})
+    # stepping stones where the old road fords the stream
+    for k in range(5):
+        out.append({"kind": "boulder", "x": float(-3.4 + k * 0.75 + rng.uniform(-0.1, 0.1)), "z": float(-39.4 + k * 0.05 + rng.uniform(-0.25, 0.25)),
+                    "rot": float(rng.uniform(0, 6.28)), "scale": 0.55, "sink": 0.55, "variant": int(rng.integers(0, 16))})
     return out
 
 

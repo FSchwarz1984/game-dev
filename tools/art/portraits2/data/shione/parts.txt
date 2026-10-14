@@ -1,50 +1,69 @@
-# Shione's own parts: eyes (near = viewer's left, outer corner on the left; far = viewer's right, outer corner on
-# the right) and brows. Eyes: near x22-32, far x46-54, rows 36-46.
+# Shione's own parts. Brows lie over her silver bangs (rows 28-33): plum-grey strokes on a clean one-pixel field of
+# the hair's base tone, so the strand texture never tangles with them. Her blush keeps the two red marks on top.
 
-# ---- brows (over the bangs; the bangs' edge is rows 34-36)
-== bN_neutral @ 23,32
-..DDDDD.
-DD.....D
+== bN_neutral @ 22,29
+..LLLLLL..
+.LLDDDDLL.
+.LDLLLLDL.
+.LL....LL.
 
-== bF_neutral @ 47,32
-.DDDD..
-D....DD
+== bF_neutral @ 46,29
+.LLLLLL..
+LLDDDDLL.
+LDLLLLDLL
+LL....LL.
 
-== bN_up @ 23,30
-..DDDD..
-.D....D.
-D.......
+== bN_up @ 22,28
+..LLLLLL..
+.LLDDDDLL.
+LLDLLLLDLL
+LDLL..LLDL
+LL......LL
 
-== bF_up @ 47,30
-..DDD..
-.D...D.
-......D
+== bF_up @ 46,28
+.LLLLLL..
+LLDDDDLL.
+LDLLLLDLL
+DLL..LLDL
+LL....LLL
 
-== bN_sad @ 23,31
-......DD
-....DD..
-.DDD....
+== bN_sad @ 22,29
+.....LLLL.
+...LLLDDLL
+.LLLDDLLL.
+LDDDLL....
+LLLL......
 
-== bF_sad @ 47,31
-DD.....
-..DD...
-....DDD
+== bF_sad @ 46,29
+LLLL.....
+LLDDLLL..
+.LLLDDLLL
+...LLLDDD
+.....LLLL
 
-== bN_angry @ 23,31
-DD......
-..DDD...
-.....DDD
+== bN_angry @ 22,29
+LLLL......
+LDDDLL....
+LLLLDDLLL.
+...LLLDDDL
+.....LLLLL
 
-== bF_angry @ 47,31
-.....DD
-..DDD..
-DD.....
+== bF_angry @ 46,29
+.....LLLL
+...LLDDDL
+.LLLDDLLL
+LDDDLLL..
+LLLLL....
 
-== bN_flat @ 23,32
-.DDDDDDD
+== bN_flat @ 22,30
+LLLLLLLLL.
+LDDDDDDDL.
+LLLLLLLLL.
 
-== bF_flat @ 47,32
-DDDDDD.
+== bF_flat @ 46,30
+.LLLLLLLL
+.LDDDDDDL
+.LLLLLLLL
 
 # ---- blush, Shione's version: keeps the two red marks (x27, x29, rows 48-50) on top
 == blush @ 23,48
@@ -52,8 +71,8 @@ DDDDDD.
 bbbbRbR.....................bbbbbb
 ....r.r...........................
 
-== blush_hatch @ 22,47
-..p.p.p.........................p.p.p.
-.pbpbRbR.......................pbpbpb.
-pbpbpRbR......................pbpbpb..
-.p.p.r.r......................p.p.p...
+== blush_hatch @ 23,47
+..pbpbp........................pbpbp.
+.pbpRbR.......................pbpbpb.
+pbpbRbR......................pbpbpb..
+.p.pr.r......................p.p.p...

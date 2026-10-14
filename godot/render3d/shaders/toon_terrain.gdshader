@@ -86,7 +86,7 @@ vec3 glyph_set(int mat, vec4 e2, vec4 e3, float h) {
 	// returns (start, count, density)
 	if (mat == 0) {
 		float fl = e2.a;
-		if (fl > 0.05 && h < fl * 0.22) return vec3(g_flowers, 0.9);
+		if (fl > 0.05 && h < fl * 0.12) return vec3(g_flowers, 0.7);
 		return vec3(g_grass, 0.18 + 0.5 * e3.b);
 	}
 	if (mat == 1) return vec3(g_dirt, 0.22 + 0.15 * (1.0 - e2.b));

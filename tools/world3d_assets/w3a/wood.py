@@ -54,7 +54,8 @@ def build_limb(L: Limb, seg_px=6.0, step_k=0.6, min_step=0.25, max_step=0.9):
     step = L.step or float(np.clip(rmax * step_k, min_step, max_step))
     L.spine = Spine(L.pts, L.radii, step=step, step_fn=L.step_fn)
     n = L.n_around or int(np.clip(round(2 * math.pi * rmax * TEXEL_PER_M / seg_px), 5, 40))
-    md, info = tube(L.spine, n_around=n, rfun=L.rfun, cap_end=L.cap_end, yscale=L.yscale, ref=-view_back_upright())
+    md, info = tube(L.spine, n_around=n, rfun=L.rfun, cap_end=L.cap_end, yscale=L.yscale, ref=-view_back_upright(),
+                    u_mode='front')
     L.md = md
     L.info = info
     return L
@@ -107,85 +108,81 @@ def offshoots(parent: Limb, R, n, frac_range=(0.45, 0.95), length=(2.0, 4.0), ra
 
 # ------------------------------------------------------------------------------------------------
 # a tiling bark texture, painted at one texel per native pixel
-def bark_texture(seed, size=256, plate_w=(4, 7), plate_h=(7, 20), base='#6f685b', light='#7d7566',
-                 dark='#5e574c', fissure='#3b342f', deep='#2c2623', lichen=('#8f9178', '#a3a58a'),
-                 lichen_p=0.0025, crack_p=0.55, wave=3.0, moss_specks=('#4c5a33',), moss_p=0.002,
-                 top_lip=True):
-    """Vertical plates split by one-texel fissures that meander; horizontal breaks between some
-    plates; a slightly lighter top rim on each plate; rare lichen and moss specks. Tiles both ways.
-    Returns (size, size, 3) uint8."""
-    from .core import hex_rgb, vnoise2
+def bark_texture(seed, size=256, spacing=(3, 6), ridge=('#5d564b', '#6c6557', '#7a7262'), lip='#8a8270',
+                 fissure='#3a332e', deep='#2b2623', lichen=('#8f9178', '#a3a58a'), lichen_p=0.002,
+                 moss=('#4c5a33', '#5a6a3a'), moss_p=0.0015, break_p=0.035, wave=(2.5, 1.2), merge_p=0.25):
+    """Camphor-like bark: one-texel dark fissures running up the trunk, wavy, now and then
+    merging and splitting, with ridges between them (2-3 flat tones per ridge, a lighter lip on one
+    edge), short dark breaks across ridges, rare lichen and moss specks. Tiles both ways (the waves
+    are periodic in y, the fissure set wraps in x). Returns (size, size, 3) uint8."""
+    from .core import hex_rgb
     R = rng(seed)
     S = size
     C = lambda h: np.array(hex_rgb(h), np.float64)
-    img = np.zeros((S, S, 3), np.float64)
-    # columns: widths summing to S
-    widths = []
-    while sum(widths) < S:
-        widths.append(int(R.integers(plate_w[0], plate_w[1] + 1)))
-    widths[-1] -= sum(widths) - S
-    if widths[-1] < plate_w[0]:
-        widths[-2] += widths[-1]
-        widths.pop()
-    edges = np.concatenate([[0], np.cumsum(widths)])
-    ys, xs = np.mgrid[0:S, 0:S]
-    # meander: periodic offset of x by y
-    ph = R.uniform(0, 2 * math.pi, 3)
-    off = (wave * np.sin(2 * math.pi * ys / S * 2 + ph[0]) + 1.4 * np.sin(2 * math.pi * ys / S * 5 + ph[1])
-           + 0.8 * np.sin(2 * math.pi * ys / S * 11 + ph[2]))
-    xw = (xs + np.round(off).astype(int)) % S
-    col = np.searchsorted(edges, xw, side='right') - 1
-    x_in = xw - edges[col]
-    wcol = np.array(widths)[col]
-    # rows per column: heights summing to S, with a per-column phase
-    plate_id = np.zeros((S, S), np.int64)
-    top_row = np.zeros((S, S), bool)
-    crack = np.zeros((S, S), bool)
-    for c in range(len(widths)):
-        hs = []
-        while sum(hs) < S:
-            hs.append(int(R.integers(plate_h[0], plate_h[1] + 1)))
-        hs[-1] -= sum(hs) - S
-        if hs[-1] < 3:
-            hs[-2] += hs[-1]
-            hs.pop()
-        phase = int(R.integers(0, S))
-        bounds = (np.concatenate([[0], np.cumsum(hs)]) + phase) % S
-        m = col == c
-        yy = ys[m]
-        rel = (yy - phase) % S
-        idx = np.searchsorted(np.cumsum(hs), rel, side='right')
-        plate_id[m] = c * 1000 + idx
-        starts = (np.concatenate([[0], np.cumsum(hs)[:-1]]))
-        is_top = (rel - starts[np.clip(idx, 0, len(hs) - 1)]) == 0
-        top_row[m] = is_top
-        # horizontal crack at some plate tops
-        crack_plate = R.uniform(size=len(hs)) < crack_p
-        crack[m] = is_top & crack_plate[np.clip(idx, 0, len(hs) - 1)]
-    # plate tone from a hash of its id
-    h = (plate_id * 2654435761 + seed * 97) % 1000 / 1000.0
-    base_c, light_c, dark_c = C(base), C(light), C(dark)
-    tone = np.where(h[..., None] < 0.33, dark_c, np.where(h[..., None] < 0.75, base_c, light_c))
-    img[:] = tone
-    # soft value variation inside big areas (periodic noise)
-    n = vnoise2(np.cos(2 * math.pi * xs / S) * 3 + 10, np.sin(2 * math.pi * ys / S) * 3 + np.cos(2 * math.pi * ys / S) * 2, seed)
-    img *= (0.94 + 0.12 * n)[..., None]
-    # lighter top rim of each plate (catches the sky)
-    if top_lip:
-        lip = np.roll(top_row, 1, axis=0) & ~crack
-        img[lip] = img[lip] * 1.08
-    # fissures: the first texel of each column, and the cracks
-    fis = x_in == 0
-    img[fis] = C(fissure)
-    deepm = fis & (R.uniform(size=(S, S)) < 0.35)
-    img[deepm] = C(deep)
-    img[crack] = C(fissure)
-    # lichen and moss specks (2x1 or 1x1 clusters)
-    for colhex, p in [(lichen[0], lichen_p), (lichen[1], lichen_p * 0.5)] + [(m, moss_p) for m in moss_specks]:
-        k = int(p * S * S)
-        px = R.integers(0, S, size=k)
-        py = R.integers(0, S, size=k)
-        ok = ~fis[py, px]
-        img[py[ok], px[ok]] = C(colhex)
-        img[py[ok], (px[ok] + 1) % S] = C(colhex)
+    # fissure base positions across the tile
+    xs0 = []
+    x = 0.0
+    while x < S - spacing[0]:
+        xs0.append(x)
+        x += R.uniform(*spacing)
+    xs0 = np.array(xs0)
+    n = len(xs0)
+    y = np.arange(S)
+    # each fissure wanders: two periodic waves (integer cycles per tile so it tiles in y)
+    paths = np.zeros((n, S))
+    for i in range(n):
+        f1, f2 = int(R.integers(1, 4)), int(R.integers(4, 9))
+        p1, p2 = R.uniform(0, 2 * math.pi, 2)
+        paths[i] = xs0[i] + wave[0] * np.sin(2 * math.pi * f1 * y / S + p1) + wave[1] * np.sin(2 * math.pi * f2 * y / S + p2)
+    # some fissures are interrupted: they fade out over a stretch (the ridges on both sides merge)
+    alive = np.ones((n, S), bool)
+    for i in range(n):
+        if R.uniform() < merge_p:
+            start = int(R.integers(0, S))
+            length = int(R.integers(10, 40))
+            idx = (start + np.arange(length)) % S
+            alive[i, idx] = False
+    img = np.zeros((S, S, 3))
+    tone = np.zeros((S, S), int)
+    ridge_c = [C(h) for h in ridge]
+    for yy in range(S):
+        px = np.round(paths[:, yy]).astype(int) % S
+        order = np.argsort(px)
+        px_sorted = px[order]
+        al = alive[order, yy]
+        row = np.zeros(S, int)            # ridge id per x
+        # ridge id: number of alive fissures to the left (wrapping)
+        cuts = px_sorted[al]
+        if len(cuts) == 0:
+            continue
+        rid = np.searchsorted(cuts, np.arange(S), side='right') % len(cuts)
+        img_row = np.zeros((S, 3))
+        for xx in range(S):
+            r = rid[xx]
+            seg_len = 9 + (r * 37) % 15
+            seg = (yy + (r * 53) % seg_len) // seg_len
+            h = (r * 2654435761 + seg * 40503 + seed * 97) % 1000 / 1000.0
+            img_row[xx] = ridge_c[0] if h < 0.3 else (ridge_c[1] if h < 0.8 else ridge_c[2])
+        img[yy] = img_row
+        # fissures and lips
+        for xx in cuts:
+            img[yy, xx % S] = C(fissure) if R.uniform() > 0.3 else C(deep)
+            img[yy, (xx + 1) % S] = C(lip) if R.uniform() < 0.75 else img[yy, (xx + 1) % S]
+    # breaks: short dark dashes across a ridge
+    k = int(break_p * S * S / 6)
+    for _ in range(k):
+        bx = int(R.integers(0, S))
+        by = int(R.integers(0, S))
+        L = int(R.integers(2, 5))
+        for d in range(L):
+            img[by, (bx + d) % S] = C(fissure)
+        img[(by + 1) % S, bx % S] = img[(by + 1) % S, bx % S] * 0.92
+    for cols, p in ((lichen, lichen_p), (moss, moss_p)):
+        for colhex in cols:
+            m = int(p * S * S)
+            px = R.integers(0, S, size=m)
+            py = R.integers(0, S, size=m)
+            for a_, b_ in zip(px, py):
+                img[b_, a_] = C(colhex)
+                img[b_, (a_ + 1) % S] = C(colhex)
     return np.clip(np.round(img), 0, 255).astype(np.uint8)

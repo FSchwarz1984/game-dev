@@ -137,6 +137,9 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_shade_tint", Vector3(0.9, 0.97, 1.1).lerp(Vector3(0.95, 0.98, 1.05), night))
 	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.05, 1.0, 0.92).lerp(Vector3(0.95, 1.0, 1.06), night))
 	environment.background_color = fog
+	# valley mist: thick in the early morning, thin at noon, back at dusk and at night
+	var mist_k := clampf(1.0 - absf(hours - 6.6) / 3.2, 0.0, 1.0) * 0.85 + clampf(1.0 - absf(hours - 19.5) / 3.0, 0.0, 1.0) * 0.45 + night * 0.35 + rain * 0.4
+	RenderingServer.global_shader_parameter_set("w3_mist", Vector4(-11.0, -26.0, clampf(0.25 + mist_k, 0.0, 0.92), 0.012))
 	var c := view.composite
 	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b))
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))

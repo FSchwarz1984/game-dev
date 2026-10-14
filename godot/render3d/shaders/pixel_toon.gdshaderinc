@@ -109,15 +109,19 @@ vec2 w3_wind_px(vec3 anchor, float flex, float amp_px) {
 
 // ------------------------------------------------------------------------------------------------
 // the canopy / roof cut-away around her: true when this fragment hides her and should be stippled out
-bool w3_cutaway(vec3 wp, vec2 cell) {
+bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
 	if (w3_player.w <= 0.0) return false;
 	vec3 d = wp - w3_player.xyz;
 	float toward = dot(d, w3_cam_back());           // > 0: this surface is between her and the camera
 	if (toward < 0.3) return false;
 	vec2 ds = w3_screen(wp) - w3_screen(w3_player.xyz);
 	float r = length(ds * vec2(1.0, 0.8));
-	float k = smoothstep(w3_player.w, w3_player.w * 0.55, r) * smoothstep(0.3, 1.2, toward);
+	float R = w3_player.w * scale;
+	float k = smoothstep(R, R * 0.55, r) * smoothstep(0.3, 1.2, toward);
 	return w3_bayer4(cell) < k * 0.82;
+}
+bool w3_cutaway(vec3 wp, vec2 cell) {
+	return w3_cutaway_r(wp, cell, 1.0);
 }
 
 // ------------------------------------------------------------------------------------------------
