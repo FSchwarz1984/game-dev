@@ -19,7 +19,7 @@ import { prologue, day1 } from '../story/seg1.js';
 import { HUD } from '../ui/hud.js';
 import { createStage } from './stage.js';
 import { loadSave, writeSave } from './save.js';
-import { portraits } from '../art/portraits.js';
+import { portraits } from './portraits.js';
 
 const PX = 20; // native pixels per metre: the audio engine's distances are in pixels
 
