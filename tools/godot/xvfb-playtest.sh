@@ -78,8 +78,9 @@ sleep 3
 # Keyboard: hold the right arrow for 1.5 s (the sprite walks at 80 viewport px/s).
 xdotool keydown Right; sleep 1.5; xdotool keyup Right
 sleep 0.5
-# Mouse click at window (300,300) = viewport (150,150) at 2x: arrives as an emulated
-# InputEventScreenTouch (input_devices/pointing/emulate_touch_from_mouse) and the sprite walks there.
+# Mouse click at window (300,300): at 1280x720 the 480x270 view is drawn at 2x with a (160,90)
+# letterbox offset, so the game sees (70,105). It arrives as an emulated InputEventScreenTouch
+# (input_devices/pointing/emulate_touch_from_mouse) and the sprite walks there.
 xdotool mousemove 300 300 click 1
 sleep 3
 # Drag with the button held: emulated InputEventScreenDrag moves the sprite by the drag delta.

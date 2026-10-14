@@ -2,15 +2,16 @@
 # FALLBACK, not used by default: the toolchain uses the official, SHA512-verified editor from
 # setup-godot.sh. Use this only after modifying the engine. Never ran to completion here: it was
 # stopped at about half way (2026-10-14) when the official binaries became available.
-# Builds the Godot editor for Linux x86_64 from source. It runs headless (import, --export-release/--export-debug,
-# --script) and also runs the game in a real X11 window, e.g. under Xvfb with Mesa's software
-# Vulkan (lavapipe, Forward+/Mobile renderers) or software GL (llvmpipe, Compatibility renderer)
-# for screenshots and playtests (see run-xvfb.sh).
+# Builds the Godot editor for Linux x86_64 from source. It runs headless (import,
+# --export-release/--export-debug, --script) and also runs the game in a real X11 window, e.g. under
+# Xvfb with Mesa's software Vulkan (lavapipe, Forward+/Mobile renderers) or software GL (llvmpipe,
+# Compatibility renderer) for screenshots and playtests (see xvfb-playtest.sh).
 #   bash tools/godot/build-editor.sh          -> $GODOT_OUT/godot-editor (default /home/user/godotengine/out)
 #   XZ=1 bash tools/godot/build-editor.sh     also writes godot-editor.xz and prints its size
 # Then run the other scripts with GODOT_BIN=$GODOT_OUT/godot-editor.
-# Build-time needs: gcc/g++, pkg-config, lld, python3 + SCons. No -dev packages: X11, GL and Vulkan
-# are loaded at run time through Godot's soname wrappers (use_sowrap=yes, the default).
+# Build-time needs (SOURCE=1 bash tools/godot/setup-runtime.sh): gcc/g++, pkg-config, lld,
+# python3 + SCons. No -dev packages: X11, GL and Vulkan are loaded at run time through Godot's
+# soname wrappers (use_sowrap=yes, the default).
 # Run-time needs (apt, installed by setup-runtime.sh): libx11-6 libxcursor1 libxinerama1 libxrandr2
 # libxi6 libxext6 libxrender1 libgl1 libegl1 libvulkan1, Mesa drivers for software rendering.
 # Re-running is cheap: the clone is only verified and SCons rebuilds nothing when up to date.

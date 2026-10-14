@@ -125,10 +125,11 @@ func _process(delta: float) -> void:
 	dbg.text = "fps %d  pos %d,%d  %s  %s" % [Engine.get_frames_per_second(), hero.position.x, hero.position.y, RenderingServer.get_current_rendering_method(), _last]
 	if _shot != "" and _frame == _shot_frame:
 		var img := get_viewport().get_texture().get_image()
-		if get_viewport().use_hdr_2d:
-			# With 2D HDR the viewport texture holds linear (half-float) values; the window shows them
-			# converted to sRGB. Image.linear_to_srgb() only takes 8-bit data (banding), so convert
-			# per pixel in float.
+		if get_viewport().use_hdr_2d and RenderingServer.get_current_rendering_method() != "gl_compatibility":
+			# Forward+/Mobile with 2D HDR: the viewport texture holds linear (half-float) values and the
+			# window shows them converted to sRGB. Image.linear_to_srgb() only takes 8-bit data
+			# (banding), so convert per pixel in float. Compatibility returns sRGB data already
+			# (measured with 4.7.2: converting it again doubles the brightness).
 			img.convert(Image.FORMAT_RGBAF)
 			for y in img.get_height():
 				for x in img.get_width():
