@@ -1,0 +1,179 @@
+{
+ "name": "camphor_a",
+ "kind": "tree",
+ "seed": 1,
+ "ppm": 20.0,
+ "anchor_note": "offsets are px from the anchor (trunk foot on the ground)",
+ "layers": {
+  "ground": {
+   "albedo": "ground.png",
+   "normal": "ground_n.png",
+   "offset": [
+    -101,
+    -27
+   ],
+   "size": [
+    214,
+    67
+   ]
+  },
+  "trunk": {
+   "albedo": "trunk.png",
+   "normal": "trunk_n.png",
+   "data": "trunk_d.png",
+   "offset": [
+    -208,
+    -398
+   ],
+   "size": [
+    412,
+    429
+   ]
+  },
+  "crown": {
+   "albedo": "crown.png",
+   "normal": "crown_n.png",
+   "data": "crown_d.png",
+   "offset": [
+    -270,
+    -450
+   ],
+   "size": [
+    527,
+    321
+   ]
+  },
+  "shadow": {
+   "albedo": "shadow.png",
+   "offset": [
+    -88,
+    -292
+   ],
+   "size": [
+    659,
+    345
+   ],
+   "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
+  }
+ },
+ "crown_sort_px": 73,
+ "core_color": [
+  20,
+  48,
+  30
+ ],
+ "crown_height_m": [
+  9.1,
+  18.43
+ ],
+ "sun_ref": {
+  "elevation_deg": 40.0,
+  "shadow_dir_xz": [
+   0.9243,
+   -0.3818
+  ]
+ },
+ "sway_amp": 1.0,
+ "species": "camphor",
+ "trunk_occluder": true,
+ "layout": "tree",
+ "collision": [
+  [
+   -0.0,
+   -17.0
+  ],
+  [
+   -11.9,
+   -18.6
+  ],
+  [
+   -27.0,
+   -19.7
+  ],
+  [
+   -41.6,
+   -17.5
+  ],
+  [
+   -52.1,
+   -12.6
+  ],
+  [
+   -55.7,
+   -6.3
+  ],
+  [
+   -53.3,
+   0.0
+  ],
+  [
+   -50.4,
+   5.7
+  ],
+  [
+   -45.2,
+   11.0
+  ],
+  [
+   -34.4,
+   14.5
+  ],
+  [
+   -23.1,
+   16.8
+  ],
+  [
+   -12.8,
+   20.0
+  ],
+  [
+   0.0,
+   22.8
+  ],
+  [
+   14.5,
+   22.8
+  ],
+  [
+   28.7,
+   20.9
+  ],
+  [
+   40.3,
+   16.9
+  ],
+  [
+   46.2,
+   11.2
+  ],
+  [
+   50.9,
+   5.7
+  ],
+  [
+   55.8,
+   0.0
+  ],
+  [
+   54.6,
+   -6.1
+  ],
+  [
+   47.3,
+   -11.5
+  ],
+  [
+   37.2,
+   -15.6
+  ],
+  [
+   23.6,
+   -17.2
+  ],
+  [
+   10.7,
+   -16.8
+  ]
+ ],
+ "trunk_radius_m": 2.02
+}

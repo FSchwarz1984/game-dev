@@ -288,6 +288,15 @@ def export(p, outdir, extra_meta=None):
         meta['crown_sort_px'] = 0
     if hasattr(p, 'collision'):
         meta['collision'] = p.collision
+    # what stops her (godot.block_circles): trees by their trunk at the foot (a clump of culms by
+    # the clump), shrubs by their body
+    trunks = [t for t in p.tube_specs if t['part'] == R.PART_TRUNK]
+    if p.kind == 'tree' and trunks:
+        feet = np.array([t['path'][0] for t in trunks])
+        spread = float(np.max(np.linalg.norm(feet[:, [0, 2]], axis=1))) if len(feet) > 1 else 0.0
+        meta['trunk_radius_m'] = round(spread + max(float(t['rr'][0]) for t in trunks), 2)
+    elif p.kind == 'shrub' and p.envs:
+        meta['body_radius_m'] = round(float(p.envs[0][1][0]), 2)
     with open(os.path.join(outdir, 'meta.json'), 'w') as fh:
         json.dump(meta, fh, indent=1)
     return meta

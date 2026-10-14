@@ -220,7 +220,7 @@ def resample(path, step):
 
 
 def tube(cv, path, radius, part, mat, mass=-1, tone=0.0, rfun=None, dens=2.6, u0=0.0, cap=True,
-         cell=-1, extra=None, kz=KZ):
+         cell=-1, extra=None, kz=KZ, ky=1.0):
     """Swept tube along a world polyline. radius: scalar, (N,) per path point, or callable(s01).
     rfun(s_metres, theta, r) -> radius modulation (bark ridges, buttresses). Writes u = metres along
     the tube (from u0), v = angle around it (0 = facing the camera side), tone bias."""
@@ -245,11 +245,13 @@ def tube(cv, path, radius, part, mat, mass=-1, tone=0.0, rfun=None, dens=2.6, u0
     if rfun is not None:
         R = rfun(s[:, None] + u0 + 0 * cos, th[None, :] + 0 * R, R)
     dirs = Nn[:, None, :] * cos[..., None] + Bn[:, None, :] * sin[..., None]
-    sq = np.array([1.0, 1.0, kz])                 # the cross-section's own depth is compressed
+    sq = np.array([1.0, ky, kz])                  # the cross-section's own depth is compressed
     P = pts[:, None, :] + dirs * R[..., None] * sq
     # normals: radial direction corrected for taper and modulation slope (approximate)
     dRds = np.gradient(R, axis=0) / max(1e-6, (s[1] - s[0]) if len(s) > 1 else 1)
     Nw = normalize(dirs - T[:, None, :] * dRds[..., None])
+    if ky != 1.0:   # a flattened cross-section (roots lying on the ground): its real normals
+        Nw = normalize(Nw / np.array([1.0, ky, 1.0]))
     if rfun is not None:   # tilt normals with the angular modulation, so ridges catch the light
         dRdt = np.gradient(R, axis=1) / (th[1] - th[0])
         tang = -Nn[:, None, :] * sin[..., None] + Bn[:, None, :] * cos[..., None]

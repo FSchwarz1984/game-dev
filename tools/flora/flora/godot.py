@@ -1,35 +1,77 @@
 """Godot 4 scenes for the exported plants: one .tscn per plant that the game instances as is.
 
-Scene layout (node origin = the plant's foot on the ground, in world px):
-  <name> (Node2D, y_sort_enabled)            put it in the y-sorted 'things' node
-    ShadowCrown, ShadowTrunk (Sprite2D)      z_index -9, flora_shadow.gdshader (multiply)
+Scene layout (docs/knowledge/18-vegetation.md; node origin = the plant's foot on the ground):
+  <name> (Node2D, y_sort_enabled, flora_plant.gd)   put it in World.things at Proj.sort_px(x, z)
+    ShadowContact, Shadow (Sprite2D)         z_index -9, flora_shadow.gdshader (multiply): contact
+                                             shade, cast shadow (crown + trunk, moves with the sun)
     Ground (Sprite2D)                        z_index -8, roots lying on the ground (if any)
     Trunk (Sprite2D)                         sorted at the foot; big trunks also cut an x-ray hole
     Crown (Sprite2D)                         sorted at the crown's southern edge (crown_sort_px),
                                              foliage.gdshader: sway + x-ray hole
-For shrubs and herbs the body is the 'Crown' node, sorted at the foot.
+For shrubs and herbs the body is the 'Crown' node, sorted at the foot. Every drawn layer uses
+foliage.gdshader, so plants take the same light as the terrain (uniform sun_dir).
 """
-import json
+import math
 import os
 import shutil
 
-from .core import SHADOW_DIR, SUN_ELEV_REF, PPM
+from .core import KZ, PPM, SHADOW_DIR, SUN_ELEV_REF
 
 SRC = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'godot_src')
+SHARED = {'foliage.gdshader': 'shaders', 'flora_shadow.gdshader': 'shaders',
+          'flora_plant.gd': '', 'flora_field.gd': ''}
 
 
 def install_shared(root):
-    """Copy the shaders and scripts into <root>/shaders."""
-    os.makedirs(os.path.join(root, 'shaders'), exist_ok=True)
-    for f in ('foliage.gdshader', 'flora_shadow.gdshader'):
-        shutil.copyfile(os.path.join(SRC, f), os.path.join(root, 'shaders', f))
+    """Copy the shaders and scripts into <root> (shaders/ and the root)."""
+    for f, sub in SHARED.items():
+        d = os.path.join(root, sub)
+        os.makedirs(d, exist_ok=True)
+        shutil.copyfile(os.path.join(SRC, f), os.path.join(d, f))
 
 
 def _color(c):
     return 'Color(%.4f, %.4f, %.4f, 1)' % tuple(v / 255.0 for v in c)
 
 
-def write_scene(meta, plant_dir, res_dir, res_root='res://flora'):
+def block_circles(meta):
+    """Circles (x, z, r in metres from the foot) that stop her: the drawn footprint of the trunk
+    (an ellipse on the ground, wide and shallow) covered by a row of circles. Shrubs: one circle
+    a little inside the body. Herbs and grasses: none (she walks through)."""
+    kind = meta.get('kind')
+    if kind == 'herb':
+        return []
+    if kind == 'shrub':
+        r = meta.get('body_radius_m', 0.0)
+        return [[0.0, 0.0, round(min(r, 0.7) * 0.7, 2)]] if r else []
+    poly = meta.get('collision')
+    if poly:
+        xs = [p[0] / PPM for p in poly]
+        zs = [p[1] / PPM for p in poly]
+        rx = (max(xs) - min(xs)) / 2
+        rz = max(0.12, (max(zs) - min(zs)) / 2)
+        cx = (max(xs) + min(xs)) / 2
+        cz = (max(zs) + min(zs)) / 2
+    else:
+        r = meta.get('trunk_radius_m')
+        if not r:
+            return []
+        rx, rz, cx, cz = r, max(0.12, r * KZ), 0.0, 0.0
+    if rx <= 0.6:                 # a thin trunk: one round post (she never sees the difference)
+        return [[round(cx, 2), round(cz, 2), round(max(rx * 0.8, rz), 2)]]
+    n = max(1, int(math.ceil(rx / rz - 0.5)))
+    if n == 1:
+        return [[round(cx, 2), round(cz, 2), round(max(rx, rz), 2)]]
+    out = []
+    for i in range(n):
+        x = cx - rx + rz + (2 * (rx - rz)) * i / (n - 1)
+        # the ellipse is thinner toward its ends
+        k = math.sqrt(max(0.0, 1 - ((x - cx) / rx) ** 2))
+        out.append([round(x, 2), round(cz, 2), round(max(0.12, rz * max(k, 0.55)), 2)])
+    return out
+
+
+def write_scene(meta, plant_dir, res_dir, res_root='res://art/flora'):
     """meta: render.export() result. plant_dir: where the PNGs are; res_dir: their res:// path."""
     name = meta['name']
     L = meta['layers']
@@ -42,8 +84,9 @@ def write_scene(meta, plant_dir, res_dir, res_root='res://flora'):
         ext.append('[ext_resource type="%s" path="%s" id="%s"]' % (kind, path, rid))
         return rid
 
+    scr = ext_res('Script', res_root + '/flora_plant.gd')
     sh_fol = ext_res('Shader', res_root + '/shaders/foliage.gdshader')
-    sh_shd = ext_res('Shader', res_root + '/shaders/flora_shadow.gdshader')
+    sh_shd = ext_res('Shader', res_root + '/shaders/flora_shadow.gdshader') if 'shadow' in L else None
     tex = {}
     for layer, f in L.items():
         for key in ('albedo', 'normal', 'data'):
@@ -78,16 +121,18 @@ def write_scene(meta, plant_dir, res_dir, res_root='res://flora'):
         ]))
         return sid
 
-    def foliage_mat(layer, occluder, amp, max_off):
+    def lit_mat(layer, occluder=False, amp=0.0, max_off=0):
         sid = 'm_' + layer
         lines = ['[sub_resource type="ShaderMaterial" id="%s"]' % sid,
                  'shader = ExtResource("%s")' % sh_fol]
         if (layer, 'data') in tex:
             lines.append('shader_parameter/sway_data = ExtResource("%s")' % tex[(layer, 'data')])
-        lines += ['shader_parameter/core_color = %s' % _color(meta.get('core_color', [30, 50, 36])),
-                  'shader_parameter/sway_amp = %.2f' % amp,
-                  'shader_parameter/max_offset = %d' % max_off,
-                  'shader_parameter/occluder = %s' % ('true' if occluder else 'false')]
+            lines += ['shader_parameter/core_color = %s' % _color(meta.get('core_color', [30, 50, 36])),
+                      'shader_parameter/sway_amp = %.2f' % amp,
+                      'shader_parameter/max_offset = %d' % max_off]
+        else:
+            lines.append('shader_parameter/has_sway_data = false')
+        lines.append('shader_parameter/occluder = %s' % ('true' if occluder else 'false'))
         sub.append('\n'.join(lines))
         return sid
 
@@ -105,30 +150,34 @@ def write_scene(meta, plant_dir, res_dir, res_root='res://flora'):
             lines.append('material = SubResource("%s")' % material)
         nodes.append('\n'.join(lines))
 
+    blocks = block_circles(meta)
     root = ['[node name="%s" type="Node2D"]' % name, 'y_sort_enabled = true',
+            'script = ExtResource("%s")' % scr,
             'metadata/flora_species = "%s"' % meta.get('species', ''),
             'metadata/flora_kind = "%s"' % meta.get('kind', ''),
-            'metadata/flora_layout = "%s"' % meta.get('layout', 'tree')]
+            'metadata/flora_layout = "%s"' % meta.get('layout', 'tree'),
+            'metadata/flora_crown_sort_px = %d' % int(meta.get('crown_sort_px', 0)),
+            'metadata/flora_block = [%s]' % ', '.join('[%.2f, %.2f, %.2f]' % tuple(c) for c in blocks)]
     if 'collision' in meta:
         root.append('metadata/flora_collision = PackedVector2Array(%s)' % ', '.join(
             '%.1f, %.1f' % (x, y) for x, y in meta['collision']))
     nodes.append('\n'.join(root))
     if 'shadow' in L:
         sprite('ShadowContact', 'shadow', z=-9, material=shadow_mat(2))
-        sprite('ShadowCrown', 'shadow', z=-9, material=shadow_mat(0))
-        sprite('ShadowTrunk', 'shadow', z=-9, material=shadow_mat(1))
+        sprite('Shadow', 'shadow', z=-9, material=shadow_mat(0))
     if 'ground' in L:
-        sprite('Ground', 'ground', z=-8, texture='SubResource("%s")' % canvas_tex('ground'))
+        sprite('Ground', 'ground', z=-8, texture='SubResource("%s")' % canvas_tex('ground'),
+               material=lit_mat('ground'))
     if 'trunk' in L:
         sprite('Trunk', 'trunk', texture='SubResource("%s")' % canvas_tex('trunk'),
-               material=foliage_mat('trunk', True, 0.0, 0) if big_trunk else None)
+               material=lit_mat('trunk', occluder=big_trunk))
     if 'crown' in L:
         sort = int(meta.get('crown_sort_px', 0))
         amp = float(meta.get('sway_amp', 1.0))
         sprite('Crown', 'crown', pos=(0, sort), texture='SubResource("%s")' % canvas_tex('crown'),
-               material=foliage_mat('crown', meta.get('layout') == 'tree', amp, 2 if amp > 1.4 else 1))
+               material=lit_mat('crown', meta.get('layout') == 'tree', amp, 2 if amp > 1.4 else 1))
     text = '[gd_scene format=3]\n\n' + '\n'.join(ext) + '\n\n' + '\n\n'.join(sub) + '\n\n' + '\n\n'.join(nodes) + '\n'
     path = os.path.join(plant_dir, name + '.tscn')
     with open(path, 'w') as fh:
         fh.write(text)
-    return path
+    return path, blocks

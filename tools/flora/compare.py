@@ -6,7 +6,7 @@ all at the same native pixel density, scaled by the same integer factor, on one 
          [--ansimuz <trees_and_bushes png>] [--shot-js <JS game screenshot>] [--shot-new <bench x3 shot>]
          --out <dir>
 JS sprites: dump them with a small node script (src/env/flora1.js PREVIEW(), camphor.js PREVIEW()).
-The new plants are taken from tools/flora/out/godot/flora (run build.py first).
+The new plants are taken from godot/art/flora (run build.py first).
 """
 import argparse
 import json
@@ -18,7 +18,7 @@ from PIL import Image, ImageDraw, ImageFont
 from scipy import ndimage as ndi
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.join(HERE, 'out', 'godot', 'flora')
+ROOT = os.path.join(os.path.dirname(os.path.dirname(HERE)), 'godot', 'art', 'flora')
 BG = (74, 88, 62)
 INK = (232, 226, 205)
 

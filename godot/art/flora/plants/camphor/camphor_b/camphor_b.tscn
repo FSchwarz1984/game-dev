@@ -1,0 +1,108 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://art/flora/flora_plant.gd" id="1_flora_plant"]
+[ext_resource type="Shader" path="res://art/flora/shaders/foliage.gdshader" id="2_foliage"]
+[ext_resource type="Shader" path="res://art/flora/shaders/flora_shadow.gdshader" id="3_flora_shadow"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/ground.png" id="4_ground"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/ground_n.png" id="5_ground_n"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/trunk.png" id="6_trunk"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/trunk_n.png" id="7_trunk_n"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/trunk_d.png" id="8_trunk_d"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/crown.png" id="9_crown"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/crown_n.png" id="10_crown_n"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/crown_d.png" id="11_crown_d"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/camphor/camphor_b/shadow.png" id="12_shadow"]
+
+[sub_resource type="ShaderMaterial" id="m_shadow2"]
+shader = ExtResource("3_flora_shadow")
+shader_parameter/channel = 2
+shader_parameter/ref_elevation = 40.00
+shader_parameter/shadow_dir = Vector2(0.9243, -0.3818)
+shader_parameter/crown_height_px = 284.5
+
+[sub_resource type="ShaderMaterial" id="m_shadow0"]
+shader = ExtResource("3_flora_shadow")
+shader_parameter/channel = 0
+shader_parameter/ref_elevation = 40.00
+shader_parameter/shadow_dir = Vector2(0.9243, -0.3818)
+shader_parameter/crown_height_px = 284.5
+
+[sub_resource type="CanvasTexture" id="ct_ground"]
+diffuse_texture = ExtResource("4_ground")
+normal_texture = ExtResource("5_ground_n")
+texture_filter = 1
+
+[sub_resource type="ShaderMaterial" id="m_ground"]
+shader = ExtResource("2_foliage")
+shader_parameter/has_sway_data = false
+shader_parameter/occluder = false
+
+[sub_resource type="CanvasTexture" id="ct_trunk"]
+diffuse_texture = ExtResource("6_trunk")
+normal_texture = ExtResource("7_trunk_n")
+texture_filter = 1
+
+[sub_resource type="ShaderMaterial" id="m_trunk"]
+shader = ExtResource("2_foliage")
+shader_parameter/sway_data = ExtResource("8_trunk_d")
+shader_parameter/core_color = Color(0.0784, 0.1882, 0.1176, 1)
+shader_parameter/sway_amp = 0.00
+shader_parameter/max_offset = 0
+shader_parameter/occluder = true
+
+[sub_resource type="CanvasTexture" id="ct_crown"]
+diffuse_texture = ExtResource("9_crown")
+normal_texture = ExtResource("10_crown_n")
+texture_filter = 1
+
+[sub_resource type="ShaderMaterial" id="m_crown"]
+shader = ExtResource("2_foliage")
+shader_parameter/sway_data = ExtResource("11_crown_d")
+shader_parameter/core_color = Color(0.0784, 0.1882, 0.1176, 1)
+shader_parameter/sway_amp = 1.00
+shader_parameter/max_offset = 1
+shader_parameter/occluder = true
+
+[node name="camphor_b" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_flora_plant")
+metadata/flora_species = "camphor"
+metadata/flora_kind = "tree"
+metadata/flora_layout = "tree"
+metadata/flora_crown_sort_px = 70
+metadata/flora_block = [[-1.44, 0.13, 0.92], [1.63, 0.13, 0.92]]
+metadata/flora_collision = PackedVector2Array(-0.0, -19.7, -12.2, -19.2, -23.8, -17.3, -35.0, -14.7, -45.8, -11.1, -50.3, -5.7, -48.1, 0.0, -48.5, 5.5, -51.4, 12.5, -47.3, 19.9, -33.2, 24.2, -16.0, 25.1, 0.0, 23.0, 12.9, 20.2, 24.7, 18.0, 37.0, 15.5, 46.1, 11.2, 51.4, 5.8, 55.1, 0.0, 53.5, -6.0, 45.5, -11.0, 37.1, -15.6, 26.3, -19.2, 12.8, -20.0)
+
+[node name="ShadowContact" type="Sprite2D" parent="."]
+z_index = -9
+texture = ExtResource("12_shadow")
+centered = false
+offset = Vector2(-86, -332)
+material = SubResource("m_shadow2")
+
+[node name="Shadow" type="Sprite2D" parent="."]
+z_index = -9
+texture = ExtResource("12_shadow")
+centered = false
+offset = Vector2(-86, -332)
+material = SubResource("m_shadow0")
+
+[node name="Ground" type="Sprite2D" parent="."]
+z_index = -8
+texture = SubResource("ct_ground")
+centered = false
+offset = Vector2(-102, -22)
+material = SubResource("m_ground")
+
+[node name="Trunk" type="Sprite2D" parent="."]
+texture = SubResource("ct_trunk")
+centered = false
+offset = Vector2(-204, -411)
+material = SubResource("m_trunk")
+
+[node name="Crown" type="Sprite2D" parent="."]
+position = Vector2(0, 70)
+texture = SubResource("ct_crown")
+centered = false
+offset = Vector2(-256, -532)
+material = SubResource("m_crown")

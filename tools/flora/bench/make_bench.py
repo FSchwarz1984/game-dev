@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Write the vegetation bench (a small Godot project) into a directory:
-  python3 tools/flora/bench/make_bench.py <project_dir>
-It copies tools/flora/out/godot/flora (run tools/flora/build.py first), bench.gd, a neutral ground
-for each layout, the layouts (a row of every species; a glade around the camphor), and the
-character placeholder (her front idle frame, for scale)."""
+  python3 tools/flora/bench/make_bench.py <project_dir> [<flora_dir>]
+It copies the built plants (default godot/art/flora: run tools/flora/build.py first) to the same
+place as in the game (res://art/flora), the core's Proj class, bench.gd, a neutral ground for each
+layout, the layouts (a row of every species; a glade around the camphor), and the character
+placeholder (her front idle frame, for scale). Run it with bench/run_bench.sh (REIMPORT=1 after
+the scripts changed, so class names resolve)."""
 import json
 import math
 import os
@@ -40,12 +42,6 @@ renderer/rendering_method="mobile"
 renderer/rendering_method.mobile="mobile"
 textures/canvas_textures/default_texture_filter=0
 
-[shader_globals]
-
-player_pos={"type": "vec2", "value": Vector2(-100000, -100000)}
-wind_strength={"type": "float", "value": 1.0}
-sun_elevation={"type": "float", "value": 47.8}
-shadow_strength={"type": "float", "value": 1.0}
 '''
 
 TSCN = '''[gd_scene format=3]
@@ -185,20 +181,24 @@ def glade_layout(cat, seed=5):
             'player': [cx + 10, cy + 150], 'lanterns': lanterns, 'clearing': [cx, cy + 150, 300, 170]}
 
 
-def main(proj):
+def main(proj, src=None):
     os.makedirs(os.path.join(proj, 'bench', 'layouts'), exist_ok=True)
     os.makedirs(os.path.join(proj, 'bench', 'char'), exist_ok=True)
+    os.makedirs(os.path.join(proj, 'core'), exist_ok=True)
+    os.makedirs(os.path.join(proj, 'shots'), exist_ok=True)
+    open(os.path.join(proj, 'shots', '.gdignore'), 'w').close()
     with open(os.path.join(proj, 'project.godot'), 'w') as fh:
         fh.write(PROJECT)
     with open(os.path.join(proj, 'bench', 'bench.tscn'), 'w') as fh:
         fh.write(TSCN)
     for f in ('bench.gd', 'linear_to_srgb.gdshader'):
         shutil.copyfile(os.path.join(HERE, f), os.path.join(proj, 'bench', f))
-    src = os.path.join(FLORA, 'out', 'godot', 'flora')
-    dst = os.path.join(proj, 'flora')
-    if os.path.exists(dst):
-        shutil.rmtree(dst)
-    shutil.copytree(src, dst)
+    shutil.copyfile(os.path.join(REPO, 'godot', 'core', 'proj.gd'), os.path.join(proj, 'core', 'proj.gd'))
+    src = src or os.path.join(REPO, 'godot', 'art', 'flora')
+    for old in (os.path.join(proj, 'flora'), os.path.join(proj, 'art', 'flora')):
+        if os.path.exists(old):
+            shutil.rmtree(old)
+    shutil.copytree(src, os.path.join(proj, 'art', 'flora'), ignore=shutil.ignore_patterns('*.import', '*.uid'))
     cat = load_catalog(src)
     row = row_layout(cat)
     glade = glade_layout(cat)
@@ -221,4 +221,4 @@ def main(proj):
 
 
 if __name__ == '__main__':
-    main(sys.argv[1])
+    main(sys.argv[1], sys.argv[2] if len(sys.argv) > 2 else None)

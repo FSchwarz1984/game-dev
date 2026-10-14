@@ -38,7 +38,7 @@ func _ready() -> void:
 	_build_stage()
 	_load_layout(String(args.get("layout", "row")))
 	_preset(String(args.get("preset", "morning")))
-	RenderingServer.global_shader_parameter_set("wind_strength", float(args.get("wind", "1.0")))
+	FloraField.set_wind(float(args.get("wind", "1.0")))
 	if args.has("walk"):
 		var w := String(args["walk"]).split(",")
 		walk = [Vector2(float(w[0]), float(w[1])), Vector2(float(w[2]), float(w[3]))]
@@ -83,7 +83,6 @@ func _build_stage() -> void:
 	shade = CanvasModulate.new()
 	world.add_child(shade)
 	sun = DirectionalLight2D.new()
-	sun.rotation_degrees = -45.0
 	world.add_child(sun)
 	view = TextureRect.new()
 	view.texture = world_vp.get_texture()
@@ -138,20 +137,25 @@ func _load_layout(name: String) -> void:
 	player.add_child(foot)
 
 
+## The terrain's time-of-day table (tools/terrain/tengan_terrain/preview.py TOD): sun elevation,
+## sun colour * energy (DirectionalLight2D), sky = ambient (CanvasModulate).
 func _preset(p: String) -> void:
 	var presets := {
-		"morning": {"amb": Color(0.60, 0.65, 0.76), "sun": Color(1.0, 0.86, 0.66), "e": 0.62, "h": 0.44, "elev": 30.0, "shadow": 0.78},
-		"noon": {"amb": Color(0.70, 0.72, 0.74), "sun": Color(1.0, 0.97, 0.90), "e": 0.50, "h": 0.55, "elev": 62.0, "shadow": 0.9},
-		"dusk": {"amb": Color(0.44, 0.38, 0.54), "sun": Color(1.0, 0.60, 0.34), "e": 0.72, "h": 0.30, "elev": 16.0, "shadow": 0.55},
-		"night": {"amb": Color(0.15, 0.18, 0.30), "sun": Color(0.55, 0.66, 0.98), "e": 0.30, "h": 0.5, "elev": 50.0, "shadow": 0.30},
+		"morning": {"elev": 24.0, "sun": Color(0.76, 0.68, 0.55), "sky": Color(0.56, 0.58, 0.65)},
+		"noon": {"elev": 58.0, "sun": Color(0.64, 0.61, 0.53), "sky": Color(0.53, 0.56, 0.60)},
+		"dusk": {"elev": 12.0, "sun": Color(1.12, 0.68, 0.40), "sky": Color(0.42, 0.37, 0.49)},
+		"night": {"elev": 40.0, "sun": Color(0.20, 0.25, 0.40), "sky": Color(0.19, 0.23, 0.36)},
 	}
 	var q: Dictionary = presets[p]
-	shade.color = q["amb"]
+	shade.color = q["sky"]
 	sun.color = q["sun"]
-	sun.energy = q["e"]
-	sun.height = q["h"]
-	RenderingServer.global_shader_parameter_set("sun_elevation", q["elev"])
-	RenderingServer.global_shader_parameter_set("shadow_strength", q["shadow"])
+	sun.energy = 1.0
+	FloraField.set_sun(q["elev"], q["sun"], q["sky"])
+	# the placeholder character takes Godot's own 2D light: point the light the same way on screen
+	var s := FloraField.sun_dir
+	var on_screen := Vector2(s.x, -(s.y - s.z) * 0.70710678)     # toward the sun, screen (y down)
+	sun.rotation = Vector2(0, 1).angle_to(-on_screen)
+	sun.height = clampf((s.y + s.z) * 0.70710678, 0.0, 1.0)
 	if p == "night" or p == "dusk":
 		var tex := GradientTexture2D.new()
 		tex.fill = GradientTexture2D.FILL_RADIAL
@@ -184,7 +188,7 @@ func _process(_delta: float) -> void:
 		var n := int(args.get("seq-n", "24")) * int(args.get("seq-every", "4"))
 		var t := clampf(float(frame - 10) / float(max(1, n)), 0.0, 1.0)
 		player.position = (walk[0].lerp(walk[1], t)).round()
-	RenderingServer.global_shader_parameter_set("player_pos", player.global_position)
+	FloraField.set_player(player.global_position, player.global_position.y)
 	_cam(_vec("cam", player.position + Vector2(0, -40)))
 	var shot_frame := int(args.get("frame", "40"))
 	if args.has("shot") and frame == shot_frame:

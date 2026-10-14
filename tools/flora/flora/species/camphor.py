@@ -60,6 +60,26 @@ def _camphor_bark(seed, moss, lichen, hollow=None):
     return fx
 
 
+def _root_bark(seed, moss, soil):
+    base_fx = arch.bark_furrowed(seed + 5, depth=0.20, n_furrows=11)
+
+    def fx(u, v, n, P, base, T):
+        dv, mat = base_fx(u, v, n, P, base, T)
+        q = vnoise2(P[:, 0] * 1.3 + 7.0, P[:, 2] * 1.3, seed + 51) * 0.7 + \
+            vnoise2(P[:, 0] * 4.0, P[:, 2] * 4.0, seed + 52) * 0.3
+        mm = (n[:, 1] > 0.55) & (q > 0.58) & (dv > -0.1)
+        mat = np.where(mm, moss, mat)
+        dv = np.where(mm, (q - 0.58) * 0.7 - 0.08, dv)
+        # where the root goes into the ground: darker, with a crumb of soil here and there
+        w = vnoise2(P[:, 0] * 5.0, P[:, 2] * 5.0, seed + 53)
+        low = np.clip(1.0 - P[:, 1] / 0.10, 0, 1)
+        dv = dv - low * 0.12
+        dirt = (P[:, 1] < 0.03) & (w > 0.62)
+        mat = np.where(dirt & ~mm, soil, mat)
+        return dv, mat
+    return fx
+
+
 def _limb_bark(seed, moss):
     base_fx = arch.bark_furrowed(seed + 3, depth=0.10, n_furrows=9)
 
@@ -98,68 +118,77 @@ def camphor(name='camphor_a', seed=1):
     lean = (rng.range(-0.4, 0.4), rng.range(0.0, 0.4))
     tp = arch.trunk_path(Ht, lean=lean, wobble=0.22, seed=seed, n=48)
     r_at = lambda t: 1.95 - 0.55 * t + 0.08 * math.sin(t * 6.0 + seed)
+    # buttress flare: broad soft fins that swell toward the ground (the base reads as one wide,
+    # lobed foot), with low ridges continuing up the trunk
     nf = 7
-    angs = np.linspace(-2.7, 2.5, nf) + np.array([rng.range(-0.15, 0.15) for _ in range(nf)])
-    fins = [dict(th=float(a), A=rng.range(1.2, 2.0) * (1.0 if abs(a) < 2.0 else 0.75),
-                 Hs=rng.range(0.9, 1.5), p=rng.range(4.0, 7.0)) for a in angs]
+    angs = np.linspace(-2.75, 2.55, nf) + np.array([rng.range(-0.18, 0.18) for _ in range(nf)])
+    fins = [dict(th=float(a), A=rng.range(1.0, 1.6) * (1.0 if abs(a) < 2.0 else 0.75),
+                 Hs=rng.range(1.0, 1.6), p=rng.range(5.0, 8.0)) for a in angs]
 
     def rfun(s, th, R0):
         out = R0.copy()
         for f in fins:
-            c = np.cos(th - f['th'])
-            out = out + f['A'] * np.exp(-s / f['Hs']) * np.maximum(0, c) ** f['p']
-        out = out + 0.09 * np.sin(th * 5 + s * 0.35 + seed) * np.exp(-s / 3.0) + 0.05 * np.sin(th * 3 - s * 0.5)
+            c = np.maximum(0, np.cos(th - f['th']))
+            out = out + f['A'] * np.exp(-s / f['Hs']) * c ** f['p'] + 0.10 * np.exp(-s / 6.0) * c ** 24
+        out = out + 0.06 * np.sin(th * 5 + s * 0.35 + seed) * np.exp(-s / 3.0) + 0.04 * np.sin(th * 3 - s * 0.5)
         return out
 
     p.tube(tp, r_at, bark, R.PART_TRUNK, rfun=rfun, dens=2.4, cap=False)
     p.trunk_top = tp[-1]
 
-    # ---------------- surface roots: the fins run on over the ground as long, thick, half-buried
-    # roots that snake away and sink into the soil (never tapering to a claw); a side root or two
+    # ---------------- surface roots. Each fin runs down into a root that starts inside the fin,
+    # below its crest, so the root comes out from under the fin where the crest sinks to it: one
+    # surface, no joint. Out on the ground a root is a low hump (its axis below the soil, the way
+    # exposed roots are mostly buried), snaking away and sinking out of sight; never a log lying on
+    # the ground, never a claw.
     def fdir(th):
         return np.array([math.sin(th), 0.0, math.cos(th)])   # 0 = south (toward the camera)
 
+    root_bark = p.material('barkCamphorRoot', PAL['barkCamphor'])
+    p.bark_fx[root_bark] = _root_bark(seed, moss, p.material('soil', PAL['soil']))
     p.root_ends = []
+    R0 = r_at(0.0)
     for k, f in enumerate(fins):
-        if abs(f['th']) > 2.25:           # behind the trunk: hidden anyway
-            continue
-        if abs(f['th']) < 0.45:           # straight at the camera a root foreshortens to a stub: skip
+        if abs(f['th']) > 2.3:            # behind the trunk: hidden anyway
             continue
         d = fdir(f['th'])
-        r_tip = r_at(0) + f['A']
-        start = d * r_tip * 0.80
         front = max(0.0, math.cos(f['th']))
-        L = rng.range(3.4, 5.6) * (1 - 0.35 * front)
+        run = rng.range(2.0, 3.6) * (1 - 0.45 * front)
         ang = math.atan2(d[2], d[0])
+        start = d * (R0 + f['A'] * 0.35)
         pts = [start.copy()]
         cur = start.copy()
-        n = 24
+        n = 26
         bend = rng.range(-0.06, 0.06)
         for i in range(1, n + 1):
-            ang += bend + rng.range(-0.10, 0.10)
-            cur = cur + np.array([math.cos(ang), 0, math.sin(ang)]) * (L / n)
+            ang += bend + rng.range(-0.10, 0.10) * (i / n)
+            cur = cur + np.array([math.cos(ang), 0, math.sin(ang)]) * ((f['A'] * 0.65 + run) / n)
             pts.append(cur.copy())
         pts = np.array(pts)
         t = np.linspace(0, 1, len(pts))
-        rr = (0.58 * (1 - t) ** 0.55 + 0.16) * (1 - 0.25 * front)
-        dive = np.clip((t - 0.58) / 0.42, 0, 1) ** 1.3
-        pts[:, 1] = rr * 0.42 - dive * rr * 1.5 + 0.06 * np.sin(t * 9 + k) * (1 - dive)
-        p.tube(pts, rr, bark, R.PART_ROOT, cast=False, dens=2.2, cap=False)
+        rr = (0.66 - 0.30 * t) * (1 - 0.15 * front)
+        # a half-buried hump: the axis under the soil, so only a low rounded back shows (no
+        # undercut, no log), sinking out of sight at the end; round in plan (kz_cs=1): lying on
+        # the ground a root is not foreshortened in depth like the trunk
+        ky = 1.0
+        pts[:, 1] = -rr * (0.42 + 0.12 * t) - rr * 0.55 * np.clip((t - 0.65) / 0.35, 0, 1) ** 1.5 \
+            + 0.02 * np.sin(t * 8 + k)
+        p.tube(pts, rr, root_bark, R.PART_ROOT, cast=False, dens=2.2, cap=False, kz_cs=1.0, ky=ky)
         p.root_ends.append(pts[int(len(pts) * 0.8)])
-        if L > 3.6 and rng() < 0.8:
-            j = int(len(pts) * rng.range(0.30, 0.45))
-            a2 = ang + rng.sign() * rng.range(0.7, 1.1)
+        if run > 2.6 and rng() < 0.7:
+            j = int(len(pts) * rng.range(0.45, 0.60))
+            a2 = ang + rng.sign() * rng.range(0.6, 1.0)
             sp = [pts[j]]
             cur = pts[j].copy()
             for i in range(14):
                 a2 += rng.range(-0.15, 0.15)
-                cur = cur + np.array([math.cos(a2), 0, math.sin(a2)]) * 0.16
+                cur = cur + np.array([math.cos(a2), 0, math.sin(a2)]) * 0.13
                 sp.append(cur.copy())
             sp = np.array(sp)
             t2 = np.linspace(0, 1, len(sp))
-            r2 = 0.24 * (1 - t2) ** 0.6 + 0.08
-            sp[:, 1] = r2 * 0.35 - np.clip((t2 - 0.5) / 0.5, 0, 1) * r2 * 1.5
-            p.tube(sp, r2, bark, R.PART_ROOT, cast=False, dens=2.2, cap=False)
+            r2 = 0.26 * (1 - t2) ** 0.5 + 0.10
+            sp[:, 1] = -r2 * (0.45 + 0.6 * np.clip((t2 - 0.5) / 0.5, 0, 1) ** 1.5)
+            p.tube(sp, r2, root_bark, R.PART_ROOT, cast=False, dens=2.2, cap=False, kz_cs=1.0, ky=ky)
 
     # ---------------- shimenawa at ~2.4 m, following the bark, a little lower at the front
     s_r = 2.4
@@ -233,8 +262,8 @@ def camphor(name='camphor_a', seed=1):
     env = p.envelope(env_c, env_r)
     layout = [
         # x, y, z, radius
-        (-9.6, 9.2, 0.6, 2.6), (9.9, 9.8, 0.0, 2.6), (-7.0, 9.6, 3.0, 2.2), (7.4, 10.0, 2.6, 2.2),
-        (-3.5, 10.6, 3.8, 2.1), (3.7, 11.0, 3.4, 2.1), (-0.2, 11.4, 5.0, 1.9),
+        (-9.6, 9.2, 0.6, 2.6), (9.9, 9.8, 0.0, 2.6), (-7.2, 10.4, 2.4, 2.0), (7.6, 10.8, 2.0, 2.0),
+        (-3.4, 11.9, 3.2, 2.0), (3.6, 12.2, 2.8, 2.0), (-0.2, 12.6, 4.4, 1.9),
         (-6.6, 12.0, -1.0, 3.0), (6.7, 12.4, -1.2, 3.0), (-2.6, 12.8, 3.6, 2.8), (2.9, 13.0, 3.2, 2.8),
         (0.0, 12.2, -4.2, 3.0), (-10.4, 11.6, -2.0, 2.4), (10.6, 12.0, -2.4, 2.4),
         (-4.8, 15.2, 0.6, 3.2), (4.7, 15.4, 0.2, 3.2), (0.0, 14.8, 4.4, 2.8), (-8.4, 14.0, -2.8, 2.6),

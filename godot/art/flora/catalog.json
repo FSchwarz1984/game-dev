@@ -1,0 +1,3444 @@
+{
+ "azalea_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.46,
+   0.59
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -22,
+     -25
+    ],
+    "size": [
+     47,
+     30
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -15,
+     -21
+    ],
+    "size": [
+     51,
+     36
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/azalea/azalea_1/azalea_1.tscn",
+  "species": "azalea"
+ },
+ "azalea_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.42,
+   0.58
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -29,
+     -26
+    ],
+    "size": [
+     60,
+     32
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -18,
+     -22
+    ],
+    "size": [
+     58,
+     38
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/azalea/azalea_2/azalea_2.tscn",
+  "species": "azalea"
+ },
+ "azalea_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.48
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.47,
+   0.68
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -21,
+     -26
+    ],
+    "size": [
+     41,
+     31
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -15,
+     -20
+    ],
+    "size": [
+     47,
+     33
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/azalea/azalea_3/azalea_3.tscn",
+  "species": "azalea"
+ },
+ "azalea_4": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.48
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.36,
+   0.52
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -19,
+     -22
+    ],
+    "size": [
+     39,
+     26
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -9,
+     -21
+    ],
+    "size": [
+     39,
+     33
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/azalea/azalea_4/azalea_4.tscn",
+  "species": "azalea"
+ },
+ "bamboo_1": {
+  "block": [
+   [
+    -0.52,
+    0.0,
+    0.31
+   ],
+   [
+    0.52,
+    0.0,
+    0.31
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.73,
+   9.96
+  ],
+  "crown_sort_px": 18,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -39,
+     -209
+    ],
+    "size": [
+     102,
+     164
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -12,
+     -121
+    ],
+    "size": [
+     237,
+     131
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -22,
+     -215
+    ],
+    "size": [
+     71,
+     222
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/bamboo/bamboo_1/bamboo_1.tscn",
+  "species": "bamboo"
+ },
+ "bamboo_2": {
+  "block": [
+   [
+    -0.45,
+    0.0,
+    0.26
+   ],
+   [
+    0.45,
+    0.0,
+    0.26
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   3.05,
+   12.11
+  ],
+  "crown_sort_px": 16,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -53,
+     -254
+    ],
+    "size": [
+     105,
+     207
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -15,
+     -126
+    ],
+    "size": [
+     307,
+     138
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -39,
+     -246
+    ],
+    "size": [
+     75,
+     252
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/bamboo/bamboo_2/bamboo_2.tscn",
+  "species": "bamboo"
+ },
+ "bamboo_3": {
+  "block": [
+   [
+    -0.45,
+    0.0,
+    0.26
+   ],
+   [
+    0.45,
+    0.0,
+    0.26
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.63,
+   9.18
+  ],
+  "crown_sort_px": 14,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -54,
+     -197
+    ],
+    "size": [
+     103,
+     154
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -16,
+     -106
+    ],
+    "size": [
+     221,
+     113
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -41,
+     -188
+    ],
+    "size": [
+     72,
+     192
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/bamboo/bamboo_3/bamboo_3.tscn",
+  "species": "bamboo"
+ },
+ "beech_1": {
+  "block": [
+   [
+    -0.48,
+    0.0,
+    0.28
+   ],
+   [
+    0.48,
+    0.0,
+    0.28
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   6.48,
+   13.2
+  ],
+  "crown_sort_px": 30,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -100,
+     -307
+    ],
+    "size": [
+     239,
+     232
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -197
+    ],
+    "size": [
+     388,
+     224
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -62,
+     -278
+    ],
+    "size": [
+     155,
+     287
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/beech/beech_1/beech_1.tscn",
+  "species": "beech"
+ },
+ "beech_2": {
+  "block": [
+   [
+    -0.43,
+    0.0,
+    0.26
+   ],
+   [
+    0.43,
+    0.0,
+    0.26
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   6.13,
+   12.92
+  ],
+  "crown_sort_px": 30,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -153,
+     -310
+    ],
+    "size": [
+     310,
+     232
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -192
+    ],
+    "size": [
+     386,
+     211
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -107,
+     -274
+    ],
+    "size": [
+     226,
+     282
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/beech/beech_2/beech_2.tscn",
+  "species": "beech"
+ },
+ "beech_3": {
+  "block": [
+   [
+    -0.42,
+    0.0,
+    0.25
+   ],
+   [
+    0.42,
+    0.0,
+    0.25
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   7.35,
+   12.92
+  ],
+  "crown_sort_px": 30,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -117,
+     -305
+    ],
+    "size": [
+     236,
+     195
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -213
+    ],
+    "size": [
+     359,
+     227
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -83,
+     -272
+    ],
+    "size": [
+     163,
+     280
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/beech/beech_3/beech_3.tscn",
+  "species": "beech"
+ },
+ "beech_4": {
+  "block": [
+   [
+    -0.48,
+    0.0,
+    0.28
+   ],
+   [
+    0.48,
+    0.0,
+    0.28
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   6.53,
+   12.85
+  ],
+  "crown_sort_px": 30,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -120,
+     -302
+    ],
+    "size": [
+     272,
+     224
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -198
+    ],
+    "size": [
+     379,
+     236
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -78,
+     -265
+    ],
+    "size": [
+     183,
+     273
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/beech/beech_4/beech_4.tscn",
+  "species": "beech"
+ },
+ "camphor_a": {
+  "block": [
+   [
+    -1.72,
+    0.08,
+    0.83
+   ],
+   [
+    0.0,
+    0.08,
+    1.06
+   ],
+   [
+    1.73,
+    0.08,
+    0.83
+   ]
+  ],
+  "collision": [
+   [
+    -0.0,
+    -17.0
+   ],
+   [
+    -11.9,
+    -18.6
+   ],
+   [
+    -27.0,
+    -19.7
+   ],
+   [
+    -41.6,
+    -17.5
+   ],
+   [
+    -52.1,
+    -12.6
+   ],
+   [
+    -55.7,
+    -6.3
+   ],
+   [
+    -53.3,
+    0.0
+   ],
+   [
+    -50.4,
+    5.7
+   ],
+   [
+    -45.2,
+    11.0
+   ],
+   [
+    -34.4,
+    14.5
+   ],
+   [
+    -23.1,
+    16.8
+   ],
+   [
+    -12.8,
+    20.0
+   ],
+   [
+    0.0,
+    22.8
+   ],
+   [
+    14.5,
+    22.8
+   ],
+   [
+    28.7,
+    20.9
+   ],
+   [
+    40.3,
+    16.9
+   ],
+   [
+    46.2,
+    11.2
+   ],
+   [
+    50.9,
+    5.7
+   ],
+   [
+    55.8,
+    0.0
+   ],
+   [
+    54.6,
+    -6.1
+   ],
+   [
+    47.3,
+    -11.5
+   ],
+   [
+    37.2,
+    -15.6
+   ],
+   [
+    23.6,
+    -17.2
+   ],
+   [
+    10.7,
+    -16.8
+   ]
+  ],
+  "crown_height_m": [
+   9.1,
+   18.43
+  ],
+  "crown_sort_px": 73,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -270,
+     -450
+    ],
+    "size": [
+     527,
+     321
+    ]
+   },
+   "ground": {
+    "albedo": "ground.png",
+    "normal": "ground_n.png",
+    "offset": [
+     -101,
+     -27
+    ],
+    "size": [
+     214,
+     67
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -88,
+     -292
+    ],
+    "size": [
+     659,
+     345
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "data": "trunk_d.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -208,
+     -398
+    ],
+    "size": [
+     412,
+     429
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/camphor/camphor_a/camphor_a.tscn",
+  "species": "camphor"
+ },
+ "camphor_b": {
+  "block": [
+   [
+    -1.44,
+    0.13,
+    0.92
+   ],
+   [
+    1.63,
+    0.13,
+    0.92
+   ]
+  ],
+  "collision": [
+   [
+    -0.0,
+    -19.7
+   ],
+   [
+    -12.2,
+    -19.2
+   ],
+   [
+    -23.8,
+    -17.3
+   ],
+   [
+    -35.0,
+    -14.7
+   ],
+   [
+    -45.8,
+    -11.1
+   ],
+   [
+    -50.3,
+    -5.7
+   ],
+   [
+    -48.1,
+    0.0
+   ],
+   [
+    -48.5,
+    5.5
+   ],
+   [
+    -51.4,
+    12.5
+   ],
+   [
+    -47.3,
+    19.9
+   ],
+   [
+    -33.2,
+    24.2
+   ],
+   [
+    -16.0,
+    25.1
+   ],
+   [
+    0.0,
+    23.0
+   ],
+   [
+    12.9,
+    20.2
+   ],
+   [
+    24.7,
+    18.0
+   ],
+   [
+    37.0,
+    15.5
+   ],
+   [
+    46.1,
+    11.2
+   ],
+   [
+    51.4,
+    5.8
+   ],
+   [
+    55.1,
+    0.0
+   ],
+   [
+    53.5,
+    -6.0
+   ],
+   [
+    45.5,
+    -11.0
+   ],
+   [
+    37.1,
+    -15.6
+   ],
+   [
+    26.3,
+    -19.2
+   ],
+   [
+    12.8,
+    -20.0
+   ]
+  ],
+  "crown_height_m": [
+   9.44,
+   19.01
+  ],
+  "crown_sort_px": 70,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -256,
+     -462
+    ],
+    "size": [
+     528,
+     329
+    ]
+   },
+   "ground": {
+    "albedo": "ground.png",
+    "normal": "ground_n.png",
+    "offset": [
+     -102,
+     -22
+    ],
+    "size": [
+     231,
+     66
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -86,
+     -332
+    ],
+    "size": [
+     661,
+     380
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "data": "trunk_d.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -204,
+     -411
+    ],
+    "size": [
+     413,
+     446
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/camphor/camphor_b/camphor_b.tscn",
+  "species": "camphor"
+ },
+ "cedar_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.48
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   3.7,
+   13.59
+  ],
+  "crown_sort_px": 19,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -52,
+     -286
+    ],
+    "size": [
+     99,
+     236
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -133
+    ],
+    "size": [
+     311,
+     147
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -46,
+     -277
+    ],
+    "size": [
+     86,
+     283
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/cedar/cedar_1/cedar_1.tscn",
+  "species": "cedar"
+ },
+ "cedar_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.41
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   4.73,
+   14.2
+  ],
+  "crown_sort_px": 16,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -42,
+     -298
+    ],
+    "size": [
+     81,
+     219
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -138
+    ],
+    "size": [
+     327,
+     144
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -36,
+     -289
+    ],
+    "size": [
+     69,
+     295
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/cedar/cedar_2/cedar_2.tscn",
+  "species": "cedar"
+ },
+ "cedar_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.48
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   5.47,
+   17.27
+  ],
+  "crown_sort_px": 20,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -54,
+     -359
+    ],
+    "size": [
+     104,
+     268
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -167
+    ],
+    "size": [
+     396,
+     177
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -46,
+     -351
+    ],
+    "size": [
+     91,
+     358
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/cedar/cedar_3/cedar_3.tscn",
+  "species": "cedar"
+ },
+ "cedar_4": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.44
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   4.92,
+   17.1
+  ],
+  "crown_sort_px": 16,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -49,
+     -356
+    ],
+    "size": [
+     97,
+     273
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -163
+    ],
+    "size": [
+     401,
+     169
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -43,
+     -346
+    ],
+    "size": [
+     84,
+     352
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/cedar/cedar_4/cedar_4.tscn",
+  "species": "cedar"
+ },
+ "cedar_5": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.4
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   5.25,
+   16.41
+  ],
+  "crown_sort_px": 17,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -53,
+     -343
+    ],
+    "size": [
+     104,
+     257
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -156
+    ],
+    "size": [
+     375,
+     162
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -47,
+     -332
+    ],
+    "size": [
+     91,
+     338
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/cedar/cedar_5/cedar_5.tscn",
+  "species": "cedar"
+ },
+ "fern_1": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.35,
+   0.35
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -17,
+     -12
+    ],
+    "size": [
+     29,
+     16
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -2,
+     -2
+    ],
+    "size": [
+     5,
+     5
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/fern/fern_1/fern_1.tscn",
+  "species": "fern"
+ },
+ "fern_2": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.29,
+   0.29
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -13,
+     -12
+    ],
+    "size": [
+     26,
+     19
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -6
+    ],
+    "size": [
+     9,
+     9
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/fern/fern_2/fern_2.tscn",
+  "species": "fern"
+ },
+ "fern_3": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.39,
+   0.39
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -14,
+     -15
+    ],
+    "size": [
+     29,
+     20
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -2,
+     -2
+    ],
+    "size": [
+     5,
+     5
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/fern/fern_3/fern_3.tscn",
+  "species": "fern"
+ },
+ "fern_4": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.39,
+   0.39
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -14,
+     -12
+    ],
+    "size": [
+     26,
+     16
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -2,
+     -2
+    ],
+    "size": [
+     5,
+     5
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/fern/fern_4/fern_4.tscn",
+  "species": "fern"
+ },
+ "fern_5": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.34,
+   0.34
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -17,
+     -13
+    ],
+    "size": [
+     31,
+     19
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -2,
+     -2
+    ],
+    "size": [
+     8,
+     8
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/fern/fern_5/fern_5.tscn",
+  "species": "fern"
+ },
+ "higanbana_1": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.37,
+   0.51
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -3,
+     -16
+    ],
+    "size": [
+     14,
+     18
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     0,
+     -4
+    ],
+    "size": [
+     6,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/higanbana/higanbana_1/higanbana_1.tscn",
+  "species": "higanbana"
+ },
+ "higanbana_2": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.45,
+   0.51
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -8,
+     -15
+    ],
+    "size": [
+     17,
+     17
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -3
+    ],
+    "size": [
+     12,
+     6
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/higanbana/higanbana_2/higanbana_2.tscn",
+  "species": "higanbana"
+ },
+ "higanbana_3": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.35,
+   0.49
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -8,
+     -15
+    ],
+    "size": [
+     19,
+     17
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -4,
+     -3
+    ],
+    "size": [
+     10,
+     8
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/higanbana/higanbana_3/higanbana_3.tscn",
+  "species": "higanbana"
+ },
+ "higanbana_4": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.36,
+   0.48
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -10,
+     -15
+    ],
+    "size": [
+     18,
+     17
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -2
+    ],
+    "size": [
+     11,
+     6
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/higanbana/higanbana_4/higanbana_4.tscn",
+  "species": "higanbana"
+ },
+ "hydrangea_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.56,
+   0.71
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -22,
+     -29
+    ],
+    "size": [
+     46,
+     33
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -4,
+     -24
+    ],
+    "size": [
+     39,
+     37
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/hydrangea/hydrangea_1/hydrangea_1.tscn",
+  "species": "hydrangea"
+ },
+ "hydrangea_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.44,
+   0.64
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -27,
+     -31
+    ],
+    "size": [
+     50,
+     38
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -17,
+     -27
+    ],
+    "size": [
+     49,
+     40
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/hydrangea/hydrangea_2/hydrangea_2.tscn",
+  "species": "hydrangea"
+ },
+ "hydrangea_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.66,
+   0.75
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -21,
+     -33
+    ],
+    "size": [
+     44,
+     37
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -5,
+     -26
+    ],
+    "size": [
+     41,
+     38
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/hydrangea/hydrangea_3/hydrangea_3.tscn",
+  "species": "hydrangea"
+ },
+ "hydrangea_4": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.52,
+   0.72
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -22,
+     -30
+    ],
+    "size": [
+     47,
+     35
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -8,
+     -26
+    ],
+    "size": [
+     45,
+     40
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/hydrangea/hydrangea_4/hydrangea_4.tscn",
+  "species": "hydrangea"
+ },
+ "maple_green_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.18
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.3,
+   5.0
+  ],
+  "crown_sort_px": 15,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -79,
+     -114
+    ],
+    "size": [
+     139,
+     85
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -7,
+     -69
+    ],
+    "size": [
+     146,
+     81
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -50,
+     -105
+    ],
+    "size": [
+     87,
+     108
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_green/maple_green_1/maple_green_1.tscn",
+  "species": "maple_green"
+ },
+ "maple_green_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.21
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.18,
+   4.73
+  ],
+  "crown_sort_px": 13,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -67,
+     -109
+    ],
+    "size": [
+     137,
+     82
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -12,
+     -69
+    ],
+    "size": [
+     160,
+     78
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -43,
+     -98
+    ],
+    "size": [
+     82,
+     102
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_green/maple_green_2/maple_green_2.tscn",
+  "species": "maple_green"
+ },
+ "maple_green_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.2
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.25,
+   5.11
+  ],
+  "crown_sort_px": 18,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -80,
+     -111
+    ],
+    "size": [
+     139,
+     85
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -8,
+     -69
+    ],
+    "size": [
+     153,
+     86
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -56,
+     -102
+    ],
+    "size": [
+     91,
+     105
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_green/maple_green_3/maple_green_3.tscn",
+  "species": "maple_green"
+ },
+ "maple_red_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.21
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.59,
+   5.06
+  ],
+  "crown_sort_px": 11,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -80,
+     -114
+    ],
+    "size": [
+     142,
+     76
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -18,
+     -77
+    ],
+    "size": [
+     164,
+     85
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -49,
+     -106
+    ],
+    "size": [
+     88,
+     110
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_red/maple_red_1/maple_red_1.tscn",
+  "species": "maple_red"
+ },
+ "maple_red_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.17
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.18,
+   4.86
+  ],
+  "crown_sort_px": 15,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -97,
+     -106
+    ],
+    "size": [
+     154,
+     79
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -29,
+     -69
+    ],
+    "size": [
+     159,
+     78
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -71,
+     -96
+    ],
+    "size": [
+     107,
+     99
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_red/maple_red_2/maple_red_2.tscn",
+  "species": "maple_red"
+ },
+ "maple_turn_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.2
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.48,
+   5.14
+  ],
+  "crown_sort_px": 19,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -79,
+     -118
+    ],
+    "size": [
+     177,
+     84
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -8,
+     -78
+    ],
+    "size": [
+     173,
+     92
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -51,
+     -107
+    ],
+    "size": [
+     124,
+     110
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_turn/maple_turn_1/maple_turn_1.tscn",
+  "species": "maple_turn"
+ },
+ "maple_turn_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.22
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.54,
+   5.78
+  ],
+  "crown_sort_px": 20,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -68,
+     -124
+    ],
+    "size": [
+     155,
+     95
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -8,
+     -72
+    ],
+    "size": [
+     181,
+     91
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -39,
+     -115
+    ],
+    "size": [
+     103,
+     119
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_turn/maple_turn_2/maple_turn_2.tscn",
+  "species": "maple_turn"
+ },
+ "maple_turn_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.18
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   2.37,
+   5.01
+  ],
+  "crown_sort_px": 16,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -81,
+     -118
+    ],
+    "size": [
+     139,
+     82
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -24,
+     -77
+    ],
+    "size": [
+     164,
+     84
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -52,
+     -109
+    ],
+    "size": [
+     85,
+     113
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/maple_turn/maple_turn_3/maple_turn_3.tscn",
+  "species": "maple_turn"
+ },
+ "ominaeshi_1": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.87,
+   0.89
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -6,
+     -21
+    ],
+    "size": [
+     11,
+     22
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -3,
+     -3
+    ],
+    "size": [
+     6,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/ominaeshi/ominaeshi_1/ominaeshi_1.tscn",
+  "species": "ominaeshi"
+ },
+ "ominaeshi_2": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.66,
+   0.81
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -5,
+     -19
+    ],
+    "size": [
+     11,
+     21
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -3,
+     -3
+    ],
+    "size": [
+     8,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/ominaeshi/ominaeshi_2/ominaeshi_2.tscn",
+  "species": "ominaeshi"
+ },
+ "ominaeshi_3": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.92,
+   1.06
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -5,
+     -24
+    ],
+    "size": [
+     10,
+     26
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -2,
+     -2
+    ],
+    "size": [
+     5,
+     5
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/ominaeshi/ominaeshi_3/ominaeshi_3.tscn",
+  "species": "ominaeshi"
+ },
+ "ominaeshi_4": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.67,
+   0.69
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -5,
+     -17
+    ],
+    "size": [
+     11,
+     18
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -3,
+     -3
+    ],
+    "size": [
+     7,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/ominaeshi/ominaeshi_4/ominaeshi_4.tscn",
+  "species": "ominaeshi"
+ },
+ "persimmon_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.23
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   3.67,
+   5.9
+  ],
+  "crown_sort_px": 26,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -83,
+     -150
+    ],
+    "size": [
+     173,
+     109
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -120
+    ],
+    "size": [
+     190,
+     145
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -56,
+     -118
+    ],
+    "size": [
+     117,
+     122
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/persimmon/persimmon_1/persimmon_1.tscn",
+  "species": "persimmon"
+ },
+ "persimmon_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.25
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   4.45,
+   5.89
+  ],
+  "crown_sort_px": 26,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -84,
+     -147
+    ],
+    "size": [
+     162,
+     103
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -101
+    ],
+    "size": [
+     195,
+     123
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -55,
+     -116
+    ],
+    "size": [
+     100,
+     120
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/persimmon/persimmon_2/persimmon_2.tscn",
+  "species": "persimmon"
+ },
+ "persimmon_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.23
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   3.88,
+   5.72
+  ],
+  "crown_sort_px": 26,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -38,
+     -145
+    ],
+    "size": [
+     145,
+     104
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -110
+    ],
+    "size": [
+     216,
+     129
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -7,
+     -109
+    ],
+    "size": [
+     79,
+     113
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/persimmon/persimmon_3/persimmon_3.tscn",
+  "species": "persimmon"
+ },
+ "red_pine_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.35
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   5.32,
+   10.72
+  ],
+  "crown_sort_px": 15,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -66,
+     -224
+    ],
+    "size": [
+     154,
+     132
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -106
+    ],
+    "size": [
+     277,
+     112
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -28,
+     -208
+    ],
+    "size": [
+     78,
+     213
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/red_pine/red_pine_1/red_pine_1.tscn",
+  "species": "red_pine"
+ },
+ "red_pine_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.35
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   5.03,
+   9.8
+  ],
+  "crown_sort_px": 15,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -86,
+     -209
+    ],
+    "size": [
+     143,
+     118
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -102
+    ],
+    "size": [
+     212,
+     108
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -54,
+     -191
+    ],
+    "size": [
+     80,
+     196
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/red_pine/red_pine_2/red_pine_2.tscn",
+  "species": "red_pine"
+ },
+ "red_pine_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.34
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   4.75,
+   10.63
+  ],
+  "crown_sort_px": 16,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -80,
+     -223
+    ],
+    "size": [
+     159,
+     143
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -106
+    ],
+    "size": [
+     245,
+     112
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -36,
+     -204
+    ],
+    "size": [
+     73,
+     209
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/red_pine/red_pine_3/red_pine_3.tscn",
+  "species": "red_pine"
+ },
+ "red_pine_4": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.33
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   5.18,
+   9.58
+  ],
+  "crown_sort_px": 17,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -57,
+     -203
+    ],
+    "size": [
+     143,
+     111
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -100
+    ],
+    "size": [
+     249,
+     106
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -27,
+     -188
+    ],
+    "size": [
+     73,
+     193
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/red_pine/red_pine_4/red_pine_4.tscn",
+  "species": "red_pine"
+ },
+ "red_pine_5": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.3
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   4.92,
+   9.16
+  ],
+  "crown_sort_px": 16,
+  "kind": "tree",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -66,
+     -196
+    ],
+    "size": [
+     121,
+     107
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -97
+    ],
+    "size": [
+     202,
+     103
+    ]
+   },
+   "trunk": {
+    "albedo": "trunk.png",
+    "normal": "trunk_n.png",
+    "offset": [
+     -40,
+     -181
+    ],
+    "size": [
+     57,
+     186
+    ]
+   }
+  },
+  "layout": "tree",
+  "scene": "res://art/flora/plants/red_pine/red_pine_5/red_pine_5.tscn",
+  "species": "red_pine"
+ },
+ "shrub_1": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.64,
+   0.92
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -30,
+     -38
+    ],
+    "size": [
+     61,
+     44
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -13,
+     -30
+    ],
+    "size": [
+     63,
+     48
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/shrub/shrub_1/shrub_1.tscn",
+  "species": "shrub"
+ },
+ "shrub_2": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.7,
+   0.96
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -30,
+     -37
+    ],
+    "size": [
+     58,
+     42
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -15,
+     -27
+    ],
+    "size": [
+     60,
+     41
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/shrub/shrub_2/shrub_2.tscn",
+  "species": "shrub"
+ },
+ "shrub_3": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.64,
+   0.87
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -28,
+     -35
+    ],
+    "size": [
+     58,
+     38
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -13,
+     -29
+    ],
+    "size": [
+     57,
+     43
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/shrub/shrub_3/shrub_3.tscn",
+  "species": "shrub"
+ },
+ "shrub_4": {
+  "block": [
+   [
+    0.0,
+    0.0,
+    0.49
+   ]
+  ],
+  "collision": null,
+  "crown_height_m": [
+   0.57,
+   0.84
+  ],
+  "crown_sort_px": 0,
+  "kind": "shrub",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -28,
+     -35
+    ],
+    "size": [
+     57,
+     43
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -10,
+     -26
+    ],
+    "size": [
+     54,
+     41
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/shrub/shrub_4/shrub_4.tscn",
+  "species": "shrub"
+ },
+ "susuki_1": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.6,
+   1.69
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -14,
+     -36
+    ],
+    "size": [
+     28,
+     39
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -4,
+     -3
+    ],
+    "size": [
+     8,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/susuki/susuki_1/susuki_1.tscn",
+  "species": "susuki"
+ },
+ "susuki_2": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.6,
+   1.58
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -15,
+     -33
+    ],
+    "size": [
+     23,
+     39
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -3
+    ],
+    "size": [
+     11,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/susuki/susuki_2/susuki_2.tscn",
+  "species": "susuki"
+ },
+ "susuki_3": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.6,
+   1.67
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -14,
+     -35
+    ],
+    "size": [
+     23,
+     40
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -6
+    ],
+    "size": [
+     12,
+     12
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/susuki/susuki_3/susuki_3.tscn",
+  "species": "susuki"
+ },
+ "susuki_4": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.6,
+   1.77
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -11,
+     -37
+    ],
+    "size": [
+     25,
+     42
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -4,
+     -3
+    ],
+    "size": [
+     10,
+     8
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/susuki/susuki_4/susuki_4.tscn",
+  "species": "susuki"
+ },
+ "susuki_5": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.6,
+   1.73
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -16,
+     -36
+    ],
+    "size": [
+     32,
+     39
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -3,
+     -3
+    ],
+    "size": [
+     8,
+     7
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/susuki/susuki_5/susuki_5.tscn",
+  "species": "susuki"
+ },
+ "tsuyukusa_1": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.1,
+   0.1
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -9,
+     -5
+    ],
+    "size": [
+     17,
+     8
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -4
+    ],
+    "size": [
+     12,
+     10
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/tsuyukusa/tsuyukusa_1/tsuyukusa_1.tscn",
+  "species": "tsuyukusa"
+ },
+ "tsuyukusa_2": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.1,
+   0.1
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -8,
+     -5
+    ],
+    "size": [
+     15,
+     7
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -4
+    ],
+    "size": [
+     12,
+     9
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/tsuyukusa/tsuyukusa_2/tsuyukusa_2.tscn",
+  "species": "tsuyukusa"
+ },
+ "tsuyukusa_3": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.1,
+   0.1
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -8,
+     -5
+    ],
+    "size": [
+     17,
+     7
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -4
+    ],
+    "size": [
+     12,
+     9
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/tsuyukusa/tsuyukusa_3/tsuyukusa_3.tscn",
+  "species": "tsuyukusa"
+ },
+ "tsuyukusa_4": {
+  "block": [],
+  "collision": null,
+  "crown_height_m": [
+   0.1,
+   0.1
+  ],
+  "crown_sort_px": 0,
+  "kind": "herb",
+  "layers": {
+   "crown": {
+    "albedo": "crown.png",
+    "data": "crown_d.png",
+    "normal": "crown_n.png",
+    "offset": [
+     -9,
+     -5
+    ],
+    "size": [
+     16,
+     8
+    ]
+   },
+   "shadow": {
+    "albedo": "shadow.png",
+    "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max",
+    "offset": [
+     -6,
+     -3
+    ],
+    "size": [
+     12,
+     9
+    ]
+   }
+  },
+  "layout": "body",
+  "scene": "res://art/flora/plants/tsuyukusa/tsuyukusa_4/tsuyukusa_4.tscn",
+  "species": "tsuyukusa"
+ }
+}

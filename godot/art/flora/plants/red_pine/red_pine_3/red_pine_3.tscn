@@ -1,0 +1,84 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://art/flora/flora_plant.gd" id="1_flora_plant"]
+[ext_resource type="Shader" path="res://art/flora/shaders/foliage.gdshader" id="2_foliage"]
+[ext_resource type="Shader" path="res://art/flora/shaders/flora_shadow.gdshader" id="3_flora_shadow"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/red_pine/red_pine_3/trunk.png" id="4_trunk"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/red_pine/red_pine_3/trunk_n.png" id="5_trunk_n"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/red_pine/red_pine_3/crown.png" id="6_crown"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/red_pine/red_pine_3/crown_n.png" id="7_crown_n"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/red_pine/red_pine_3/crown_d.png" id="8_crown_d"]
+[ext_resource type="Texture2D" path="res://art/flora/plants/red_pine/red_pine_3/shadow.png" id="9_shadow"]
+
+[sub_resource type="ShaderMaterial" id="m_shadow2"]
+shader = ExtResource("3_flora_shadow")
+shader_parameter/channel = 2
+shader_parameter/ref_elevation = 40.00
+shader_parameter/shadow_dir = Vector2(0.9243, -0.3818)
+shader_parameter/crown_height_px = 153.8
+
+[sub_resource type="ShaderMaterial" id="m_shadow0"]
+shader = ExtResource("3_flora_shadow")
+shader_parameter/channel = 0
+shader_parameter/ref_elevation = 40.00
+shader_parameter/shadow_dir = Vector2(0.9243, -0.3818)
+shader_parameter/crown_height_px = 153.8
+
+[sub_resource type="CanvasTexture" id="ct_trunk"]
+diffuse_texture = ExtResource("4_trunk")
+normal_texture = ExtResource("5_trunk_n")
+texture_filter = 1
+
+[sub_resource type="ShaderMaterial" id="m_trunk"]
+shader = ExtResource("2_foliage")
+shader_parameter/has_sway_data = false
+shader_parameter/occluder = false
+
+[sub_resource type="CanvasTexture" id="ct_crown"]
+diffuse_texture = ExtResource("6_crown")
+normal_texture = ExtResource("7_crown_n")
+texture_filter = 1
+
+[sub_resource type="ShaderMaterial" id="m_crown"]
+shader = ExtResource("2_foliage")
+shader_parameter/sway_data = ExtResource("8_crown_d")
+shader_parameter/core_color = Color(0.0784, 0.1412, 0.1255, 1)
+shader_parameter/sway_amp = 1.00
+shader_parameter/max_offset = 1
+shader_parameter/occluder = true
+
+[node name="red_pine_3" type="Node2D"]
+y_sort_enabled = true
+script = ExtResource("1_flora_plant")
+metadata/flora_species = "red_pine"
+metadata/flora_kind = "tree"
+metadata/flora_layout = "tree"
+metadata/flora_crown_sort_px = 16
+metadata/flora_block = [[0.00, 0.00, 0.34]]
+
+[node name="ShadowContact" type="Sprite2D" parent="."]
+z_index = -9
+texture = ExtResource("9_shadow")
+centered = false
+offset = Vector2(-6, -106)
+material = SubResource("m_shadow2")
+
+[node name="Shadow" type="Sprite2D" parent="."]
+z_index = -9
+texture = ExtResource("9_shadow")
+centered = false
+offset = Vector2(-6, -106)
+material = SubResource("m_shadow0")
+
+[node name="Trunk" type="Sprite2D" parent="."]
+texture = SubResource("ct_trunk")
+centered = false
+offset = Vector2(-36, -204)
+material = SubResource("m_trunk")
+
+[node name="Crown" type="Sprite2D" parent="."]
+position = Vector2(0, 16)
+texture = SubResource("ct_crown")
+centered = false
+offset = Vector2(-80, -239)
+material = SubResource("m_crown")

@@ -77,19 +77,20 @@ class Plant:
 
     # ---------------------------------------------------------------- wood
     def tube(self, path, radius, mat, part=R.PART_TRUNK, rfun=None, tone=0.0, cast=True, u0=0.0,
-             cap=True, dens=2.6):
+             cap=True, dens=2.6, kz_cs=None, ky=1.0):
         path = np.asarray(path, dtype=np.float64)
         if callable(radius):
             rr = np.array([radius(t) for t in np.linspace(0, 1, len(path))])
         else:
             rr = np.broadcast_to(np.asarray(radius, dtype=np.float64), (len(path),)).copy()
         self.tube_specs.append(dict(path=path, radius=radius, rr=rr, mat=mat, part=part, rfun=rfun,
-                                    tone=tone, cast=cast, u0=u0, cap=cap, dens=dens))
+                                    tone=tone, cast=cast, u0=u0, cap=cap, dens=dens, kz_cs=kz_cs, ky=ky))
 
     def draw_wood(self, cv):
         for t in self.tube_specs:
             R.tube(cv, self.D(t['path']), t['radius'], t['part'], t['mat'], rfun=t['rfun'],
-                   tone=t['tone'], u0=t['u0'], cap=t['cap'], dens=t['dens'], kz=self.kz)
+                   tone=t['tone'], u0=t['u0'], cap=t['cap'], dens=t['dens'],
+                   kz=self.kz if t.get('kz_cs') is None else t['kz_cs'], ky=t.get('ky', 1.0))
 
     # ---------------------------------------------------------------- foliage
     def envelope(self, c, r):
