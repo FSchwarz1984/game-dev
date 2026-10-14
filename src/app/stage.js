@@ -248,8 +248,13 @@ export async function createStage({ root, field, vistaView, onProgress = null })
         const rec = a.draw(stage), h = ra[id];
         if (!rec) { h.set({ hidden: true }); continue; }
         let x = rec.x, z = rec.z, y = ground(a.x, a.z) + rec.up / PPM;
-        // Saji on the frame: depth order behind the hat (front, side) or over it (back), same screen spot
-        if (id === 'saji' && a.ride) { const bias = z < actors.tsuzumi.z ? -0.3 : 0.3; z = actors.tsuzumi.z + bias; y += bias; }
+        // Saji on the frame: she stands on Tsuzumi's ground (her own body waits where she hopped on);
+        // depth order behind the hat (front, side) or over it (back), same screen spot
+        if (id === 'saji' && a.ride) {
+          const lead = actors.tsuzumi, bias = z < lead.z ? -0.3 : 0.3;
+          a.body.x = lead.x; a.body.z = lead.z;
+          y = ground(lead.x, lead.z) + rec.up / PPM + bias; z = lead.z + bias;
+        }
         h.set({ hidden: false, sheet: sheetByUrl.get(rec.albedo), frame: [rec.sx, rec.sy, rec.sw, rec.sh], anchor: [rec.pivot.x, rec.pivot.y], flip: !!rec.mirror, x, z, y });
       }
       for (const ln of lanterns) if (ln.attachTo) placeLantern(ln);
