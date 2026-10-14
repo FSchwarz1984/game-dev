@@ -287,6 +287,24 @@ def stroke2d(cv, x0, y0, x1, y1, w0, w1, D0, D1, n_cam, fields, test=True):
     fields values may be scalars or callables(t, s) of the along/across parameters."""
     L = max(1e-6, math.hypot(x1 - x0, y1 - y0))
     dx, dy = (x1 - x0) / L, (y1 - y0) / L
+    if max(w0, w1) <= 0.55:
+        # a hair-thin stroke (thread, stamen, stalk): one pixel per step, a clean pixel-art line
+        n = max(2, int(math.ceil(L * 2)) + 1)
+        tt = np.linspace(0, 1, n)
+        px = np.floor(x0 + (x1 - x0) * tt).astype(np.int64)
+        py = np.floor(y0 + (y1 - y0) * tt).astype(np.int64)
+        key = py * 100000 + px
+        _, first = np.unique(key, return_index=True)
+        first = np.sort(first)
+        px, py, tt = px[first], py[first], tt[first]
+        ss = np.zeros_like(tt)
+        D = D0 + (D1 - D0) * tt
+        f = {}
+        for k, v in fields.items():
+            f[k] = v(tt, ss) if callable(v) else (np.full(len(tt), v) if np.ndim(v) == 0 else np.broadcast_to(v, (len(tt),) + np.shape(v)))
+        f['n'] = n_cam(tt, ss) if callable(n_cam) else np.broadcast_to(np.asarray(n_cam, dtype=np.float64), (len(tt), 3))
+        cv.write(py, px, D, f, test=test)
+        return
     wm = max(w0, w1)
     xa, xb = int(math.floor(min(x0, x1) - wm - 1)), int(math.ceil(max(x0, x1) + wm + 1))
     ya, yb = int(math.floor(min(y0, y1) - wm - 1)), int(math.ceil(max(y0, y1) + wm + 1))

@@ -116,5 +116,8 @@ def screen_light(S, world, SP, toward_xz=(-0.92, 0.38)):
     hor[fm] = horizon_points(world, px, pz, ph, toward_xz, start_px=1.0)
     # vertical faces see half the sky; darker toward the foot
     rel = np.where(S.fd[fm] > 0, S.fk[fm] / np.maximum(S.fd[fm], 1), 0.5)
-    sky[fm] = 0.62 - 0.22 * np.clip((rel - 0.45) / 0.55, 0, 1) ** 1.5
+    # short faces (stair risers, curbs, low banks) are barely occluded; tall
+    # cliffs darken toward the foot
+    tall = np.clip((S.fd[fm] - 8) / 30.0, 0, 1)
+    sky[fm] = 0.80 - tall * (0.14 + 0.26 * np.clip((rel - 0.4) / 0.6, 0, 1) ** 1.5)
     return hor, sky

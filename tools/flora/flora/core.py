@@ -30,7 +30,9 @@ _LC = np.array([-0.55, 0.60, 0.58])                 # camera space: x right, y u
 LIGHT_C = _LC / np.linalg.norm(_LC)
 LIGHT_W = np.array([LIGHT_C[0], (LIGHT_C[1] + LIGHT_C[2]) / SQ2, (LIGHT_C[2] - LIGHT_C[1]) / SQ2])
 LIGHT_W = LIGHT_W / np.linalg.norm(LIGHT_W)         # the shading light in world space (crown self-shade)
-_LS = np.array([-0.55, 0.75, -0.40])                # world: from the west-north-west, ~48 deg high
+# A high reference sun (~60 deg): pixel-art shadows are short. The game varies the elevation
+# (global sun_elevation) and the shadow shader stretches from this reference continuously.
+_LS = np.array([-0.40, 1.00, -0.29])                # world: from the west-north-west, ~60 deg high
 SHADOW_LIGHT_W = _LS / np.linalg.norm(_LS)
 SHADOW_DIR = np.array([-SHADOW_LIGHT_W[0], -SHADOW_LIGHT_W[2]])
 SHADOW_DIR = SHADOW_DIR / np.linalg.norm(SHADOW_DIR)

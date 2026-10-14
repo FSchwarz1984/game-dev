@@ -129,10 +129,13 @@ def sway_data(p):
         R.ellipsoids(tmp, p.D([m['c']]), [m['r'] * m['core'] * sq], R.PART_CORE, 1, mass=mi)
     shell = tmp.filled & sel
     shell = ndi.binary_erosion(shell, iterations=1) | (shell & ndi.binary_erosion(sel, iterations=2))
-    out[..., 2] = np.where(shell, 255, 0)
     occ = ndi.binary_closing(sel, iterations=2) & ndi.binary_fill_holes(sel)
     occ = ndi.binary_erosion(occ, iterations=1)
-    out[..., 3] = np.where(occ | sel, np.where(occ, 255, 0), 0)
+    # B: bit 7 = the crown's inside lies under this texel, bit 6 = dense enough to hide an actor
+    out[..., 2] = np.where(shell, 128, 0) + np.where(occ, 64, 0)
+    # A: 255 on every texel of the layer, so importers that bleed colour into transparent texels
+    # (fix_alpha_border) never touch the data
+    out[..., 3] = np.where(sel | occ, 255, 0)
     p.flex = flex
     return out
 
@@ -160,7 +163,23 @@ def shadow_layer(p):
     lone = (c > 0) & (ndi.uniform_filter((c > 0).astype(float), 3) < 0.3)
     c[lone] = 0
     t = (sh_t > 0.5).astype(float)
-    return c, t, box
+    # contact shade: where roots, the trunk foot or a bush's low leaves meet the ground (it does
+    # not move with the sun): the drawn footprint of everything within ~0.5 m of the ground, blurred
+    k = np.zeros_like(c)
+    src = p.cv
+    h_contact = {'tree': 0.45, 'shrub': 0.22, 'herb': 0.06}.get(p.kind, 0.3)
+    low = src.filled & (src.wpos[..., 1] < h_contact) & np.isin(src.part, (R.PART_TRUNK, R.PART_ROOT, R.PART_LEAF,
+                                                                           R.PART_CORE, R.PART_BLADE, R.PART_LIMB))
+    ys, xs = np.nonzero(low)
+    if len(ys):
+        P = src.wpos[ys, xs]
+        gx = np.round(src.ax + P[:, 0] * PPM - x0).astype(int)
+        gy = np.round(src.ay + P[:, 2] * PPM - y0).astype(int)
+        ok = (gx >= 0) & (gy >= 0) & (gx < k.shape[1]) & (gy < k.shape[0])
+        k[gy[ok], gx[ok]] = 1.0
+        k = ndi.gaussian_filter(k, 2.2 if p.kind == 'tree' else 1.4)
+        k = np.where(k > 0.12, 1.0, np.where(k > 0.04, 0.5, 0.0))
+    return c, t, k, box
 
 
 # ---------------------------------------------------------------- write files
@@ -215,7 +234,14 @@ def export(p, outdir, extra_meta=None):
     crown_n = p.normal_rgba(p.sel_crown)
     data = sway_data(p)
     put('ground', ground_rgba, ground_n)
-    put('trunk', wood_rgba, wood_n)
+    trunk_data = None
+    if p.meta.get('trunk_occluder'):
+        # a big trunk hides whoever walks behind it: same x-ray hole as the crown, no sway
+        tsel = p.sel_wood
+        trunk_data = np.zeros(tsel.shape + (4,), np.uint8)
+        trunk_data[..., 2] = np.where(ndi.binary_erosion(tsel, iterations=2), 64, 0)
+        trunk_data[..., 3] = np.where(tsel, 255, 0)
+    put('trunk', wood_rgba, wood_n, trunk_data)
     put('crown', crown_rgba, crown_n, data)
     # composite preview (for sheets): ground, trunk, crown
     comp = np.zeros_like(crown_rgba)
@@ -225,11 +251,12 @@ def export(p, outdir, extra_meta=None):
     p.composite = comp
     p.layers_rgba = {'ground': ground_rgba, 'trunk': wood_rgba, 'crown': crown_rgba}
     # shadow (own box: it reaches past the sprite to the lower right)
-    c, t, box = shadow_layer(p)
+    c, t, k, box = shadow_layer(p)
     sh = np.zeros(c.shape + (4,), np.uint8)
     sh[..., 0] = np.round(c * 255)
     sh[..., 1] = np.round(t * 255)
-    sh[..., 3] = np.round(np.maximum(c, t) * 255)
+    sh[..., 2] = np.round(k * 255)
+    sh[..., 3] = np.round(np.maximum(np.maximum(c, t), k) * 255)
     p.shadow = sh
     p.shadow_box = box
     m = sh[..., 3] > 0
@@ -240,7 +267,7 @@ def export(p, outdir, extra_meta=None):
         meta['layers']['shadow'] = {'albedo': 'shadow.png',
                                     'offset': [int(box[0] + x0 - round(ax)), int(box[1] + y0 - round(ay))],
                                     'size': [int(x1 - x0), int(y1 - y0)],
-                                    'channels': 'R = crown shade, G = trunk shade, A = max'}
+                                    'channels': 'R = crown shade, G = trunk shade, B = contact shade (still), A = max'}
     # crown sort: the crown is drawn after every actor standing under it
     if p.sel_crown.any():
         ys, xs = np.nonzero(p.sel_crown)
@@ -254,6 +281,8 @@ def export(p, outdir, extra_meta=None):
             meta['crown_height_m'] = [round(float(min(hs)), 2), round(float(max(hs)), 2)]
     meta['sun_ref'] = {'elevation_deg': round(SUN_ELEV_REF, 1), 'shadow_dir_xz': [round(float(v), 4) for v in SHADOW_DIR]}
     meta['sway_amp'] = p.sway_amp
+    meta['species'] = p.meta.get('species', '')
+    meta['trunk_occluder'] = bool(p.meta.get('trunk_occluder', False))
     meta['layout'] = 'body' if p.single_layer else 'tree'
     if p.single_layer:
         meta['crown_sort_px'] = 0

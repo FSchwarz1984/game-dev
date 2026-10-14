@@ -1,0 +1,67 @@
+{
+ "name": "persimmon_2",
+ "kind": "tree",
+ "seed": 72,
+ "ppm": 20.0,
+ "anchor_note": "offsets are px from the anchor (trunk foot on the ground)",
+ "layers": {
+  "trunk": {
+   "albedo": "trunk.png",
+   "normal": "trunk_n.png",
+   "offset": [
+    -55,
+    -116
+   ],
+   "size": [
+    100,
+    120
+   ]
+  },
+  "crown": {
+   "albedo": "crown.png",
+   "normal": "crown_n.png",
+   "data": "crown_d.png",
+   "offset": [
+    -84,
+    -147
+   ],
+   "size": [
+    162,
+    103
+   ]
+  },
+  "shadow": {
+   "albedo": "shadow.png",
+   "offset": [
+    -38,
+    -21
+   ],
+   "size": [
+    149,
+    119
+   ],
+   "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
+  }
+ },
+ "crown_sort_px": 26,
+ "core_color": [
+  19,
+  44,
+  30
+ ],
+ "crown_height_m": [
+  4.45,
+  5.89
+ ],
+ "sun_ref": {
+  "elevation_deg": 63.7,
+  "shadow_dir_xz": [
+   0.8096,
+   0.587
+  ]
+ },
+ "sway_amp": 1.0,
+ "species": "persimmon",
+ "trunk_occluder": false,
+ "layout": "tree"
+}

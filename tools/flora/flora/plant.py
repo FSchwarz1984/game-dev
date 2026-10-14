@@ -98,7 +98,7 @@ class Plant:
 
     def mass(self, c, r, mat, env, cell_r=0.26, flat=0.62, density=1.0, core=0.93, protrude=0.12,
              tone=0.0, sway=None, lit_mat=None, hl=1.0, under=None, bumps=(4, 7, 0.10, 0.24),
-             shape='blob'):
+             shape='blob', fringe=0.0):
         """A foliage mass (natural space ellipsoid) covered with leaf clumps. cell_r: clump radius
         (m); flat: clump thickness / width; core: the inner shell between clumps; sway: 0..1
         flexibility (default: from its reach out of the trunk); lit_mat: material for the sunlit
@@ -106,7 +106,7 @@ class Plant:
         self.masses.append(dict(c=np.asarray(c, float), r=np.asarray(r, float), mat=mat, env=env,
                                 cell_r=cell_r, flat=flat, density=density, core=core,
                                 protrude=protrude, tone=tone, sway=sway, lit_mat=lit_mat, hl=hl,
-                                under=under, bumps=bumps, shape=shape))
+                                under=under, bumps=bumps, shape=shape, fringe=fringe))
         return len(self.masses) - 1
 
     def group(self, c, sway):
@@ -233,6 +233,21 @@ class Plant:
             jitter = 1 + rng.g.uniform(-m['protrude'], m['protrude'] * 0.6, size=k)
             pos = c + d * r * jitter[:, None]
             rad = cr * rng.g.uniform(0.62, 1.38, size=k) ** 1.2
+            if m.get('fringe', 0) > 0:
+                # sprays hanging from the underside: the lower edge is ragged, not a smooth arc
+                nf = int(math.pi * (r[0] + r[2]) / cr * m['fringe'])
+                th = rng.g.uniform(0, 2 * math.pi, size=nf)
+                dy = rng.g.uniform(-0.85, -0.45, size=nf)
+                rad_h = np.sqrt(np.maximum(0, 1 - dy * dy))
+                df = np.stack([np.cos(th) * rad_h, dy, np.sin(th) * rad_h], axis=-1)
+                keep_f = world_to_cam(normalize(df / r))[:, 2] > -0.2
+                df = df[keep_f]
+                drop = rng.g.uniform(0.4, 1.2, size=len(df)) * cr
+                pf = c + df * r - np.array([0, 1.0, 0]) * drop[:, None]
+                pos = np.concatenate([pos, pf])
+                rad = np.concatenate([rad, cr * rng.g.uniform(0.55, 0.85, size=len(df))])
+                d = np.concatenate([d, df])
+                k = len(pos)
             C.append(pos)
             Rr.append(np.stack([rad, rad * m['flat'], rad], axis=-1))
             M.append(np.full(k, mi))
@@ -460,7 +475,9 @@ class Plant:
         below_m[:-1] = massm[1:]
         # the pixel row where a clump disappears behind the clump in front of it: a dark seam
         # (always between masses; inside a mass only on the lit side, where it draws the shingles)
-        edge_between = sel_leaf & (below != cell) & (dbelow > dep + 0.02) & (below >= 0)
+        # shingles only inside a mass: between masses the lit top of the front one against the
+        # shaded underside of the one behind already separates them (a seam there reads as a crack)
+        edge_between = sel_leaf & (below != cell) & (dbelow > dep + 0.02) & (below >= 0) & (below_m == massm)
         edge_out = sel_leaf & (below != cell) & (dbelow < dep - 0.05) & ((below_m != massm) | (dbelow < dep - sep_dz))
         ey, ex = np.nonzero(edge_out)
         if len(ey):
@@ -555,7 +572,7 @@ class Plant:
             xs += [g[0] - ext, g[0] + ext]
             zs += [g[2] - ext, g[2] + ext]
         for t in self.tube_specs:
-            if t['part'] == R.PART_ROOT:
+            if t['part'] != R.PART_TRUNK:
                 continue
             for q in t['path'][::4]:
                 g = q - L * (q[1] / L[1])
@@ -578,15 +595,23 @@ class Plant:
         Z = (gy + 0.5 - cv.ay) / PPM
         P = np.stack([X.ravel(), np.zeros(X.size), Z.ravel()], axis=-1)
         sh_c = np.zeros(X.size)
+        saved = None
+        if not self.masses and self.groups and self.kind == 'tree':
+            # blade canopies (bamboo): each spray shades the ground like a small, thin mass
+            saved = self.masses
+            self.masses = [dict(c=g['c'], r=np.array([0.55, 0.35, 0.55]), density=0.55) for g in self.groups]
         if self.masses:
             T = np.ones(X.size)
             for s in range(0, len(P), 200000):
                 T[s:s + 200000] = self.transmission(P[s:s + 200000], noise=0.62, dens_k=1.15, L=SHADOW_LIGHT_W)
             sh_c = 1 - T
+        if saved is not None:
+            self.masses = saved
         sh_t = np.zeros((H, W))
         Lw = SHADOW_LIGHT_W
         for t in self.tube_specs:
-            if t['part'] == R.PART_ROOT or not t['cast']:
+            # only trunks cast a line: limbs sit inside the crown, whose shade already covers them
+            if t['part'] != R.PART_TRUNK or not t['cast']:
                 continue
             path, rr = t['path'], t['rr']
             pts, s = R.resample(path, 0.04)

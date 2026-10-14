@@ -12,10 +12,10 @@ import numpy as np
 TOD = {
     # elevation (deg), sun colour*energy (DirectionalLight2D), sky = ambient (CanvasModulate),
     # bounce = light thrown back from the ground onto walls, sat = grade saturation
-    'morning': dict(elev=24.0, sun=(0.66, 0.60, 0.50), sky=(0.52, 0.55, 0.62), bounce=(0.20, 0.19, 0.15), sat=0.92),
+    'morning': dict(elev=24.0, sun=(0.76, 0.68, 0.55), sky=(0.56, 0.58, 0.65), bounce=(0.20, 0.19, 0.15), sat=0.92),
     'noon': dict(elev=58.0, sun=(0.64, 0.61, 0.53), sky=(0.53, 0.56, 0.60), bounce=(0.24, 0.23, 0.17), sat=0.95),
-    'dusk': dict(elev=12.0, sun=(0.95, 0.58, 0.33), sky=(0.33, 0.30, 0.42), bounce=(0.16, 0.10, 0.08), sat=0.95),
-    'night': dict(elev=40.0, sun=(0.17, 0.21, 0.34), sky=(0.15, 0.18, 0.30), bounce=(0.03, 0.03, 0.05), sat=0.75),
+    'dusk': dict(elev=12.0, sun=(1.12, 0.68, 0.40), sky=(0.42, 0.37, 0.49), bounce=(0.18, 0.12, 0.09), sat=0.95),
+    'night': dict(elev=40.0, sun=(0.20, 0.25, 0.40), sky=(0.19, 0.23, 0.36), bounce=(0.03, 0.03, 0.05), sat=0.75),
 }
 
 

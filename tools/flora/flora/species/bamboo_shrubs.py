@@ -47,31 +47,34 @@ def bamboo(name, seed):
         pts = np.array([base + out * bend * t ** 1.8 + np.array([0, h * t, 0]) for t in np.linspace(0, 1, 30)])
         rc = rng.range(0.055, 0.085)
         mat = culm_o if rng() < 0.25 else culm_g
-        p.tube(pts, np.linspace(rc, rc * 0.55, len(pts)), mat, R.PART_TRUNK, dens=3.0, cap=False)
+        p.tube(pts, np.linspace(rc, rc * 0.55, len(pts)), mat, R.PART_TRUNK, dens=3.0, cap=False, cast=k < 3)
         tops.append((pts, h))
     p.trunk_top = np.array([0, Hmax * 0.6, 0])
-    # sprays: from the nodes of the upper culm, short twigs carrying drooping lanceolate leaves
+    # sprays: from the nodes of the upper two thirds, twigs carrying fans of long drooping
+    # lanceolate leaves; denser toward the top, where the culm ends in a leafy whip
     for k, (pts, h) in enumerate(tops):
-        n_nodes = int(h * 0.55 / node_gap)
+        n_nodes = int(h * 0.68 / node_gap)
         for j in range(n_nodes):
-            t = 0.45 + 0.55 * j / max(1, n_nodes - 1)
-            if rng() < 0.35:
+            t = 0.32 + 0.68 * j / max(1, n_nodes - 1)
+            if rng() < 0.25 - 0.2 * t:
                 continue
             P0 = arch.point_on(pts, t)
-            a = rng.range(0, 2 * math.pi)
-            d = np.array([math.cos(a), 0, math.sin(a)])
-            tw = P0 + d * rng.range(0.35, 0.8) + np.array([0, rng.range(0.15, 0.35), 0])
-            g = p.group(tw, min(1.0, 0.35 + 0.65 * t))
-            p.blade(np.array([P0, (P0 + tw) / 2 + [0, 0.06, 0], tw]), np.array([1.0, 0.9, 0.7]), culm_g, group=g,
-                    face=(0, 0, 1), fold=0.2, tone=-0.1)
-            for i in range(rng.int(4, 7)):
-                aa = a + rng.range(-1.2, 1.2)
-                dd = np.array([math.cos(aa), 0, math.sin(aa)])
-                L = rng.range(0.18, 0.28)
-                q0 = tw + dd * rng.range(-0.05, 0.1)
-                lf = np.array([q0, q0 + dd * L * 0.55 + [0, -L * 0.15, 0], q0 + dd * L + [0, -L * 0.55, 0]])
-                p.blade(lf, np.array([1.2, 2.2, 0.6]), leaf, group=g, face=(dd[0] * 0.4, 0.85, dd[2] * 0.4 + 0.2),
-                        tone=rng.range(-0.08, 0.08), fold=0.6)
+            for side in (-1, 1) if t > 0.55 else (rng.sign(),):
+                a = rng.range(0, 2 * math.pi)
+                d = np.array([math.cos(a), 0, math.sin(a)])
+                tw = P0 + d * rng.range(0.4, 0.9) * (1.2 - t * 0.4) + np.array([0, rng.range(0.1, 0.3), 0])
+                g = p.group(tw, min(1.0, 0.30 + 0.70 * t))
+                p.blade(np.array([P0, (P0 + tw) / 2 + [0, 0.05, 0], tw]), np.array([0.9, 0.8, 0.6]), culm_g, group=g,
+                        face=(0, 0, 1), fold=0.2, tone=-0.12)
+                for i in range(rng.int(6, 10)):
+                    aa = a + rng.range(-1.4, 1.4)
+                    dd = np.array([math.cos(aa), 0, math.sin(aa)])
+                    L = rng.range(0.24, 0.36)
+                    q0 = tw + dd * rng.range(-0.08, 0.12) + np.array([0, rng.range(-0.06, 0.06), 0])
+                    lf = np.array([q0, q0 + dd * L * 0.5 + [0, -L * 0.10, 0], q0 + dd * L * 0.85 + [0, -L * 0.45, 0],
+                                   q0 + dd * L + [0, -L * 0.75, 0]])
+                    p.blade(lf, np.array([1.0, 2.0, 1.4, 0.5]), leaf, group=g, face=(dd[0] * 0.4, 0.85, dd[2] * 0.4 + 0.2),
+                            tone=rng.range(-0.1, 0.08) + 0.05 * t, fold=0.6)
     p.leaf_opts.update(dict(blade_base=0.22, blade_tip=0.12, blade_jitter=0.28))
     return p
 
@@ -132,7 +135,7 @@ def hydrangea(name, seed):
         cand = np.nonzero((pl.c_pos[:, 1] > 0.45) & (pl.c_pos[:, 2] > -0.2))[0]
         if not len(cand):
             return
-        n = hr.int(6, 10)
+        n = hr.int(5, 8)
         chosen = []
         for _ in range(n * 4):
             i = int(hr.pick(cand))
@@ -146,10 +149,10 @@ def hydrangea(name, seed):
             d = normalize(c - pl.masses[mi]['c'])
             P = c + d * 0.06
             mat = hr.pick(pick)
-            rr = hr.range(0.12, 0.16)
+            rr = hr.range(0.17, 0.22)
             # a head is a tight dome of florets: draw it as small clumps so it is not a smooth ball
-            k = 9
-            q = P[None, :] + hr.g.normal(scale=rr * 0.45, size=(k, 3)) * np.array([1, 0.7, 1])
+            k = 12
+            q = P[None, :] + hr.g.normal(scale=rr * 0.40, size=(k, 3)) * np.array([1, 0.7, 1])
             R.ellipsoids(cv, pl.D(q), np.tile([[rr * 0.55, rr * 0.5, rr * 0.55 * pl.kz]], (k, 1)), R.PART_DETAIL, mat,
                          mass=mi, nkz=pl.kz, bumps=np.tile([[5, 0.2, 0.0, 0.7]], (k, 1)))
     p.details.append(flowers)

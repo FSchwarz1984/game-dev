@@ -118,16 +118,16 @@ def paint_grass(P, idx, X, Y, calm, wild, lipd, footd, seed):
     (2-8 m, borders broken into clusters); inside them a few value patches;
     then grass clumps that gather in masses with open, calm ground between
     (never an even carpet); sparse lit blades only on the clumps."""
-    hf = noise.fbm(X / 300.0, Y / 300.0, seed + 1, 3) * 0.7 + noise.fbm(X / 90.0, Y / 90.0, seed + 2, 2) * 0.3
-    damp = smoothstep(16.0, 0.0, footd)          # at the foot of walls: damp, cool
-    hv = hf - damp * 0.3 + (noise.vnoise(X / 2.6, Y / 2.6, seed + 3) - 0.5) * 0.05
-    rp = np.where(hv < 0.42, R['grass_cool'], np.where(hv < 0.67, R['grass'], R['grass_dry'])).astype(np.uint8)
+    hf = noise.fbm(X / 420.0, Y / 420.0, seed + 1, 3) * 0.8 + noise.fbm(X / 140.0, Y / 140.0, seed + 2, 2) * 0.2
+    damp = smoothstep(18.0, 0.0, footd)          # at the foot of walls: damp, cool
+    hv = hf - damp * 0.4 + (noise.vnoise(X / 2.6, Y / 2.6, seed + 3) - 0.5) * 0.04
+    rp = np.where(hv < 0.36, R['grass_cool'], np.where(hv < 0.70, R['grass'], R['grass_dry'])).astype(np.uint8)
     lawn = calm > 0.5
     rp = np.where(lawn & (rp == R['grass']), R['lawn'], rp)
-    # value patches (2-6 m), dithered into clusters at their borders
-    pv = noise.fbm(X / 80.0, Y / 80.0, seed + 5, 3)
-    base = 3.6 + (pv - 0.5) * 1.8 * (1.0 - 0.3 * calm) - damp * 0.5
-    tb = _dither_round(base, X, Y, 0.4, seed + 6)
+    # value: a few broad, soft patches (5-10 m) only
+    pv = noise.fbm(X / 170.0, Y / 170.0, seed + 5, 3)
+    base = 3.6 + (pv - 0.5) * 1.3 * (1.0 - 0.3 * calm) - damp * 0.5
+    tb = _dither_round(base, X, Y, 0.35, seed + 6)
     # where clumps gather: masses ~1-3 m across with open ground between them
     extra = (wild - 0.5) * 0.35 - calm * 0.18
 
@@ -193,7 +193,7 @@ def paint_moss(P, idx, X, Y, seed):
     clus = noise.fbm(X / 26.0 + 9.0, Y / 26.0, seed + 5, 3)
     alive = (clus > 0.47) & (((bh >> np.uint32(18)) & np.uint32(3)) != 0)
     pv = noise.fbm(X / 60.0, Y / 60.0, seed + 6, 2)
-    base = _dither_round(2.7 + (pv - 0.5) * 1.4, X, Y, 0.6, seed + 7)
+    base = _dither_round(3.2 + (pv - 0.5) * 1.2, X, Y, 0.5, seed + 7)
     r_cell = np.sqrt(d1) / (cw * 0.55)
     side = (bx + by * 1.3) / (cw * 0.5)
     off = np.zeros(X.shape, np.float32)
@@ -245,12 +245,17 @@ def paint_dirt(P, idx, X, Y, u, along, side, hw, wear, seed, ramp='dirt'):
     pv = noise.fbm(X / 26.0, Y / 26.0, seed + 1, 3)
     fine = noise.fbm(X / 4.0, Y / 4.0, seed + 2, 2)
     base = 3.4 + (pv - 0.5) * 1.5 + (fine - 0.5) * 0.7
-    # ruts: two bands about 40% out from the centre line, wandering a little
+    # ruts: two bands about 40% out from the centre line, wandering a little (roads wide
+    # enough for carts only); a footpath is trodden darker along its middle instead
     off = side * u
     wob = (noise.fbm(along / 60.0, side * 3.0 + seed, seed + 4, 2) - 0.5) * 0.16
+    cart = hw > 1.6 * 10
     for c in (-0.44, 0.44):
         band = np.exp(-((off - c - wob) / 0.11) ** 2)
-        base = base - band * 0.9 * wear
+        base = base - band * 0.9 * wear * cart
+    base = base - np.exp(-((off - wob) / 0.3) ** 2) * 0.5 * wear * (~cart)
+    grit = noise.hash01(X.astype(np.int64), Y.astype(np.int64), seed + 6)
+    base = base + np.where(grit > 0.93, 0.8, np.where(grit < 0.05, -0.8, 0.0))
     base = base + np.exp(-(off / 0.18) ** 2) * 0.35 * wear     # the crown between the ruts
     # the edge: a darker line under the leaning grass, a little lighter dust just inside
     base = base - smoothstep(0.86, 0.98, u) * 1.1 + smoothstep(0.62, 0.8, u) * smoothstep(0.92, 0.8, u) * 0.35
@@ -264,7 +269,7 @@ def paint_dirt(P, idx, X, Y, u, along, side, hw, wear, seed, ramp='dirt'):
 def paint_earth(P, idx, X, Y, seed):
     pv = noise.fbm(X / 30.0, Y / 30.0, seed + 1, 3)
     fine = noise.fbm(X / 5.0, Y / 5.0, seed + 2, 2)
-    tone = _dither_round(3.7 + (pv - 0.5) * 1.3 + (fine - 0.5) * 0.6, X, Y, 0.6)
+    tone = _dither_round(3.1 + (pv - 0.5) * 1.2 + (fine - 0.5) * 0.6, X, Y, 0.45, seed + 3)
     P.ramp.flat[idx] = R['earth']
     P.tone.flat[idx] = np.clip(tone, 0, N_TONES - 1)
     P.tx.flat[idx] = (fine - 0.5) * 0.2
@@ -306,6 +311,41 @@ def paint_atlas_top(P, idx, X, Y, atlas, ramp_a, ramp_b, seed, scale=1.0, base_t
     P.flags.flat[idx] |= 2
 
 
+def paint_rock_relief(P, idx, X, Y, atlas, seed, scale=2.0, base_tone=3.6):
+    """Bare rock outcrop tops: the scan's height as a shaded relief (lit from the
+    upper left), quantised to a few tones in clusters; dark cracks only where
+    the segmentation parts the plates; lichen rosettes on the high, dry spots,
+    moss in the cracks and hollows."""
+    hgt = atlas['h']
+    ah, aw = hgt.shape
+    ax = (np.floor(X / scale).astype(np.int64)) % aw
+    ay = (np.floor(Y / scale).astype(np.int64)) % ah
+    gy, gx = np.gradient(hgt)
+    sx, sy = gx[ay, ax], gy[ay, ax]
+    hh = hgt[ay, ax]
+    light = -(sx * 0.7 + sy * 0.7) * 9.0                         # upper-left lit
+    t = base_tone + np.clip(light, -1.6, 1.6) + (hh - 0.5) * 0.9
+    t = _dither_round(t, X, Y, 0.35, seed + 1)
+    # cracks: the deepest concave creases of the relief (continuous lines, not a lattice)
+    lap = (np.roll(hgt, 1, 0) + np.roll(hgt, -1, 0) + np.roll(hgt, 1, 1) + np.roll(hgt, -1, 1) - 4 * hgt)
+    crack = lap[ay, ax] > np.percentile(lap, 93)
+    rp = np.where(noise.fbm(X / 120.0, Y / 120.0, seed + 3, 2) > 0.5, R['rock_warm'], R['rock']).astype(np.uint8)
+    t = np.where(crack, 1.3, t)
+    mz = noise.fbm(X / 24.0, Y / 24.0, seed + 4, 2)
+    mossy = (crack & (mz > 0.45)) | ((hh < 0.3) & (mz > 0.55))
+    rp = np.where(mossy, R['moss'], rp)
+    t = np.where(mossy, 2.4 + (mz > 0.62), t)
+    lz = noise.fbm(X / 9.0 + 5, Y / 9.0, seed + 7, 2)
+    lich = (~crack) & (~mossy) & (hh > 0.6) & (lz > 0.7) & (noise.vnoise(X / 1.5, Y / 1.5, seed + 8) > 0.35)
+    rp = np.where(lich, R['lichen'], rp)
+    t = np.where(lich, np.where(lz > 0.7, 4, 3), t)
+    P.ramp.flat[idx] = rp
+    P.tone.flat[idx] = np.clip(t, 0, N_TONES - 1)
+    P.tx.flat[idx] = np.clip(sx * 6.0, -0.5, 0.5)
+    P.tz.flat[idx] = np.clip(sy * 6.0, -0.5, 0.5)
+    P.flags.flat[idx] |= 2
+
+
 def paint_tread(P, world, idx, X, Y, seed):
     """Stone treads: 1-3 slabs per step, joints, the nosing catching the light,
     a crease at the back, worn lighter in the middle, moss in joints and corners."""
@@ -319,8 +359,8 @@ def paint_tread(P, world, idx, X, Y, seed):
     seg = np.floor((u + off) / seg_w).astype(np.int64)
     fu = (u + off) - seg * seg_w
     hs = noise.hash2(seg, k * 7 + sid, seed + 2)
-    stone_tone = 3.0 + ((hs & np.uint32(255)).astype(np.float32) / 255.0) * 1.0
-    rp = np.where((hs >> np.uint32(9)) & np.uint32(1), R['stone_warm'], R['stone']).astype(np.uint8)
+    stone_tone = 3.5 + ((hs & np.uint32(255)).astype(np.float32) / 255.0) * 0.9
+    rp = np.where(((hs >> np.uint32(9)) & np.uint32(3)) == 0, R['stone'], R['stone_warm']).astype(np.uint8)
     fine = noise.fbm(X / 5.0, Y / 5.0, seed + 3, 2)
     t = stone_tone + (fine - 0.5) * 0.9
     tread_d = np.maximum(world.stair_v.max(), 1)
@@ -349,12 +389,12 @@ def paint_cheek(P, world, idx, X, Y, seed):
     u = world.stair_u.flat[idx]
     v = world.stair_v.flat[idx]
     hb = noise.hash2(k, np.sign(u).astype(np.int64) + world.sid.flat[idx].astype(np.int64) * 3, seed + 1)
-    t = 2.9 + ((hb & np.uint32(255)).astype(np.float32) / 255.0) * 0.8
+    t = 3.3 + ((hb & np.uint32(255)).astype(np.float32) / 255.0) * 0.8
     fine = noise.fbm(X / 4.0, Y / 4.0, seed + 2, 2)
     t = t + (fine - 0.5) * 0.9 + np.where(v < 1.5, 0.6, 0.0)
     mz = noise.fbm(X / 10.0, Y / 10.0, seed + 3, 2)
     mossy = mz > 0.56
-    rp = np.where(mossy, R['moss'], np.where((hb >> np.uint32(8)) & np.uint32(1), R['stone'], R['stone_warm'])).astype(np.uint8)
+    rp = np.where(mossy, R['moss'], np.where(((hb >> np.uint32(8)) & np.uint32(3)) == 0, R['stone'], R['stone_warm'])).astype(np.uint8)
     t = np.where(mossy, 2.5 + (fine > 0.5), t)
     P.ramp.flat[idx] = rp
     P.tone.flat[idx] = np.clip(np.round(t), 0, N_TONES - 1)
@@ -363,16 +403,32 @@ def paint_cheek(P, world, idx, X, Y, seed):
 
 
 def paint_water(P, world, idx, X, Y, seed):
-    """A still spring pool: darker with depth, a darker band in the bank's
-    reflection along the north shore, a few slow glints."""
+    """A still spring pool: the bed shows through the shallow margin (stones,
+    warm), deepening to dark blue-green; a dark band mirrors the north bank;
+    a few slow horizontal glints. (A shader can animate the glints.)"""
     dep = world.wdepth.flat[idx]
-    fine = noise.fbm(X / 18.0, Y / 6.0, seed + 1, 2)
-    t = 4.6 - np.clip(dep / 0.7, 0, 1) * 2.4 + (fine - 0.5) * 0.6
-    tone = _dither_round(t, X, Y, 0.7)
-    # glints: short horizontal strokes
-    g = noise.hash01(np.floor(X / 4).astype(np.int64), Y.astype(np.int64), seed + 2) > 0.985
+    water = ~np.isnan(world.water)
+    # px of open water north of each water pixel (distance to the north shore)
+    north = np.zeros(world.water.shape, np.float32)
+    rows = np.nonzero(water.any(axis=1))[0]
+    run = np.zeros(world.W, np.float32)
+    for r in range(rows.min(), rows.max() + 1):
+        run = np.where(water[r], run + 1, 0)
+        north[r] = run
+    dn = north.flat[idx]
+    t = 4.4 - np.clip(dep / 0.6, 0, 1) * 2.6
+    t = t - smoothstep(10.0, 3.0, dn) * 1.2                      # the bank mirrored in the water
+    t = t + (noise.fbm(X / 30.0, Y / 8.0, seed + 1, 2) - 0.5) * 0.7
+    tone = _dither_round(t, X, Y, 0.45, seed + 4)
+    rp = np.full(len(idx), R['water'], np.uint8)
+    # the shallow margin: stones of the bed seen through clear water
+    shallow = dep < 0.16
+    rp = np.where(shallow, R['wetsoil'], rp)
+    tone = np.where(shallow, 3 + (noise.hash01(X.astype(np.int64) // 2, Y.astype(np.int64) // 2, seed + 5) > 0.6), tone)
+    # glints: short horizontal strokes, sparse, never on the mirrored band
+    g = (noise.hash01(np.floor(X / 5).astype(np.int64), Y.astype(np.int64), seed + 2) > 0.988) & (dn > 9) & ~shallow
     tone = np.where(g, 6.0, tone)
-    P.ramp.flat[idx] = R['water']
+    P.ramp.flat[idx] = rp
     P.tone.flat[idx] = np.clip(tone, 0, N_TONES - 1)
     P.flags.flat[idx] |= 4
 
@@ -416,12 +472,21 @@ def paint_tops(world, atlases, seed=0):
     # ---- stone ----------------------------------------------------------------
     idx = np.flatnonzero(top == TOP['rock'])
     if len(idx):
-        paint_atlas_top(P, idx, Xg.flat[idx], Yg.flat[idx], atlases['cliff'], R['rock'], R['rock_warm'], seed + 600,
-                        scale=2.2, base_tone=3.6, spread=1.8, gap_tone=1.4, moss_k=0.45, lichen_k=1.0, rim_k=0.75)
+        paint_rock_relief(P, idx, Xg.flat[idx], Yg.flat[idx], atlases['rocktop'], seed + 600)
     idx = np.flatnonzero(top == TOP['scree'])
     if len(idx):
-        paint_atlas_top(P, idx, Xg.flat[idx], Yg.flat[idx], atlases['pebbles'], R['rock'], R['rock_warm'], seed + 650,
-                        scale=1.3, base_tone=3.2, spread=2.0, gap_tone=1.2, moss_k=0.2, rim_k=0.8)
+        Xs, Ys = Xg.flat[idx], Yg.flat[idx]
+        paint_forest(P, idx, Xs, Ys, seed + 640)
+        keep_r, keep_t = P.ramp.flat[idx].copy(), P.tone.flat[idx].copy()
+        paint_atlas_top(P, idx, Xs, Ys, atlases['pebbles'], R['rock'], R['rock_warm'], seed + 650,
+                        scale=1.4, base_tone=3.3, spread=2.0, gap_tone=1.2, moss_k=0.0, rim_k=0.8)
+        a = atlases['pebbles']
+        ah, aw = a['plate'].shape
+        pl = a['plate'][(np.floor(Ys / 1.4).astype(np.int64)) % ah, (np.floor(Xs / 1.4).astype(np.int64)) % aw]
+        thin = noise.fbm(Xs / 40.0, Ys / 40.0, seed + 655, 2)
+        loose = (pl == 0) | (noise.hash01(pl, pl * 7 + 1, seed + 656) < 0.25 + thin * 0.45)
+        P.ramp.flat[idx[loose]] = keep_r[loose]
+        P.tone.flat[idx[loose]] = keep_t[loose]
     idx = np.flatnonzero(top == TOP['gravel'])
     if len(idx):
         paint_atlas_top(P, idx, Xg.flat[idx], Yg.flat[idx], atlases['pebbles'], R['gravel'], R['gravel'], seed + 660,
@@ -512,8 +577,8 @@ def _details(P, world, E, Xg, Yg, seed):
     which = ((hh >> np.uint32(3)) % np.uint32(len(stamps.PEBBLES))).astype(np.int64)
     stamps.stamp(P.prio, P.tone, P.ramp, ys, xs, stamps.PEBBLES, which, allow=ground)
     # rock fall at the foot of every cliff: stones on the lower ground, densest at the foot
-    rub = (E['sfoot'] < 28) & ~np.isin(top, [TOP['water'], TOP['tread'], TOP['cheek'], TOP['void']])
-    rd = (smoothstep(28.0, 1.0, E['sfoot']) * 0.55).astype(np.float32)
+    rub = (E['sfoot'] < 20) & ~np.isin(top, [TOP['water'], TOP['tread'], TOP['cheek'], TOP['void']])
+    rd = (smoothstep(20.0, 1.0, E['sfoot']) ** 1.5 * 0.4).astype(np.float32)
     ys, xs, hh = stamps.jitter_points(rub, 6, 5, rd, seed + 15)
     which = ((hh >> np.uint32(3)) % np.uint32(len(stamps.PEBBLES))).astype(np.int64)
     rid = np.where((hh >> np.uint32(7)) & np.uint32(1), R['rock'], R['rock_warm']).astype(np.int16)
@@ -522,6 +587,6 @@ def _details(P, world, E, Xg, Yg, seed):
     t = stamps.stamp(P.prio, P.tone, P.ramp, ys, xs, stamps.PEBBLES, which, allow=rub)
     newly = t & (before_r != R['rock'])
     # stone pixels: rock ramp, tone around 3-5 from the glyph offset
-    P.ramp[newly] = R['rock_warm']
-    P.tone[newly] = np.clip(P.tone[newly] - P.tone[newly] + 3.6 + (P.tone[newly] - np.round(P.tone[newly])), 1, 6)
+    P.ramp[newly] = R['rock']
+    P.tone[newly] = np.clip(3.0 + (P.tone[newly] - np.round(P.tone[newly])) * 1.5, 1, 5)
     P.flags[newly] |= 2

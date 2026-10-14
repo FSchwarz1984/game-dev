@@ -1,0 +1,67 @@
+{
+ "name": "cedar_3",
+ "kind": "tree",
+ "seed": 13,
+ "ppm": 20.0,
+ "anchor_note": "offsets are px from the anchor (trunk foot on the ground)",
+ "layers": {
+  "trunk": {
+   "albedo": "trunk.png",
+   "normal": "trunk_n.png",
+   "offset": [
+    -38,
+    -351
+   ],
+   "size": [
+    71,
+    358
+   ]
+  },
+  "crown": {
+   "albedo": "crown.png",
+   "normal": "crown_n.png",
+   "data": "crown_d.png",
+   "offset": [
+    -53,
+    -359
+   ],
+   "size": [
+    104,
+    265
+   ]
+  },
+  "shadow": {
+   "albedo": "shadow.png",
+   "offset": [
+    -12,
+    -12
+   ],
+   "size": [
+    155,
+    119
+   ],
+   "channels": "R = crown shade, G = trunk shade, B = contact shade (still), A = max"
+  }
+ },
+ "crown_sort_px": 19,
+ "core_color": [
+  18,
+  34,
+  33
+ ],
+ "crown_height_m": [
+  5.9,
+  17.27
+ ],
+ "sun_ref": {
+  "elevation_deg": 63.7,
+  "shadow_dir_xz": [
+   0.8096,
+   0.587
+  ]
+ },
+ "sway_amp": 1.0,
+ "species": "cedar",
+ "trunk_occluder": false,
+ "layout": "tree"
+}

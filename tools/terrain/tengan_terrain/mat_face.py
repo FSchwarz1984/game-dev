@@ -121,6 +121,15 @@ def paint_faces(S, world, top, atlases, seed=0):
         mossy = ledge & (damp > 0.5) & (noise.hash01(X[m].astype(np.int64), np.round(v[m]).astype(np.int64), seed + 5) < 0.75)
         rp = np.where(mossy, R['moss'], rp)
         t = np.where(mossy, 2.6 + (damp > 0.62), t)
+        # tufts sprouting from ledges: the pixel 1-2 rows below is a ledge chosen for a plant
+        sprout = np.zeros(m.sum(), bool)
+        for dv in (1, 2):
+            av2 = (av + dv) % ah
+            led2 = a['ledge'][av2, au] & (a['plate'][av2, au] > 0)
+            pick = noise.hash01(np.floor_divide(au, 3), av2, seed + 9) < 0.09
+            sprout |= led2 & pick & (damp > 0.42) & (np.abs(((au % 3) - 1)) <= (2 - dv))
+        rp = np.where(sprout, R['grass'], rp)
+        t = np.where(sprout, 3.6, t)
         # rare thin water stains below a ledge (1-2 px wide, fading downward)
         sc = noise.hash01(np.floor(X[m] / 2.0).astype(np.int64), 77, seed + 6)
         streak = (sc < 0.025) & (rel[m] > 0.2) & (rel[m] < 0.8)
@@ -160,15 +169,16 @@ def paint_faces(S, world, top, atlases, seed=0):
         tone[m] = t
         lnx[m] = a['nx'][av, au]
         lny[m] = a['ny'][av, au]
-    # -- earth bank: layered soil, embedded stones, roots
+    # -- earth bank: layered soil, embedded stones, roots, and a lot of vegetation:
+    #    grass curtains hanging from the lip, moss and herb clumps clinging to the face
     for st in (FACE['earth'], FACE['bank'], FACE['wetbank']):
         m = style == st
         if not m.any():
             continue
         Xm, vm = X[m], v[m]
         wob = (noise.fbm(Xm / 40.0, np.zeros(m.sum()) + 2.0, seed + 11, 2) - 0.5) * 6.0
-        strata = noise.fbm(Xm / 70.0, (vm + wob) / 3.2, seed + 12, 2)
-        t = 2.4 + (strata - 0.5) * 2.2 + (0.3 - rel[m]) * 0.8
+        strata = noise.fbm(Xm / 90.0, (vm + wob) / 4.0, seed + 12, 2)
+        t = 3.0 + (strata - 0.5) * 1.6 + (0.3 - rel[m]) * 0.6
         tone_m = _dither_round_s(t, fx[m], fy[m])
         rp = np.full(m.sum(), R['soil'] if st != FACE['wetbank'] else R['wetsoil'], np.uint8)
         # embedded stones: small rounded lumps lit on the upper left
@@ -177,26 +187,36 @@ def paint_faces(S, world, top, atlases, seed=0):
         au = (Xm.astype(np.int64) * 2 // 3) % aw
         av = (-np.round(vm).astype(np.int64) * 2 // 3) % ah
         pl = a['plate'][av, au]
-        sel = noise.hash01(pl, pl * 3 + 1, seed + 13) < 0.16
-        stone = (pl > 0) & sel
+        stone = (pl > 0) & (noise.hash01(pl, pl * 3 + 1, seed + 13) < 0.12)
         rim = a['rim'][av, au]
-        st_t = 3.4 + np.where(rim == 2, 1.0, 0) + np.where(rim == 1, 0.5, 0) + np.where(rim == -1, -0.8, 0)
+        st_t = 3.5 + np.where(rim == 2, 1.0, 0) + np.where(rim == 1, 0.5, 0) + np.where(rim == -1, -0.8, 0)
         rp = np.where(stone, R['stone_warm'], rp)
         tone_m = np.where(stone, st_t, tone_m)
-        # roots threading the bank (thin, wavy, mostly near the top)
+        # roots threading the bank (thin, wavy, a few)
         ry = (np.round(vm).astype(np.int64))
         rootline = np.abs(np.sin(Xm * 0.11 + np.floor(ry / 9.0) * 2.1) * 2.6 + (ry % 9) - 4.5) < 0.55
-        rootsel = noise.hash01(np.floor(Xm / 19).astype(np.int64), np.floor(ry / 9.0).astype(np.int64), seed + 14) < 0.22
-        root = rootline & rootsel & (rel[m] < 0.8)
+        rootsel = noise.hash01(np.floor(Xm / 19).astype(np.int64), np.floor(ry / 9.0).astype(np.int64), seed + 14) < 0.12
+        root = rootline & rootsel & (rel[m] < 0.7)
         rp = np.where(root, R['bark'], rp)
         tone_m = np.where(root, 2.0, tone_m)
-        if st == FACE['bank']:
-            g = rel[m] < 0.6 + (noise.hash01(Xm.astype(np.int64), 3, seed + 15) - 0.5) * 0.4
-            rp = np.where(g, R['grass_cool'], rp)
-            tone_m = np.where(g, 2.0 + (noise.hash01(Xm.astype(np.int64), ry, seed + 16) > 0.6), tone_m)
+        # vegetation clinging to the face: clumps (clusters ~1 m) of grass and moss, lit on top
+        vz = noise.fbm(Xm / 26.0, vm / 9.0, seed + 17, 3)
+        vy = noise.vnoise(Xm / 2.2, vm / 1.6, seed + 18)
+        cover = (vz + (vy - 0.5) * 0.35) > (0.56 if st != FACE['bank'] else 0.42)
+        green = np.where(noise.fbm(Xm / 60.0, vm / 30.0, seed + 19, 2) > 0.5, R['grass_cool'], R['moss'])
+        top_of_clump = cover & ~((noise.fbm(Xm / 26.0, (vm + 1) / 9.0, seed + 17, 3) + (noise.vnoise(Xm / 2.2, (vm + 1) / 1.6, seed + 18) - 0.5) * 0.35) > (0.56 if st != FACE['bank'] else 0.42))
+        rp = np.where(cover, green, rp)
+        tone_m = np.where(cover, np.where(top_of_clump, 4.0, 2.6 + (vy > 0.6)), tone_m)
+        # grass curtains: long hanging sod from the lip, in clumps
+        cur = np.floor(4 + noise.fbm(Xm / 7.0, np.full(m.sum(), 9.0), seed + 20, 2) * 9.0 - 3.0)
+        curtain = fk[m] <= cur
+        rp = np.where(curtain, np.where(green == R['moss'], R['grass_cool'], R['grass']), rp)
+        tone_m = np.where(curtain, np.clip(3.4 - fk[m] * 0.18, 2, 4) + (noise.hash01(Xm.astype(np.int64), ry, seed + 21) > 0.75), tone_m)
+        tip = curtain & (fk[m] == cur) & (noise.hash01(Xm.astype(np.int64), 5, seed + 22) < 0.5)
+        tone_m = np.where(tip, tone_m + 0.8, tone_m)
         ramp[m] = rp
         tone[m] = tone_m
-        lny[m] = np.where(stone, a['ny'][av, au], 0.0)
+        lny[m] = np.where(stone, a['ny'][av, au], np.where(cover | curtain, 0.25, 0.0))
     # -- stair risers: dressed stone below each nosing
     m = style == FACE['riser']
     if m.any():
@@ -210,11 +230,11 @@ def paint_faces(S, world, top, atlases, seed=0):
         seg = np.floor((uu + off) / seg_w)
         fu = (uu + off) - seg * seg_w
         hs = noise.hash2(seg.astype(np.int64), k * 7 + sidm, seed + 702)
-        t = 3.0 + ((hs & np.uint32(255)).astype(np.float32) / 255.0) * 0.8
+        t = 3.3 + ((hs & np.uint32(255)).astype(np.float32) / 255.0) * 0.8
         t = np.where(fk[m] <= 1, t - 0.7, t)                          # under the nosing
         t = np.where(fk[m] >= fd[m], t - 0.4, t)                     # the foot
         t = np.where(fu < 1.0, t - 1.1, t)
-        rp = np.where((hs >> np.uint32(9)) & np.uint32(1), R['stone_warm'], R['stone']).astype(np.uint8)
+        rp = np.where(((hs >> np.uint32(9)) & np.uint32(3)) == 0, R['stone'], R['stone_warm']).astype(np.uint8)
         mz = noise.fbm(X[m] / 12.0, v[m] / 6.0, seed + 703, 2)
         mossy = (fk[m] >= fd[m] - 1) & (mz > 0.55)
         rp = np.where(mossy, R['moss'], rp)
@@ -228,7 +248,7 @@ def paint_faces(S, world, top, atlases, seed=0):
         u = world.stair_u.ravel()[up[m]]
         k = world.stair_k.ravel()[up[m]].astype(np.int64)
         hb = noise.hash2(k, np.sign(u).astype(np.int64) + sid_up[m] * 3, seed + 751)
-        t = 2.7 + ((hb & np.uint32(255)).astype(np.float32) / 255.0) * 0.8
+        t = 3.1 + ((hb & np.uint32(255)).astype(np.float32) / 255.0) * 0.8
         # bevel: lit top row and left edge, dark right edge and foot
         xl = np.zeros(m.sum(), bool)
         col = fx[m]
