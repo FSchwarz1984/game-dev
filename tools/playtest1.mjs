@@ -33,8 +33,8 @@ await page.waitForFunction(() => window.APP && window.APP.G);
 
 const log = (...a) => console.log(`[${mode}]`, ...a);
 let shotN = 0;
-async function shot(name) {
-  await page.waitForTimeout(900);            // let CSS fades and cards settle (they run on the wall clock)
+async function shot(name, settle = 900) {
+  await page.waitForTimeout(settle);         // let CSS fades and cards settle (they run on the wall clock)
   await page.evaluate(() => window.APP.render());
   await page.waitForTimeout(60);
   const f = path.join(out, `${String(++shotN).padStart(2, '0')}-${name}.png`);
@@ -45,10 +45,16 @@ async function shot(name) {
 }
 const state = () => page.evaluate(() => {
   const { G } = window.APP, f = G.f, P = f.player;
-  return { x: P.x, z: P.z, control: f.control, busy: G.D.busy, blocking: G.ui.blocking, dlg: !!G.ui.dlg, target: f.target?.id || null, label: f.contextLabel(), w: P.holder.q.w, saved: localStorage.getItem('amagishi.save'), vista: !!G.stage.vistaOn };
+  return { x: P.x, z: P.z, control: f.control, busy: G.D.busy, blocking: G.ui.blocking, dlg: !!G.ui.dlg, target: f.target?.id || null, label: f.contextLabel(), w: P.holder.q.w, saved: localStorage.getItem('amagishi.save'), vista: !!G.stage.vistaOn, card: document.querySelector('.st-card.on h2')?.textContent || '' };
 });
-// advance the clock n frames of 1/30 s without drawing
-const ticks = n => page.evaluate(n => { for (let i = 0; i < n; i++) window.APP.tick(1 / 30); }, n);
+// advance the clock n frames of 1/30 s without drawing; between frames the page gets a task
+// boundary, as it does between animation frames, so the scenes' awaits resume frame by frame
+// (one synchronous loop would hold every continuation until the loop ends)
+const ticks = n => page.evaluate(async n => {
+  const ch = window.__tickCh || (window.__tickCh = new MessageChannel());
+  const next = () => new Promise(r => { ch.port1.onmessage = () => r(); ch.port2.postMessage(0); });
+  for (let i = 0; i < n; i++) { window.APP.tick(1 / 30); await next(); }
+}, n);
 // the same, but a line of dialogue that comes up is read and dismissed like a player would
 async function play(n) {
   for (let done = 0; done < n; done += 15) {
@@ -197,7 +203,9 @@ async function prologueRun() {
   await ticks(40);
   await shot('title');
   if (VIEW.touch) await tap('.ttl-menu button[data-a="start"]'); else await page.keyboard.press('Enter');
-  await ticks(120); await shot('entrance-dusk');
+  // a tap's click arrives after the touch events: wait for the title to go before running the clock
+  await page.waitForFunction(() => !document.querySelector('.ttl') || document.querySelector('.ttl.gone'), null, { timeout: 15000 });
+  await ticks(150); await shot('entrance-dusk', 2800);   // the fade from black is a 2.4 s CSS transition
   const P = await places();
   await until(s => s.dlg, 'statues line'); await shot('statues');
   await until(s => s.control && !s.busy, 'control on the road');
@@ -255,8 +263,13 @@ async function dayOneRun() {
     if (!s.control && s.busy) break;            // the way out has already begun (the statues, the end)
     await walk([x, z], 1.2);
   }
+  // the last stretch to the statues, unless she is already over the line that starts the ending
+  // (once the ending runs, the scene walks her off the map: no route is expected then)
   const s0 = await state();
-  if (s0.control) await walk([119.2, P.dosojinStand[1]], 0.6);
-  await until(s => s.saved && s.saved.includes('end'), 'end card', 3000);
-  await shot('end');
+  if (s0.control && !s0.busy && s0.x < 118.2) {
+    await walk([119.2, P.dosojinStand[1]], 0.6).catch(async e => { const s = await state(); if (s.control && !s.busy) throw e; });
+  }
+  await until(s => s.card.includes('第一段') || (s.saved && s.saved.includes('end')), 'end card', 3000);
+  await ticks(45); await shot('end', 1500);
+  await until(s => s.saved && s.saved.includes('end'), 'the end is saved', 3000);
 }
