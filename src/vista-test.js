@@ -3,7 +3,7 @@
 //   &w=&h=          force the native size (otherwise from the viewport, integer scale)
 //   &fig=0          hide the stand-in figure (the real sprite is drawn by the host)
 //   &manual=1       no animation loop; drive with window.VT.render(state, frames, dt)
-//   &seq=1          play the prologue sequence on a loop (dusk pan, rise, sky, wave)
+//   &seq=1          play the prologue sequence on a loop (dusk pan, rise, sky, wave); &seqt0=s starts it at s
 // window.DONE is set after the first frame.
 
 import { createVista } from './vista/index.js';
@@ -89,7 +89,7 @@ if (q.get('manual') === '1') {
   v.draw(1 / 60, state);
   window.DONE = true;
 } else {
-  let last = performance.now(), T0 = last, first = true;
+  let last = performance.now(), T0 = last - num('seqt0', 0) * 1000, first = true;
   const loop = now => {
     const dt = (now - last) / 1000; last = now;
     if (q.get('seq') === '1') sequence(((now - T0) / 1000) % 52);

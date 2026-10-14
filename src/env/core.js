@@ -140,7 +140,10 @@ export const rpick = (r, t) => r[clamp(Math.round(t * (r.length - 1)), 0, r.leng
 
 /* ---------- ordered dither ---------- */
 export const BAYER4 = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-export const bayer = (x, y) => (BAYER4[(x & 3) + (y & 3) * 4] + 0.5) / 16;
+/** Ordered dither, deliberately weak: band edges get a 1–2 px stipple, never a wide checkerboard
+    (Eastward-style clean clusters; checkerboard fields read as screen-door noise at 3×). */
+export const DITHER_K = 0.4;
+export const bayer = (x, y) => 0.5 + ((BAYER4[(x & 3) + (y & 3) * 4] + 0.5) / 16 - 0.5) * DITHER_K;
 
 /* ---------- geometry helpers ---------- */
 /** distance from p to a polyline; returns {d, i, t, s} (segment index, param, signed side) */

@@ -8,8 +8,8 @@
 // distant mountains), two tones per face, and a rim of light along every lower edge where a nearer
 // range hangs in front of a farther one: the plain's glow catching the peak tips.
 
-import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, ridged, IndexLayer, I, pack, mix3 } from './util.js';
-import { march } from './terrain.js';
+import { clamp, smooth, rng, hash2, vnoise, fbm, ridged, IndexLayer, I, pack, mix3, run } from './util.js';
+import { marchGen } from './terrain.js';
 
 export const S = { land: 1, forest: 2, rock: 3, river: 4, rim: 5, funnel: 6, mouth: 7, funnelRim: 8 };
 const HAZE_Z = [30, 40, 52, 66];
@@ -17,12 +17,23 @@ const HAZE_Z = [30, 40, 52, 66];
 /**
  * @param o { w, h, cx, yh, f, Hs, funnel: {X, Z, D, R}, towns: [{X, Z, r}], hazeEdgeY, seed }
  */
-export function buildSkyShore(o) {
+export function buildSkyShore(o) { return run(buildSkyShoreGen(o)); }
+
+export function* buildSkyShoreGen(o) {
   const { w, h, cx, yh, f, Hs, funnel: Fn } = o;
   const R = rng(o.seed + 501);
   const towns = o.towns;
   const rivers = makeRivers(R, Fn);
-  const flatAt = (X, Z) => { let fl = 0; for (const t of towns) { const q = Math.hypot(X - t.X, (Z - t.Z) * 0.8) / t.r; if (q < 1.6) fl = Math.max(fl, smooth(1.6, 0.8, q)); } return fl; };
+  const flatAt = (X, Z) => {
+    let fl = 0;
+    for (let k = 0; k < towns.length; k++) {
+      const t = towns[k], dx = X - t.X, dz = (Z - t.Z) * 0.8, lim = t.r * 1.6;
+      if (dx > lim || dx < -lim || dz > lim || dz < -lim) continue;
+      const q = Math.sqrt(dx * dx + dz * dz) / t.r;
+      if (q < 1.6) fl = Math.max(fl, smooth(1.6, 0.8, q));
+    }
+    return fl;
+  };
   const depth = (X, Z) => {
     let d = 0.15 + 0.2 * fbm(X * 0.12, Z * 0.12, 2, 81);
     const flat = flatAt(X, Z);
@@ -30,7 +41,7 @@ export function buildSkyShore(o) {
     const zone = smooth(0.25, 0.6, vnoise(X * 0.04, Z * 0.05, 85));
     d += (1 - flat) * Math.pow(rg, 2.1) * 5.2 * (0.45 + 0.55 * zone);
     d += (1 - flat) * 0.22 * Math.pow(vnoise(X * 2.6, Z * 2.6, 87), 4);   // hanging forest, tips down
-    for (const rv of rivers) { const dd = distRiver(rv, X, Z); if (dd < 0.6) d -= (0.6 - dd) * 0.45; }
+    for (let k = 0; k < rivers.length; k++) { const dd = distRiver(rivers[k], X, Z); if (dd < 0.6) d -= (0.6 - dd) * 0.45; }
     const fx = X - Fn.X, fz = Z - Fn.Z, r = Math.hypot(fx, fz) / Fn.R;
     if (r < 1) {
       const ang = Math.atan2(fz, fx);
@@ -40,10 +51,12 @@ export function buildSkyShore(o) {
     return Math.max(0.02, d);
   };
   const height = (X, Z) => Hs - depth(X, Z);
-  const m = march({ w, h, cx, yh, f, camY: 0, z0: 4, z1: 140, height, k: 0.013, ceiling: true });
+  const m = yield* marchGen({ w, h, cx, yh, f, camY: 0, z0: 4, z1: 140, height, k: 0.013, ceiling: true });
   const L = new IndexLayer(w, h);
-  const Lt = norm3([-0.4, -0.7, -0.6]); // light from below, from the left and toward us
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+  const Lt = norm3([-0.18, -0.85, -0.5]); // light from below (the plain's glow), a little from the left and toward us
+  for (let y = 0; y < h; y++) {
+   if ((y & 15) === 15) yield;
+   for (let x = 0; x < w; x++) {
     const i = y * w + x;
     if (!m.mask[i]) continue;
     const X = m.X[i], Z = m.Z[i];
@@ -55,14 +68,16 @@ export function buildSkyShore(o) {
     const fr = Math.hypot(X - Fn.X, Z - Fn.Z) / Fn.R;
     let mat = S.land;
     if (fr < 1) mat = fr < 0.06 ? S.mouth : S.funnel;
-    else if (-ny < 0.55) mat = S.rock;
+    else if (-ny < 0.42) mat = S.rock;
     else if (vnoise(X * 0.7, Z * 0.7, 89) > 0.5) mat = S.forest;
     if (fr >= 1) for (const rv of rivers) if (distRiver(rv, X, Z) < Z / f * 0.7) mat = S.river;
     const sun = lam > 0.55 ? 6 : lam > 0.25 ? 4 : 2;
     const sky = clamp(Math.round(-ny * 3), 0, 3);
     let haze = 0; for (const zz of HAZE_Z) if (Z > zz) haze++;
     L.idx[i] = I(mat, sun, sky, haze);
+   }
   }
+  yield;
   // lower edges of nearer ranges against farther ones catch the light from below
   const src = L.idx.slice();
   for (let y = 0; y < h - 2; y++) for (let x = 0; x < w; x++) {
@@ -71,6 +86,19 @@ export function buildSkyShore(o) {
     if (m.Z[i + w] > m.Z[i] * 1.18) {
       const fr = Math.hypot(m.X[i] - Fn.X, m.Z[i] - Fn.Z) / Fn.R;
       L.idx[i] = I(fr < 1 ? S.funnelRim : S.rim, 6, 3, src[i] & 7);
+    }
+  }
+  // hanging forest: inverted conifer tips under the lower edges of the nearer ranges, tips catching the light
+  {
+    const src2 = L.idx.slice();
+    for (let y = 1; y < h - 4; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x, v = src2[i];
+      if ((v >> 8) !== S.rim || hash2(x, y, 97) > 0.42) continue;
+      const above = src2[i - w];
+      if (!above || (above >> 8) === S.rim) continue;
+      const len = 1 + Math.floor(hash2(x, y, 98) * 3);
+      for (let k = 0; k < len; k++) { const j = i + k * w; if (m.Z[j + w] > m.Z[i] * 1.1 || k === 0) L.idx[j] = (above & ~0xe0) | (2 << 5); }
+      L.idx[i + len * w] = v;
     }
   }
   // the hem: cut off where the haze takes it, frayed a little (nothing beyond is seen)
@@ -93,16 +121,30 @@ export function buildSkyShore(o) {
   };
   for (const t of towns) {
     // a few streets: lamps in lines
-    for (let s = 0; s < 4; s++) {
+    for (let s = 0; s < 3; s++) {
       const a = R() * Math.PI, len = t.r * (0.8 + R() * 0.8), ox = (R() - 0.5) * t.r * 0.6, oz = (R() - 0.5) * t.r * 0.6;
-      for (let u = -len / 2; u < len / 2; u += 0.16) put(t.X + ox + Math.cos(a) * u, t.Z + oz + Math.sin(a) * u, 0.55 + R() * 0.3);
+      for (let u = -len / 2; u < len / 2; u += 0.22) put(t.X + ox + Math.cos(a) * u, t.Z + oz + Math.sin(a) * u, 0.55 + R() * 0.3);
     }
-    const n = Math.round(t.r * t.r * 5);
+    const n = Math.round(t.r * t.r * 3);
     for (let k = 0; k < n; k++) { const a = R() * Math.PI * 2, d = Math.pow(R(), 0.7) * t.r; put(t.X + Math.cos(a) * d, t.Z + Math.sin(a) * d / 0.8, 0.4 + R() * 0.6); }
   }
   // scattered farms
-  for (let k = 0; k < 60; k++) put((R() - 0.5) * 70, 26 + R() * 50, 0.3 + R() * 0.35);
-  return { layer: L, lights, proj, depth, height, rivers, mask: m.mask, Z: m.Z };
+  for (let k = 0; k < 40; k++) put((R() - 0.5) * 70, 26 + R() * 50, 0.3 + R() * 0.35);
+  // points along the rivers where they can be seen (for the glints that run up them)
+  const flow = [];
+  rivers.forEach((pts, ri) => {
+    let u = 0;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const [ax, az] = pts[i], [bx, bz] = pts[i + 1], len = Math.hypot(bx - ax, bz - az);
+      for (let d = 0; d < len; d += 0.35) {
+        const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
+        const [x, y] = proj(X, Z), xi = Math.round(x), yi = Math.round(y);
+        if (yi >= 0 && yi < h && xi >= 0 && xi < w && L.idx[yi * w + xi] && (L.idx[yi * w + xi] >> 8) === S.river) flow.push({ x: xi, y: yi, u: u + d, ri, Z });
+      }
+      u += len;
+    }
+  });
+  return { layer: L, lights, flow, proj, depth, height, rivers, mask: m.mask, Z: m.Z };
 }
 
 function norm3(v) { const l = Math.hypot(v[0], v[1], v[2]); return [v[0] / l, v[1] / l, v[2] / l]; }
@@ -135,14 +177,15 @@ function distRiver(pts, X, Z) {
       const [ax, az] = pts[i], [bx, bz] = pts[i + 1];
       for (let k = Math.floor(Math.min(az, bz) - 1); k <= Math.floor(Math.max(az, bz) + 1); k++) {
         if (!bins.has(k)) bins.set(k, []);
-        bins.get(k).push([ax, az, bx - ax, bz - az]);
+        bins.get(k).push(ax, az, bx - ax, bz - az);
       }
     }
   }
   const list = bins.get(Math.floor(Z));
   if (!list) return 1e9;
   let best = 1e9;
-  for (const [ax, az, dx, dz] of list) {
+  for (let o = 0; o < list.length; o += 4) {
+    const ax = list[o], az = list[o + 1], dx = list[o + 2], dz = list[o + 3];
     if (X < Math.min(ax, ax + dx) - 1 || X > Math.max(ax, ax + dx) + 1) continue;
     const t = clamp(((X - ax) * dx + (Z - az) * dz) / (dx * dx + dz * dz), 0, 1);
     const d = Math.hypot(X - ax - dx * t, Z - az - dz * t);
@@ -153,16 +196,16 @@ function distRiver(pts, X, Z) {
 
 // colours (night): pale blue land, a touch of teal, lit faintly from below; low contrast
 const BASE = {
-  [S.land]: [[36, 46, 76], [46, 58, 88], [58, 72, 100]],
+  [S.land]: [[38, 48, 78], [47, 59, 89], [58, 72, 100]],
   [S.forest]: [[31, 42, 68], [40, 53, 80], [50, 65, 92]],
-  [S.rock]: [[44, 52, 82], [58, 68, 98], [74, 86, 114]],
+  [S.rock]: [[40, 49, 79], [54, 65, 95], [68, 80, 108]],
   [S.river]: [[112, 134, 160], [136, 160, 184], [156, 182, 204]],
   [S.rim]: [[78, 104, 124], [92, 122, 138], [104, 138, 150]],
   [S.funnel]: [[40, 54, 84], [56, 76, 104], [76, 102, 124]],
   [S.funnelRim]: [[96, 136, 146], [110, 156, 160], [128, 176, 176]],
   [S.mouth]: [[120, 170, 172], [150, 200, 196], [180, 226, 214]],
 };
-const HAZE_K = [0, 0.3, 0.52, 0.7, 0.84];
+const HAZE_K = [0, 0.34, 0.56, 0.73, 0.86];
 export function skyShorePalette(hazeCol) {
   return i => {
     const m = i >> 8, s = (i >> 5) & 7, hz = i & 7;

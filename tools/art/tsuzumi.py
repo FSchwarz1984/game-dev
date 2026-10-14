@@ -1,946 +1,233 @@
-"""百々つゞみ (Tsuzumi Momo) - hand-pixelled sprite parts and animations.
+"""百々つゞみ (Tsuzumi Momo) - animations and sheet description (revision 2).
 
-Reference: assets/reference/illustrations/tsuzumi.png. Extremely wide sugegasa (cream straw top,
-indigo underside, a red band over the crown), long straight black-violet hime-cut hair with
-white-and-red ties on the side locks, white haori with very wide sleeves (indigo lining) over an
-indigo kimono, a red cord bow at the obi with one long red tail, wide indigo trousers gathered by
-white ankle wraps, dark split-toe boots. She carries a back-frame (背負子) with a wicker trunk.
-
-Model space: every part is drawn in a 27-column space whose column 13 is her centre line and
-whose row 38 is the outline under her soles. It maps into the 48x64 frame at (MX, MY), so the foot
-pivot is frame pixel (24, 61). Light comes from the top-left.
+Reference: assets/reference/illustrations/tsuzumi.png. Parts live in tsu_base.py (body, hat, the
+back-frame) and tsu_actions.py (action poses). Three sheets:
+    load   wearing the back-frame with the wicker box on its shelf
+    frame  wearing the old back-frame, empty (day 1); Saji sits on its top rail
+    plain  no back-frame
+Model space: column 13 is her centre line, row 38 the outline under her soles; it maps into the
+56x64 cell at (MX, MY) = (15, 23), so the foot pivot is cell pixel (28, 61). Light: top-left.
+The ground line is row 38 in every pose; only the walk's contact frames put the leading foot one
+pixel lower in the front and back views (it is nearer the camera).
+'<anim>Ride' (front view only): the same frames without the post tips, for when Saji rides.
 """
 
 from __future__ import annotations
 
-from pixart import Palette, G
-from rig import L, Frame, at
+from rig import L, Frame, at, merge, shear_h, shear_v, crop_rows
+from tsu_base import *  # noqa: F401,F403  (parts and PAL)
+import tsu_base as B
 
-# ---------------------------------------------------------------------------------------------
-# Palette (colours picked from the illustration, pushed a little for pixel-art saturation)
+FW, FH = 56, 64
+MX, MY = 15, 23
+PIVOT = (28, 61)
 
-PAL = Palette({
-    # white haori, hat straw, ankle wraps
-    'W': ('#fbf7ef', 'white', 2), 'w': ('#ebe3d6', 'white', 0), 'v': ('#cbc0cd', 'white', -1), 'V': ('#9d90aa', 'white', -2),
-    # indigo kimono, trousers, hat underside, boots
-    'I': ('#5f679f', 'indigo', 1), 'i': ('#42487d', 'indigo', 0), 'n': ('#2f305c', 'indigo', -1), 'N': ('#201e3f', 'indigo', -2),
-    # red band, cord, sash, ties
-    'R': ('#e3647c', 'red', 1), 'r': ('#c03e5a', 'red', 0), 'd': ('#8c2b45', 'red', -1),
-    # hair
-    'H': ('#76689e', 'hair', 2), 'j': ('#4d406f', 'hair', 1), 'k': ('#342a4f', 'hair', 0), 'K': ('#231c37', 'hair', -1),
-    # skin
-    's': ('#fde7d8', 'skin', 0), 'z': ('#efbca8', 'skin', -1), 'Z': ('#d4907f', 'skin', -2), 'b': ('#f5a0a2', 'skin', 0),
-    # eyes
-    'e': ('#6f84b3', 'eye', 0), 'E': ('#2a2444', 'eye', -2), 'y': ('#ffffff', 'eye', 2),
-    # back-frame wood and wicker trunk, straw rope
-    'G': ('#b58c5f', 'wood', 1), 'g': ('#8b6443', 'wood', 0), 'u': ('#5e4130', 'wood', -1),
-    'T': ('#e1c084', 'wicker', 1), 't': ('#bf9558', 'wicker', 0), 'p': ('#8f6a3c', 'wicker', -1), 'P': ('#644728', 'wicker', -2),
-    # dango (eat), lantern paper is a separate prop
-    'D': ('#f3d9df', 'food', 1), 'f': ('#9bc46a', 'food', 0), 'F': ('#e6a1b4', 'food', 0),
-}, outlines={
-    # five line colours: cool near-black (hair, indigo, eyes), soft violet on white cloth and straw,
-    # deep red on red cloth, warm brown on skin, dark brown on the wooden frame and wicker
-    'hair': '#16122a', 'indigo': '#16122a', 'eye': '#16122a', 'white': '#3b3150',
-    'red': '#3e1424', 'food': '#3e1424', 'skin': '#6a3438', 'wood': '#2f1e12', 'wicker': '#2f1e12',
-}, default_outline='#16122a', bevel={'hair': 0.7, 'white': 1.0, 'indigo': 0.9, 'skin': 1.1, 'wicker': 0.8, 'wood': 0.6})
-
-FW, FH = 48, 64          # frame size
-MX, MY = 11, 23          # model space origin inside the frame
-PIVOT = (24, 61)         # foot pivot (frame pixels): centre column, outline row under the soles
+# Anchors in model space (converted to pivot-relative pixels by the build).
+LOAD_TOP = {'front': (13, 6), 'side': (5, 6), 'back': (13, 6)}   # top rail: where Saji sits
+HOOK = {'front': (4, -1), 'side': (1, -1), 'back': (22, -1)}      # the peg on her right post
+HAND_REST = {'front': (7, 30), 'side': (16, 29), 'back': (20, 30)}
 
 
-# =============================================================================================
-# FRONT (facing the camera)
-
-F_HEAD = L(0, '''
-.............o.............
-...........ooWoo...........
-.........ooWWwrvoo.........
-.......ooWWwwwrrvvoo.......
-.....ooWWwvwwwwrrvvvoo.....
-...ooWWWwvwwwwwwrrvvvvoo...
-.ooWWWwwvwwwwwwwwrrvvvvvoo.
-.onnnnooooooooooooooonNNNo.
-..onNoKKKKKKKKKKKKKKKoNNo..
-...ookkkkjkkkjkkkjkkkkoo...
-....oKkjksEEsssEEskKkKo....
-....oKkjksEessseEskKkKo....
-....oKkjkbsssssssbkKkKo....
-....oKkjkzsssZssszkKkKo....
-....oKkjkozssssszokKkKo....
-....oKkWwKoooooooKwvkKo....
-....oKkrrKKo...oKKrdkKo....
-....oKokko.......oKKoKo....
-.....o.oo.........oo.o.....
-''', z=8)
-
-# Blink and other face swaps for the front head (rows 10-14, cols 9-17).
-F_FACE = {
-    'open': None,
-    'blink': L(10, '''
-s..sss..s
-sEEsssEEs
-''', col=9, z=8.1),
-    'happy': L(10, '''
-sEssssEss
-EsEsssEsE
-''', col=8, z=8.1),
-    'chew': L(13, '''
-sZZs
-''', col=12, z=8.1),
-    'open_mouth': L(13, '''
-sZs
-sZs
-''', col=12, z=8.1),
-    'strain': L(10, '''
-sEssssEs
-EsEssEsE
-''', col=9, z=8.1),
-}
-
-F_TORSO = L(16, '''
-...ozzzo...
-.oWwrzrwvo.
-oWWwwrwwwvo
-oWwiwniwwvo
-oWwiinniwvo
-oWwiinnnwvo
-oWwwwwrRwvo
-odrrrrRrrdo
-oWwwwdrdwvo
-oWwiiidnwvo
-''', col=8, z=5)
-
-F_STRAPS = L(17, '''
-.T.......T.
-.Tp.....tp.
-..Tp...tp..
-..tp...tp..
-..tp...tp..
-''', col=8, z=5.5)
-
-F_ARM_L = L(17, '''
-...ooo.
-.oWWWWo
-oWWWwwo
-oWwwwwo
-oWwwvwo
-oWwwvwo
-oWwwvwo
-oWwvvwo
-oWwvwwo
-oiinnno
-.ooozso
-....oo.
-''', col=3, z=6)
-
-F_ARM_R = L(17, '''
-.ooo...
-owwwwo.
-owwwvvo
-owwwvvo
-owvwvVo
-owvwvVo
-owvwvVo
-owvvvVo
-owwvvVo
-onnnNNo
-oszooo.
-.oo....
-''', col=17, z=6)
-
-F_SKIRT = L(25, '''
-..oWwiinnnwvo..
-..oWwiinnnwvo..
-..oWwiinnnwvo..
-..oWwiinnnwvo..
-..oWwwinnwvvo..
-.oWwwviinvvvVo.
-.oWwvviinnvvVo.
-oWwvvoinnnovVVo
-ooooooinnnnoooo
-.oiiiinnonnnNo.
-''', col=6, z=3)
-
-F_LEG_L = L(35, '''
-.owWvo.
-onnnnno
-oNnnnNo
-ooooooo
-''', col=6, z=2)
-
-F_LEG_R = L(35, '''
-.owvvo.
-onnnnNo
-oNnnnNo
-ooooooo
-''', col=14, z=2)
-
-F_SASH = L(25, '''
-.o..
-odo.
-ordo
-ordo
-.odo
-.ordo
-.ordo
-..odo
-..ordo
-...odo
-...oo.
-''', col=15, z=7)
-
-F_SASH2 = L(25, '''
-.o..
-odo.
-ordo
-ordo
-.odo
-.odo.
-.ordo
-.ordo
-..odo
-..odo
-..oo.
-''', col=15, z=7)
-
-F_LOAD = L(-10, '''
-..o...........o...
-.ogo.........ogo..
-.ogo.........oguoo
-.ogo.........ogoo.
-ooooooooooooooooo.
-oWWwwwtwwwwwtwwvo.
-owwwwwtwwwwwtwvvo.
-ovvvvvpvvvvvpvVVo.
-oooooooooooooooo..
-..oIiiiiiiiiino...
-.oIiwiiiiiwiiino..
-.oiiiiiwiiiiinNo..
-.oiwiiiiiiiwinNo..
-''', col=5, z=0)
-
-# =============================================================================================
-# SIDE (facing right; mirror for left)
-
-S_HEAD = L(0, '''
-.............o.............
-...........ooWoo...........
-.........ooWrwwvoo.........
-.......ooWWrrwwvvvoo.......
-.....ooWWWwrrwwwvvvvoo.....
-...ooWWWWwwwrrwwwvvvvvoo...
-.ooWWWWwwwwwwrrwwwvvvvvvoo.
-.onnnooooooooooooooooonnno.
-.....oKKKKKKKKKKKKKKKo.....
-....oKkkjkkkkkkjkkkkkko....
-....oKkkjkkkkKkkjkkkkKo....
-....oKkkkjkkKjkssEEsso.....
-....oKkkkjkkKjkssEesso.....
-....oKkkkkjkKjkbsssssso....
-....oKkkkkjkKjkzsssZso.....
-....oKkkkkkkKWwozzzzo......
-....oKkkkkkkKrrooooo.......
-....oKkkkkkKKkko...........
-....oKkkkkkKKKKo...........
-''', z=8)
-
-S_FACE = {
-    'open': None,
-    'blink': L(11, '''
-sss
-EEs
-''', col=17, z=8.1),
-    'happy': L(11, '''
-sEs
-Ess
-''', col=17, z=8.1),
-    'chew': L(14, '''
-ZZ
-''', col=18, z=8.1),
-    'open_mouth': L(14, '''
-ZZ
-''', col=18, z=8.1),
-    'strain': L(11, '''
-EsE
-sEs
-''', col=16, z=8.1),
-}
-
-S_HAIR = L(19, '''
-...oKkkkkkKo
-...oKkkjkkKo
-...oKkkjkKo.
-...oKkjkkKo.
-...oKkjkkKo.
-...oKkjkKKo.
-...oKkjkKo..
-...oKkkkKo..
-....oKkKo...
-....oKKo....
-.....oo.....
-''', col=1, z=2)
-
-S_HAIR2 = L(19, '''
-...oKkkkkkKo
-...oKkkjkkKo
-...oKkkjkKo.
-..oKkkjkKo..
-..oKkjkkKo..
-..oKkjkKKo..
-..oKkjkKo...
-.oKkkkKo....
-.oKkKKo.....
-.oKKo.......
-..o.........
-''', col=1, z=2)
-
-S_TORSO = L(17, '''
-....ozzo..
-..oWwrwo..
-.oWWwrwvo.
-.oWwwiwvo.
-.oWwiinvo.
-.oWwiinvo.
-.oWwiinvo.
-.oWwwwRrdo
-odrrrrRrdo
-.oWwwwdrdo
-.oWwiinvo.
-''', col=8, z=5)
-
-S_STRAP = L(17, '''
-.T....
-.Tp...
-..tp..
-..tp..
-''', col=8, z=6.5)
-
-S_ARM = L(17, '''
-..ooo..
-.oWWWo.
-oWWWwwo
-oWwwwvo
-oWwwwvo
-oWwwvvo
-oWwvwvo
-oWwvwvo
-oWwvwvo
-oWwvwvo
-oinnnNo
-.oooszo
-....oo.
-''', col=9, z=6)
-
-S_SKIRT = L(25, '''
-..oWwiiinvo...
-..oWwiiinvo...
-..oWwiiinvo...
-..oWwiiinvvo..
-..oWwwiinvvo..
-.oWwwviinvvo..
-.oWwvvinnvVo..
-.oWwvoinnovVo.
-.ooooiinnnoooo
-''', col=6, z=3)
-
-# Side legs, one grid per walk phase (rows 33-38): trouser bottoms, wraps, boots pointing right.
-S_LEGS = {
-    'stand': L(33, '''
-..oinnnNo..
-..oiinnNo..
-..owWWvo...
-..onnnnnoo.
-..oNnnnnnNo
-..oooooooo.
-''', col=8, z=2),
-    'contact_a': L(33, '''
-.oinnoinnNo..
-oinNo.oinnNo.
-owWo...owWWvo
-onno...onnnnnoo
-oNNo...oNnnnnnNo
-oooo...ooooooooo
-''', col=5, z=2),
-    'down_a': L(33, '''
-..oinnoinNo..
-.oinNooinnNo.
-.owWo.owWWvo.
-.onnoonnnnnoo
-oNnNooNnnnnnNo
-ooooooooooooo.
-''', col=5, z=2),
-    'pass_a': L(33, '''
-...oinninNo..
-...oinNinNo..
-...owWoWWvo..
-...onnonnnnoo
-...oNnoNnnnnNo
-...ooooooooooo
-''', col=5, z=2),
-    'contact_b': L(33, '''
-.oinnoinnNo..
-oinnNo.oiNo..
-owWWvo..owWo.
-onnnnnoo.onnoo
-oNnnnnnNooNnNo
-oooooooooooooo
-''', col=5, z=2),
-    'down_b': L(33, '''
-..oinnoinNo..
-..oinNooinNo.
-..owWWvoowWo.
-..onnnnnoonnoo
-.oNnnnnnNoNnNo
-.ooooooooooooo
-''', col=5, z=2),
-}
-
-S_LOAD = L(-10, '''
-.........o.......
-........ogo......
-........ogo......
-........ogo......
-oooooooooogo.....
-oWwwwwwwvoguoo...
-oWwwwwwvvogo.....
-oWvvvvvVVogo.....
-ooooooooooogo....
-.oIiwiiinogo.....
-.oiiiiwinogo.....
-.oiwiiiinogo.....
-.oiiiwiinogo.....
-.oiiiiinnogo.....
-.onnnnnNNogo.....
-.ooooooooogo.....
-oTTTTTTTpogo.....
-optpppppPogo.....
-ooooooooooogo....
-otTtttWtpogo.....
-otptttWtpogo.....
-opttptWppogo.....
-oWWWWWWWwogo.....
-otttptWtpogo.....
-otptttWtpogo.....
-opttptWppogo.....
-otttptWtpogo.....
-otptttWtpogo.....
-oPPPPPWPPogo.....
-ooooooooooogoooo.
-..........ogggguo
-..........ooooooo
-''', col=-1, z=1)
-
-# =============================================================================================
-# BACK (facing away)
-
-B_HEAD = L(0, '''
-.............o.............
-...........ooWoo...........
-.........ooWWwrvoo.........
-.......ooWWwwwrrvvoo.......
-.....ooWWwvwwwwrrvvvoo.....
-...ooWWWwvwwwwwwrrvvvvoo...
-.ooWWWwwvwwwwwwwwrrvvvvvoo.
-.ooWWwwwwwwwwwwwwwvvvvvvoo.
-..oooowwwwwwwwwwwwwvvoooo..
-.....oooooooooooooooo......
-.....oKkkjkkkkjkkkKo.......
-.....oKkjkkkkjkkkjKo.......
-.....oKkjkkkjkkkkjKo.......
-.....oKkjkkkjkkkkjKo.......
-.....oKkjkkkjkkkkkKo.......
-.....oKkjkkkjkkkkkKo.......
-.....oKkjkkkjkkkkKKo.......
-''', col=1, z=8)
-
-B_HAIR = L(17, '''
-.oKkkkkjkkkkkKKo.
-.oKkkkkjkkkkkKKo.
-.oKkjkkjkkkjkKo..
-.oKkjkkkkkkjkKo..
-.oKkjkkkkkkjkKo..
-.oKkjkkkkkkkKKo..
-.oKkkjkkkkkkKKo..
-.oKkkjkkkkkKKo...
-.ooKKkkkkkkKKo...
-..ooKKkkkkKKoo...
-....ooKKKKoo.....
-......oooo.......
-''', col=5, z=9)
-
-B_HAIR2 = L(17, '''
-.oKkkkkjkkkkkKKo.
-.oKkkkkjkkkkkKKo.
-.oKkjkkjkkkjkKo..
-.oKkjkkkkkkjkKo..
-..oKjkkkkkkjkKo..
-..oKjkkkkkkkKKo..
-..oKkjkkkkkkKKo..
-..oKkjkkkkkKKo...
-..ooKkkkkkkKKo...
-...ooKKkkkKKoo...
-.....ooKKKKoo....
-.......oooo......
-''', col=5, z=9)
-
-B_TORSO = L(17, '''
-.oooooooooo.
-oWWwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-oWwwwwwwwvvo
-''', col=7, z=5)
-
-B_ARM_L = L(17, '''
-....oo.
-..ooWWo
-.oWWWwo
-oWWwwwo
-oWwwwvo
-oWwwwvo
-oWwwvvo
-oWwwvwo
-oWwwvwo
-oWwvvwo
-oiinnno
-.oszooo
-..oo...
-''', col=2, z=6)
-
-B_ARM_R = L(17, '''
-.oo....
-owwoo..
-owwwvo.
-owwvvvo
-owwvvVo
-owwvvVo
-owvvvVo
-owvwvVo
-owvwvVo
-owvvVVo
-onnnNNo
-ooozso.
-...oo..
-''', col=18, z=6)
-
-B_SKIRT = L(26, '''
-.oWwwwwwwvvvo..
-.oWwwwwwwvvvo..
-.oWwwwwwwvvvo..
-.oWwwwwwwvvvVo.
-.oWwwvwwvvvvVo.
-.oWwwvwwvvvvVo.
-oWwwwvwwvvvvVVo
-ooooooooooooooo
-.oiiiinonnnnNo.
-''', col=6, z=3)
-
-B_LEG_L = L(35, '''
-.owWvo.
-onnnnno
-oNnnnNo
-ooooooo
-''', col=6, z=2)
-
-B_LEG_R = L(35, '''
-.owvvo.
-onnnnNo
-oNnnnNo
-ooooooo
-''', col=14, z=2)
-
-B_SASH = L(28, '''
-.o.
-odo
-odo
-ordo
-.odo
-.oo.
-''', col=4, z=7)
-
-B_LOAD = L(-10, '''
-..o...........o...
-.ogo.........ogo..
-.ogo.........oguoo
-.ogo.........ogoo.
-ooooooooooooooooo.
-oWWwwwtwwwwwtwwvo.
-owwwwwtwwwwwtwvvo.
-ovvvvvpvvvvvpvVVo.
-oooooooooooooooo..
-..oIiiiiiiiiino...
-.oIiwiiiiiwiiino..
-.oiiiiiwiiiiinNo..
-.oiwiiiiiiiwinNo..
-.oiiiiwiiiiiinNo..
-.oiiiiiiiwiiinNo..
-.oiwiiiiiiiiwnNo..
-.onnnnnnnnnnnNNo..
-.oooooooooooooo...
-.oTTTTTTTTTTTTpo..
-.optppppppppppPo..
-.oooooooooooooo...
-.otTtttWtttpttpo..
-.otttptWttptttpo..
-.otptttWtpttpppo..
-.optttpWptttptpo..
-.oWWWWWWWWWWWWwo..
-.otttptWttptttpo..
-.otptttWtpttpppo..
-.optttpWptttptpo..
-.otttptWttptttpo..
-.otptttWtpttpppo..
-.optttpWptttptpo..
-.oPPPPPWPPPPPPPo..
-.oooooooooooooo...
-.ogggggggggggguo..
-.oooooooooooooo...
-''', col=5, z=10)
-
-
-# =============================================================================================
-# Animations. Each recipe returns a list of Frames for (view, load). Offsets are whole pixels.
-# Upper-body bob moves head, torso, arms, straps and the load together; legs stay planted.
-
-LOAD_TOP = {'front': (13, -6), 'side': (3, -6), 'back': (13, -6)}   # where Saji sits (model space)
-HOOK = {'front': (21, -7), 'side': (11, -4), 'back': (21, -7)}      # lantern peg tip
-HAND_REST = {'front': (8, 28), 'side': (13, 28), 'back': (18, 28)}  # resting hand (front: her right hand)
-
-
-def _anchors(view, load, dy=0, hand=None, load_dy=None):
-    ld = dy if load_dy is None else load_dy
-    a = {'hand': hand or (HAND_REST[view][0], HAND_REST[view][1] + dy)}
+def _anchors(view, load, dy=0, hand=None, ldy=None):
+    """dy: body offset for the default hand; ldy: offset of the frame (defaults to dy)."""
+    ldy = dy if ldy is None else ldy
+    a = {'hand': hand if hand is not None else (HAND_REST[view][0], HAND_REST[view][1] + dy)}
     if load:
-        a['loadTop'] = (LOAD_TOP[view][0], LOAD_TOP[view][1] + ld)
-        a['hook'] = (HOOK[view][0], HOOK[view][1] + ld)
+        a['loadTop'] = (LOAD_TOP[view][0], LOAD_TOP[view][1] + ldy)
+        a['hook'] = (HOOK[view][0], HOOK[view][1] + ldy)
     return a
 
 
-def _front(load, dy=0, face='open', arm_l=None, arm_r=None, legs=(0, 0), skirt=(0, 0), sash=0,
-           head_dy=None, over_head=()):
-    hd = dy if head_dy is None else head_dy
-    face_l = F_FACE.get(face)
-    layers = [
-        at(F_LOAD, 0, dy) if load else None,
-        at(F_LEG_L, 0, legs[0]), at(F_LEG_R, 0, legs[1]),
-        at(F_SKIRT, skirt[0], skirt[1]),
-        at(F_TORSO, 0, dy),
-        at(F_STRAPS, 0, dy) if load else None,
-        at(F_SASH2 if sash else F_SASH, skirt[0], skirt[1]),
-        arm_l or at(F_ARM_L, 0, dy), arm_r or at(F_ARM_R, 0, dy),
-        at(F_HEAD, 0, hd), at(face_l, 0, hd) if face_l else None,
-        *over_head,
-    ]
-    return layers
+def _face(table, face):
+    return table.get(face) if face else None
 
 
-def _side(load, dy=0, face='open', arm=None, legs='stand', hair=0, head_dy=None, over_head=(), far_arm=None, arm_over=None):
-    """arm: the near sleeve under the head; arm_over: a near arm drawn over the head instead
-    (raised to the hat, hand at the mouth)."""
-    hd = dy if head_dy is None else head_dy
-    face_l = S_FACE.get(face)
+# ---------------------------------------------------------------------------------------------
+# View composers. Every offset is in whole pixels. 'body' moves the torso, sleeves, straps and the
+# frame; 'head' moves face and hat; sleeves/hair/sash take their own (lagged) offsets.
+
+def front(load, body=0, head=0, face=None, sl=(0, 0), sr=(0, 0), legs=('plant', 0, 'plant', 0), hem='c',
+          sash=0, arm_l=None, arm_r=None, over=(), hem_dy=0):
+    ll, lld, rl, rld = legs
     return [
-        at(S_HAIR2 if hair else S_HAIR, 0, hd),
-        at(S_LOAD, 0, dy) if load else None,
-        far_arm,
-        at(S_LEGS[legs], 0, 0),
-        at(S_SKIRT, 0, 0),
-        at(S_TORSO, 0, dy),
-        None if arm_over else (arm or at(S_ARM, 0, dy)),
-        at(S_STRAP, 0, dy) if load else None,
-        at(S_HEAD, 0, hd), at(face_l, 0, hd) if face_l else None,
+        at(B.F_FRAME, 0, body) if load else None,
+        at(B.F_LEG_L[ll], 0, lld), at(B.F_LEG_R[rl], 0, rld),
+        at(B.F_HEM[hem], 0, hem_dy), at(B.F_SKIRT, 0, hem_dy),
+        at(B.F_TORSO, 0, body),
+        at(B.F_STRAPS, 0, body) if load else None,
+        at(B.F_SASH2 if sash else B.F_SASH, 0, hem_dy),
+        arm_l if arm_l is not None else at(B.F_SLEEVE_L, sl[0], body + sl[1]),
+        arm_r if arm_r is not None else at(B.F_SLEEVE_R, sr[0], body + sr[1]),
+        at(B.F_FACE_ROWS, 0, head), at(_face(B.F_FACE, face), 0, head) if _face(B.F_FACE, face) else None,
+        at(B.HAT_F, 0, head),
+        *over,
+    ]
+
+
+def side(load, body=0, head=0, face=None, sleeve=None, lower=None, hair=0, hair_dy=None, arm_over=None, over=()):
+    hd = head if hair_dy is None else hair_dy
+    return [
+        at(B.S_HAIR[hair], 0, hd),
+        at(B.S_BOX, 0, body) if load == 'box' else None,
+        at(B.S_FRAME, 0, body) if load else None,
+        lower if lower is not None else at(B.S_LOWER['stand']),
+        at(B.S_SKIRT, 0, max(0, body)),
+        at(B.S_TORSO, 0, body),
+        None if arm_over is not None else (sleeve if sleeve is not None else at(B.S_SLEEVE[0], 0, body)),
+        at(B.S_STRAP, 0, body) if load else None,
+        at(B.S_FACE_ROWS, 0, head), at(_face(B.S_FACE, face), 0, head) if _face(B.S_FACE, face) else None,
+        at(B.HAT_S, 0, head),
         arm_over,
-        *over_head,
+        *over,
     ]
 
 
-def _back(load, dy=0, arm_l=None, arm_r=None, legs=(0, 0), skirt=(0, 0), hair=0, head_dy=None, sash=0):
-    hd = dy if head_dy is None else head_dy
+def back(load, body=0, head=0, sl=(0, 0), sr=(0, 0), legs=('plant', 0, 'plant', 0), hem='c', hair=0, hair_dy=None,
+         arm_l=None, arm_r=None, top=(), hem_dy=0):
+    ll, lld, rl, rld = legs
+    hd = head if hair_dy is None else hair_dy
     return [
-        at(B_LEG_L, 0, legs[0]), at(B_LEG_R, 0, legs[1]),
-        at(B_SKIRT, skirt[0], skirt[1]),
-        at(B_SASH, skirt[0] - sash, skirt[1]),
-        at(B_TORSO, 0, dy),
-        arm_l or at(B_ARM_L, 0, dy), arm_r or at(B_ARM_R, 0, dy),
-        at(B_HEAD, 0, hd),
-        at(B_HAIR2 if hair else B_HAIR, 0, hd) if not load else None,
-        at(B_LOAD, 0, dy) if load else None,
+        at(B.F_LEG_L[ll], 0, lld), at(B.F_LEG_R[rl], 0, rld),
+        at(B.B_HEM[hem], 0, hem_dy), at(B.B_SKIRT, 0, hem_dy), at(B.B_SASH, 0, hem_dy),
+        at(B.B_TORSO, 0, body),
+        arm_l if arm_l is not None else at(B.B_SLEEVE_L, sl[0], body + sl[1]),
+        arm_r if arm_r is not None else at(B.B_SLEEVE_R, sr[0], body + sr[1]),
+        at(B.B_HAIR_ROWS, 0, head), at(B.B_HAIR[hair], 0, hd),
+        at(B.HAT_B, 0, head),
+        at(B.B_FRAME, 0, body) if load else None,
+        at(B.B_BOX, 0, body) if load == 'box' else None,
+        *top,
     ]
 
 
-IDLE_DY = [0, 0, 0, 1, 1, 1, 1, 0]
-IDLE_SWAY = [0, 0, 0, 0, 1, 1, 1, 0]
+# ---------------------------------------------------------------------------------------------
+# Idle: the hat stays still; chest and shoulders breathe one pixel; hair tips and sash sway.
+
+BREATH = [0, 0, 0, -1, -1, -1, 0, 0]
+SWAY = [0, 0, 0, 0, 1, 1, 1, 0]     # one frame behind the breath
 
 
 def idle(view, load):
     out = []
-    for i, dy in enumerate(IDLE_DY):
-        face = 'blink' if i == 6 else 'open'
+    for i, b in enumerate(BREATH):
+        face = 'blink' if i == 6 else None
         if view == 'front':
-            ly = _front(load, dy, face, sash=IDLE_SWAY[i])
+            ly = front(load, body=b, face=face, sash=SWAY[i])
         elif view == 'side':
-            ly = _side(load, dy, face, hair=IDLE_SWAY[i])
+            ly = side(load, body=b, face=face, hair=SWAY[i] * 2, hair_dy=0)
         else:
-            ly = _back(load, dy, hair=IDLE_SWAY[i], sash=IDLE_SWAY[i])
-        out.append(Frame(ly, _anchors(view, load, dy)))
+            ly = back(load, body=b, hair=SWAY[i] * 2, hair_dy=0)
+        out.append(Frame(ly, _anchors(view, load, b)))
     return out
 
 
-WALK_BOB = [0, 1, -1, 0, 1, -1]
-WALK_FRONT_LEGS = [(-1, 1), (-1, 1), (0, -1), (1, -1), (1, -1), (-1, 0)]
-WALK_FRONT_ARMS = [(1, -1), (1, -1), (0, 0), (-1, 1), (-1, 1), (0, 0)]   # extra dy for (left, right) sleeves
-WALK_SIDE_LEGS = ['contact_a', 'down_a', 'pass_a', 'contact_b', 'down_b', 'pass_a']
-WALK_SIDE_ARM = [1, 1, 0, -1, -1, 0]
+# ---------------------------------------------------------------------------------------------
+# Walk: 8 frames - contact, down, passing, up for each leg; 1 px bob; hair, sleeves and the sash
+# tail follow the body one frame late.
+
+BOB = [0, 1, 0, -1, 0, 1, 0, -1]
+LAG = [BOB[(i - 1) % 8] for i in range(8)]
+# front legs: (left part, dy, right part, dy) - the forward foot sits a pixel lower
+F_LEGS_WALK = [('long', 0, 'tuck', -1), ('plant', 0, 'tuck', -2), ('plant', 0, 'plant', -1), ('tuck', 0, 'plant', 0),
+               ('tuck', -1, 'long', 0), ('tuck', -2, 'plant', 0), ('plant', -1, 'plant', 0), ('plant', 0, 'tuck', 0)]
+F_HEM_WALK = ['l', 'l', 'c', 'r', 'r', 'r', 'c', 'l']
+HEM_LAG = [F_HEM_WALK[(i - 1) % 8] for i in range(8)]
+# back legs: the trailing foot comes toward the camera (lower), the leading one goes away
+B_LEGS_WALK = [('tuck', -1, 'long', 0), ('tuck', -2, 'plant', 0), ('plant', -1, 'plant', 0), ('plant', 0, 'tuck', 0),
+               ('long', 0, 'tuck', -1), ('plant', 0, 'tuck', -2), ('plant', 0, 'plant', -1), ('tuck', 0, 'plant', 0)]
+SIDE_HAIR = [1, 1, 2, 2, 1, 1, 2, 2]
+SLEEVE_SWING = [-1, -1, 0, 1, 1, 1, 0, -1]   # near sleeve, side view (back when the near leg leads)
 
 
 def walk(view, load):
     out = []
-    for i, dy in enumerate(WALK_BOB):
+    for i, b in enumerate(BOB):
+        lag = LAG[i]
         if view == 'front':
-            al, ar = WALK_FRONT_ARMS[i]
-            ly = _front(load, dy, 'open', at(F_ARM_L, 0, dy + al), at(F_ARM_R, 0, dy + ar),
-                        legs=WALK_FRONT_LEGS[i], skirt=(0, 0), sash=i % 3 == 2)
+            sw = SLEEVE_SWING[(i - 1) % 8]
+            ly = front(load, body=b, head=b, sl=(0, lag - b + (1 if sw < 0 else 0)), sr=(0, lag - b + (1 if sw > 0 else 0)),
+                       legs=F_LEGS_WALK[i], hem=HEM_LAG[i], sash=(i // 2) % 2)
         elif view == 'side':
-            ly = _side(load, dy, 'open', at(S_ARM, WALK_SIDE_ARM[i], dy), WALK_SIDE_LEGS[i], hair=i % 3 != 0)
+            sw = SLEEVE_SWING[(i - 1) % 8]
+            sleeve = at(B.S_SLEEVE[0], sw, lag)
+            ly = side(load, body=b, head=b, sleeve=sleeve, lower=at(B.S_WALK[i]), hair=SIDE_HAIR[(i - 1) % 8], hair_dy=lag)
         else:
-            al, ar = WALK_FRONT_ARMS[i]
-            ly = _back(load, dy, at(B_ARM_L, 0, dy + ar), at(B_ARM_R, 0, dy + al),
-                       legs=WALK_FRONT_LEGS[i], hair=i % 3 != 0, sash=i % 3 == 2)
-        out.append(Frame(ly, _anchors(view, load, dy)))
+            sw = SLEEVE_SWING[(i - 1) % 8]
+            ly = back(load, body=b, head=b, sl=(0, lag - b + (1 if sw > 0 else 0)), sr=(0, lag - b + (1 if sw < 0 else 0)),
+                      legs=B_LEGS_WALK[i], hem=HEM_LAG[i], hair=[1, 1, 0, 2, 2, 2, 0, 1][i], hair_dy=lag)
+        out.append(Frame(ly, _anchors(view, load, b)))
     return out
 
 
+def heavy_idle(view, load):
+    """Holding extra weight: sunk, shoulders down, a slow heavy breath; the hat sinks with her."""
+    out = []
+    for i, b in enumerate([2, 2, 3, 3]):
+        face = 'blink' if i == 3 else None
+        if view == 'front':
+            ly = front(load, body=b, head=b, face=face, hem_dy=1, legs=('plant', 0, 'plant', 0))
+        elif view == 'side':
+            ly = side(load, body=b, head=b, face=face, hair_dy=b)
+        else:
+            ly = back(load, body=b, head=b, hem_dy=1, hair_dy=b)
+        out.append(Frame(ly, _anchors(view, load, b)))
+    return out
+
+
+
+
+
 # =============================================================================================
-# SIDE action parts (facing right). Shoulder at about (12, 18).
+# Actions (parts in tsu_actions.py)
 
-S_ARM_FWD = L(17, '''
-..ooo.........
-.oWWWooooooo..
-oWWWWWWWWwwio..
-oWwwwwwwwwvnsso
-oWwwwwwwwvvNozo
-.oWwwwwwvvVo.o.
-..oWwwwvvVo....
-...owwvvVo.....
-....ooooo......
-''', col=9, z=6.5)
-
-S_ARM_CHEST = L(17, '''
-..ooo....
-.oWWWo...
-oWWWwwo..
-oWwwwwwo.
-oWwwwwwio
-oWwwwvvnso
-oWwwwvvNzo
-oWwvwvVoo.
-oWwvwvVo..
-oWwvvVo...
-oinnNNo...
-.ooooo....
-''', col=9, z=6.5)
-
-S_ARM_OFFER = L(17, '''
-..ooo.........
-.oWWWo........
-oWWWwwoooooo..
-oWwwwwwWWwwio.
-oWwwwwwwwwvnoo
-oWwwwwwwwvvNszo
-.oWwwwwwvvVossso
-..oWwwwvvVo.ooo.
-...owwvvVo......
-....ooooo.......
-''', col=9, z=6.5)
-
-S_ARM_UP_HALF = L(11, '''
-.........oo.
-........ossoo
-.......oszo..
-......oszo...
-..ooo.oiio...
-.oWWWoWWno...
-oWWWwwWwvo...
-oWwwwwwwvVo..
-oWwwwwwvvVo..
-oWwwwwvvVo...
-oWwwwvvVo....
-oWwvvvVo.....
-oWwvvVo......
-oinnNo.......
-.oooo........
-''', col=9, z=6.5)
-
-S_ARM_UP = L(0, '''
-.......oo..
-......osso.
-......oszo.
-......oszo.
-......oszo.
-......oszo.
-......oszo.
-......oszo.
-......oszo.
-.....oiino.
-.....oWnno.
-....oWwvno.
-..ooWWwvVo.
-.oWWWwwvVo.
-oWWWwwwvVo.
-oWwwwwwvVo.
-oWwwwwvVo..
-oWwwwvvVo..
-oWwwvvVo...
-oWwvvVo....
-oWwvVo.....
-oinNo......
-.ooo.......
-''', col=9, z=8.5)
-
-S_ARM_MOUTH = L(9, '''
-..........oo...
-.........oDDo..
-.........oDFo..
-.........oFFo..
-.........ofDo..
-.........offo..
-..........osso.
-.........oszo..
-..ooo...oszo...
-.oWWWo.oiio....
-oWWWwwoWnno....
-oWwwwwwwvVo....
-oWwwwwwwvVo....
-oWwwwwwvVo.....
-oWwwwwvvVo.....
-oWwwvvvVo......
-oWwvvVVo.......
-oinnNNo........
-.ooooo.........
-''', col=9, z=8.5)
-
-S_ARM_BEAM = L(17, '''
-..ooo.........
-.oWWWo........
-oWWWwwo.......
-oWwwwwwoo.....
-oWwwwwwwwoo...
-oWwwwwwwwwioo.
-.oWwwwwwvvnsso
-..oWwwwvvVozzo
-...owwvvVo.oo.
-....ooooo.....
-''', col=9, z=6.5)
-
-S_ARM_STRAP = L(17, '''
-..ooo...
-.oWWWoso
-oWWWwwzo
-oWwwwwwo
-oWwwwvwo
-oWwwvvwo
-oWwvwvvo
-oWwvwvVo
-oWwvwvVo
-oWwvvvVo
-oinnnNo.
-.ooooo..
-''', col=9, z=6.5)
-
-S_LEGS['crouch'] = L(33, '''
-...oiiinnnnNo..
-..oiiinnnnnnNo.
-..owWWvoowWWvo.
-.onnnnnoonnnnnoo
-.oNnnnnNoNnnnnnNo
-.ooooooooooooooo.
-''', col=5, z=2)
-
-S_SKIRT_CROUCH = L(27, '''
-...oWwiiinvo...
-..oWwwiiinvvo..
-.oWwwviiinvvvo.
-.oWwvviinnnvVo.
-oWwvvoiinnnovVo
-oooooiiinnnnooo
-''', col=5, z=3)
-
-# Bowing upper bodies (head + torso + near arm), hat tipped forward.
-S_BOW1 = L(5, '''
-.........o...........
-.......ooWoo.........
-.....ooWWrwvoo.......
-...ooWWWrrwwvvoo.....
-.ooWWWWwwrrwwvvvoo...
-oWWWWwwwwwrrwwvvvvoo.
-oWWWwwwwwwwwrwwvvvvvo
-.ooWwwwwwwwwwwwvvvvvo
-...ooonnnnnnnnnnoooo.
-.....oKKKKKKKKKKKo...
-....oKkkjkkkkKjkssEo.
-....oKkkjkkkKjkssEeo.
-....oKkkkjkkKjkbssssso
-...oWKkkkjkKWwozsZso.
-..oWWWkkkkkKrrooooo..
-.oWWWwwKkkKKKo.......
-oWWwwwwwKKKwvo.......
-oWwwwwwwwwwwvo.......
-oWwwwwwwwwRrdo.......
-odrrrrrrrRrrdo.......
-oWwwwwwwwwdrdo.......
-.oWwwwwwiinvo........
-''', col=3, z=7)
+import tsu_actions as A
 
 
-def _hand(view, col, row):
-    return (col, row)
+def _drop(ly, *parts):
+    return [i for i in ly if not (i is not None and i[0] in parts)]
 
 
 def take(view, load):
     """Reach out, close the hand, pull it to the chest, hold."""
     out = []
-    if view == 'side':
-        seq = [(S_ARM_FWD, 0, 0, (23, 20)), (S_ARM_FWD, 1, 0, (24, 20)), (S_ARM_CHEST, 0, 0, (18, 22)), (S_ARM_CHEST, 0, 1, (18, 23))]
-        for arm, dx, dy, hand in seq:
-            out.append(Frame(_side(load, dy, 'open', at(arm, dx, dy), 'stand'), _anchors(view, load, dy, (hand[0] + dx, hand[1] + dy))))
-    elif view == 'front':
-        seq = [(F_ARM_L_REACH, 0, 0, (4, 29)), (F_ARM_L_REACH, 0, 1, (4, 30)), (F_ARM_L_CHEST, 0, 0, (11, 23)), (F_ARM_L_CHEST, 0, 1, (11, 24))]
-        for arm, dx, dy, hand in seq:
-            out.append(Frame(_front(load, dy, 'open', arm_l=at(arm, dx, dy)), _anchors(view, load, dy, hand)))
+    if view == 'front':
+        seq = [(A.F_REACH_L, 0, (2, 31)), (A.F_REACH_L, 1, (2, 32)), (A.F_CHEST_L, 0, (11, 22)), (A.F_CHEST_L, 1, (11, 23))]
+        for arm, dy, hand in seq:
+            out.append(Frame(front(load, body=0, arm_l=at(arm, 0, dy)), _anchors(view, load, 0, hand)))
+    elif view == 'side':
+        seq = [(A.S_FWD, 0, (24, 21)), (A.S_FWD, 1, (25, 21)), (A.S_CHEST, 0, (18, 23)), (A.S_CHEST, 0, (18, 23))]
+        for arm, dx, hand in seq:
+            out.append(Frame(side(load, sleeve=at(arm, dx, 0)), _anchors(view, load, 0, (hand[0], hand[1]))))
     return out
 
 
 def give(view, load):
-    """Hold it at the chest, push it forward, hold it out, return."""
+    """Hold it at the chest, offer it forward, hold it out, return."""
     out = []
-    if view == 'side':
-        seq = [(S_ARM_CHEST, 0, 0, (18, 22)), (S_ARM_OFFER, 0, 0, (23, 23)), (S_ARM_OFFER, 1, 0, (24, 23)), (S_ARM_CHEST, 0, 0, (18, 22))]
-        for arm, dx, dy, hand in seq:
-            out.append(Frame(_side(load, dy, 'open', at(arm, dx, dy), 'stand'), _anchors(view, load, dy, (hand[0] + dx, hand[1] + dy))))
-    elif view == 'front':
-        seq = [(F_ARM_L_CHEST, F_ARM_R_CHEST, (13, 23)), (F_ARM_L_OFFER, F_ARM_R_OFFER, (13, 27)),
-               (F_ARM_L_OFFER, F_ARM_R_OFFER, (13, 27)), (F_ARM_L_CHEST, F_ARM_R_CHEST, (13, 23))]
-        for i, (al, ar, hand) in enumerate(seq):
-            dy = 1 if i == 2 else 0
-            out.append(Frame(_front(load, 0, 'open', arm_l=at(al, 0, dy), arm_r=at(ar, 0, dy)), _anchors(view, load, 0, (hand[0], hand[1] + dy))))
+    if view == 'front':
+        seq = [(A.F_CHEST_L, A.F_CHEST_R, 0, (13, 22)), (A.F_OFFER_L, A.F_OFFER_R, 0, (13, 26)),
+               (A.F_OFFER_L, A.F_OFFER_R, 1, (13, 27)), (A.F_CHEST_L, A.F_CHEST_R, 0, (13, 22))]
+        for al, ar, dy, hand in seq:
+            out.append(Frame(front(load, arm_l=at(al, 0, dy), arm_r=at(ar, 0, dy)), _anchors(view, load, 0, hand)))
+    elif view == 'side':
+        seq = [(A.S_CHEST, 0, (18, 23)), (A.S_OFFER, 0, (23, 24)), (A.S_OFFER, 1, (24, 24)), (A.S_CHEST, 0, (18, 23))]
+        for arm, dx, hand in seq:
+            out.append(Frame(side(load, sleeve=at(arm, dx, 0)), _anchors(view, load, 0, hand)))
     return out
 
 
 def push(view, load):
-    """Side only: wind up, push the hand forward into the door, lean, hold."""
+    """Side: wind up, push the hand into the door, lean in, hold (the hand passes through)."""
     out = []
-    seq = [(S_ARM_CHEST, 0, 0, 0, (18, 22)), (S_ARM_FWD, 0, 0, 0, (23, 20)), (S_ARM_FWD, 1, 0, 1, (24, 20)), (S_ARM_FWD, 1, 0, 1, (24, 20))]
-    for arm, dx, dy, lean, hand in seq:
-        ly = _side(load, dy, 'open', at(arm, dx + lean, dy), 'stand', head_dy=dy)
-        # lean: head and torso one pixel forward
-        ly = [(l, x + (lean if l in (S_HEAD, S_TORSO, S_LOAD, S_STRAP, S_HAIR, S_HAIR2) or l in S_FACE.values() else 0), y) if l is not None else None for l, x, y in [i if i is not None else (None, 0, 0) for i in ly]]
-        out.append(Frame(ly, _anchors(view, load, dy, (hand[0] + dx + lean, hand[1] + dy))))
+    seq = [(A.S_CHEST, 0, 0, (18, 23)), (A.S_FWD, 0, 0, (24, 19)), (A.S_FWD, 1, 1, (25, 19)), (A.S_FWD, 1, 1, (25, 19))]
+    for arm, dx, lean, hand in seq:
+        ly = side(load, sleeve=at(arm, dx + lean, 0))
+        moved = (B.S_TORSO, B.S_FACE_ROWS, B.HAT_S, B.S_STRAP, B.S_FRAME, B.S_BOX) + tuple(B.S_HAIR)
+        ly = [(l, x + (lean if l in moved else 0), y) if l is not None else None for l, x, y in [i if i is not None else (None, 0, 0) for i in ly]]
+        a = _anchors(view, load, 0, (hand[0] + lean, hand[1]))
+        if load:
+            a['loadTop'] = (a['loadTop'][0] + lean, a['loadTop'][1]); a['hook'] = (a['hook'][0] + lean, a['hook'][1])
+        out.append(Frame(ly, a))
     return out
 
 
@@ -948,770 +235,198 @@ def reach_up(view, load):
     """Raise a lantern to a hook: arm half up, fully up, up on her toes, hold."""
     out = []
     if view == 'side':
-        seq = [(S_ARM_UP_HALF, 0, (20, 11)), (S_ARM_UP, 0, (16, 1)), (S_ARM_UP, -1, (16, 0)), (S_ARM_UP, 0, (16, 1))]
+        seq = [(A.S_UP_HALF, 0, (21, 9)), (A.S_UP, 0, (14, -3)), (A.S_UP, -1, (14, -4)), (A.S_UP, 0, (14, -3))]
         for arm, dy, hand in seq:
-            out.append(Frame(_side(load, dy, 'open', legs='stand', arm_over=at(arm, 0, dy)), _anchors(view, load, dy, (hand[0], hand[1] + dy))))
+            out.append(Frame(side(load, body=dy, head=dy, arm_over=at(arm, 0, dy)), _anchors(view, load, dy, hand)))
     elif view == 'back':
-        return reach_up_back(load)
+        seq = [(A.B_UP_HALF_R, 0, (26, 9)), (A.B_UP_R, 0, (21, -3)), (A.B_UP_R, -1, (21, -4)), (A.B_UP_R, 0, (21, -3))]
+        for arm, dy, hand in seq:
+            out.append(Frame(back(load, body=dy, head=dy, arm_r=None, top=(at(arm, 0, dy),)) if False else
+                             back(load, body=dy, head=dy, arm_r=at(B.B_SLEEVE_R, 0, 99), top=(at(arm, 0, dy),)),
+                             _anchors(view, load, dy, hand)))
     return out
 
 
 def eat(view, load):
     """Bring a dango to her mouth, bite, chew, lower it."""
     out = []
-    if view == 'side':
-        seq = [(S_ARM_CHEST, 'open', (18, 22)), (S_ARM_MOUTH, 'open_mouth', (19, 15)), (S_ARM_MOUTH, 'chew', (19, 15)), (S_ARM_CHEST, 'chew', (18, 22))]
+    if view == 'front':
+        seq = [(A.F_CHEST_L, None, (11, 22)), (A.F_MOUTH_L, 'open_mouth', (12, 13)), (A.F_MOUTH_L, 'chew', (12, 13)), (A.F_CHEST_L, 'chew', (11, 22))]
         for arm, face, hand in seq:
-            if arm is S_ARM_MOUTH:
-                ly = _side(load, 0, face, legs='stand', arm_over=at(arm, 0, 0))
+            if arm is A.F_MOUTH_L:
+                ly = front(load, face=face, arm_l=at(B.F_SLEEVE_L, 0, 99), over=(at(arm),))
             else:
-                ly = _side(load, 0, face, at(arm, 0, 0), 'stand')
+                ly = front(load, face=face, arm_l=at(arm))
             out.append(Frame(ly, _anchors(view, load, 0, hand)))
-    elif view == 'front':
-        seq = [(F_ARM_L_CHEST, 'open', (11, 23)), (F_ARM_L_MOUTH, 'open_mouth', (12, 15)), (F_ARM_L_MOUTH, 'chew', (12, 15)), (F_ARM_L_CHEST, 'chew', (11, 23))]
+    elif view == 'side':
+        seq = [(A.S_CHEST, None, (18, 23)), (A.S_MOUTH, 'open_mouth', (19, 15)), (A.S_MOUTH, 'chew', (19, 15)), (A.S_CHEST, 'chew', (18, 23))]
         for arm, face, hand in seq:
-            over = (at(arm, 0, 0),) if arm is F_ARM_L_MOUTH else ()
-            out.append(Frame(_front(load, 0, face, arm_l=None if over else at(arm, 0, 0), over_head=over,
-                                    ) if not over else _front_with_arm_over(load, face, arm), _anchors(view, load, 0, hand)))
-    return out
-
-
-def _front_with_arm_over(load, face, arm):
-    ly = _front(load, 0, face)
-    # replace the left sleeve and draw the raised arm over the face
-    ly = [i for i in ly if not (i is not None and i[0] is F_ARM_L)]
-    return ly + [at(arm, 0, 0)]
-
-
-def strain(view, load):
-    """Without the load: knees bent, both hands under a heavy beam, shaking, a little lift."""
-    out = []
-    if view == 'side':
-        seq = [(0, 'open'), (1, 'strain'), (2, 'strain'), (1, 'strain')]
-        for i, (sh, face) in enumerate(seq):
-            dy = 3
-            shake = [0, 0, 1, 0][i]
-            ly = [
-                at(S_HAIR, shake, dy),
-                at(S_LEGS['crouch'], 0, 0),
-                at(S_SKIRT_CROUCH, 0, 0),
-                at(S_TORSO, shake, dy),
-                at(S_ARM_BEAM, shake, dy - [0, 0, 0, 1][i]),
-                at(S_HEAD, shake, dy), at(S_FACE[face], shake, dy) if S_FACE.get(face) else None,
-            ]
-            out.append(Frame(ly, {'hand': (22 + shake, 24 + dy - [0, 0, 0, 1][i])}))
-    elif view == 'front':
-        seq = ['open', 'strain', 'strain', 'strain']
-        for i, face in enumerate(seq):
-            dy = 3
-            shake = [0, 0, 1, 0][i]
-            lift = [0, 0, 0, 1][i]
-            ly = [
-                at(F_LEG_L_CROUCH, 0, 0), at(F_LEG_R_CROUCH, 0, 0),
-                at(F_SKIRT, 0, 2),
-                at(F_TORSO, shake, dy), at(F_SASH, 0, 2),
-                at(F_ARM_L_BEAM, shake, dy - lift), at(F_ARM_R_BEAM, shake, dy - lift),
-                at(F_HEAD, shake, dy), at(F_FACE[face], shake, dy) if F_FACE.get(face) else None,
-            ]
-            out.append(Frame(ly, {'hand': (13 + shake, 27 + dy - lift)}))
-    return out
-
-
-def heavy_idle(view, load):
-    """Holding extra weight: sunk two pixels, shoulders down, slow heavy breath."""
-    out = []
-    for i, b in enumerate([2, 2, 3, 3]):
-        if view == 'front':
-            ly = _front(load, b, 'blink' if i == 3 else 'open', skirt=(0, 1), head_dy=b + 1)
-        elif view == 'side':
-            ly = _side(load, b, 'open', head_dy=b + 1)
-            ly = [(S_SKIRT, 0, 1) if (i2 is not None and i2[0] is S_SKIRT) else i2 for i2 in ly]
-        else:
-            ly = _back(load, b, skirt=(0, 1), head_dy=b + 1)
-        out.append(Frame(ly, _anchors(view, load, b)))
-    return out
-
-
-# =============================================================================================
-# FRONT action parts. Her right sleeve is on the viewer's left (F_ARM_L), shoulder ~ (8, 18).
-
-F_ARM_L_CHEST = L(17, '''
-...ooo....
-.oWWWWo...
-oWWWwwo...
-oWwwwwo...
-oWwwwwwoo.
-oWwwwwwiso
-oWwwwvvnzo
-oWwwvvVoo.
-oWwvvVo...
-oWvvVo....
-oinNo.....
-.ooo......
-''', col=3, z=6.5)
-
-F_ARM_R_CHEST = L(17, '''
-.ooo......
-owwwwo....
-owwwvvo...
-owwwvvo...
-oowwwvvo..
-osinwvVo..
-ozNnvvVo..
-.oowvvVo..
-...owvVo..
-....ovVVo.
-.....oNNo.
-......ooo.
-''', col=14, z=6.5)
-
-F_ARM_L_OFFER = L(17, '''
-...ooo.....
-.oWWWWo....
-oWWWwwo....
-oWwwwwwo...
-oWwwwwwo...
-oWwwwwwwo..
-oWwwwwwwoo.
-oWwwwwvvino
-oWwwwvvVnso
-.oWwvvVoozo
-..oinNo..o.
-...ooo.....
-''', col=3, z=6.5)
-
-F_ARM_R_OFFER = L(17, '''
-.....ooo...
-....owwwwo.
-....owwwvvo
-...owwwvvVo
-...owwwvvVo
-..owwwvvvVo
-.oowwwvvVVo
-oinwvvvVVVo
-osnNvvVVVo.
-ozoovvVVo..
-.o..oNNNo..
-.....ooo...
-''', col=12, z=6.5)
-
-F_ARM_L_REACH = L(17, '''
-...ooo...
-.oWWWWo..
-oWWWwwo..
-oWwwwwo..
-oWwwwwwo.
-oWwwwwwo.
-oWwwwwvo.
-oWwwwvvo.
-oWwwvvVo.
-oWwvvVo..
-oinnNo...
-oszoo....
-oso......
-.o.......
-''', col=1, z=6.5)
-
-F_ARM_L_MOUTH = L(9, '''
-.oo.oo.oo...
-oFFoDDoffo..
-oFFoDDoffoso
-.oo.oo.oozzo
-........oso.
-.......oszo.
-.......oszo.
-......oiino.
-....ooWWnno.
-..ooWWWwvVo.
-.oWWWwwwvVo.
-oWWwwwwwvVo.
-oWwwwwwvvVo.
-oWwwwwwvVo..
-oWwwwwvvVo..
-oWwwwvvVo...
-oWwwvvVo....
-oWwvvVo.....
-oinnNo......
-.oooo.......
-''', col=2, z=8.5)
-
-F_ARM_L_BEAM = L(17, '''
-...ooo....
-.oWWWWo...
-oWWWwwo...
-oWwwwwwo..
-oWwwwwwo..
-oWwwwwwwo.
-oWwwwwwwo.
-oWwwwwvvo.
-.oWwwvvino
-..oWvvVnso
-...oinNozo
-....ooo.o.
-''', col=3, z=6.5)
-
-F_ARM_R_BEAM = L(17, '''
-....ooo...
-...owwwwo.
-...owwwvvo
-..owwwvvVo
-..owwwvvVo
-.owwwvvvVo
-.owwwvvvVo
-.owwvvvVVo
-oinwvvVVo.
-osnvvVVo..
-ozoNNNo...
-.o.ooo....
-''', col=14, z=6.5)
-
-F_LEG_L_CROUCH = L(35, '''
-.owWvo..
-onnnnno.
-oNnnnNo.
-ooooooo.
-''', col=5, z=2)
-
-F_LEG_R_CROUCH = L(35, '''
-.owvvo.
-onnnnNo
-oNnnnNo
-ooooooo
-''', col=15, z=2)
-
-
-# =============================================================================================
-# Bow. The upper body leans around the hips with a horizontal shear; the head drops forward and
-# the hat brim tips with a vertical shear. The load leans with the back.
-
-from rig import shear_h, shear_v, merge, crop_rows
-
-HIP_ROW = 27
-
-
-def _bow_side(load, k, head_dx, head_dy, tilt, face='blink'):
-    upper = merge(at(S_TORSO), at(S_ARM_CHEST if k > 0.5 else S_ARM))
-    upper = shear_h(upper, k, HIP_ROW)
-    head = merge(at(S_HEAD), at(S_FACE[face]) if S_FACE.get(face) else None)
-    head = shear_v(head, tilt, 13)
-    hair = shear_h(S_HAIR, k * 0.5, HIP_ROW)
-    ly = [
-        at(hair, 0, 0),
-        at(shear_h(S_LOAD, k, HIP_ROW), 0, 0) if load else None,
-        at(S_LEGS['stand']), at(S_SKIRT),
-        at(upper),
-        at(shear_h(S_STRAP, k, HIP_ROW)) if load else None,
-        at(head, head_dx, head_dy),
-    ]
-    return ly
-
-
-def bow(view, load):
-    """Deep bow: lean in, hold low, come back up (5 frames)."""
-    out = []
-    if view == 'side':
-        steps = [(0.25, 3, 1, 0.12, 'open'), (0.5, 6, 3, 0.26, 'blink'), (0.62, 7, 5, 0.36, 'blink'),
-                 (0.62, 7, 5, 0.36, 'blink'), (0.38, 5, 2, 0.2, 'open')]
-        for k, hx, hy, tilt, face in steps:
-            ly = _bow_side(load, k, hx, hy, tilt, face)
-            a = _anchors(view, load, 0)
-            if load:
-                # the load top leans with the back: shift = k * (HIP_ROW - row)
-                for name in ('loadTop', 'hook'):
-                    c, r = a[name]
-                    a[name] = (c + int(round(k * (HIP_ROW - r))), r)
-            out.append(Frame(ly, a))
-    elif view == 'back':
-        steps = [(1, 1), (3, 3), (4, 5), (4, 5), (2, 2)]
-        for body, head in steps:
-            ly = _back(load, body, head_dy=head)
-            out.append(Frame(ly, _anchors(view, load, body)))
-    elif view == 'front':
-        steps = [(1, 2, 'open', False), (2, 3, 'blink', True), (3, 4, 'blink', True), (3, 4, 'blink', True), (1, 2, 'open', False)]
-        for body, head, face, dish in steps:
-            ly = _front(load, body, face, head_dy=head, arm_l=at(F_ARM_L_CHEST, 0, body), arm_r=at(F_ARM_R_CHEST, 0, body))
-            if dish:
-                ly = [i for i in ly if not (i is not None and (i[0] is F_HEAD or i[0] in F_FACE.values()))]
-                ly.append(at(F_HEAD_BOW, 0, head - 2))
-            out.append(Frame(ly, _anchors(view, load, body)))
-    return out
-
-
-# =============================================================================================
-# BACK action parts. Her right arm is on the viewer's right (shoulder ~ (19, 18)).
-
-B_ARM_R_UP_HALF = L(10, '''
-.......oo
-......oso
-.....oszo
-....oiio.
-...oWnno.
-..owwvNo.
-.owwwvVo.
-owwwvvVo.
-owwwvVVo.
-owwvvVo..
-owwvVVo..
-owvvVo...
-onnNNo...
-.oooo....
-''', col=18, z=11)
-
-B_ARM_R_UP = L(-1, '''
-..oo...
-.osso..
-.oszo..
-.oszo..
-.oszo..
-.oszo..
-.oszo..
-.oszo..
-.oszo..
-.oszo..
-.oino..
-oWnnNo.
-owwvVo.
-owwvVo.
-owwvVo.
-owvvVo.
-owvVo..
-owvVo..
-owvVo..
-owvVo..
-owvVo..
-onNNo..
-.ooo...
-''', col=18, z=11)
-
-B_ARM_L_UP = L(-1, '''
-...oo..
-..osso.
-..oszo.
-..oszo.
-..oszo.
-..oszo.
-..oszo.
-..oszo.
-..oszo.
-..oszo.
-..oino.
-.oWWno.
-.oWwwvo
-.oWwwvo
-.oWwwvo
-.oWwvvo
-..oWwvo
-..oWwvo
-..oWwvo
-..oWwvo
-..oWwvo
-..oinNo
-...ooo.
-''', col=2, z=11)
-
-B_ARM_L_UP_HALF = L(10, '''
-oo.......
-oso......
-ozso.....
-.oiio....
-.onnWo...
-.oNvwwo..
-.oVvwwwo.
-.oVvvwwwo
-.oVVvwwwo
-..oVvwwWo
-..oVVvwWo
-...oVvwWo
-...oNNnno
-....oooo.
-''', col=0, z=11)
-
-B_ARM_R_SHOUT = L(11, '''
-.oo.......
-oszo......
-.oszo.....
-..oinoo...
-..oWwnNo..
-.ooWwwvNo.
-oWWwwvvVo.
-owwwvvVVo.
-.owwvvVo..
-.owvvVVo..
-..ovVVo...
-..onNNo...
-...ooo....
-''', col=16, z=11)
-
-B_ARM_L_SHOUT = L(11, '''
-.......oo.
-......ozso
-.....ozso.
-...ooino..
-..oNnwWo..
-.oNvwwWoo.
-.oVvvwwWWo
-.oVVvvwwwo
-..oVvvwwo.
-..oVVvvwo.
-...oVVvo..
-...oNNno..
-....ooo...
-''', col=1, z=11)
-
-B_SIT_SKIRT = L(26, '''
-..oWwwwwwwvvvo...
-.oWWwwwwwwvvvVo..
-oWWwwwwwwwwvvvVo.
-ooooooooooooooooo
-''', col=5, z=3)
-
-# Lower legs hanging from the branch, seen from behind: no thighs (they point away), so the legs
-# are short; the swinging leg rises a pixel as it swings forward (away from the camera).
-B_SIT_LEGS = [L(29, '''
-...oiinno.onnnNo..
-...owWWvo.owvvvo..
-...onnnno.onnnNo..
-...ooooo..ooooo...
-''', col=4, z=2), L(29, '''
-...oiinno.onnnNo..
-...owWWvo.owvvvo..
-...onnnno.onnnNo..
-...ooooo..oNnnNo..
-..........ooooo...
-''', col=4, z=2), L(29, '''
-...oiinno.onnnNo..
-...owWWvo.owvvvo..
-...onnnno.onnnNo..
-...oNnnNo.ooooo...
-...ooooo..........
-''', col=4, z=2)]
-
-
-def _back_top(load, dy=0, arm_l=None, arm_r=None, legs=(0, 0), skirt=(0, 0), head_dy=None, top=()):
-    """Back view with arms drawn after the load (raised arms beside the tower)."""
-    hd = dy if head_dy is None else head_dy
-    return [
-        at(B_LEG_L, 0, legs[0]), at(B_LEG_R, 0, legs[1]),
-        at(B_SKIRT, skirt[0], skirt[1]),
-        at(B_SASH, skirt[0], skirt[1]),
-        at(B_TORSO, 0, dy),
-        arm_l if arm_l and not load else None, arm_r if arm_r and not load else None,
-        at(B_HEAD, 0, hd),
-        at(B_HAIR, 0, hd) if not load else None,
-        at(B_LOAD, 0, dy) if load else None,
-        arm_l if arm_l and load else None, arm_r if arm_r and load else None,
-        *top,
-    ]
-
-
-def reach_up_back(load):
-    out = []
-    seq = [(B_ARM_R_UP_HALF, 0, (25, 11)), (B_ARM_R_UP, 0, (21, 0)), (B_ARM_R_UP, -1, (21, -1)), (B_ARM_R_UP, 0, (21, 0))]
-    for arm, dy, hand in seq:
-        ly = _back_top(load, dy, arm_l=at(B_ARM_L, 0, dy), arm_r=at(arm, 0, dy))
-        out.append(Frame(ly, _anchors('back', load, dy, hand)))
+            if arm is A.S_MOUTH:
+                ly = side(load, face=face, arm_over=at(arm))
+            else:
+                ly = side(load, face=face, sleeve=at(arm))
+            out.append(Frame(ly, _anchors(view, load, 0, hand)))
     return out
 
 
 def climb(view, load):
     """Back view: hand over hand, knees lifting in turn (4 frames)."""
     out = []
-    seq = [
-        (at(B_ARM_L_UP, 0, 0), at(B_ARM_R_UP_HALF, 0, 2), (-3, 0), 0, (3, 1)),
-        (at(B_ARM_L_UP, 0, 1), at(B_ARM_R_UP_HALF, 0, 1), (-2, 0), -1, (3, 2)),
-        (at(B_ARM_L_UP_HALF, 0, 2), at(B_ARM_R_UP, 0, 0), (0, -3), 0, (22, 1)),
-        (at(B_ARM_L_UP_HALF, 0, 1), at(B_ARM_R_UP, 0, 1), (0, -2), -1, (22, 2)),
-    ]
-    for al, ar, legs, dy, hand in seq:
-        ly = _back_top(load, dy, arm_l=al, arm_r=ar, legs=legs)
-        out.append(Frame(ly, _anchors('back', load, dy, hand)))
+    seq = [(A.B_UP_L, 0, A.B_UP_HALF_R, 2, ('plant', -3, 'plant', 0), 0, (5, -3)),
+           (A.B_UP_L, 1, A.B_UP_HALF_R, 1, ('plant', -2, 'plant', 0), -1, (5, -2)),
+           (A.B_UP_HALF_L, 2, A.B_UP_R, 0, ('plant', 0, 'plant', -3), 0, (21, -3)),
+           (A.B_UP_HALF_L, 1, A.B_UP_R, 1, ('plant', 0, 'plant', -2), -1, (21, -2))]
+    for al, ady, ar, ardy, legs, b, hand in seq:
+        ly = back(load, body=b, head=b, legs=legs, arm_l=at(B.B_SLEEVE_L, 0, 99), arm_r=at(B.B_SLEEVE_R, 0, 99),
+                  top=(at(al, 0, ady + b), at(ar, 0, ardy + b)))
+        out.append(Frame(ly, _anchors('back', load, b, hand)))
     return out
 
 
 def shout(view, load):
-    """Back view: hands cupped at her mouth, elbows out; leans in on the shout (3 frames)."""
+    """Back view: hands cupped at her mouth, elbows out; she leans into the shout (3 frames)."""
     out = []
-    seq = [(1, 0), (0, -1), (0, -1)]
-    for i, (dy, hd) in enumerate(seq):
-        ly = _back_top(load, dy, arm_l=at(B_ARM_L_SHOUT, 0, dy), arm_r=at(B_ARM_R_SHOUT, 0, dy), head_dy=hd)
-        out.append(Frame(ly, _anchors('back', load, dy, (13, 13))))
+    for i, (b, h) in enumerate([(1, 1), (0, -1), (0, -1)]):
+        ly = back(load, body=b, head=h, arm_l=at(B.B_SLEEVE_L, 0, 99), arm_r=at(B.B_SLEEVE_R, 0, 99),
+                  top=(at(A.B_SHOUT_L, 0, b), at(A.B_SHOUT_R, 0, b)))
+        out.append(Frame(ly, _anchors('back', load, b, (13, 12))))
     return out
 
 
 def sit_branch(view, load):
-    """Back view: sitting on a branch (seat anchor at the hips), legs swinging (4 frames)."""
+    """Back view: sitting on a branch (anchor 'seat' at her hips), calves swinging (4 frames)."""
     out = []
-    order = [0, 1, 0, 2]
-    for i, li in enumerate(order):
-        dy = 0
+    for i, li in enumerate([0, 1, 0, 2]):
+        b = [0, 0, -1, 0][i]
         ly = [
-            at(B_SIT_LEGS[li], 0, 0),
-            at(B_SIT_SKIRT, 0, 0),
-            at(B_TORSO, 0, dy),
-            at(B_ARM_L, 0, dy), at(B_ARM_R, 0, dy),
-            at(B_HEAD, 0, dy),
-            at(B_HAIR, 0, dy) if not load else None,
-            at(B_LOAD, 0, dy) if load else None,
+            at(A.B_SIT_LEGS[li]), at(A.B_SIT_SKIRT),
+            at(B.B_TORSO, 0, b), at(B.B_SLEEVE_L, 0, b), at(B.B_SLEEVE_R, 0, b),
+            at(B.B_HAIR_ROWS), at(B.B_HAIR[[0, 1, 0, 2][i]], 0, 0), at(B.HAT_B),
+            at(B.B_FRAME, 0, b) if load else None, at(B.B_BOX, 0, b) if load == 'box' else None,
         ]
-        a = _anchors('back', load, dy)
+        a = _anchors('back', load, b)
         a['seat'] = (13, 29)
         out.append(Frame(ly, a))
     return out
 
 
-# =============================================================================================
-# Asleep on her back with the hat over her face, then sitting up (no load). Head to the left,
-# feet to the right (this is a side-view animation: mirror for the other direction).
-
-ASLEEP = [L(27, '''
-............o..............................
-..........ooWoo............................
-........ooWWwrvoo..........................
-......ooWWwwwrrvvoo........ooo.............
-....ooWWwvwwwwrrvvvooooooooWWWoooooo....oo.
-..ooWWWwvwwwwwwrrvvvvoWWWWwWwwwwwwWo..oNNo.
-ooWWWwwvwwwwwwwwrrvvvvowwwwwwwvwwwwooonnno.
-okkKKooooooooooooooooKoiiwrRrdiiwwwvvoonnNo
-okKKKkkKKoozzzo..owwwoiiiwdrdniiwvvvvvownno
-.ooKKkkKoowwwwwoowWwwwonnnnddnnnnnvvVoowno.
-...oooooowwwwwwwwwwwwwoozsoooonnnnooooooo..
-.......oooooooooooooooo.oo....ooooo........
-''', col=-8, z=4), L(27, '''
-............o..............................
-..........ooWoo............................
-........ooWWwrvoo..........................
-......ooWWwwwrrvvoo........................
-....ooWWwvwwwwrrvvvooooooooooooooooo....oo.
-..ooWWWwvwwwwwwrrvvvvoWWWWwWwwwwwwWo..oNNo.
-ooWWWwwvwwwwwwwwrrvvvvowwwwwwwvwwwwooonnno.
-okkKKooooooooooooooooKoiiwrRrdiiwwwvvoonnNo
-okKKKkkKKoozzzo..owwwoiiiwdrdniiwvvvvvownno
-.ooKKkkKoowwwwwoowWwwwonnnnddnnnnnvvVoowno.
-...oooooowwwwwwwwwwwwwoozsoooonnnnooooooo..
-.......oooooooooooooooo.oo....ooooo........
-''', col=-8, z=4)]
-
-# Propped on her elbows: the hat still tipped over her eyes.
-SITUP_PROP = L(22, '''
-.............o.............
-...........ooWoo...........
-.........ooWWwrvoo.........
-.......ooWWwwwrrvvoo.......
-.....ooWWwvwwwwrrvvvoo.....
-...ooWWWwvwwwwwwrrvvvvoo...
-.ooWWWwwvwwwwwwwwrrvvvvvoo.
-.onnnnooooooooooooooonnnno.
-..oKkoKKKKKKKKKKKKKKKkKo...
-..oKkkkkzsssZssoKkkkkkKo.....oo.
-..oKKkkkozzzzzoooWWwwwwoooooonNo
-...oKKkkooWwrwwoWwwwwwwwwwwvoonno
-....oKkkowwwrRrdoiiiiinnnnnnvonNo
-....oKkWWoWwdrdoiiiiinnnnnnnnoono
-...oWWwwWoWwwwwoiiinnnnnnnnnnnoo.
-..oWWwwwwoooooooooooooooooooooo..
-..oooooooo.......................
-''', col=-2, z=5)
-
-# Sitting on the ground facing right, legs out along the ground.
-S_SIT_LEGS = L(32, '''
-.oWWwwwwwwwwwwvo..oo.
-oWwwwiiiinnnnnnoonNo.
-oWwwiiiinnnnnnnnoNno.
-oWwvvinnnnnnnnnNowWo.
-.oooooooooooooooonnoo
-.................ooo.
-''', col=4, z=3)
+HIP = 27
 
 
-def asleep(view, load):
-    """Side view only (mirror for the other way): two breathing frames, slow."""
-    return [Frame([at(ASLEEP[i])], {'hand': (14, 39)}) for i in (0, 1)]
-
-
-def _sit_ground(face='open', hat_tilt=0.0, arm=None):
-    head = S_HEAD if not hat_tilt else shear_v(merge(at(S_HEAD), at(S_FACE[face]) if S_FACE.get(face) else None), hat_tilt, 13)
-    dy = 8
-    return [
-        at(S_HAIR, 0, dy - 4),
-        at(S_SIT_LEGS),
-        at(S_TORSO, 0, dy), at(arm or S_ARM, 0, dy - 1),
-        at(head, 0, dy) if hat_tilt else at(S_HEAD, 0, dy),
-        at(S_FACE[face], 0, dy) if (S_FACE.get(face) and not hat_tilt) else None,
-    ]
-
-
-def sit_up(view, load):
-    """Side view: lying, propped on elbows, sitting with the hat over her eyes, hat pushed back."""
-    return [
-        Frame([at(ASLEEP[0])], {'hand': (14, 39)}),
-        Frame([at(SITUP_PROP)], {'hand': (8, 37)}),
-        Frame(_sit_ground('blink', 0.18), {'hand': (13, 36), 'seat': (12, 38)}),
-        Frame(_sit_ground('open'), {'hand': (13, 36), 'seat': (12, 38)}),
-    ]
-
-
-def sit(view, load):
-    """Side view: sitting on the ground (cutscenes), breathing and a blink."""
-    out = []
-    for i in range(4):
-        ly = _sit_ground('blink' if i == 3 else 'open')
-        if i in (1, 2):
-            ly = [(l, x, y + 1) if (l is not None and l not in (S_SIT_LEGS,)) and l is not S_HAIR else (l, x, y) if l is not None else None
-                  for l, x, y in [i2 if i2 is not None else (None, 0, 0) for i2 in ly]]
-        out.append(Frame(ly, {'hand': (13, 36), 'seat': (12, 38)}))
-    return out
-
-
-# =============================================================================================
-# Shouldering the frame: crouch with her back to the standing load, slip the straps on, rise.
-
-def shoulder(view, load):
+def bow(view, load):
+    """A deep bow: lean in, hold, come back up (5 frames)."""
     out = []
     if view == 'side':
-        # (load dx, load dy, body dy, legs, arm)
-        seq = [(-5, 14, 3, 'crouch', S_ARM), (-1, 12, 3, 'crouch', S_ARM_STRAP), (0, 5, 1, 'stand', S_ARM_STRAP), (0, 0, 0, 'stand', S_ARM)]
-        for ldx, ldy, dy, legs, arm in seq:
-            ly = [
-                at(S_HAIR, 0, dy),
-                at(S_LOAD, ldx, ldy),
-                at(S_LEGS[legs]),
-                at(S_SKIRT_CROUCH) if legs == 'crouch' else at(S_SKIRT),
-                at(S_TORSO, 0, dy),
-                at(arm, 0, dy),
-                at(S_STRAP, 0, dy) if ldy < 13 else None,
-                at(S_HEAD, 0, dy),
-            ]
-            a = {'hand': (14, 18 + dy), 'loadTop': (LOAD_TOP['side'][0] + ldx, LOAD_TOP['side'][1] + ldy),
-                 'hook': (HOOK['side'][0] + ldx, HOOK['side'][1] + ldy)}
+        # clean lean ratios (1/3, 1/2) give regular 3- and 2-row steps; the hat tips with them
+        steps = [(1 / 3, 1 / 4, 2, 1, None), (1 / 2, 1 / 3, 4, 3, 'blink'), (1 / 2, 1 / 2, 5, 4, 'blink'),
+                 (1 / 2, 1 / 2, 5, 4, 'blink'), (1 / 3, 1 / 4, 2, 1, None)]
+        for k, tilt, hx, hy, face in steps:
+            upper = shear_h(merge(at(B.S_TORSO), at(A.S_CHEST if k >= 0.5 else B.S_SLEEVE[0])), k, HIP)
+            head = merge(at(B.S_FACE_ROWS), at(_face(B.S_FACE, face)) if _face(B.S_FACE, face) else None, at(B.HAT_S))
+            head = shear_v(head, tilt, 13)
+            hair = shear_h(B.S_HAIR[0], k / 2, HIP)
+            ly = [at(hair),
+                  at(shear_h(B.S_BOX, k, HIP)) if load == 'box' else None,
+                  at(shear_h(B.S_FRAME, k, HIP)) if load else None,
+                  at(B.S_LOWER['stand']), at(B.S_SKIRT), at(upper),
+                  at(shear_h(B.S_STRAP, k, HIP)) if load else None,
+                  at(head, hx, hy)]
+            a = _anchors(view, load, 0)
+            if load:
+                for n in ('loadTop', 'hook'):
+                    c, r = a[n]
+                    a[n] = (c + int(k * (HIP - r)), r)
             out.append(Frame(ly, a))
     elif view == 'front':
-        seq = [(14, 3), (12, 3), (5, 1), (0, 0)]
-        for ldy, dy in seq:
-            legs = (0, 0)
-            ly = [
-                at(F_LOAD, 0, ldy),
-                at(F_LEG_L_CROUCH if dy > 1 else F_LEG_L), at(F_LEG_R_CROUCH if dy > 1 else F_LEG_R),
-                at(F_SKIRT, 0, min(dy, 2)),
-                at(F_TORSO, 0, dy), at(F_STRAPS, 0, dy) if ldy < 13 else None,
-                at(F_SASH, 0, min(dy, 2)),
-                at(F_ARM_L_CHEST if 0 < ldy < 13 else F_ARM_L, 0, dy), at(F_ARM_R_CHEST if 0 < ldy < 13 else F_ARM_R, 0, dy),
-                at(F_HEAD, 0, dy),
-            ]
-            a = {'hand': (11, 23 + dy), 'loadTop': (LOAD_TOP['front'][0], LOAD_TOP['front'][1] + ldy),
-                 'hook': (HOOK['front'][0], HOOK['front'][1] + ldy)}
-            out.append(Frame(ly, a))
+        for b, h, dish in [(1, 1, False), (2, 3, True), (3, 4, True), (3, 4, True), (1, 1, False)]:
+            ly = front(load, body=b, head=h, face='blink' if dish else None,
+                       arm_l=at(A.F_CHEST_L, 0, b), arm_r=at(A.F_CHEST_R, 0, b))
+            if dish:
+                ly = _drop(ly, B.HAT_F, B.F_FACE_ROWS, *[f for f in B.F_FACE.values() if f]) + [at(A.F_HAT_DISH, 0, h - 1)]
+            out.append(Frame(ly, _anchors(view, load, b)))
+    else:
+        for b, h, dish in [(1, 1, False), (2, 3, True), (3, 4, True), (3, 4, True), (1, 1, False)]:
+            ly = back(load, body=b, head=h, hair_dy=h)
+            if dish:
+                ly = _drop(ly, B.HAT_B)
+                ly.insert(len(ly) - (2 if load == 'box' else 1 if load else 0), at(A.F_HAT_DISH, 0, h - 1))
+            out.append(Frame(ly, _anchors(view, load, b)))
     return out
 
 
-
-
-
-# Front bow, deep frames: the head tips toward the camera, so the hat shows its top as a broad
-# dish (apex near the middle, the red band running to her left) and the face disappears under it.
-F_HEAD_BOW = L(5, '''
-.......ooooooooooooo.......
-....oooWWWWwwwwwwvvvooo....
-..ooWWWWwwwwwwwwwwvvvvvoo..
-.oWWWwwwwwwwwrwwwwwvvvvvvo.
-oWWWwwwwwwwwrRwwwwwwvvvvvvo
-oWWwwwwwwwwwoRrwwwwwwvvvvVo
-oWwwwwwwwwwwwrRrwwwwwvvvvVo
-.oWwwwwwwwwwwwrRrwwwwvvvVo.
-..ooWwwwwwwwwwwwrRrwvvvoo..
-....ooonnnnnnnnnnnnnooo....
-......oKKkkkkkkkkkKKo......
-.......oKKkKKKkKKKKo.......
-........oooooooooo.........
-''', z=8.5)
-
-
-# =============================================================================================
-# From the first brief: release (放: both arms flung out), hurt, look up, lift and carry overhead.
-
-# Front head tipped back: the hat's indigo underside opens up like the illustration; she looks up.
-F_HEAD_UP = L(1, '''
-.......ooooooooooooo.......
-....oooWWwwwwwwwwwvvooo....
-..ooWWwwnnnnnnnnnnnvvvvoo..
-.oWWwnnnNNNNNNNNNNNnnvvvvo.
-oWwnnNNNnnnnnnnnnnNNNnnvvo.
-oWnnNnnnnnnnnnnnnnnnNnnnvo.
-onnNnnnoKKKKKKKKKoonnNnnvo.
-.onnnnoKkkkjkkkjkkKonnnno..
-..ooooKkkkkkkkkkkkkKoooo...
-....oKkjksEEsssEEskKkKo....
-....oKkjkseesssseskKkKo....
-....oKkjkbsssssssbkKkKo....
-....oKkjkzsssZssszkKkKo....
-....oKkjkozssssszokKkKo....
-....oKkWwKoooooooKwvkKo....
-....oKkrrKKo...oKKrdkKo....
-....oKokko.......oKKoKo....
-.....o.oo.........oo.o.....
-''', z=8)
-
-F_ARM_L_UP = B_ARM_L_UP
-F_ARM_R_UP = B_ARM_R_UP
-F_ARM_L_OUT = B_ARM_L_UP_HALF
-F_ARM_R_OUT = B_ARM_R_UP_HALF
+def strain(view, load):
+    """Knees bent, both hands under a heavy beam, shaking, a little lift (no back-frame)."""
+    out = []
+    for i in range(4):
+        shake, lift = [0, 0, 1, 0][i], [0, 0, 0, 1][i]
+        face = None if i == 0 else 'strain'
+        b = 3
+        if view == 'front':
+            ly = [at(A.F_LEG_CROUCH_L), at(A.F_LEG_CROUCH_R), at(B.F_HEM['c'], 0, 2), at(B.F_SKIRT, 0, 2),
+                  at(B.F_TORSO, shake, b), at(B.F_SASH, 0, 2),
+                  at(A.F_BEAM_L, shake, b - lift), at(A.F_BEAM_R, shake, b - lift),
+                  at(B.F_FACE_ROWS, shake, b), at(_face(B.F_FACE, face), shake, b) if face else None, at(B.HAT_F, shake, b)]
+            hand = (13 + shake, 29 + b - lift)
+        else:
+            ly = [at(B.S_HAIR[0], shake, b), at(A.S_CROUCH), at(B.S_SKIRT, 0, 3), at(B.S_TORSO, shake, b),
+                  at(A.S_BEAM, shake, b - lift),
+                  at(B.S_FACE_ROWS, shake, b), at(_face(B.S_FACE, face), shake, b) if face else None, at(B.HAT_S, shake, b)]
+            hand = (23 + shake, 24 + b - lift)
+        out.append(Frame(ly, {'hand': hand}))
+    return out
 
 
 def release(view, load):
-    """Fling both arms out (3 frames: gather, fling, hold)."""
+    """Fling both arms out (放): gather, fling, hold."""
     out = []
     if view == 'front':
-        seq = [(at(F_ARM_L_CHEST, 0, 1), at(F_ARM_R_CHEST, 0, 1), 1, 'blink'),
-               (at(F_ARM_L_OUT, 0, -1), at(F_ARM_R_OUT, 0, -1), -1, 'open'),
-               (at(F_ARM_L_OUT, 0, 0), at(F_ARM_R_OUT, 0, 0), 0, 'open')]
-        for al, ar, dy, face in seq:
-            ly = _front(load, dy, face, arm_l=None, arm_r=None)
-            ly = [i for i in ly if not (i is not None and i[0] in (F_ARM_L, F_ARM_R))] + [al, ar]
-            out.append(Frame(ly, _anchors(view, load, dy, (13, 22 + dy))))
+        seq = [(A.F_CHEST_L, A.F_CHEST_R, 1, 'blink'), (A.F_OUT_L, A.F_OUT_R, -1, None), (A.F_OUT_L, A.F_OUT_R, 0, None)]
+        for al, ar, b, face in seq:
+            ly = front(load, body=b, face=face, arm_l=at(al, 0, b), arm_r=at(ar, 0, b))
+            out.append(Frame(ly, _anchors(view, load, b, (13, 22 + b))))
     elif view == 'side':
-        seq = [(at(S_ARM_CHEST, 0, 1), 1, 'blink', False), (at(S_ARM_UP_HALF, 0, -1), -1, 'open', True), (at(S_ARM_UP_HALF, 0, 0), 0, 'open', True)]
-        for arm, dy, face, over in seq:
-            ly = _side(load, dy, face, arm_over=arm) if over else _side(load, dy, face, arm)
-            out.append(Frame(ly, _anchors(view, load, dy, (20, 11 + dy))))
+        for arm, b, over in [(A.S_CHEST, 1, False), (A.S_UP_HALF, -1, True), (A.S_UP_HALF, 0, True)]:
+            ly = side(load, body=b, arm_over=at(arm, 0, b)) if over else side(load, body=b, sleeve=at(arm, 0, b))
+            out.append(Frame(ly, _anchors(view, load, b, (21, 9 + b))))
     else:
-        seq = [(at(B_ARM_L, 1, 1), at(B_ARM_R, -1, 1), 1), (at(B_ARM_L_UP_HALF, 0, -1), at(B_ARM_R_UP_HALF, 0, -1), -1),
-               (at(B_ARM_L_UP_HALF, 0, 0), at(B_ARM_R_UP_HALF, 0, 0), 0)]
-        for al, ar, dy in seq:
-            out.append(Frame(_back_top(load, dy, arm_l=al, arm_r=ar), _anchors(view, load, dy, (13, 22 + dy))))
+        for al, ar, b in [(None, None, 1), (A.B_UP_HALF_L, A.B_UP_HALF_R, -1), (A.B_UP_HALF_L, A.B_UP_HALF_R, 0)]:
+            if al is None:
+                ly = back(load, body=b, sl=(1, 0), sr=(-1, 0))
+            else:
+                ly = back(load, body=b, arm_l=at(B.B_SLEEVE_L, 0, 99), arm_r=at(B.B_SLEEVE_R, 0, 99), top=(at(al, 0, b), at(ar, 0, b)))
+            out.append(Frame(ly, _anchors(view, load, b, (13, 22 + b))))
     return out
 
 
 def hurt(view, load):
     """Flinch: knocked back a pixel, eyes squeezed, arms up; then recover (2 frames)."""
     out = []
-    for i, (dx, dy) in enumerate([(-1, 1), (0, 0)]):
+    for i, (dx, b) in enumerate([(-1, 1), (0, 0)]):
+        face = 'strain' if i == 0 else 'blink'
         if view == 'front':
-            ly = _front(load, dy, 'strain' if i == 0 else 'blink', arm_l=at(F_ARM_L_CHEST, 0, dy), arm_r=at(F_ARM_R_CHEST, 0, dy))
+            ly = front(load, body=b, head=b, face=face, arm_l=at(A.F_CHEST_L, dx, b), arm_r=at(A.F_CHEST_R, dx, b))
         elif view == 'side':
-            ly = _side(load, dy, 'strain' if i == 0 else 'blink', at(S_ARM_CHEST, 0, dy))
+            ly = side(load, body=b, head=b, face=face, sleeve=at(A.S_CHEST, dx, b))
         else:
-            ly = _back(load, dy, arm_l=at(B_ARM_L, 1, dy), arm_r=at(B_ARM_R, -1, dy))
-        # knock the whole upper body back (toward screen-left in the side view)
-        ly = [(l, x + (dx if l not in (F_LEG_L, F_LEG_R, B_LEG_L, B_LEG_R) and l not in S_LEGS.values() else 0), y)
-              if l is not None else None for l, x, y in [j if j is not None else (None, 0, 0) for j in ly]]
-        out.append(Frame(ly, _anchors(view, load, dy)))
+            ly = back(load, body=b, head=b, sl=(1, 0), sr=(-1, 0))
+        keep = set(B.F_LEG_L.values()) | set(B.F_LEG_R.values()) | {B.S_LOWER['stand']}
+        ly = [(l, x + (dx if l not in keep else 0), y) if l is not None else None for l, x, y in [j if j is not None else (None, 0, 0) for j in ly]]
+        out.append(Frame(ly, _anchors(view, load, b)))
     return out
 
 
 def look_up(view, load):
     """Tips her head back to look up (cutscenes): 2 breathing frames."""
     out = []
-    for i, dy in enumerate([0, 1]):
+    for b in (0, -1):
         if view == 'front':
-            ly = _front(load, dy, 'open')
-            ly = [j for j in ly if not (j is not None and (j[0] is F_HEAD or j[0] in F_FACE.values()))]
-            ly.append(at(F_HEAD_UP, 0, dy))
+            ly = _drop(front(load, body=b), B.HAT_F, B.F_FACE_ROWS) + [at(A.F_FACE_UP), at(A.F_HAT_UP)]
         elif view == 'side':
-            head = shear_v(S_HEAD, -0.22, 13)
-            ly = _side(load, dy, None, head_dy=dy)
-            ly = [(head, 1, dy) if (j is not None and j[0] is S_HEAD) else j for j in ly]
+            head = shear_v(merge(at(B.S_FACE_ROWS), at(B.HAT_S)), -1 / 5, 13)
+            ly = _drop(side(load, body=b), B.S_FACE_ROWS, B.HAT_S) + [at(head, 0, 1)]
         else:
-            ly = _back(load, dy, head_dy=dy + 1)
-        out.append(Frame(ly, _anchors(view, load, dy)))
+            ly = back(load, body=b, head=1, hair_dy=1)
+        out.append(Frame(ly, _anchors(view, load, b)))
     return out
 
 
@@ -1719,49 +434,135 @@ def lift(view, load):
     """Lift something overhead: crouch and grab, bring it up, hold it high (3 frames)."""
     out = []
     if view == 'front':
-        seq = [('crouch', at(F_ARM_L_BEAM, 0, 3), at(F_ARM_R_BEAM, 0, 3), 3, (13, 30)),
-               ('stand', at(F_ARM_L_CHEST, 0, 0), at(F_ARM_R_CHEST, 0, 0), 0, (13, 22)),
-               ('stand', at(F_ARM_L_UP, 0, 0), at(F_ARM_R_UP, 0, 0), 0, (13, -2))]
-        for legs, al, ar, dy, hand in seq:
-            ly = _front(load, dy, 'strain' if legs == 'crouch' else 'open', skirt=(0, min(dy, 2)))
+        seq = [('crouch', A.F_BEAM_L, A.F_BEAM_R, 3, (13, 32)), ('stand', A.F_CHEST_L, A.F_CHEST_R, 0, (13, 22)),
+               ('stand', A.F_UP_L, A.F_UP_R, 0, (13, -3))]
+        for legs, al, ar, b, hand in seq:
+            if al is A.F_UP_L:   # raised arms go in front of the brim; the sleeves slide down to the elbows
+                ly = front(load, body=b, head=b, arm_l=at(B.F_SLEEVE_L, 0, 99), arm_r=at(B.F_SLEEVE_R, 0, 99),
+                           over=(at(al, 0, b), at(ar, 0, b)))
+                out.append(Frame(ly, _anchors(view, load, b, hand)))
+                continue
+            ly = front(load, body=b, head=b, face='strain' if legs == 'crouch' else None, hem_dy=2 if legs == 'crouch' else 0,
+                       arm_l=at(al, 0, b), arm_r=at(ar, 0, b))
             if legs == 'crouch':
-                ly = [(F_LEG_L_CROUCH, 0, 0) if (j is not None and j[0] is F_LEG_L) else (F_LEG_R_CROUCH, 0, 0) if (j is not None and j[0] is F_LEG_R) else j for j in ly]
-            ly = [j for j in ly if not (j is not None and j[0] in (F_ARM_L, F_ARM_R))] + [al, ar]
-            out.append(Frame(ly, _anchors(view, load, dy, hand)))
+                ly = _drop(ly, *B.F_LEG_L.values(), *B.F_LEG_R.values()) + [at(A.F_LEG_CROUCH_L), at(A.F_LEG_CROUCH_R)]
+                ly = [ly[-2], ly[-1]] + ly[:-2]
+            out.append(Frame(ly, _anchors(view, load, b, hand)))
     elif view == 'side':
-        seq = [('crouch', at(S_ARM_BEAM, 0, 3), 3, (22, 27), False), ('stand', at(S_ARM_CHEST, 0, 0), 0, (18, 22), False),
-               ('stand', at(S_ARM_UP, 0, 0), 0, (16, 1), True)]
-        for legs, arm, dy, hand, over in seq:
-            if legs == 'crouch':
-                ly = [at(S_HAIR, 0, dy), at(S_LOAD, 0, dy) if load else None, at(S_LEGS['crouch']), at(S_SKIRT_CROUCH),
-                      at(S_TORSO, 0, dy), arm, at(S_STRAP, 0, dy) if load else None, at(S_HEAD, 0, dy), at(S_FACE['strain'], 0, dy)]
+        for kind, arm, b, hand in [('crouch', A.S_BEAM, 3, (23, 27)), ('stand', A.S_CHEST, 0, (18, 23)), ('stand', A.S_UP, 0, (14, -3))]:
+            if kind == 'crouch':
+                ly = side(load, body=b, head=b, face='strain', lower=at(A.S_CROUCH), sleeve=at(arm, 0, b))
+            elif arm is A.S_UP:
+                ly = side(load, arm_over=at(arm))
             else:
-                ly = _side(load, dy, 'open', arm_over=arm) if over else _side(load, dy, 'open', arm)
-            out.append(Frame(ly, _anchors(view, load, dy, hand)))
+                ly = side(load, sleeve=at(arm))
+            out.append(Frame(ly, _anchors(view, load, b, hand)))
     else:
-        seq = [(at(B_ARM_L, 1, 2), at(B_ARM_R, -1, 2), 2, (13, 30)), (at(B_ARM_L_UP_HALF, 0, 0), at(B_ARM_R_UP_HALF, 0, 0), 0, (13, 10)),
-               (at(B_ARM_L_UP, 0, 0), at(B_ARM_R_UP, 0, 0), 0, (13, -2))]
-        for al, ar, dy, hand in seq:
-            out.append(Frame(_back_top(load, dy, arm_l=al, arm_r=ar, skirt=(0, min(dy, 1))), _anchors(view, load, dy, hand)))
+        for al, ar, b, hand in [(None, None, 2, (13, 32)), (A.B_UP_HALF_L, A.B_UP_HALF_R, 0, (13, 9)), (A.B_UP_L, A.B_UP_R, 0, (13, -3))]:
+            if al is None:
+                ly = back(load, body=b, head=b, hem_dy=1, sl=(1, 0), sr=(-1, 0))
+            else:
+                ly = back(load, arm_l=at(B.B_SLEEVE_L, 0, 99), arm_r=at(B.B_SLEEVE_R, 0, 99), top=(at(al), at(ar)))
+            out.append(Frame(ly, _anchors(view, load, b, hand)))
     return out
 
 
 def carry_overhead(view, load):
-    """Walk with something held overhead (6 frames; the object is a prop at 'hand')."""
+    """Walk holding something overhead (8 frames; the object is a prop at 'hand')."""
     out = []
-    for i, dy in enumerate(WALK_BOB):
+    for i, b in enumerate(BOB):
         if view == 'front':
-            ly = _front(load, dy, 'open', legs=WALK_FRONT_LEGS[i], sash=i % 3 == 2)
-            ly = [j for j in ly if not (j is not None and j[0] in (F_ARM_L, F_ARM_R))] + [at(F_ARM_L_UP, 0, dy), at(F_ARM_R_UP, 0, dy)]
-            hand = (13, -2 + dy)
+            ly = front(load, body=b, head=b, legs=F_LEGS_WALK[i], hem=HEM_LAG[i], sash=(i // 2) % 2,
+                       arm_l=at(B.F_SLEEVE_L, 0, 99), arm_r=at(B.F_SLEEVE_R, 0, 99), over=(at(A.F_UP_L, 0, b), at(A.F_UP_R, 0, b)))
+            hand = (13, -3 + b)
         elif view == 'side':
-            ly = _side(load, dy, 'open', legs=WALK_SIDE_LEGS[i], hair=i % 3 != 0, arm_over=at(S_ARM_UP, 0, dy))
-            hand = (16, 1 + dy)
+            ly = side(load, body=b, head=b, lower=at(B.S_WALK[i]), hair=SIDE_HAIR[(i - 1) % 8], hair_dy=LAG[i], arm_over=at(A.S_UP, 0, b))
+            hand = (14, -3 + b)
         else:
-            ly = _back_top(load, dy, arm_l=at(B_ARM_L_UP, 0, dy), arm_r=at(B_ARM_R_UP, 0, dy), legs=WALK_FRONT_LEGS[i])
-            hand = (13, -2 + dy)
-        out.append(Frame(ly, _anchors(view, load, dy, hand)))
+            ly = back(load, body=b, head=b, legs=B_LEGS_WALK[i], hem=HEM_LAG[i], hair_dy=LAG[i],
+                      arm_l=at(B.B_SLEEVE_L, 0, 99), arm_r=at(B.B_SLEEVE_R, 0, 99), top=(at(A.B_UP_L, 0, b), at(A.B_UP_R, 0, b)))
+            hand = (13, -3 + b)
+        out.append(Frame(ly, _anchors(view, load, b, hand)))
     return out
+
+
+def shoulder(view, load):
+    """Putting the back-frame on: crouch with her back to it, slip the straps on, rise (4 frames)."""
+    out = []
+    if view == 'side':
+        for ldx, ldy, b, crouch, grip in [(-4, 10, 3, True, False), (-1, 9, 3, True, True), (0, 4, 1, False, True), (0, 0, 0, False, False)]:
+            ly = [
+                at(B.S_HAIR[0], 0, b),
+                at(B.S_BOX, ldx, ldy) if load == 'box' else None,
+                at(B.S_FRAME, ldx, ldy),
+                at(A.S_CROUCH) if crouch else at(B.S_LOWER['stand']),
+                at(B.S_SKIRT, 0, 3 if crouch else 0),
+                at(B.S_TORSO, 0, b),
+                at(A.S_GRIP if grip else B.S_SLEEVE[0], 0, b),
+                at(B.S_STRAP, 0, b) if ldy < 10 else None,
+                at(B.S_FACE_ROWS, 0, b), at(B.HAT_S, 0, b),
+            ]
+            out.append(Frame(ly, {'hand': (16, 18 + b), 'loadTop': (LOAD_TOP['side'][0] + ldx, LOAD_TOP['side'][1] + ldy),
+                                  'hook': (HOOK['side'][0] + ldx, HOOK['side'][1] + ldy)}))
+    elif view == 'front':
+        for ldy, b, crouch in [(10, 3, True), (9, 3, True), (4, 1, False), (0, 0, False)]:
+            ly = front(load, body=b, head=b, hem_dy=2 if crouch else 0,
+                       arm_l=at(A.F_CHEST_L, 0, b) if 0 < ldy < 10 else None, arm_r=at(A.F_CHEST_R, 0, b) if 0 < ldy < 10 else None)
+            ly = _drop(ly, B.F_FRAME, B.F_STRAPS)
+            ly = [at(B.F_FRAME, 0, ldy)] + ly + ([at(B.F_STRAPS, 0, b)] if ldy < 10 else [])
+            if crouch:
+                ly = _drop(ly, *B.F_LEG_L.values(), *B.F_LEG_R.values()) + [at(A.F_LEG_CROUCH_L), at(A.F_LEG_CROUCH_R)]
+                ly = [ly[0], ly[-2], ly[-1]] + ly[1:-2]
+            out.append(Frame(ly, {'hand': (11, 22 + b), 'loadTop': (LOAD_TOP['front'][0], LOAD_TOP['front'][1] + ldy),
+                                  'hook': (HOOK['front'][0], HOOK['front'][1] + ldy)}))
+    return out
+
+
+def asleep(view, load):
+    """Side view (mirror for the other way): on her back with the hat over her face, breathing."""
+    out = []
+    for i in (0, 1):
+        ly = [at(A.ASLEEP_BODY[i]), at(B.HAT_F, -9, 26)]
+        out.append(Frame(ly, {'hand': (26, 34)}))
+    return out
+
+
+def _sit_ground(face=None, tilt=0.0, arm=None):
+    b = 8
+    head = merge(at(B.S_FACE_ROWS), at(_face(B.S_FACE, face)) if _face(B.S_FACE, face) else None, at(B.HAT_S))
+    if tilt:
+        head = shear_v(head, tilt, 13)
+    return [at(B.S_HAIR[0], 0, b - 4), at(A.S_SIT_LEGS), at(B.S_TORSO, 0, b), at(arm or B.S_SLEEVE[0], 0, b - 1), at(head, 0, b)]
+
+
+def sit_up(view, load):
+    """Side: lying, propped on her elbows, sitting with the hat over her eyes, hat back in place."""
+    return [
+        Frame([at(A.ASLEEP_BODY[0]), at(B.HAT_F, -9, 26)], {'hand': (26, 34)}),
+        Frame([at(A.ASLEEP_BODY[0], 0, 0), at(shear_v(B.HAT_S, 1 / 4, 13), -6, 21)], {'hand': (14, 35)}),
+        Frame(_sit_ground('blink', 1 / 4), {'hand': (16, 36), 'seat': (12, 38)}),
+        Frame(_sit_ground(), {'hand': (16, 36), 'seat': (12, 38)}),
+    ]
+
+
+def sit(view, load):
+    """Side: sitting on the ground (cutscenes); breathing and a blink."""
+    out = []
+    for i in range(4):
+        ly = _sit_ground('blink' if i == 3 else None)
+        if i in (1, 2):
+            ly = [(l, x, y + 1) if (l is not None and l is not A.S_SIT_LEGS) else (l, x, y) for l, x, y in ly]
+        out.append(Frame(ly, {'hand': (16, 36), 'seat': (12, 38)}))
+    return out
+
+
+def _ride(fn):
+    """The same animation for when Saji rides on the frame: in the front view the post tips are
+    left out (Saji sits between them, wider than the gap, and would otherwise be striped by them)."""
+    def ride(view, load):
+        return [Frame(_drop(f.layers, B.F_FRAME), f.anchors) for f in fn(view, load)]
+    ride.__name__ = fn.__name__ + '_ride'
+    return ride
 
 
 # =============================================================================================
@@ -1770,33 +571,43 @@ def carry_overhead(view, load):
 NAME = 'tsuzumi'
 FRAME = (FW, FH)
 ORIGIN = (MX, MY)
-
-F, S, B = 'front', 'side', 'back'
+F, S, Bk = 'front', 'side', 'back'
+ALL = ('load', 'frame', 'plain')
 
 # name: (recipe, views, fps, loop, sheets)
 ANIMS = {
-    'idle':       (idle,       (F, S, B), 4,   True,  ('load', 'plain')),
-    'walk':       (walk,       (F, S, B), 10,  True,  ('load', 'plain')),
-    'heavyIdle':  (heavy_idle, (F, S, B), 3,   True,  ('load', 'plain')),
-    'take':       (take,       (F, S),    8,   False, ('load', 'plain')),
-    'give':       (give,       (F, S),    8,   False, ('load', 'plain')),
-    'push':       (push,       (S,),      8,   False, ('load', 'plain')),
-    'reachUp':    (reach_up,   (S, B),    6,   False, ('load', 'plain')),
-    'eat':        (eat,        (F, S),    4,   False, ('load', 'plain')),
-    'bow':        (bow,        (F, S, B), 5,   False, ('load', 'plain')),
-    'climb':      (climb,      (B,),      6,   True,  ('load', 'plain')),
-    'shout':      (shout,      (B,),      6,   False, ('load', 'plain')),
-    'sitBranch':  (sit_branch, (B,),      3,   True,  ('load', 'plain')),
-    'shoulder':   (shoulder,   (F, S),    5,   False, ('load',)),
-    'strain':     (strain,     (F, S),    8,   True,  ('plain',)),
-    'asleep':     (asleep,     (S,),      1.5, True,  ('plain',)),
-    'sitUp':      (sit_up,     (S,),      4,   False, ('plain',)),
-    'sit':        (sit,        (S,),      3,   True,  ('plain',)),
-    'release':    (release,        (F, S, B), 8, False, ('load', 'plain')),
-    'hurt':       (hurt,           (F, S, B), 6, False, ('load', 'plain')),
-    'lookUp':     (look_up,        (F, S, B), 2, True,  ('load', 'plain')),
-    'lift':       (lift,           (F, S, B), 5, False, ('load', 'plain')),
-    'carryOverhead': (carry_overhead, (F, S, B), 9, True, ('load', 'plain')),
+    'idle':          (idle,           (F, S, Bk), 4,   True,  ALL),
+    'walk':          (walk,           (F, S, Bk), 10,  True,  ALL),
+    'heavyIdle':     (heavy_idle,     (F, S, Bk), 3,   True,  ALL),
+    'take':          (take,           (F, S),     8,   False, ALL),
+    'give':          (give,           (F, S),     8,   False, ALL),
+    'shoulder':      (shoulder,       (F, S),     5,   False, ('load', 'frame')),
+    'push':          (push,           (S,),       8,   False, ALL),
+    'reachUp':       (reach_up,       (S, Bk),    6,   False, ALL),
+    'eat':           (eat,            (F, S),     4,   False, ALL),
+    'bow':           (bow,            (F, S, Bk), 5,   False, ALL),
+    'climb':         (climb,          (Bk,),      6,   True,  ALL),
+    'shout':         (shout,          (Bk,),      6,   False, ALL),
+    'sitBranch':     (sit_branch,     (Bk,),      3,   True,  ALL),
+    'release':       (release,        (F, S, Bk), 8,   False, ALL),
+    'hurt':          (hurt,           (F, S, Bk), 6,   False, ALL),
+    'lookUp':        (look_up,        (F, S, Bk), 2,   True,  ALL),
+    'lift':          (lift,           (F, S, Bk), 5,   False, ALL),
+    'carryOverhead': (carry_overhead, (F, S, Bk), 10,  True,  ALL),
+    'strain':        (strain,         (F, S),     8,   True,  ('plain',)),
+    'asleep':        (asleep,         (S,),       1.5, True,  ('plain',)),
+    'sitUp':         (sit_up,         (S,),       4,   False, ('plain',)),
+    'sit':           (sit,            (S,),       3,   True,  ('plain',)),
+    # front view while Saji rides (characters.js frameAt(..., { rider: true }) picks these)
+    'idleRide':      (_ride(idle),       (F,),    4,   True,  ('load', 'frame')),
+    'walkRide':      (_ride(walk),       (F,),    10,  True,  ('load', 'frame')),
+    'heavyIdleRide': (_ride(heavy_idle), (F,),    3,   True,  ('load', 'frame')),
+    'takeRide':      (_ride(take),       (F,),    8,   False, ('load', 'frame')),
+    'giveRide':      (_ride(give),       (F,),    8,   False, ('load', 'frame')),
 }
 
-SHEETS = {'load': True, 'plain': False}   # sheet name -> draw the back-frame load
+SHEETS = {'load': 'box', 'frame': 'frame', 'plain': None}
+
+# Draw order for Saji riding on the frame: 'behind' = draw Saji first (Tsuzumi's hat covers her
+# legs), 'over' = draw Saji after Tsuzumi.
+RIDER = {'front': 'behind', 'side': 'behind', 'back': 'over'}

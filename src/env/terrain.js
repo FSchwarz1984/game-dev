@@ -375,7 +375,10 @@ export class Terrain {
 }
 
 /** grass/moss overhang length at the top of a face (px), stable per column */
-function overhang(X) { const h = hash2(X, 0, 101); return h < 0.45 ? 1 : h < 0.75 ? 2 : h < 0.92 ? 3 : 5; }
+function overhang(X) { // sod hangs over in clumps (a smooth per-column length plus a little jitter), not a comb
+  const c = Math.floor(X / 7), f = X / 7 - c, a = hash2(c, 0, 101), b = hash2(c + 1, 0, 101), n = a + (b - a) * f * f * (3 - 2 * f);
+  const h = hash2(X, 0, 102); return Math.max(1, Math.round(n * 4.2 - 0.6) + (h < 0.18 ? 1 : 0));
+}
 
 /** separable box blur of an Int16 field (returns Float32, units = input units / ZS → px) */
 function boxBlur(src, W, H, r) {

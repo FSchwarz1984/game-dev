@@ -2,6 +2,7 @@
 
     python3 tools/art/build.py                 # sheets + src/art/characters.data.js
     python3 tools/art/build.py --contact DIR   # also write contact sheets (1x and 4x) to DIR
+    python3 tools/art/build.py --anim DIR      # also write 4x animated APNG + GIF of walks and idles
 
 Deterministic: the same sources always give byte-identical PNGs (no timestamps, fixed order).
 Outputs:
@@ -133,6 +134,8 @@ def compact_json(data) -> str:
     for ci, (cname, c) in enumerate(chars):
         out.append(f' {json.dumps(cname)}: {{')
         out.append(f'  "frame": {json.dumps(c["frame"])}, "pivot": {json.dumps(c["pivot"])}, "palette": {c.get("palette", 0)},')
+        if 'rider' in c:
+            out.append(f'  "rider": {json.dumps(c["rider"], separators=(", ", ": "))},')
         out.append('  "anims": {')
         an = list(c['anims'].items())
         for ai, (aname, a) in enumerate(an):
@@ -157,10 +160,39 @@ def compact_json(data) -> str:
     return '\n'.join(out)
 
 
+def write_anims(mod, sheet_name, data, out_dir, names=('walk', 'idle'), k=4, bg=(70, 96, 64)):
+    """Animated APNG and GIF at k x (one per animation/view), plus a frame-by-frame strip."""
+    fw, fh = mod.FRAME
+    alb = data['albedo']
+    for name in names:
+        if name not in data['table']:
+            continue
+        fps = mod.ANIMS[name][2]
+        for view, entry in data['table'][name].items():
+            ri, n = entry['row'], entry['frames']
+            frames = []
+            for ci in range(n):
+                cell = alb[ri * fh:(ri + 1) * fh, ci * fw:(ci + 1) * fw]
+                ys, xs = np.nonzero(alb[ri * fh:(ri + 1) * fh, :n * fw, 3])
+                im = Image.new('RGB', (fw * k, fh * k), bg)
+                z = Image.fromarray(cell, 'RGBA').resize((fw * k, fh * k), Image.NEAREST)
+                im.paste(z, (0, 0), z)
+                frames.append(im)
+            base = os.path.join(out_dir, f'{mod.NAME}_{sheet_name}_{name}_{view}')
+            dur = int(round(1000 / fps))
+            frames[0].save(base + '.png', save_all=True, append_images=frames[1:], duration=dur, loop=0, format='PNG')
+            frames[0].save(base + '.gif', save_all=True, append_images=frames[1:], duration=dur, loop=0)
+            strip = Image.new('RGB', (n * (fw * k + 4), fh * k), (30, 32, 38))
+            for ci, f in enumerate(frames):
+                strip.paste(f, (ci * (fw * k + 4), 0))
+            strip.save(base + '_strip.png')
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--contact', default=None, help='directory for contact sheets')
     ap.add_argument('--only', default=None, help='comma-separated character names')
+    ap.add_argument('--anim', default=None, help='directory for animated APNG/GIF previews (4x)')
     args = ap.parse_args()
     names = args.only.split(',') if args.only else CHARACTERS
     sprite_dir = os.path.join(ROOT, 'assets', 'sprites')
@@ -187,12 +219,17 @@ def main():
             if args.contact:
                 os.makedirs(args.contact, exist_ok=True)
                 contact_sheet(mod, sname, data, args.contact)
+            if args.anim:
+                os.makedirs(args.anim, exist_ok=True)
+                write_anims(mod, sname, data, args.anim)
         for aname, (fn, views, fps, loop, sh) in mod.ANIMS.items():
             if not any(s in man['sheets'] for s in sh):
                 continue
             man['anims'][aname] = {'fps': fps, 'loop': loop, 'views': list(views), 'sheets': list(sh),
                                    'mirrorLeft': 'side' in views}
         man['palette'] = len(mod.PAL.colours())
+        if getattr(mod, 'RIDER', None):
+            man['rider'] = dict(mod.RIDER)
         manifest[name] = man
     out = os.path.join(ROOT, 'src', 'art', 'characters.data.js')
     os.makedirs(os.path.dirname(out), exist_ok=True)

@@ -59,13 +59,19 @@ def at(layer, dx=0, dy=0):
     return (layer, dx, dy) if layer is not None else None
 
 
-def shear_h(layer: L, k: float, pivot_row: int) -> L:
-    """Lean: shift each row right by round(k * (pivot_row - row)); rows above the pivot move
-    forward (k > 0 leans to the right). Returns a new layer (grid widened as needed)."""
+def _step(v: float, clean: bool) -> int:
+    import math
+    return int(math.floor(v + 1e-9)) if clean else int(round(v))
+
+
+def shear_h(layer: L, k: float, pivot_row: int, clean: bool = True) -> L:
+    """Lean: shift each row right by k * (pivot_row - row); rows above the pivot move forward
+    (k > 0 leans to the right). clean: floor the shift, so a ratio like 1/2 or 1/3 gives the
+    regular 2- or 3-row steps of a proper pixel line instead of irregular jags."""
     import numpy as np
     g = layer.grid
     h, w = g.shape
-    shifts = [int(round(k * (pivot_row - (layer.row + j)))) for j in range(h)]
+    shifts = [_step(k * (pivot_row - (layer.row + j)), clean) for j in range(h)]
     lo, hi = min(shifts), max(shifts)
     out = np.full((h, w + hi - lo), '.', dtype='<U1')
     for j in range(h):
@@ -74,12 +80,13 @@ def shear_h(layer: L, k: float, pivot_row: int) -> L:
     return L(layer.row, out, layer.col + lo, layer.z, layer.only)
 
 
-def shear_v(layer: L, k: float, pivot_col: int) -> L:
-    """Tilt: shift each column down by round(k * (col - pivot_col)) (k > 0 tips the right side down)."""
+def shear_v(layer: L, k: float, pivot_col: int, clean: bool = True) -> L:
+    """Tilt: shift each column down by k * (col - pivot_col) (k > 0 tips the right side down);
+    clean as in shear_h."""
     import numpy as np
     g = layer.grid
     h, w = g.shape
-    shifts = [int(round(k * ((layer.col + i) - pivot_col))) for i in range(w)]
+    shifts = [_step(k * ((layer.col + i) - pivot_col), clean) for i in range(w)]
     lo, hi = min(shifts), max(shifts)
     out = np.full((h + hi - lo, w), '.', dtype='<U1')
     for i in range(w):

@@ -4,8 +4,8 @@
 // hills at its far side and two ranges beyond. Units: camera height above the plain = 1 (~500 m);
 // the camera sits in the crown of the tree on the pass, the pass itself at 0.94.
 
-import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, ridged, bayer, IndexLayer, I } from './util.js';
-import { march, sunShadows } from './terrain.js';
+import { clamp, smooth, rng, hash2, vnoise, fbm, ridged, bayer, IndexLayer, I, run } from './util.js';
+import { marchGen, sunShadows } from './terrain.js';
 import { waterBand } from './tod.js';
 
 export const G = {
@@ -27,7 +27,7 @@ GROUND_MATS[G.pond] = { albedo: [0.18, 0.24, 0.22], water: true, refl: 0.72 };
 GROUND_MATS[G.bank] = { albedo: [0.46, 0.46, 0.3] };
 GROUND_MATS[G.forest] = { albedo: [0.25, 0.33, 0.15] };
 GROUND_MATS[G.cedar] = { albedo: [0.16, 0.23, 0.13] };
-GROUND_MATS[G.rock] = { albedo: [0.44, 0.41, 0.36] };
+GROUND_MATS[G.rock] = { albedo: [0.36, 0.35, 0.32] };
 GROUND_MATS[G.grove] = { albedo: [0.18, 0.25, 0.12] };
 GROUND_MATS[G.townGround] = { albedo: [0.42, 0.38, 0.32] };
 GROUND_MATS[G.roof] = { albedo: [0.27, 0.28, 0.32] };
@@ -145,7 +145,7 @@ function foldH(F, X, Z) {
   const w = F.w0 + F.wk * Z;
   const d = Math.abs(X - xr) / w;
   if (d >= 1.6) return 0;
-  const n = ridged(Z * 1.1 + F.s * 7, X * 1.1, 3, F.s);
+  const n = ridged(Z * 1.1 + F.s * 7, X * 1.1, 2, F.s);
   const prof = d < 1 ? Math.pow(1 - d * d, 0.7) : 0;
   // the outer side keeps some height (the massif behind the fold)
   const outer = (X - xr) * F.side > 0 ? 0.55 * clamp(1 - (d - 1) / 0.6, 0, 1) * (d >= 1 ? 1 : 0) : 0;
@@ -157,7 +157,7 @@ function ourSlope(X, Z) {
   if (Z >= foot) return 0;
   const p = 1 - Z / foot;
   let t = 0.94 * Math.pow(p, 1.4);
-  t *= 0.9 + 0.2 * ridged(X * 1.6 + Z * 0.12, Z * 0.32, 3, 21);   // gullies running down the slope
+  t *= 0.9 + 0.2 * ridged(X * 1.6 + Z * 0.12, Z * 0.32, 2, 21);   // gullies running down the slope
   return t + 0.05 * X * X * p;
 }
 
@@ -202,15 +202,15 @@ export function makeHeight(hamlets) {
   };
   const height = (X, Z) => {
     let t = base(X, Z);
-    if (t > 0.012 && Z < 16) { // forest crowns on the slopes and folds
+    if (t > 0.012 && Z < 6.5) { // forest crowns where they are big enough to see (farther: shading texture)
       const cedar = vnoise(X * 0.8, Z * 0.6, 51) > 0.56;
-      t += crowns(X, Z, 0.045, 0.024, cedar) * smooth(16, 6, Z);
+      t += crowns(X, Z, 0.045, 0.024, cedar) * smooth(6.5, 3.5, Z);
     }
     if (Z > 6 && Z < 45) {
       const list = bz.get(Math.floor(Z));
-      if (list) for (const [vx, vz, vr, vh] of list) {
-        const dx = X - vx, dz = Z - vz, d2 = (dx * dx + dz * dz) / (vr * vr);
-        if (d2 < 1) t = Math.max(t, vh * Math.sqrt(1 - d2));
+      if (list) for (let k = 0; k < list.length; k++) {
+        const b = list[k], dx = X - b[0], dz = Z - b[1], d2 = (dx * dx + dz * dz) / (b[2] * b[2]);
+        if (d2 < 1) { const v = b[3] * Math.sqrt(1 - d2); if (v > t) t = v; }
       }
     }
     return t;
@@ -250,17 +250,23 @@ export function landuse(X, Z, t) {
 
 // ---------------------------------------------------------------- render the ground to an index layer
 
-export function buildGround({ w, h, cx, yh, f, S, sun, seed }) {
+export function buildGround(o) { return run(buildGroundGen(o)); }
+
+export function* buildGroundGen({ w, h, cx, yh, f, S, sun, seed }) {
   const hamlets = hamletLayout(seed);
   const height = makeHeight(hamlets);
   const t0 = performance.now();
   const gapsFor = dir => (Math.abs(dir) < 0.17 ? [[11.6, 26]] : null);
-  const m = march({ w, h, cx, yh, f, camY: 1, z0: 0.22, z1: 280, height, k: 0.013, kFar: 0.03, zFar: 26, gapsFor });
+  const m = yield* marchGen({ w, h, cx, yh, f, camY: 1, z0: 0.22, z1: 280, height, k: 0.013, kFar: 0.03, zFar: 26, gapsFor });
   const tMarch = performance.now() - t0;
+  yield;
   const shadow = sunShadows(height, { xa: -16, xb: 16, za: 0.3, zb: 70, nx: 480, nz: 180, slope: sun.slope, soft: 0.05 });
+  yield;
   const L = new IndexLayer(w, h);
   const [slx, sly, slz] = sun.dir;
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+  for (let y = 0; y < h; y++) {
+   if ((y & 15) === 15) yield;
+   for (let x = 0; x < w; x++) {
     const i = y * w + x;
     if (!m.mask[i]) continue;
     const X = m.X[i], Z = m.Z[i];
@@ -286,24 +292,34 @@ export function buildGround({ w, h, cx, yh, f, S, sun, seed }) {
     } else {
       const cedar = vnoise(X * 0.8, Z * 0.6, 51) > 0.56;
       mat = cedar ? G.cedar : G.forest;
-      if (ny < 0.5) mat = G.rock;
+      if (ny < 0.4 && vnoise(X * 3, Z * 3, 52) > 0.35) mat = G.rock;
       if (Z < 5.6 && Math.abs(X) < 0.8) {
         if (distPoly(SWITCH_P, X, Z) < 0.018 && vnoise(X * 12, Z * 12, 77) > 0.38) mat = G.path;
       }
     }
     let sun8, sky4;
+    let tex = 0;
+    if ((mat === G.forest || mat === G.cedar || mat === G.hillForest) && Z > 3.5) {
+      // tree crowns too small for the geometry: a lit cap and a shaded side per crown, cells ~2-3 px
+      const cs = 0.06 * Math.max(1, Z / 6), u = X / cs, v = (Z + t * 4) / (cs * 1.6);
+      const cu = Math.floor(u), cv = Math.floor(v), fu = u - cu - 0.5, fv = v - cv - 0.5;
+      const hh = hash2(cu, cv, 333);
+      tex = (fu + fv * 0.6 > 0.15 ? 1 : fu + fv * 0.6 < -0.32 ? -1 : 0) + (hh < 0.12 ? -1 : 0);
+    }
     if (GROUND_MATS[mat].water) {
       sun8 = waterBand(y - yh, S);
       sky4 = sh > 0.5 ? 3 : 2;
     } else {
       const direct = Math.pow(lam, 0.75) * sh;
-      sun8 = clamp(Math.round(direct * 7), 0, 7);
+      sun8 = clamp(Math.round(direct * 7) + tex, 0, 7);
       sky4 = clamp(Math.round((ny - 0.45) / 0.55 * 3), 0, 3);
     }
     const hz = 1 - Math.exp(-Z / 62);
     const haze = clamp(Math.floor(hz * 8 + (plain ? (bayer(x, y) - 0.5) * 0.7 : 0)), 0, 7);
     L.idx[i] = I(mat, sun8, sky4, haze);
+   }
   }
+  yield;
   L.despeckle(() => true);
   return { layer: L, X: m.X, Z: m.Z, mask: m.mask, height, hamlets, ms: { march: Math.round(tMarch), total: Math.round(performance.now() - t0) } };
 }

@@ -13,7 +13,7 @@
    canopies now use sphere-lit sub-clumps with leaf cells (paint.js
    foliage) instead of flat noise, and a black pine was added.
    ===================================================================== */
-import { SB, PX, POST, MAT, foliage, mass, domeBlobs, cylN, LIGHT } from './paint.js';
+import { SB, PX, POST, MAT, foliage, mass, crown, domeBlobs, cylN, LIGHT } from './paint.js';
 import { PAL } from './palette.js';
 import { RNG, clamp, lerp, hash2, hyp, ramp } from './core.js';
 
@@ -70,53 +70,63 @@ export function cedar(seed, H = 170, W = 44) {
   return { s, meta: { ax: cx, ay: baseY + 1, sway: 0.5, foliage: true, occluder: true, kind: 'tree' } };
 }
 
-/* ---------------- black pine 黒松: a crooked trunk carrying flat plates of needles ---------------- */
+/* ---------------- black pine 黒松: a crooked trunk carrying broad cloud pads of needles ----------------
+   The pads are the pine: wide, flat, layered clouds with a bright needle-tufted top and a dark
+   underside, big against a thick, plated, dark trunk (a thin stick with small pads reads as a toy). */
 export function pine(seed, H = 120, lean = 0) {
-  const R = RNG(seed * 17 + 5), W = 120, h = H + 8, s = new SB(W, h), cx = W / 2 + R.range(-4, 4) - lean * 14, baseY = h - 3;
-  const pts = [[cx, baseY]]; let x = cx, y = baseY; const segs = 5;
-  for (let i = 1; i <= segs; i++) { x += R.range(-6, 6) + lean * 7; y -= (baseY - 20) / segs; pts.push([x, y]); }
-  trunk(s, pts, R.range(7, 9), 3.2, PAL.barkPine, { seed, cols: 3, seg: 4, fis: 0.34, b: 3 });
-  const plates = []; const np = R.int(5, 7);
+  const R = RNG(seed * 17 + 5), W = 190, h = H + 16, s = new SB(W, h), baseY = h - 3;
+  const cx = W / 2 - lean * 22 + R.range(-4, 4);
+  const pts = []; let x = cx, y = baseY; const segs = 6;
+  for (let i = 0; i <= segs; i++) { pts.push([x, y]); x += (lean * 10 + R.range(-4, 4)) * (i < 2 ? 0.5 : 1) + Math.sin(i * 1.3 + seed) * 2; y -= (baseY - 24) / segs; }
+  trunk(s, pts, R.range(9, 11), 3.6, PAL.barkPineBlack, { seed, cols: 3, seg: 5, fis: 0.42, b: 3 });
+  // a root flare
+  for (let k = 0; k < 2; k++) { const d = k ? 1 : -1; PX.stroke(cx + d * 3, baseY - 4, cx + d * R.range(7, 9), baseY + 1, 3, 1.2, (xx, yy) => s.pz(xx, yy, PAL.barkPineBlack[k ? 1 : 2], 1.5, { m: MAT.BARK, b: 1 })); }
+  const at = t => { const f = t * segs, i = Math.min(segs - 1, Math.floor(f)), u = f - i; return [lerp(pts[i][0], pts[i + 1][0], u), lerp(pts[i][1], pts[i + 1][1], u)]; };
+  const pads = []; const np = R.int(5, 7);
   for (let i = 0; i < np; i++) {
-    const t = i / (np - 1); const p = pts[Math.min(segs, 1 + Math.floor(t * (segs - 0.01)))];
-    const side = i === np - 1 ? 0 : (i % 2 ? 1 : -1) * R.range(0.6, 1);
-    const px = p[0] + side * R.range(12, 22) * (1 - t * 0.4) + lean * 6, py = p[1] - R.range(3, 8);
-    branch(s, p[0], p[1], px, py + 3, 2.4, 1.2, PAL.barkPine, 6, 4);
-    plates.push({ x: px, y: py, w: R.range(16, 25) * (1 - t * 0.3), h: R.range(5, 7), i });
+    const t = 0.34 + 0.66 * i / (np - 1), [bx, by] = at(t);
+    const side = i === np - 1 ? 0.15 * Math.sign(lean || 1) : (i % 2 ? 1 : -1) * R.range(0.7, 1) + lean * 0.5;
+    const reach = (1 - t * 0.45) * R.range(16, 26);
+    const px = bx + side * reach, py = by - R.range(1, 5);
+    if (i < np - 1) PX.stroke(bx, by, px, py + 4, 2.6, 1.3, (xx, yy, tt, sx) => s.pz(xx, yy, PAL.barkPineBlack[clamp(Math.round(3 - sx * 1.5), 0, 5)], 5, { m: MAT.BARK, b: 4, n: cylN(sx * 0.8, 0.3) }));
+    pads.push({ x: px, y: py, w: R.range(28, 38) * (1 - t * 0.3), h: R.range(8, 11) * (1 - t * 0.2), i });
   }
-  plates.sort((a, b) => a.y - b.y);
-  plates.forEach((pl, i) => {
-    const zz = 10 + (np - i) * 2;
-    mass(s, { x: pl.x - pl.w * 0.35, y: pl.y + 1, rx: pl.w * 0.55, ry: pl.h * 0.9, z: zz - 1, droop: 0.25, seed: i * 5 }, { ramp: PAL.pine, cell: 2.2, seed, tone: -0.02, under: 1.3, rim: 0.12 });
-    mass(s, { x: pl.x + pl.w * 0.3, y: pl.y + 0.5, rx: pl.w * 0.6, ry: pl.h, z: zz, droop: 0.2, seed: i * 5 + 1 }, { ramp: PAL.pine, cell: 2.2, seed, tone: 0.02, under: 1.3, rim: 0.12 });
-    // needle tufts: a spiky top edge and hanging needles underneath
-    for (let k = 0; k < pl.w * 1.6; k++) {
-      const xx = Math.round(pl.x + R.range(-pl.w, pl.w) * 0.85);
-      for (let yy = Math.round(pl.y - pl.h * 1.2); yy < pl.y + pl.h * 1.3; yy++) {
-        if (!s.a(xx, yy)) continue;
-        if (R() < 0.6 && !s.a(xx, yy - 1)) { s.px(xx, yy - 1, PAL.pine[4], { m: MAT.LEAF, z: zz + 3, b: zz }); if (R() < 0.35) s.px(xx, yy - 2, PAL.pine[5], { m: MAT.LEAF, z: zz + 3, b: zz }); }
-        break;
-      }
+  pads.sort((a, b) => a.y - b.y);
+  const rr = PAL.pineNeedle;
+  pads.forEach((pd, i) => {
+    const zz = 10 + i * 2.5, n = 3 + (pd.w > 26 ? 1 : 0);
+    for (let k = 0; k < n; k++) { // a pad is a short row of overlapping clouds, the middle one highest
+      const f = n === 1 ? 0 : k / (n - 1) * 2 - 1;
+      mass(s, { x: pd.x + f * pd.w * 0.42, y: pd.y + Math.abs(f) * 1.5, rx: pd.w * 0.36, ry: pd.h * (0.8 - Math.abs(f) * 0.15), z: zz + (1 - Math.abs(f)), droop: 0.3, seed: i * 7 + k },
+        { ramp: rr, cell: 2.6, seed, tone: 0.02, under: 1.5, rim: 0.14, cellK: 0.2, blobK: 0.22, gapW: 0.06, group: { x: pd.x - pd.w * 0.1, y: pd.y - pd.h * 0.3, rx: pd.w * 0.75, ry: pd.h * 1.1, k: 0.55 }, base: 0.38, litK: 0.6 });
+    }
+    // needle tufts: a spiky lit top edge, short dark needles hanging under the pad
+    for (let k = 0; k < pd.w * 1.8; k++) {
+      const xx = Math.round(pd.x + R.range(-1, 1) * pd.w * 0.8);
+      let top = -1; for (let yy = Math.round(pd.y - pd.h * 1.6); yy < pd.y + pd.h * 1.5; yy++) if (s.a(xx, yy)) { top = yy; break; }
+      if (top < 0) continue;
+      if (R() < 0.7) { s.px(xx, top - 1, rr[4], { m: MAT.LEAF, z: zz + 3, b: zz }); if (R() < 0.4) s.px(xx + (R() < 0.5 ? -1 : 1), top - 2, rr[5], { m: MAT.LEAF, z: zz + 3, b: zz }); }
+      let bot = -1; for (let yy = Math.round(pd.y + pd.h * 1.6); yy > top; yy--) if (s.a(xx, yy)) { bot = yy; break; }
+      if (bot > 0 && R() < 0.45) s.pz(xx, bot + 1, rr[1], zz - 1, { m: MAT.LEAF, b: zz - 1 });
     }
   });
-  POST.ao(s, 2, 0.2); POST.outline(s, { k: 0.62 }); POST.normals(s, 0.8);
-  return { s, meta: { ax: Math.round(pts[0][0]), ay: baseY + 1, sway: 0.35, foliage: true, occluder: true, kind: 'tree' } };
+  POST.ao(s, 2, 0.2); POST.outline(s, { k: 0.6 }); POST.normals(s, 0.8);
+  return { s, meta: { ax: Math.round(pts[0][0]), ay: baseY + 1, sway: 0.3, foliage: true, occluder: true, kind: 'tree' } };
 }
 
-/* ---------------- broadleaf (maple): stacked plates of leaf clusters ---------------- */
+/* ---------------- broadleaf (maple): a rounded crown of leaf clusters on a grey trunk ---------------- */
 export function maple(seed, red = false, H = 100) {
-  const R = RNG(seed * 7 + 3), W = 112, h = H + 4, s = new SB(W, h), cx = W / 2 + R.range(-3, 3), baseY = h - 2;
-  const lean = R.range(-8, 8);
-  trunk(s, [[cx, baseY], [cx + lean * 0.4, baseY - 30], [cx + lean, 46]], 5, 2.6, PAL.barkGrey, { seed, cols: 2, seg: 8, fis: 0.1, b: 2 });
-  for (let k = 0; k < 6; k++) { const a = R.range(-1.3, 1.3); branch(s, cx + lean * 0.7, 58 + k * 3, cx + lean + Math.sin(a) * 34, 32 + R.range(-12, 8), 1.8, 0.8, PAL.barkGrey, 5, 3); }
+  const R = RNG(seed * 7 + 3), W = 170, h = H + 34, s = new SB(W, h), cx = Math.round(W / 2 + R.range(-3, 3)), baseY = h - 2;
+  const lean = R.range(-6, 6), cw = R.range(92, 108), chh = R.range(56, 66), ccy = baseY - H + chh * 0.5 + 2;
+  const fork = [cx + lean * 0.6, ccy + chh * 0.42];
+  trunk(s, [[cx, baseY], [cx + lean * 0.3, baseY - (baseY - fork[1]) * 0.5], fork], 9, 5, PAL.barkGrey, { seed, cols: 3, seg: 8, fis: 0.12, b: 2, moss: 0.15 });
+  for (let k = 0; k < 2; k++) { const d = k ? 1 : -1; PX.stroke(cx + d * 3, baseY - 3, cx + d * R.range(6, 8), baseY + 1, 2.6, 1, (x, y) => s.pz(x, y, PAL.barkGrey[k ? 1 : 2], 1.5, { m: MAT.BARK, b: 1 })); }
+  // two or three limbs fork into the crown, so it rests on a tree rather than on a stick
+  const nl = R.int(2, 3);
+  for (let k = 0; k < nl; k++) { const d = nl === 2 ? (k ? 1 : -1) : k - 1; trunk(s, [fork, [fork[0] + d * cw * 0.16 + R.range(-3, 3), fork[1] - chh * 0.3], [fork[0] + d * cw * 0.3 + R.range(-4, 4), fork[1] - chh * 0.55]], 5, 2, PAL.barkGrey, { seed: seed + k, cols: 2, seg: 6, fis: 0.1, b: 3, z: 3 }); }
   const rr = red ? PAL.mapleRed : PAL.maple;
-  for (let Lr = 0; Lr < 5; Lr++) {
-    const y = 14 + Lr * 9 + R.range(-2, 2), wv = 40 - Math.abs(Lr - 2) * 7;
-    const n = 3;
-    for (let k = 0; k < n; k++) { const f = k / (n - 1) * 2 - 1; const x = cx + lean * (1 - Lr / 6) + f * wv * 0.55 + R.range(-4, 4);
-      mass(s, { x, y: y + Math.abs(f) * 2, rx: R.range(11, 15), ry: R.range(5.5, 7), z: 6 + Lr * 4 + (1 - Math.abs(f)) * 3, droop: 0.35, seed: Lr * 7 + k }, { ramp: rr, cell: 2.5, seed, tone: 0.02 + (Lr < 2 ? 0.04 : 0), under: 0.9, rim: 0.1 }); }
-  }
-  POST.ao(s, 2, 0.18); POST.outline(s, { k: 0.66 }); POST.normals(s, 0.8);
+  crown(s, { x: cx + lean, y: ccy, w: cw, h: chh, ramp: rr, young: red ? rr : PAL.mapleYoung, seed: seed + 5, z0: 6, gaps: 0, base: 0.33, litK: 0.52 });
+  POST.ao(s, 2, 0.2); POST.outline(s, { k: 0.64 }); POST.normals(s, 0.8);
   return { s, meta: { ax: cx, ay: baseY + 1, sway: 0.8, foliage: true, occluder: true, kind: 'tree' } };
 }
 

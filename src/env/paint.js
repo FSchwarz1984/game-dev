@@ -139,7 +139,9 @@ export const PX = {
    lit balls (the "voxel-ball trees" the owner rejected).
    m: {x, y, rx, ry, z, droop (ends hang by droop*ry*u^2), tilt}
    o: {ramp, cell, seed, mat, tone, under (shade the lower part), rim,
-       spread (dither), bulgeK, light, cellK (texture strength), only}
+       spread (dither), bulgeK, light, cellK (texture strength), only,
+       blobK (flat tone offset per leaf cell: band edges become leaf-cluster
+       shapes instead of tiles), gapW (dark crack between cells, 0 = none)}
    --------------------------------------------------------------------- */
 export function mass(s, m, o = {}) {
   const rr = o.ramp, n = rr.length, cell = o.cell || 3.2, seed = (o.seed || 1) * 7 + (m.seed || 0), mat = o.mat ?? MAT.LEAF;
@@ -174,15 +176,54 @@ export function mass(s, m, o = {}) {
     const lx = (x + 0.5 - ccx) / cell, ly = (y + 0.5 - ccy) / cell; nx += lx * cellK; ny -= ly * cellK; nz += cellH * cellK * 0.6;
     const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
     const lit = nx * L[0] + ny * L[1] + nz * L[2];
-    let t = (o.base ?? 0.36) + lit * (o.litK ?? 0.5) + tone + (cid - 0.5) * 0.12;
+    let t = (o.base ?? 0.36) + lit * (o.litK ?? 0.5) + tone + (cid - 0.5) * (o.blobK ?? 0.12);
     if (v > 0.25) t -= (v - 0.25) * under;           // the underside falls into shade
-    if (Math.sqrt(c2) - Math.sqrt(c1) < 0.13) t -= 0.13; // gaps between leaves
+    if (Math.sqrt(c2) - Math.sqrt(c1) < (o.gapW ?? 0.13)) t -= 0.13; // gaps between leaves
     if (o.rim && r2 > 0.55 && v < -0.2 && u < 0.3) t += o.rim; // sun on the upper rim
     const k = PX.ri(clamp(t, 0, 1), n, x, y, o.spread ?? 0.35);
     const z = (m.z || 0) + dome * Math.min(m.rx, m.ry) * (o.zk ?? 0.8) + cellH * 0.8;
     s.pz(x, y, rr[k], z, { m: mat, b: z * bulgeK, n: [nx, ny, nz] });
   }
 }
+/** A broadleaf crown: one leafy volume — a darker core (what shows in the crevices), then big
+    overlapping bulges (young growth on the top row, the broadest in front and below), lit mostly as
+    the whole crown and a little as themselves, with flat leaf-cluster tone blobs (band edges break
+    into leaf shapes, never tiles or checkerboards), a fringe tucked under the lowest edge and a few
+    sky gaps. o: {x, y (crown centre), w, h, ramp, young, seed, tone, z0, fringe, gaps, cell} */
+export function crown(s, o) {
+  const R = RNG((o.seed || 1) * 41 + 3), rr = o.ramp, young = o.young || rr, w = o.w, h = o.h, cx = o.x, cy = o.y, z0 = o.z0 || 0;
+  const cell = o.cell ?? (w > 150 ? 4.4 : w > 80 ? 3.6 : 3);
+  const group = { x: cx - w * 0.06, y: cy - h * 0.06, rx: w * 0.56, ry: h * 0.62, k: o.groupK ?? 0.72 };
+  mass(s, { x: cx, y: cy + h * 0.06, rx: w * 0.47, ry: h * 0.44, z: z0, droop: 0.12, seed: 99 }, { ramp: rr, cell: cell * 0.95, seed: o.seed * 3 + 7, tone: (o.tone || 0) - 0.12, under: 0.5, cellK: 0.12, blobK: 0.26, gapW: 0.04, group, base: 0.3, litK: 0.5, zk: 0.3 });
+  const cl = [];
+  for (let r = 0; r < 3; r++) {
+    const t = r / 2;                                   // 0 the top (back) → 1 the bottom (front)
+    const rad = w * (0.15 + t * 0.05) * R.range(0.95, 1.08);
+    const yy = cy + h * (-0.24 + t * 0.44);
+    const half = w * (0.3 + t * 0.12);
+    const n = r === 0 ? (w > 205 ? 3 : 2) : r === 1 ? 3 + (w > 225 ? 1 : 0) : 3;
+    for (let i = 0; i < n; i++) {
+      const f = n === 1 ? 0 : i / (n - 1) * 2 - 1;
+      const x = cx + f * half + R.range(-rad * 0.18, rad * 0.18), y = yy + f * f * h * 0.07 + R.range(-rad * 0.12, rad * 0.12);
+      const rx = rad * R.range(0.9, 1.12), ry = rx * R.range(0.66, 0.78);
+      cl.push({ x, y, rx, ry, z: z0 + 10 + t * 30 + (1 - Math.abs(f)) * 6 + R.range(0, 3), droop: R.range(0.08, 0.22), seed: r * 16 + i, tone: (r === 0 ? 0.03 : 0) + R.range(-0.025, 0.025), top: r === 0 });
+    }
+  }
+  cl.sort((a, b) => a.z - b.z);
+  for (const m of cl) mass(s, m, { ramp: m.top ? young : rr, cell, seed: o.seed * 3, tone: (o.tone || 0) - 0.02, under: 0.5, rim: 0.05, cellK: 0.14, blobK: 0.3, gapW: 0.05, group, base: o.base ?? 0.37, litK: o.litK ?? 0.6, zk: 0.45 });
+  if (o.fringe !== false) { // tucked up under the crown's own lowest edge, so it hangs from it
+    const nf = Math.round(w / 20);
+    for (let k = 0; k < nf; k++) {
+      const x = Math.round(cx + R.range(-w * 0.42, w * 0.42)); let yb = -1; for (let y = Math.min(s.h - 1, Math.ceil(cy + h)); y >= 0; y--) if (s.a(x, y)) { yb = y; break; }
+      if (yb < 0) continue;
+      mass(s, { x, y: yb - 1, rx: R.range(0.025, 0.045) * w + 2, ry: R.range(3, 5), z: z0 + 46, droop: 0.5, seed: 40 + k, tone: -0.1 }, { ramp: rr, cell: cell * 0.8, seed: o.seed * 3 + 1, under: 1.1, rim: 0.0, base: 0.3, litK: 0.4, blobK: 0.2, gapW: 0.04 });
+    }
+  }
+  const ng = o.gaps ?? Math.round(w / 40);
+  for (let k = 0; k < ng; k++) { const a = R.range(Math.PI * 1.05, Math.PI * 1.95), d = R.range(0.6, 0.85); const gx = cx + Math.cos(a) * w * 0.42 * d, gy = cy + Math.sin(a) * h * 0.5 * d; const r = R.range(1.2, 2.6) * Math.min(1, w / 120 + 0.4);
+    for (let y = Math.floor(gy - r); y <= gy + r; y++) for (let x = Math.floor(gx - r); x <= gx + r; x++) if (hyp(x - gx, (y - gy) * 1.3) < r) s.clear(x, y); }
+}
+
 /** compatibility: a list of round blobs becomes masses */
 export function foliage(s, blobs, o = {}) { for (const b of blobs) mass(s, { x: b.x, y: b.y, rx: b.r, ry: b.r * 0.92, z: b.z }, o); }
 

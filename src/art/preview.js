@@ -1,10 +1,10 @@
 // Character art preview for the 2D pipeline: a 480x270 native canvas, integer-upscaled, with a
-// small ground, every character in a few poses (Saji riding on Tsuzumi's load via anchors) and
+// small ground, every character in a few poses (Saji riding on Tsuzumi's frame via anchors) and
 // per-pixel lighting from the normal maps (sun + a moving lantern). Not part of the game.
 //   ?t=noon|dusk   lighting preset      ?time=SECONDS   freeze the clock (for screenshots)
 // Sets window.DONE = true after the first full frame.
 
-import { TSUZUMI, SAJI, SHIONE, CHARACTERS, frameAt } from './characters.js';
+import { TSUZUMI, SAJI, SHIONE, CHARACTERS, frameAt, riderOrder } from './characters.js';
 
 const W = 480, H = 270;
 const params = new URLSearchParams(location.search);
@@ -82,23 +82,23 @@ function groundAt(x, y) {
 // --- scene ---------------------------------------------------------------------------------------
 // Each actor: character, sheet, anim, dir, position (pivot), and optional rider (Saji on the load).
 const SCENE = [
-  { ch: TSUZUMI, sheet: 'load', anim: 'idle', dir: 'down', x: 52, y: 118, rider: { anim: 'sitTalk' } },
-  { ch: TSUZUMI, sheet: 'load', anim: 'walk', dir: 'right', x: 112, y: 118, rider: { anim: 'sit' } },
-  { ch: TSUZUMI, sheet: 'load', anim: 'walk', dir: 'up', x: 172, y: 118, rider: { anim: 'sit' } },
-  { ch: TSUZUMI, sheet: 'load', anim: 'walk', dir: 'left', x: 232, y: 118, rider: { anim: 'sitBell' } },
-  { ch: TSUZUMI, sheet: 'load', anim: 'bow', dir: 'right', x: 296, y: 118 },
-  { ch: TSUZUMI, sheet: 'load', anim: 'reachUp', dir: 'up', x: 352, y: 118 },
-  { ch: TSUZUMI, sheet: 'load', anim: 'heavyIdle', dir: 'down', x: 404, y: 118 },
+  { ch: TSUZUMI, sheet: 'load', anim: 'idle', dir: 'down', x: 40, y: 118, rider: { anim: 'sitTalk' } },
+  { ch: TSUZUMI, sheet: 'load', anim: 'walk', dir: 'right', x: 100, y: 118, rider: { anim: 'sit' } },
+  { ch: TSUZUMI, sheet: 'load', anim: 'walk', dir: 'up', x: 160, y: 118, rider: { anim: 'sit' } },
+  { ch: TSUZUMI, sheet: 'frame', anim: 'walk', dir: 'left', x: 220, y: 118, rider: { anim: 'sitBell' } },
+  { ch: TSUZUMI, sheet: 'frame', anim: 'idle', dir: 'down', x: 280, y: 118, rider: { anim: 'sit' } },
+  { ch: TSUZUMI, sheet: 'load', anim: 'bow', dir: 'right', x: 338, y: 118 },
+  { ch: TSUZUMI, sheet: 'frame', anim: 'shoulder', dir: 'right', x: 394, y: 118 },
   { ch: SHIONE, sheet: 'main', anim: 'idle', dir: 'down', x: 450, y: 118 },
-  { ch: TSUZUMI, sheet: 'plain', anim: 'idle', dir: 'down', x: 40, y: 236 },
-  { ch: TSUZUMI, sheet: 'plain', anim: 'walk', dir: 'right', x: 88, y: 236 },
-  { ch: TSUZUMI, sheet: 'plain', anim: 'eat', dir: 'down', x: 136, y: 236 },
-  { ch: TSUZUMI, sheet: 'plain', anim: 'asleep', dir: 'right', x: 196, y: 236 },
-  { ch: SAJI, sheet: 'main', anim: 'idle', dir: 'down', x: 252, y: 236 },
-  { ch: SAJI, sheet: 'main', anim: 'walk', dir: 'right', x: 282, y: 236 },
-  { ch: SAJI, sheet: 'main', anim: 'hop', dir: 'down', x: 312, y: 236 },
-  { ch: SAJI, sheet: 'main', anim: 'pointStand', dir: 'right', x: 342, y: 236 },
-  { ch: SAJI, sheet: 'main', anim: 'float', dir: 'up', x: 378, y: 236 },
+  { ch: TSUZUMI, sheet: 'plain', anim: 'idle', dir: 'down', x: 36, y: 236 },
+  { ch: TSUZUMI, sheet: 'plain', anim: 'walk', dir: 'right', x: 84, y: 236 },
+  { ch: TSUZUMI, sheet: 'plain', anim: 'eat', dir: 'down', x: 132, y: 236 },
+  { ch: TSUZUMI, sheet: 'plain', anim: 'asleep', dir: 'right', x: 190, y: 236 },
+  { ch: SAJI, sheet: 'main', anim: 'idle', dir: 'down', x: 250, y: 236 },
+  { ch: SAJI, sheet: 'main', anim: 'walk', dir: 'right', x: 280, y: 236 },
+  { ch: SAJI, sheet: 'main', anim: 'hop', dir: 'down', x: 310, y: 236 },
+  { ch: SAJI, sheet: 'main', anim: 'pointStand', dir: 'right', x: 340, y: 236 },
+  { ch: SAJI, sheet: 'main', anim: 'float', dir: 'up', x: 374, y: 236 },
   { ch: SHIONE, sheet: 'main', anim: 'carryWalk', dir: 'right', x: 432, y: 236 },
 ];
 
@@ -151,16 +151,20 @@ function render(time) {
   const actors = [...SCENE].sort((a, b) => a.y - b.y);
   for (const a of actors) blobShadow(a.x, a.y, a.ch === SAJI ? 6 : 9, 3);
   for (const a of actors) {
-    const f = frameAt(a.ch, a.sheet, a.anim, a.dir, time % 4);
+    const f = frameAt(a.ch, a.sheet, a.anim, a.dir, time % 4, { rider: !!a.rider });
     if (!f) continue;
     f.ch = a.ch;
-    blitFrame(f, a.x, a.y);
+    let rider = null;
     if (a.rider && f.anchors.loadTop) {
       const r = frameAt(SAJI, 'main', a.rider.anim, a.dir, time % 4);
       r.ch = SAJI;
       const seat = r.anchors.seat || { x: 0, y: 0 };
-      blitFrame(r, a.x + f.anchors.loadTop.x - seat.x, a.y + f.anchors.loadTop.y - seat.y);
+      rider = () => blitFrame(r, a.x + f.anchors.loadTop.x - seat.x, a.y + f.anchors.loadTop.y - seat.y);
     }
+    // front and side: Saji first (the hat brim covers her skirt); back: Saji over the frame
+    if (rider && riderOrder(a.ch, f) === 'behind') rider();
+    blitFrame(f, a.x, a.y);
+    if (rider && riderOrder(a.ch, f) !== 'behind') rider();
   }
   // light
   const L = LIGHT, d = L.dir, dl = Math.hypot(d[0], d[1], d[2]);

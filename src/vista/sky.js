@@ -1,7 +1,7 @@
 // Sky: a banded gradient with dithered seams (painted per time of day), a star field, and cloud
 // puffs (each its own small indexed sprite, so the deck can drift and part).
 
-import { clamp, lerp, smooth, rng, hash2, bayer, mix3, pack, makeCanvas, ctx2d, IndexLayer, I, TAU, fbm } from './util.js';
+import { clamp, smooth, rng, pack, makeCanvas, ctx2d, IndexLayer, I, TAU, fbm, run } from './util.js';
 import { skyAt, palette } from './tod.js';
 
 // Paint the sky gradient for one time of day. Rows: elevation e = (yh - y) / S; bands every ~5 px
@@ -10,7 +10,7 @@ export function paintSky(w, h, yh, S, env, extra) {
   // a clean gradient: per-row colour quantised to fine steps (no dither speckle), the warm west
   // side blended in per column band
   const c = makeCanvas(w, h), g = ctx2d(c), id = g.createImageData(w, h), U = new Uint32Array(id.data.buffer);
-  const NU = 24, q = v => Math.round(v / 2) * 2;
+  const NU = extra ? Math.ceil(w / 2) : 24, q = v => Math.round(v / 2) * 2;
   for (let y = 0; y < h; y++) {
     const e = (yh - y) / S;
     const row = [];
@@ -100,14 +100,19 @@ export class CloudDeck {
         const X = (x + 0.5 - cx) * Z / f;
         // banks elongated across the view; detail octaves dropped with distance (no speckle)
         const oct = Z < 14 ? 4 : Z < 30 ? 3 : 2;
-        let n = fbm(X * 0.16 + 11, Z * 0.34, oct, seed);
-        n += 0.22 * (vnoiseLite(X * 0.05, Z * 0.09, seed + 7) - 0.5);
+        // far away a row spans a lot of depth: lower the depth frequency there, so distant banks stay
+        // a few rows thick instead of aliasing into one-pixel lines
+        const Ze = Z < 12 ? Z : 12 + (Z - 12) * 0.3;
+        let n = fbm(X * 0.16 + 11, Ze * 0.34, oct, seed);
+        n += 0.22 * (vnoiseLite(X * 0.05, Ze * 0.09, seed + 7) - 0.5);
         const i = y * w + x;
         D[i] = (n - (1 - cover) * 0.72 - 0.22) * 4 * fade;
         PX[i] = X; PZ[i] = Z;
       }
     }
     this.D = D; this.PX = PX; this.PZ = PZ; this.yb = yb;
+    let ya = 0; while (ya < yb && !D.subarray(ya * w, ya * w + w).some(v => v > -1.6)) ya++;
+    this.ya = Math.max(1, ya);
     this.layer = new IndexLayer(w, h);
     this.key = null;
     this.canvas = makeCanvas(w, h);
@@ -116,43 +121,61 @@ export class CloudDeck {
   // hole: {X, Z, r} in the deck plane (r = 0: closed). light: [lx, ly] screen direction toward the light
   render(hole, key, pal, light = [0.8, 0.6]) {
     const k = key + '|' + (hole ? hole.r.toFixed(2) : '0');
-    if (k === this.key) return this.canvas;
-    this.key = k;
-    const { w, h } = this.o, D = this.D, idx = this.layer.idx;
-    idx.fill(0);
-    const val = new Float32Array(w * this.yb);
-    for (let i = 0; i < val.length; i++) {
-      let d = D[i];
-      if (hole && hole.r > 0) {
-        const dx = this.PX[i] - hole.X, dz = (this.PZ[i] - hole.Z) * 0.8, q = Math.hypot(dx, dz) / hole.r;
-        d -= smooth(1.25, 0.55, q) * 1.6;
-        d += smooth(0.9, 1.35, q) * smooth(1.9, 1.35, q) * 0.25 * Math.min(1, hole.r / 3); // clouds bunch up at the hole's rim
-      }
-      val[i] = d;
-    }
-    const [lx, ly] = light;
-    for (let y = 1; y < this.yb - 1; y++) for (let x = 1; x < w - 1; x++) {
-      const i = y * w + x, d = val[i];
-      if (d <= 0) continue;
-      const gx = val[i + 1] - val[i - 1], gy = val[i + w] - val[i - w], gl = Math.hypot(gx, gy) || 1;
-      const nx = -gx / gl, ny = -gy / gl;                       // outward
-      const lam = nx * lx + ny * ly;                            // facing the light
-      const edge = d < 0.18;
-      const thick = clamp(d / 1.6, 0, 1);
-      let mat = 1, sun = clamp(Math.round((lam * 0.5 + 0.5) * 6 * (1 - thick * 0.35)), 0, 7);
-      if (edge && lam > 0.15) { mat = 2; sun = 7; }
-      else if (thick > 0.62 && lam < 0.2) mat = 3;
-      const sky = clamp(Math.round((1 - thick) * 2 + (ny < 0 ? 1 : 0)), 0, 3);
-      idx[i] = I(mat, sun, sky, 0);
-    }
-    this.layer.used = null;
-    this.layer.despeckle(() => true);
-    const U = this.layer.pixels(pal);
-    if (!this.img) this.img = this.g.createImageData(w, h);
-    new Uint32Array(this.img.data.buffer).set(U);
-    this.g.putImageData(this.img, 0, 0);
+    if (k !== this.key) run(this.renderGen(hole, key, pal, light));
     return this.canvas;
   }
+  // the same in three bands of rows, one per step: a parting sky never costs one long frame
+  *renderGen(hole0, key, pal, light = [0.8, 0.6]) {
+    const hole = hole0 ? { X: hole0.X, Z: hole0.Z, r: hole0.r } : null;
+    const k = key + '|' + (hole ? hole.r.toFixed(2) : '0');
+    const { w, h } = this.o, D = this.D, idx = this.layer.idx;
+    const val = this.val || (this.val = new Float32Array(w * this.yb));
+    let lut = this.luts && this.luts.get(pal);
+    if (!lut) {
+      lut = new Uint32Array(1024);
+      for (let m = 1; m <= 3; m++) for (let s2 = 0; s2 < 8; s2++) for (let k2 = 0; k2 < 4; k2++) { const v = I(m, s2, k2, 0); lut[v & 1023] = pal(v) >>> 0; }
+      (this.luts || (this.luts = new Map())).set(pal, lut);
+      if (this.luts.size > 3) this.luts.delete(this.luts.keys().next().value);
+    }
+    if (!this.img) this.img = this.g.createImageData(w, h);
+    const U = new Uint32Array(this.img.data.buffer);
+    const [lx, ly] = light;
+    const ya = this.ya, yb = this.yb, nb = 4, step = Math.ceil((yb - ya) / nb);
+    for (let b = 0; b < nb; b++) {
+      const y0 = ya + b * step, y1 = Math.min(yb - 1, y0 + step);
+      if (y0 >= y1) break;
+      // densities for the band and one row around it
+      for (let i = Math.max(0, (y0 - 1) * w), e = Math.min(val.length, (y1 + 1) * w); i < e; i++) {
+        let d = D[i];
+        if (hole && hole.r > 0) {
+          const dx = this.PX[i] - hole.X, dz = (this.PZ[i] - hole.Z) * 0.8, q = Math.hypot(dx, dz) / hole.r;
+          d -= smooth(1.25, 0.55, q) * 1.6;
+          d += smooth(0.9, 1.35, q) * smooth(1.9, 1.35, q) * 0.25 * Math.min(1, hole.r / 3) * (1 - smooth(3.5, 7, hole.r)); // clouds bunch up at the rim of a small hole
+        }
+        val[i] = d;
+      }
+      for (let y = y0; y < y1; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x, d = val[i];
+        if (d <= 0 || x === 0 || x === w - 1) { idx[i] = 0; U[i] = 0; continue; }
+        const gx = val[i + 1] - val[i - 1], gy = val[i + w] - val[i - w], gl = Math.hypot(gx, gy) || 1;
+        const nx = -gx / gl, ny = -gy / gl;                       // outward
+        const lam = nx * lx + ny * ly;                            // facing the light
+        const edge = d < 0.18;
+        const thick = clamp(d / 1.6, 0, 1);
+        let mat = 1, sun = clamp(Math.round((lam * 0.5 + 0.5) * 6 * (1 - thick * 0.35)), 0, 7);
+        if (edge && lam > 0.15) { mat = 2; sun = 7; }
+        else if (thick > 0.62 && lam < 0.2) mat = 3;
+        const sky = clamp(Math.round((1 - thick) * 2 + (ny < 0 ? 1 : 0)), 0, 3);
+        const v = I(mat, sun, sky, 0);
+        idx[i] = v; U[i] = lut[v & 1023];
+      }
+      this.g.putImageData(this.img, 0, 0, 0, y0, w, y1 - y0);
+      if (b < nb - 1) yield;
+    }
+    this.key = k;
+    return this.canvas;
+  }
+
 }
 
 function vnoiseLite(x, y, s) { return fbm(x, y, 2, s); }

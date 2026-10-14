@@ -58,33 +58,67 @@ const TUFT = [
   [0, 0, 0, 0, 1, 0, 1, 0, 0, -1, 0, 0],
 ];
 
+/* ---------------- grass clumps ----------------
+   The carpet is a jittered grid of small mounds (11×7 px cells); each
+   pixel takes the front-most mound covering it (the one anchored lowest
+   on screen), so clumps overlap like real tufts. A mound: a half-ellipse
+   with a ragged top of blade tips, the tips and the upper-left lit, a
+   dark line under its foot; uncovered pixels are the shaded gaps.
+   This is the hand-pixelled grass carpet (clean clusters, no
+   checkerboards), and every mound tilts the normal so the dynamic light
+   rolls over the carpet. Fills CL; returns false for a gap. */
+const CLW = 11, CLH = 7;
+export const CL = { off: 0, nx: 0, ny: 0, tip: false, id: 0 };
+export function clump(X, Y, dens, flat = 0, round = false, tall = 0) {
+  const cx0 = Math.floor(X / CLW), cy0 = Math.floor(Y / CLH), d255 = dens * 255;
+  let bestAy = -1e9, bh = 0, bdx = 0, brx = 1, btop = 0, bbl = 0;
+  for (let j = 0; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+    const qx = cx0 + i, qy = cy0 + j, h = hashi(qx, qy, 101);
+    if ((h & 255) >= d255) continue;
+    const ay = qy * CLH + ((h >>> 12) % CLH);
+    if (ay < Y || ay <= bestAy) continue;
+    const ax = qx * CLW + ((h >>> 8) % CLW) + ((qy & 1) ? 3 : 0);
+    const rx = 2 + ((h >>> 16) & 7) % 4, dx = X - ax;
+    if (dx < -rx || dx > rx) continue;
+    const hg = Math.max(1, 2 + ((h >>> 19) & 3) % 3 - flat);
+    const u = dx / (rx + 0.5);
+    let blade = 0;
+    if (!round && dx > -rx && dx < rx) { const bt = hashi(X, ay, 103) & 15; blade = bt < 2 ? 3 : bt < 5 ? 2 : bt < 8 ? 1 : 0; if (flat) blade = blade > 1 ? 1 : 0; else if (blade && tall) blade += tall; }
+    const top = ay - Math.round(hg * Math.sqrt(Math.max(0, 1 - u * u))) - blade;
+    if (Y < top) continue;
+    bestAy = ay; bh = h; bdx = dx; brx = rx; btop = top; bbl = blade;
+  }
+  if (bestAy < -1e8) { CL.off = -1; CL.nx = 0; CL.ny = -0.05; CL.tip = false; CL.id = 0; return false; }
+  const rel = Y - btop, u = bdx / brx;
+  let off = 0;
+  if (rel < bbl) off = (rel === 0 && u < 0.2 && ((bh >>> 20) & 1) === 0) ? 2 : 1;   // a blade standing up
+  else if (Y === bestAy && rel > 1 && ((bh >>> 22) & 1)) off = -1;
+  else if (rel === bbl && u < 0 && ((bh >>> 23) & 1)) off = 1;
+  CL.off = off; CL.nx = u * 0.42; CL.ny = rel <= 1 ? 0.32 : Y === bestAy ? -0.32 : 0.04; CL.tip = rel < bbl; CL.id = bh;
+  return true;
+}
+
 /* ---------------- meadow grass ----------------
-   calm 0..1 lowers contrast and tuft density (clearings), moist 0..1,
+   calm 0..1 lowers contrast and clump density (clearings), moist 0..1,
    flowers 0..1 (patch coverage), dry 0..1 (sun-bleached saddle) */
 export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0) {
   const N = NZ;
-  const big = N.big.sample(X * 0.3, Y * 0.3), mid = N.mid.sample(X * 0.85, Y * 0.85), cl = N.cl.sample(X * 0.55, Y * 0.55);
-  const d = bayer(x, y) - 0.5;
-  const v = mid * 0.62 + cl * 0.38 + d * 0.05;
-  let k = v < 0.33 + calm * 0.04 ? 1 : v < 0.7 - calm * 0.02 ? 2 : 3;
-  // hue zones: cool and warm greens, sun-bleached dry patches, dithered boundaries
-  const dz = big + (1 - moist) * 0.3 + dry * 0.35 + d * 0.1;
-  const R = dz > 0.86 ? G.dry : big + d * 0.14 > 0.54 ? G.warm : G.cool;
+  const big = N.big.sample(X * 0.3, Y * 0.3), mid = N.mid.sample(X * 0.6, Y * 0.6);
+  // hue zones: cool and warm greens, sun-bleached dry patches (large, clean boundaries)
+  const dz = big + (1 - moist) * 0.3 + dry * 0.35;
+  const R = dz > 0.86 ? G.dry : big > 0.54 ? G.warm : G.cool;
+  // base value: two broad tones, the darker in the hollows of the big noise
+  const base = mid > 0.5 - calm * 0.05 ? 3 : 2;
+  const dens = clamp((0.5 + (mid - 0.5) * 1.7 + (big - 0.5) * 0.5) * (1 - calm * 0.7), 0.05, 0.9);
+  // lush and short stretches (a slow field of its own), so the carpet is not one even pattern
+  const lush = N.warp.sample(X * 0.16 + 50, Y * 0.16 + 9);
   let flags = 0;
-  // crevices: sparse darker pixels in the hollows
-  const h = hashi(X, Y, 3);
-  if (k === 1 && (h & 1023) < 70 * (1 - calm)) k = 0;
-  // tufts: Λ / w glyphs on a jittered 6×5 grid, denser on lit clumps
-  const cx = Math.floor(X / 6), cy = Math.floor(Y / 5), ch = hashi(cx, cy, 5);
-  const dens = (0.22 + (k - 1) * 0.14 + cl * 0.22) * (1 - calm * 0.7);
-  if ((ch & 255) < dens * 255) {
-    const lx = X - cx * 6 - ((ch >> 8) & 1), ly = Y - cy * 5 - ((ch >> 9) & 1);
-    if (lx >= 0 && lx < 4 && ly >= 0 && ly < 3) {
-      const g = TUFT[(ch >>> 12) % 5][ly * 4 + lx];
-      if (g > 0) { k = Math.min(5, k + 1 + ((ch >> 16) & 1)); flags |= FLAG.BLADE; }
-      else if (g < 0) k = Math.max(0, k - 1);
-    }
-  }
+  const has = clump(X, Y, dens, calm > 0.55 ? 2 : calm > 0.25 ? 1 : lush < 0.36 ? 1 : 0, false, calm < 0.3 && lush > 0.62 ? 1 : 0);
+  let k = base + CL.off;
+  if (!has && (hashi(X, Y, 3) & 1023) < 40 * (1 - calm)) k -= 1;   // a few deep crevices in the gaps
+  if (CL.tip) flags |= FLAG.BLADE;
+  if (calm > 0.5 && k > 3) k = 3;
+  k = k < 0 ? 0 : k > 5 ? 5 : k;
   let c = R[k];
   // flowers: clustered in patches, 2 px with a stem pixel
   if (flowers > 0) {
@@ -102,28 +136,56 @@ export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0)
     }
   }
   OUT[0] = c[0]; OUT[1] = c[1]; OUT[2] = c[2];
-  OUT[3] = (cl - 0.5) * 0.25; OUT[4] = (v - 0.5) * 0.3 + (flags ? 0.12 : 0); OUT[5] = MAT.GRASS; OUT[6] = flags;
+  OUT[3] = CL.nx; OUT[4] = CL.ny + (mid - 0.5) * 0.15; OUT[5] = MAT.GRASS; OUT[6] = flags;
 }
 
-/* ---------------- clearing: trodden short grass, moss and bare earth ---------------- */
+/* ---------------- yard: the trodden earth round the house ----------------
+   packed grey-brown earth in broad soft patches, a few pebbles and fallen camphor leaves */
+const YARD = [[70, 58, 46], [86, 72, 56], [101, 86, 66], [116, 101, 78], [132, 118, 92]];
+export function yard(X, Y, x, y, leaves = 0.3) {
+  const N = NZ;
+  const big = N.mid.sample(X * 0.7, Y * 0.7), r = hashi(X, Y, 85);
+  const v = big * 0.8 + N.cl.sample(X * 0.35, Y * 0.35) * 0.2 + (bayer(x, y) - 0.5) * 0.1;
+  let k = v < 0.34 ? 1 : v < 0.62 ? 2 : 3, c;
+  // pebbles: 2×2, lit top-left
+  const px = X >> 1, py = Y >> 1, ph = hashi(px, py, 87);
+  if ((ph & 1023) < 5) { const q = (X & 1) + (Y & 1) * 2; c = q === 0 ? PAL.stoneWarm[4] : q === 3 ? YARD[0] : PAL.stoneWarm[3]; }
+  else {
+    c = YARD[k];
+    // fallen leaves: 2-px flecks in drifts
+    const drift = N.warp.sample(X * 0.5 + 31, Y * 0.5);
+    if (drift > 1 - leaves * 0.6) { const lh = hashi(X >> 1, Y, 89); if ((lh & 255) < 40 && (X & 1) === 0) c = PAL.litter[(lh >> 8) & 3]; else if ((lh & 255) < 40) c = PAL.litter[2]; }
+  }
+  set(c);
+  OUT[3] = ((r & 255) / 255 - 0.5) * 0.2; OUT[4] = (big - 0.5) * 0.25; OUT[5] = MAT.PATH; OUT[6] = 0;
+}
+
+/* ---------------- clearing under the great tree: yard, moss cushions, short grass ---------------- */
 export function clearing(X, Y, x, y, wear = 0.3) {
   const N = NZ;
-  const w = N.warp.sample(X * 0.5, Y * 0.5) * 0.6 + N.mid.sample(X * 1.1, Y * 1.1) * 0.4 + wear * 0.35 - 0.2 + (bayer(x, y) - 0.5) * 0.08;
-  if (w > 0.62) { path(X, Y, x, y, 0, 0, 30, 0); OUT[0] *= 0.96; OUT[1] *= 0.96; return; }
-  if (w < 0.34) { moss(X, Y, x, y, 0.35); return; }
-  grass(X, Y, x, y, 0.75, 0.75, 0.12);
+  const w = N.warp.sample(X * 0.5, Y * 0.5) * 0.6 + N.mid.sample(X * 1.1, Y * 1.1) * 0.4 + wear * 0.3 - 0.18;
+  if (w > 0.62) { yard(X, Y, x, y, 0.5); return; }
+  if (w > 0.56) { // the yard's ragged border: sparse clumps on earth
+    if (!clump(X, Y, 0.35, 2)) { yard(X, Y, x, y, 0.2); return; }
+    grass(X, Y, x, y, 0.8, 0.8, 0); return;
+  }
+  if (w < 0.42) { moss(X, Y, x, y, 0.25); return; }
+  grass(X, Y, x, y, 0.75, 0.8, 0.1);
 }
 
-/* ---------------- moss carpet ---------------- */
+/* ---------------- moss carpet: soft round cushions, a few bright fruiting specks ---------------- */
 const MOSS = PAL.moss;
 export function moss(X, Y, x, y, dark = 0) {
   const N = NZ;
-  const v = N.fine.sample(X * 1.2, Y * 1.2) * 0.5 + N.cl.sample(X * 0.9, Y * 0.9) * 0.5 - dark * 0.15 + (bayer(x, y) - 0.5) * 0.2;
-  let k = v < 0.3 ? 1 : v < 0.52 ? 2 : v < 0.72 ? 3 : 4;
+  const v = N.mid.sample(X * 0.8, Y * 0.8) - dark * 0.15;
+  const base = v < 0.42 ? 2 : 3;
+  clump(X, Y, 0.8, 1, true);
+  let k = base + CL.off;
   const h = hashi(X, Y, 15) & 1023;
-  if (h < 14) k = 5; else if (h < 30) k = 0;
+  if (CL.off >= 1 && h < 22) k = 5;
+  k = k < 1 ? 1 : k > 5 ? 5 : k;
   set(MOSS[k]);
-  OUT[3] = (v - 0.5) * 0.3; OUT[4] = (v - 0.5) * 0.3; OUT[5] = MAT.MOSS; OUT[6] = 0;
+  OUT[3] = CL.nx * 0.8; OUT[4] = CL.ny * 0.8; OUT[5] = MAT.MOSS; OUT[6] = 0;
 }
 
 /* ---------------- forest floor: dark soil, leaf litter, needles, twigs ---------------- */
@@ -240,10 +302,12 @@ export function bed(X, Y, x, y) {
    along: px along the root, across: -1..1 */
 const BARK = PAL.barkCamphor;
 export function rootTop(X, Y, x, y, along, across) {
-  const f = hash2(Math.floor(along / 7), Math.floor((across + 1) * 3), 61);
-  let t = 4.4 - across * 1.6 + (f - 0.5) * 1.2 + (bayer(x, y) - 0.5) * 0.6 + (Math.abs(across) > 0.8 ? -1.2 : 0);
+  const lane = Math.floor((across + 1) * 2.5), f = hash2(Math.floor(along / 9) + lane * 7, lane, 61);
+  const furrow = ((across + 1) * 2.5) % 1 < 0.22;
+  let t = 3.6 - across * 1.5 + (f - 0.5) * 1.0 + (bayer(x, y) - 0.5) * 0.5 - (Math.abs(across) > 0.75 ? 1.0 : 0) - (furrow ? 1.2 : 0);
   let c = BARK[clamp(Math.round(t), 0, BARK.length - 1)];
-  if (hash2(X >> 1, Y >> 1, 63) < 0.16 && across < 0.3) c = MOSS[2 + (hash2(X, Y, 64) < 0.5 ? 0 : 1)];
+  const mz = NZ.warp.sample(X * 0.6, Y * 0.6);
+  if (mz > 0.6 && across < 0.4) c = MOSS[clamp(Math.round(1.6 + (mz - 0.6) * 6 - across), 1, 4)];
   set(c);
   OUT[3] = across * 0.6; OUT[4] = 0.2; OUT[5] = MAT.BARK; OUT[6] = 0;
 }
@@ -257,21 +321,29 @@ const ROCK = PAL.rock, ROCKW = PAL.rockWarm, SOIL = PAL.soil;
 export function wall(kind, X, u, ha, h, H, x, y, lit) {
   const N = NZ, dith = (bayer(x, y) - 0.5) * 0.6;
   let c, mat = MAT.ROCK;
-  if (kind === WM.STONEWALL) {               // 石垣: stacked stones, dark gaps, moss
-    const rowH = 9, hb = ha + 3;
-    const row = Math.floor(hb / rowH), fh = (hb - row * rowH) / rowH;  // 0 at the bottom of a course
-    const off = (row & 1) * 7 + hash2(row, 1, 72) * 9; const sw = 12 + Math.floor(hash2(row, Math.floor((u + off) / 17), 73) * 7);
-    const col = Math.floor((u + off) / sw), fu = ((u + off) - col * sw) / sw;
-    const sid = hashi(col, row, 74); const R = (sid & 1) ? PAL.stoneWarm : PAL.stone;
-    if (fu < 1.5 / sw || fh < 1.2 / rowH) { // gap
-      if (hash2(X, ha, 75) < 0.3) { set(MOSS[1]); OUT[3] = 0; OUT[4] = 0; OUT[5] = MAT.MOSS; OUT[6] = FLAG.WALL; return; }
+  if (kind === WM.STONEWALL) {               // 石垣, 野面積み: irregular field stones, dark chinks, moss on the ledges
+    // a stretched Voronoi of stones (wider than tall, bigger toward the foot), each lit along its upper-left bevel
+    const big = h < H * 0.4 ? 1.25 : 1, CWs = 15 * big, CHs = 9.5 * big;
+    const gx = u / CWs, gy = (ha + 2) / CHs, cx = Math.floor(gx), cy = Math.floor(gy);
+    let d1 = 1e9, d2 = 1e9, id = 0, ox = 0, oy = 0;
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      const qx = cx + i, qy = cy + j, hh = hashi(qx, qy, 74);
+      const jx = qx + 0.12 + (hh & 255) / 255 * 0.76, jy = qy + 0.2 + ((hh >> 8) & 255) / 255 * 0.6;
+      const dx = gx - jx, dy = (gy - jy) * 1.15, dd = dx * dx + dy * dy;
+      if (dd < d1) { d2 = d1; d1 = dd; id = hh; ox = dx; oy = dy; } else if (dd < d2) d2 = dd;
+    }
+    const gap = Math.sqrt(d2) - Math.sqrt(d1);
+    const R = ((id >>> 20) & 3) === 0 ? PAL.stoneWarm : ((id >>> 20) & 3) === 1 ? PAL.stoneCool : PAL.stone;
+    if (gap < 0.075) {                       // the chink between stones: dark, now and then a moss plug
+      if (hash2(X >> 1, ha >> 1, 75) < 0.22) { set(MOSS[1 + (hash2(X, ha, 78) < 0.5 ? 1 : 0)]); OUT[3] = 0; OUT[4] = 0; OUT[5] = MAT.MOSS; OUT[6] = FLAG.WALL; return; }
       c = R[0];
     } else {
-      let t = 2.2 + ((sid >> 4) & 255) / 255 * 1.4 + dith + lit * 0.6;
-      if (fh > 0.82) t += 1.4; else if (fh < 0.28) t -= 0.9;
-      if (fu < 0.2) t += 0.5; else if (fu > 0.86) t -= 0.6;
+      let t = 2.3 + ((id >> 16) & 255) / 255 * 1.3 + dith * 0.6 + lit * 0.6;
+      t += -ox * 0.9 + oy * 1.1;                      // ha grows upward: +oy = the stone's upper part
+      if (gap < 0.16) t += (oy > 0 || ox < -0.1) ? 0.9 : -1.0;   // bevel: lit along the top-left, shaded under
+      if (h < 3) t -= (3 - h) * 0.4;                  // the foot sits in shade and damp
       c = R[clamp(Math.round(t), 1, R.length - 1)];
-      if (fh > 0.7 && ((sid >> 12) & 7) === 0 && hash2(X, ha, 76) < 0.7) c = MOSS[2 + (hash2(X, ha, 77) < 0.5 ? 0 : 1)];
+      if (oy > 0.18 && gap > 0.1 && ((id >>> 12) & 7) < 2 && NZ.warp.sample(X * 0.3, ha * 0.5) > 0.5) c = MOSS[clamp(Math.round(2 + oy * 3 + dith), 2, 4)];
     }
     mat = MAT.STONE;
   } else if (kind === WM.RISER) {
@@ -280,12 +352,20 @@ export function wall(kind, X, u, ha, h, H, x, y, lit) {
     if (fromTop < 1) t += 2.2; else if (h < 1) t -= 0.8;
     if (((u % 23) + 23) % 23 < 1) t -= 1;
     c = PAL.stone[clamp(Math.round(t), 0, PAL.stone.length - 1)]; mat = MAT.STONE;
-  } else if (kind === WM.EARTH) {
-    const strata = N.cl.sample(u * 0.4, ha * 1.6);
-    let t = 1.6 + strata * 1.8 + dith + lit * 0.5 + (H - h < 3 ? 0.8 : 0);
-    c = SOIL[clamp(Math.round(t), 0, SOIL.length - 1)];
-    if (hash2(u >> 1, ha >> 1, 79) > 0.95) c = PAL.stone[3 + (hash2(u, ha, 80) < 0.5 ? 1 : 0)];
-    mat = MAT.SOIL;
+  } else if (kind === WM.EARTH) {               // a cut bank: layered soil, embedded stones, roots, a few tufts
+    const strata = N.mid.sample(u * 0.08, ha * 0.9) * 0.7 + N.cl.sample(u * 0.25, ha * 0.5) * 0.3;
+    let t = 1.5 + strata * 2 + dith * 0.5 + lit * 0.5 + (H - h < 3 ? 0.7 : 0) - (h < 4 ? (4 - h) * 0.3 : 0);
+    c = SOIL[clamp(Math.round(t), 0, SOIL.length - 1)]; mat = MAT.SOIL;
+    // stones: little rounded lumps lit at the top-left, a dark pixel under them
+    const sx = Math.floor(u / 7), sy = Math.floor(ha / 6), sh = hashi(sx, sy, 79);
+    if ((sh & 255) < 46) { const cx = sx * 7 + 1 + ((sh >> 8) & 3), cy = sy * 6 + 1 + ((sh >> 10) & 3), r = 1.2 + ((sh >> 12) & 3) * 0.5, dx = u - cx, dy = ha - cy, d = Math.sqrt(dx * dx + dy * dy * 1.4);
+      if (d < r) { c = PAL.stoneWarm[clamp(Math.round(3 - dx * 0.6 + dy * 0.7), 1, 6)]; mat = MAT.STONE; } else if (d < r + 1 && dy < 0) c = SOIL[0]; }
+    // a root threading the bank
+    const rl = Math.abs(Math.sin(u * 0.09 + Math.floor(ha / 11) * 2.1) * 3 + (ha % 11) - 5);
+    if (rl < 0.5 && hash2(Math.floor(u / 23), Math.floor(ha / 11), 81) < 0.35) c = BARK[2];
+    // tufts growing out of the bank
+    const tx = Math.floor(u / 9), ty = Math.floor(ha / 7), th = hashi(tx, ty, 83);
+    if ((th & 255) < 26 && h > 3) { const ox = u - tx * 9 - 3, oy = ha - ty * 7 - 2; if (oy >= 0 && oy < 3 && Math.abs(ox) <= 2 - oy * 0.5) { c = G.warm[clamp(3 - oy + (ox < 0 ? 1 : 0), 1, 5)]; mat = MAT.GRASS; } }
   } else if (kind === WM.BARK) {
     let t = 2.2 + hash2(Math.floor(u / 3), Math.floor(ha / 6), 81) * 1.6 + dith - (h < 2 ? 0.8 : 0) + lit * 0.8;
     c = BARK[clamp(Math.round(t), 0, BARK.length - 1)]; mat = MAT.BARK;

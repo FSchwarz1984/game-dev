@@ -159,6 +159,12 @@ export class Renderer {
     this.statics = []; this.byName = {};
     for (const s of M.statics) this.statics.push(Object.assign({}, s));
     this.buildBuckets();
+    // a blurred, coarse height grid (16 px cells) for the depth haze in the lighting pass
+    { const hc = 4, hw = Math.ceil(Zg.w / hc), hh = Math.ceil(Zg.h / hc); let hz = new Float32Array(hw * hh);
+      for (let j = 0; j < hh; j++) for (let i = 0; i < hw; i++) { let a = 0, n = 0; for (let v = 0; v < hc; v++) for (let u = 0; u < hc; u++) { const x = i * hc + u, y = j * hc + v; if (x < Zg.w && y < Zg.h) { a += Zg.data[y * Zg.w + x]; n++; } } hz[j * hw + i] = n ? a / n : 0; }
+      for (let pass = 0; pass < 2; pass++) { const o = new Float32Array(hw * hh); for (let j = 0; j < hh; j++) for (let i = 0; i < hw; i++) { let a = 0, n = 0; for (let v = -1; v <= 1; v++) for (let u = -1; u <= 1; u++) { const x = i + u, y = j + v; if (x >= 0 && y >= 0 && x < hw && y < hh) { a += hz[y * hw + x]; n++; } } o[j * hw + i] = a / n; } hz = o; }
+      this.tZG = X.tex(hw, hh, hz, { ifmt: gl.R16F, fmt: gl.RED, type: gl.FLOAT, linear: true });
+      this.zgR = [Zg.x0, Zg.y0, 1 / (hw * Zg.cell * hc), 1 / (hh * Zg.cell * hc)]; }
     // far mask
     const F = M.far; this.farM = F; this.tFar = X.tex(F.w, F.h, F.data, { ifmt: gl.R8, fmt: gl.RED, linear: true });
     // backdrop layer
@@ -326,6 +332,7 @@ export class Renderer {
     return P.t('uShM', this.f.sh.depth).t('uShC', this.f.sh.tex[0]).v4a('uLP', this.lp).v4a('uLC', this.lc).i('uNL', this.nl)
       .v4a('uChar', this.charSlots).f('uMist', ...E.mist).v('uFogCol', E.fog).f('uMistZ', this.M ? this.M.mistZ : 0)
       .f('uCloud', E.cloud).f('uShafts', this.Q.shafts ? E.shafts : 0).f('uShaftSteps', this.Q.shafts).f('uNight', E.night)
+      .t('uZG', this.tZG).f('uZGR', ...(this.zgR || [0, 0, 0, 0]))
       .v('uFarCol', E.farCol).f('uBounds', ...this.boundsPx4()).f('uEdgeFar', this.edgeFar ?? (this.M ? this.M.edgeFar : 0.6)).v('uCharK', E.charK).f('uFlecks', E.flecks * this.Q.flecks);
   }
   boundsPx4() { const b = this.boundsPx || { x0: -1e5, y0: -1e5, x1: 1e5, y1: 1e5 }; return [b.x0, b.y0, b.x1, b.y1]; }

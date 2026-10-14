@@ -1,14 +1,16 @@
-"""家守さぢ (Saji Yamori) - zashiki-warashi, the companion who rides on Tsuzumi's load.
+"""家守さぢ (Saji Yamori) - zashiki-warashi, the companion who rides on Tsuzumi's back-frame.
 
-Reference: assets/reference/illustrations/saji.png. Red messy bob with an ahoge and a teal
-headband; big teal eyes; a pale-mint shawl collar with a teal border; a gold bell on a red cord at
-the collar (the game's hint bell); plum kimono top with a red collar edge; white sleeves with red
-lining; a teal obi with a big bow on her left; a red flared skirt with a cream wavy stripe; white
-socks tied with red ribbons; plum boots with red laces.
+Reference: assets/reference/illustrations/saji.png. Red messy bob: side locks that flare and flick
+out at the jaw, a fringe with a parted gap that shows her forehead, a separate curled ahoge, two
+highlight streaks, a teal-green alice band; big teal eyes; a pale-green shawl collar worn as a
+short cape over the shoulders, with a darker teal edge, its front flaps meeting at a 2x2 gold bell
+(the game's hint bell); plum kimono with a red collar edge; white sleeves with red lining; teal
+obi with the bow on her left; red flared skirt with a cream stripe; plum boots.
 
-Model space: 21 columns, centre column 10; row 27 is the outline under her soles. It maps into the
-32x40 frame at (MX, MY), so the foot pivot is frame pixel (16, 37). Sitting animations carry a
-'seat' anchor (her bottom) to place on Tsuzumi's 'loadTop'.
+Model space: 21 columns, centre column 10; row 26 is the outline under her soles (27 px tall
+with the ahoge). It maps into the 36x40 frame at (MX, MY) = (8, 11), so the foot pivot is frame
+pixel (18, 37). Sitting animations carry a 'seat' anchor (row 19: the skirt drapes 3 px over the
+rail) to place on Tsuzumi's 'loadTop'; riding, the pair is 52 px tall.
 """
 
 from __future__ import annotations
@@ -23,8 +25,8 @@ PAL = Palette({
     'K': ('#f0533f', 'skirt', 1), 'k': ('#cf3439', 'skirt', 0), 'j': ('#9b2434', 'skirt', -1), 'J': ('#691a2b', 'skirt', -2),
     # teal (headband, obi, capelet border)
     'Q': ('#4fa8a0', 'teal', 1), 'q': ('#2f7d7a', 'teal', 0), 'c': ('#215a5d', 'teal', -1), 'C': ('#163b42', 'teal', -2),
-    # mint shawl collar
-    'M': ('#f1f8ea', 'mint', 1), 'm': ('#d2e7d1', 'mint', 0), 'x': ('#a7c7b6', 'mint', -1),
+    # pale-green shawl collar (a short cape over the shoulders)
+    'M': ('#e3f1dc', 'mint', 1), 'm': ('#c2dfc4', 'mint', 0), 'x': ('#94c0a6', 'mint', -1),
     # plum kimono top and boots
     'P': ('#93437a', 'plum', 1), 'p': ('#702e5e', 'plum', 0), 'u': ('#4e2045', 'plum', -1), 'U': ('#34152f', 'plum', -2),
     # cream sleeves, socks, skirt stripe
@@ -50,37 +52,37 @@ PIVOT = (18, 37)
 # FRONT
 
 F_HEAD = L(0, '''
-..........oo.........
-.........oRdo........
-......oooRrooo.......
-.....oRRrrrrrdo......
-....oRqQqqqqqqco.....
-...oRrRrrRrrRrrdo....
-...oRrrRrrrrRrrdDo...
-..oRrsEEssssEEsrdDo..
-..oRrslesssslesrdDo..
-..oRrseesssseesrdDo..
-..oRrbsssssssbsrddo..
-..oRrdzssZZsszdrdDo..
-...odDdozzzzzodddDo..
-....oooo.ooo.oooo....
+....ooo..............
+...oRRdo.............
+...odooRoooo.........
+....o.oRHrrRrrdoo....
+....oRHRrrrrRrrrdo...
+...oRRqQQqqqqqcrdo...
+..oRqqRHrRrrRrrccdo..
+.oRqrRrrRrsRrRrrcdo..
+.oRRrsEErssrEEsrdDo..
+.oRrrslesssslesrddo..
+.oRrdreesssseerdrdDo.
+oRrddobsszZssboddrDo.
+oRdodoozsssszoododdo.
+.oo.o.oooooooo.o.oo..
 ''', z=8)
 
 F_FACE = {
     'open': None,
-    'blink': L(7, '''
-ssssssss
-EEssssEE
-ssssssss
+    'blink': L(8, '''
+ss....ss
+EE....EE
+ss....ss
 ''', col=6, z=8.1),
     'talk': L(11, '''
 sZZs
 sZZs
 ''', col=8, z=8.1),
-    'grin': L(10, '''
+    'grin': L(11, '''
 .zZZz.
 ''', col=7, z=8.1),
-    'wide': L(7, '''
+    'wide': L(8, '''
 EE....EE
 le....le
 eE....eE
@@ -88,10 +90,10 @@ eE....eE
 }
 
 F_BODY = L(12, '''
-.....oooooooooo......
-...ooMMMMmmmmmxoo....
-..oWMMMMmmmmmmxxvo...
-...oqqqqqqqqqqqco....
+......ooooooooo......
+.....oPrsszrpo.......
+....opPprzrppuo......
+....opPpprppuuo......
 ....oopPppppppuo.....
 ....oqqqqqqqQqqqo....
 ...oKkkkkkkkkqcCQo...
@@ -102,22 +104,35 @@ F_BODY = L(12, '''
 ..ooooooooooooooooo..
 ''', z=5)
 
-F_ARM_L = L(13, '''
-..oo.
-.oWwo
-oWwwo
-oWwKo
-ozso.
-.oo..
-''', col=1, z=6)
+# The pale-green shawl collar: a short cape over the shoulders, darker teal edge; the front
+# flaps meet at the bell. Drawn over the resting arms, under arms that are doing something.
+F_CAPE = L(13, '''
+....oooooo.oooooo....
+..ooMMMMMo.oMmmxxoo..
+.oMMMMMmmQQQQmmmxxxo.
+oMMmmQQQo...oqqqmxxxo
+oQQQo...........oqqco
+.ooo.............ooo.
+''', z=6.5)
 
-F_ARM_R = L(13, '''
-.oo..
-owvo.
-owwvo
-oKwvo
-.oszo
-..oo.
+F_ARM_L = L(16, '''
+.oooo.
+oWwwwo
+oWwwwo
+oWwwvo
+oKKkko
+.oozso
+...oo.
+''', z=6)
+
+F_ARM_R = L(16, '''
+.oooo.
+owwwvo
+owwwvo
+owwvvo
+okkKKo
+oszoo.
+.oo...
 ''', col=15, z=6)
 
 F_ARM_R_POINT = L(12, '''
@@ -186,20 +201,20 @@ F_LEGS = L(22, '''
 # SIDE (facing right)
 
 S_HEAD = L(0, '''
-.........oo..........
-........oRdo.........
-.....oooRrooo........
-....oRRrrrrrrdo......
-...oRqQqqqqqqqco.....
-..oRrrRrrrRrrRrdo....
-..oRrrRrrRrrRrrrdo...
-..oRrrrRrrrrdrsEEo...
-..oRrrRrrrrrdrsleso..
-..oRrrrRrrrdrbseeso..
-..oDdrrrRrrddssssso..
-..oDdddrrrdddzsZzo...
-...oDDddddddozzzo....
-....oooooooooooo.....
+......ooo............
+.....oRRdo...........
+.....odooRoooooo.....
+......oooRHrrRrdo....
+....ooRHRrqqRrrRdo...
+...oRRrHrrqQRrrRrdo..
+..oRrrRrrrrqqRrRrdo..
+.oRrrrRrrrrqqRsEEo...
+.oRrrRrrrrrrqrsleso..
+.oRrrrRrrrrdrbseeso..
+.oDdrrrRrrddrssssso..
+oRDdddrrrdddrzsZzo...
+odoDdoDddooddzzzo....
+.o.oo.ooo..ooooo.....
 ''', z=8)
 
 S_FACE = {
@@ -216,11 +231,11 @@ ZZ
 
 S_BODY = L(12, '''
 .......ooooooo.......
-.....ooMMMmmmxoo.....
-....oMMMMmmmmmxxo....
-....oxqqqqqqqqqco....
+......opPrrpuo.......
+.....opPpprppuo......
+....oupPppppuuuo.....
 .....oupPpppuuuo.....
-....oqqqqqqqqqco.....
+....occcqcccccCo.....
 ...oqcoKkkkkkkkko....
 ..oocCKkkkkkkkkkkoo..
 .oKkjkkkkkkkkkkkkkjo.
@@ -228,6 +243,15 @@ S_BODY = L(12, '''
 .oJjjjJjjjJjjjJjjjJo.
 ..ooooooooooooooooo..
 ''', z=5)
+
+S_CAPE = L(12, '''
+.....ooooooooo.......
+...ooMMMMmmmmxo......
+..oMMMMMmmmmmmxo.....
+.oQMMmmmmmmmmxxQo....
+.oQQQQQqqqqqqqqo.....
+..ooo.........o......
+''', z=6.5)
 
 S_LEGS = {
     'stand': L(22, '''
@@ -257,37 +281,45 @@ S_LEGS = {
 # BACK
 
 B_HEAD = L(0, '''
-..........oo.........
-.........oRdo........
-......oooRrooo.......
-.....oRRrrrrrdo......
-....oRrRrrrrRrdo.....
-...oRrRrrRrrrRrdo....
-...oQqqqqqqqqqqcco...
-..oRrRrrRrrRrrRrdDo..
-..oRrRrrRrrrRrrrdDo..
-..oRrRrrrRrrRrrrdDo..
-..oRrrRrrrRrrRrrdDo..
-..oRrrRrrrrRrrRrdDo..
-...odrRrrrrRrrrddo...
-....oddddoddddddo....
-.....oooo.oooooo.....
+..............ooo....
+.............odRRo...
+.......ooooooRoodo...
+.....oorRrRrRrooo....
+...ooRrqQQqqqcrdoo...
+..oRRqRHrrRrrRrcrdo..
+.oRqRrHrRrrRrrRrcdo..
+.oRrRrHrRrrRrrRrrdDo.
+.oRrRrrRrRrrRrrRrdDo.
+.oRrRrrRrrRrrRrrdrDo.
+.oRrrRrrRrrdRrrddrDo.
+oRRdrrdRrddrRddrdDDo.
+odordoddoDdoodDodDDo.
+.o.oo.oo.oo..oo.ooo..
 ''', z=8)
 
 B_BODY = L(12, '''
 .....oooooooooo......
-...ooMMMmmmmmmxoo....
-..oWMMMMmmmmmmmxvo...
-...oxxxxxxxxxxxxo....
+....oppppppppppo.....
 ....oppppppppppuo....
-...oQqqqqqqqqqqqco...
+....oppppppppppuo....
+....oppppppppppuo....
+...occcqcccccccCCo...
 ..ooQqQoKkkkkkkkoo...
 ..oKjcqkkkkkkkkkjo...
-.oKkkkkkkkkkkkkkkjo..
+.oKkkkkkkkkkkkkkjo...
 .oWwwWwwwWwwwWwwwvo..
 .oJjjJjjjJjjjJjjjJo..
 ..ooooooooooooooooo..
 ''', z=5)
+
+B_CAPE = L(12, '''
+.....ooooooooooo.....
+...ooMMMMMMMMMmmoo...
+.ooMMMMMMMMmmmmmmxoo.
+oMMMMMMMmmmmmmmmmxxxo
+oQQQQQQQqqqqqqqqqqqco
+.oooo...........oooo.
+''', z=6.5)
 
 F_LEGS_WALK = {
     'a': L(22, '''
@@ -354,13 +386,14 @@ F_SIT_LEGS = [L(20, '''
 # =============================================================================================
 # SIDE parts (sleeve split out; sitting legs)
 
-S_ARM = L(13, '''
-.oo..
-oWwo.
-oWwvo
-oKwvo
-.ozso
-..oo.
+S_ARM = L(16, '''
+.ooo..
+oWwwo.
+oWwvo.
+oWwvo.
+oKKko.
+.ozso.
+..oo..
 ''', col=5, z=6)
 
 S_ARM_POINT = L(12, '''
@@ -447,22 +480,24 @@ B_SIT_SKIRT = L(17, '''
 ..ooooooooooooooooo..
 ''', z=5)
 
-B_ARM_L = L(13, '''
-..oo.
-.oWwo
-oWwwo
-oWwwo
-oszo.
-.oo..
-''', col=1, z=6)
+B_ARM_L = L(16, '''
+.oooo.
+oWwwwo
+oWwwwo
+oWwwvo
+oKKkko
+.oozso
+...oo.
+''', z=6)
 
-B_ARM_R = L(13, '''
-.oo..
-owvo.
-owwvo
-owwvo
-.ozso
-..oo.
+B_ARM_R = L(16, '''
+.oooo.
+owwwvo
+owwwvo
+owwvvo
+okkKKo
+oszoo.
+.oo...
 ''', col=15, z=6)
 
 B_ARM_R_POINT = L(12, '''
@@ -521,19 +556,19 @@ oWwwwszo
 PRONE = None  # kept for reference: front-view prone was unreadable at this size
 
 
-F_BELL = L(13, '''
+F_BELL = L(14, '''
 .oo.
 oYyo
 oygo
 .oo.
 ''', col=8, z=7)
 
-S_BELL = L(13, '''
+S_BELL = L(14, '''
 .oo.
 oYyo
 oygo
 .oo.
-''', col=13, z=7)
+''', col=14, z=7)
 
 S_ARM = S_ARM.shifted(2)
 S_ARM_POINT = S_ARM_POINT.shifted(2)
@@ -544,8 +579,8 @@ S_SIT_BODY = merge(at(S_BODY))  # same upper body; the sitting skirt replaces th
 # =============================================================================================
 # Animations
 
-SEAT = {'front': (10, 22), 'side': (8, 22), 'back': (10, 22)}
-HAND = {'front': (17, 17), 'side': (10, 17), 'back': (17, 17)}
+SEAT = {'front': (10, 19), 'side': (8, 19), 'back': (10, 19)}   # the skirt drapes 3 px over the edge
+HAND = {'front': (16, 21), 'side': (9, 21), 'back': (16, 21)}
 
 
 def _crop_upper(layer, last_row):
@@ -562,6 +597,17 @@ def _lift(layers, lift):
     return [(l, x, y - lift) if l is not None else None for l, x, y in [i if i is not None else (None, 0, 0) for i in layers]]
 
 
+REST_ARMS = None   # filled in below (the resting arms hang under the cape)
+
+
+def _arms(arms, cape, extra=()):
+    """Resting arms are drawn under the cape; arms doing something (pointing, waving, holding the
+    bell) are drawn over it."""
+    rest = [a for a in arms if a is not None and any(a[0] is r for r in REST_ARMS)]
+    other = [a for a in arms if a is not None and not any(a[0] is r for r in REST_ARMS)]
+    return rest + [cape] + list(extra) + other
+
+
 def _front(dy=0, face=None, arm_l=None, arm_r=None, legs=None, sit=None, head='front', bell=0):
     heads = {'front': F_HEAD, 'side': S_HEAD, 'back': B_HEAD}
     hl = heads[head]
@@ -570,7 +616,8 @@ def _front(dy=0, face=None, arm_l=None, arm_r=None, legs=None, sit=None, head='f
         ly += [at(legs or F_LEGS), at(F_BODY, 0, dy)]
     else:
         ly += [at(F_SIT_SKIRT), at(F_UPPER, 0, dy), at(F_SIT_LEGS[sit])]
-    ly += [at(F_BELL, bell, dy), arm_l or at(F_ARM_L, 0, dy), arm_r or at(F_ARM_R, 0, dy), at(hl, 0, dy)]
+    ly += _arms([arm_l or at(F_ARM_L, 0, dy), arm_r or at(F_ARM_R, 0, dy)], at(F_CAPE, 0, dy), [at(F_BELL, bell, dy)])
+    ly.append(at(hl, 0, dy))
     if head == 'front' and F_FACE.get(face):
         ly.append(at(F_FACE[face], 0, dy))
     return ly
@@ -583,7 +630,8 @@ def _side(dy=0, face=None, arm=None, legs='stand', sit=None, head='side', bell=0
     else:
         ly += [at(S_SIT_LEGS[sit]), at(S_UPPER, 0, dy)]
     hl = {'side': S_HEAD, 'back': S_HEAD_BACKWARD, 'front': F_HEAD}[head]
-    ly += [at(S_BELL, bell, dy), arm or at(S_ARM, 0, dy), at(hl, 0, dy)]
+    ly += _arms([arm or at(S_ARM, 0, dy)], at(S_CAPE, 0, dy), [at(S_BELL, bell, dy)])
+    ly.append(at(hl, 0, dy))
     if head == 'side' and S_FACE.get(face):
         ly.append(at(S_FACE[face], 0, dy))
     return ly
@@ -596,7 +644,8 @@ def _back(dy=0, arm_l=None, arm_r=None, legs=None, sit=None, head='back', face=N
     else:
         ly += [at(B_SIT_SKIRT), at(B_UPPER, 0, dy)]
     hl = {'back': B_HEAD, 'side': S_HEAD, 'front': F_HEAD}[head]
-    ly += [arm_l or at(B_ARM_L, 0, dy), arm_r or at(B_ARM_R, 0, dy), at(hl, 0, dy)]
+    ly += _arms([arm_l or at(B_ARM_L, 0, dy), arm_r or at(B_ARM_R, 0, dy)], at(B_CAPE, 0, dy))
+    ly.append(at(hl, 0, dy))
     if head == 'front' and F_FACE.get(face):
         ly.append(at(F_FACE[face], 0, dy))
     if head == 'side' and S_FACE.get(face):
@@ -605,6 +654,7 @@ def _back(dy=0, arm_l=None, arm_r=None, legs=None, sit=None, head='back', face=N
 
 
 S_HEAD_BACKWARD = S_HEAD.flipped(10)
+REST_ARMS = (F_ARM_L, F_ARM_R, S_ARM, B_ARM_L, B_ARM_R)
 
 
 def _a(view, dy=0, hand=None, sit=False, lift=0):
@@ -776,7 +826,7 @@ def look_back(view, _load=False):
 
 def _prone(i, arm, dx=0, head_dy=0):
     head = merge(at(S_HEAD), at(S_FACE['talk']) if i % 2 else None)
-    return [at(PRONE_BODY[i % 2], dx, 0), at(head, 7 + dx, 12 + head_dy), at(PRONE_ARMS[arm], dx, 0)]
+    return [at(PRONE_BODY[i % 2], dx, 1), at(head, 7 + dx, 13 + head_dy), at(PRONE_ARMS[arm], dx, 1)]
 
 
 def pinned(view, _load=False):
@@ -784,7 +834,7 @@ def pinned(view, _load=False):
     turn, arms flail, mouth going."""
     out = []
     for i in range(4):
-        out.append(Frame(_prone(i, i % 2), {'hand': (22, 18 + 3 * (i % 2)), 'beam': (3, 21)}))
+        out.append(Frame(_prone(i, i % 2), {'hand': (22, 19 + 3 * (i % 2)), 'beam': (3, 22)}))
     return out
 
 
@@ -794,7 +844,7 @@ def crawl(view, _load=False):
     out = []
     for i in range(4):
         out.append(Frame(_prone(i, (i + 1) % 2, dx=[-1, 0, 0, 1][i], head_dy=[0, -1, 0, -1][i]),
-                         {'hand': (21 + [0, 1, 1, 2][i], 18 + 3 * ((i + 1) % 2))}))
+                         {'hand': (21 + [0, 1, 1, 2][i], 19 + 3 * ((i + 1) % 2))}))
     return out
 
 

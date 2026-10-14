@@ -16,7 +16,7 @@
    Light from the top-left; camphor greens from PAL.camphor; new growth on
    the sunlit tops from PAL.camphorNew.
    ===================================================================== */
-import { SB, PX, POST, MAT, mass, cylN } from './paint.js';
+import { SB, PX, POST, MAT, mass, crown, cylN } from './paint.js';
 import { PAL } from './palette.js';
 import { RNG, clamp, lerp, hash2, hyp, vnoise } from './core.js';
 import { fern } from './flora.js';
@@ -38,8 +38,8 @@ export function camphorTrunk(seed = 3) {
         const u = (acc + t * L) / total; const n = cylN(sx * 0.9, 0.25);
         const fur = hash2(Math.floor((sx + 1) * 3), Math.floor((acc + t * L) / 6), seed + 5) < 0.2;
         let tt = 3.4 - sx * 1.6 + (fur ? -1.4 : 0) + (hash2(x >> 1, y >> 1, seed) - 0.5) * 0.6;
-        if (hash2(x >> 1, y >> 1, seed + 7) < 0.22 && sx < -0.1) { s.pz(x, y, PAL.moss[clamp(Math.round(2.6 - sx), 1, 5)], zf + n[2] * w0 * 0.3, { m: MAT.MOSS, b: lerp(b0, b1, u) + n[2] * 6, n }); return; }
-        s.pz(x, y, BARK[clamp(Math.round(tt + (bayer2(x, y) - 0.5) * 0.6), 0, BARK.length - 1)], zf + n[2] * w0 * 0.3, { m: MAT.BARK, b: lerp(b0, b1, u) + n[2] * 6, n });
+        if (hash2(x >> 1, y >> 1, seed + 7) < 0.22 && sx < -0.1) { s.pz(x, y, PAL.moss[clamp(Math.round(2.6 - sx), 1, 5)], zf + n[2] * w0 * 0.3, { m: MAT.MOSS, b: lerp(b0, b1, u) + n[2] * 6 - 50, n }); return; }
+        s.pz(x, y, BARK[clamp(Math.round(tt + (bayer2(x, y) - 0.5) * 0.6), 0, BARK.length - 1)], zf + n[2] * w0 * 0.3, { m: MAT.BARK, b: lerp(b0, b1, u) + n[2] * 6 - 50, n });
       });
       acc += L;
     }
@@ -59,6 +59,8 @@ export function camphorTrunk(seed = 3) {
     for (const b of butt) { const bump = b.w * Math.exp(-h / b.lift); if (b.a < -0.8) xl -= bump; if (b.a > 0.8) xr += bump; }
     for (let x = Math.floor(xl); x <= Math.ceil(xr); x++) {
       const sx = clamp((x + 0.5 - (xl + xr) / 2) / ((xr - xl) / 2), -1, 1);
+      const footRise = (1 - Math.sqrt(Math.max(0, 1 - sx * sx))) * 12; // the base outline curves up toward the sides (they stand further back)
+      if (h < footRise - 2) continue;
       // arc-length coordinate around the cylinder: furrows crowd toward the edges
       const U = Math.asin(sx) * 52;
       // buttress ridges: raised bands that run down into the roots
@@ -66,11 +68,13 @@ export function camphorTrunk(seed = 3) {
       // furrows: wandering vertical lines ~9 px apart in U
       const fu = U + Math.sin(h * 0.045 + Math.floor(U / 8)) * 2.2 + vnoise(U * 0.08, h * 0.02, seed) * 5;
       const fi = Math.floor(fu / 8), ff = fu / 8 - fi;
-      const furrow = ff < 0.2 || (ff > 0.52 && ff < 0.62 && hash2(fi, Math.floor(h / 23), seed + 2) < 0.35);
-      const crack = !furrow && ((h + Math.floor(hash2(fi, 3, seed) * 15)) % 15) === 0 && hash2(fi, Math.floor(h / 15), seed + 4) < 0.75;
+      // furrows merge and split: their width breathes along the height
+      const fw = 0.16 + vnoise(fi * 3.1, h * 0.05, seed + 2) * 0.14;
+      const furrow = ff < fw || (ff > 0.55 && ff < 0.55 + fw * 0.5 && vnoise(fi * 2.3, h * 0.03, seed + 6) > 0.62);
       const n = cylN(sx * 0.94, 0.05);
-      let t = 4.0 - sx * 2.4 + ridge * 1.1 + (hash2(fi, Math.floor(h / 7), seed) - 0.5) * 0.8 + (ff > 0.2 && ff < 0.34 ? 1.0 : 0);
-      if (furrow) t -= 2.7; if (crack) t -= 1.8;
+      const plate = vnoise(fi * 5.7, h * 0.07, seed) - 0.5; // slow tone drift along each ridge of bark, no blocks
+      let t = 4.0 - sx * 2.4 + ridge * 1.1 + plate * 1.1 + (ff > fw && ff < fw + 0.14 ? 1.0 : 0) + (ff > 0.8 ? -0.4 : 0);
+      if (furrow) t -= 2.6;
       if (h < 14) t -= (14 - h) * 0.12;
       let col = BARK[clamp(Math.round(t + (bayer2(x, y) - 0.5) * 0.7), 0, BARK.length - 1)], mat = MAT.BARK;
       // moss: on the lit, upward-facing side and down at the foot, in clumps
@@ -78,27 +82,29 @@ export function camphorTrunk(seed = 3) {
       const mossK = (sx < 0.0 ? 0.6 : 0.72) - (h < 70 ? (70 - h) / 70 * 0.16 : 0) - (h > 150 ? 0.06 : 0);
       if (mz > mossK && !furrow) { col = PAL.moss[clamp(Math.round(2.4 - sx * 1.2 + (mz - mossK) * 6 + (bayer2(x, y) - 0.5)), 0, 5)]; mat = MAT.MOSS; }
       else if (hash2(x >> 1, y >> 1, seed + 13) < 0.025 && !furrow) col = PAL.lichen[1 + (hash2(x, y, 3) < 0.5 ? 1 : 0)];
+      if (h < footRise + 6) { const k = (footRise + 6 - h) / 8; col = [col[0] * (1 - k * 0.45), col[1] * (1 - k * 0.42), col[2] * (1 - k * 0.38)]; } // soil and shade at the foot
       const z = Math.sqrt(1 - sx * sx) * hw * 0.6 + 10;
-      s.pz(x, y, col, z, { m: mat, b: Math.sqrt(1 - sx * sx) * 50 + ridge * 6, n });
+      s.pz(x, y, col, z, { m: mat, b: (Math.sqrt(1 - sx * sx) - 1) * 50 + ridge * 6, n });
     }
   }
   // burls: round knots with ring shading
   for (const [bx, bh, br] of [[-28, 120, 8], [24, 150, 6], [36, 72, 7]]) {
     const xc = cx + bx + lean(bh), yc = base - bh;
-    PX.ell(xc, yc, br, br * 0.9, (x, y, u, v, d) => { const ring = Math.floor(d * 3.5) % 2; const t = 4.2 - u * 1.6 - v * 1.4 - (ring ? 0.8 : 0) - (d > 0.85 ? 1.2 : 0); s.pz(x, y, BARK[clamp(Math.round(t), 0, BARK.length - 1)], 80, { m: MAT.BARK, b: 56 + (1 - d) * 4, n: [u * 0.7, -v * 0.7, Math.sqrt(Math.max(0.1, 1 - d * d))] }); });
+    PX.ell(xc, yc, br, br * 0.9, (x, y, u, v, d) => { const ring = Math.floor(d * 3.5) % 2; const t = 4.2 - u * 1.6 - v * 1.4 - (ring ? 0.8 : 0) - (d > 0.85 ? 1.2 : 0); s.pz(x, y, BARK[clamp(Math.round(t), 0, BARK.length - 1)], 80, { m: MAT.BARK, b: 6 + (1 - d) * 4, n: [u * 0.7, -v * 0.7, Math.sqrt(Math.max(0.1, 1 - d * d))] }); });
   }
   // the hollow (洞) at the foot, between two buttresses
   { const xc = cx - 30, yc = base - 26;
-    PX.ell(xc, yc, 13, 17, (x, y, u, v, d) => { const deep = d < 0.75; const t = deep ? 0.3 + v * 0.3 : 1.4 - u * 0.6; const c = deep ? [34 + v * 10, 28 + v * 8, 26 + v * 6] : BARK[clamp(Math.round(t), 0, 7)]; s.pz(x, y, c, 82, { m: MAT.BARK, b: deep ? 20 : 54, n: deep ? [0, 0, 1] : [-u * 0.6, v * 0.5, 0.6] }); }, { amp: 0.12, seed: 5 });
-    for (let x = xc - 9; x <= xc + 9; x++) { const y = Math.round(yc + 16 + Math.abs(x - xc) * 0.15); if (s.a(x, y)) s.px(x, y, PAL.moss[3], { m: MAT.MOSS, z: 83, b: 55 }); } }
+    PX.ell(xc, yc, 13, 17, (x, y, u, v, d) => { const deep = d < 0.75; const t = deep ? 0.3 + v * 0.3 : 1.4 - u * 0.6; const c = deep ? [34 + v * 10, 28 + v * 8, 26 + v * 6] : BARK[clamp(Math.round(t), 0, 7)]; s.pz(x, y, c, 82, { m: MAT.BARK, b: deep ? -30 : 4, n: deep ? [0, 0, 1] : [-u * 0.6, v * 0.5, 0.6] }); }, { amp: 0.12, seed: 5 });
+    for (let x = xc - 9; x <= xc + 9; x++) { const y = Math.round(yc + 16 + Math.abs(x - xc) * 0.15); if (s.a(x, y)) s.px(x, y, PAL.moss[3], { m: MAT.MOSS, z: 83, b: 5 }); } }
   // low limbs reaching west over the hut and east over the shrine (in front of the trunk)
   limb([[cx - 26, base - 112], [cx - 66, base - 132], [cx - 118, base - 136], [cx - 176, base - 128], [cx - 196, base - 122]], 40, 9, 54, 80, 90);
   limb([[cx - 120, base - 136], [cx - 146, base - 160], [cx - 160, base - 176]], 9, 4, 72, 76, 91);
   limb([[cx + 26, base - 122], [cx + 70, base - 142], [cx + 124, base - 146], [cx + 178, base - 140], [cx + 198, base - 134]], 38, 9, 54, 76, 90);
   limb([[cx + 128, base - 146], [cx + 150, base - 168], [cx + 158, base - 184]], 9, 4, 70, 74, 91);
+  // (low limbs reach toward the viewer: their bulge grows past the trunk's front plane)
   // ferns in the crotches and on the buttresses
   for (const [fx, fy, sz] of [[cx - 52, base - 118, 0.7], [cx + 44, base - 126, 0.6], [cx - 62, base - 6, 0.8], [cx + 58, base - 10, 0.7], [cx - 6, base - 186, 0.6]]) {
-    const f = fern(Math.round(fx * 7 + fy), sz).s; s.blit(f, Math.round(fx - f.w / 2), Math.round(fy - f.h + 3), { dz: 95 });
+    const f = fern(Math.round(fx * 7 + fy), sz).s; s.blit(f, Math.round(fx - f.w / 2), Math.round(fy - f.h + 3), { dz: 95, db: -2 });
   }
   // the shimenawa: a fat twisted straw rope across the front at ~3 m, shide hanging from it, a tassel at the front
   const ry = base - 62, rw = 9;
@@ -108,55 +114,91 @@ export function camphorTrunk(seed = 3) {
     for (let k = -rw / 2; k <= rw / 2; k++) {
       const v = k / (rw / 2), twist = ((x * 0.8 - k * 1.6 + 100) % 6) < 3;
       const t = 2.6 - v * 1.4 + (twist ? 0.7 : -0.5) - Math.abs(sx) * 0.8 - (Math.abs(v) > 0.8 ? 0.9 : 0);
-      s.pz(x, Math.round(yc + k), PAL.rope[clamp(Math.round(t), 0, 4)], 120, { m: MAT.ROPE, b: 58 + (1 - Math.abs(sx)) * 6 + (1 - Math.abs(v)) * 2, n: [sx * 0.5, -v * 0.8, 0.5] });
+      s.pz(x, Math.round(yc + k), PAL.rope[clamp(Math.round(t), 0, 4)], 120, { m: MAT.ROPE, b: (Math.sqrt(Math.max(0, 1 - sx * sx)) - 1) * 50 + 6 + (1 - Math.abs(v)) * 2, n: [sx * 0.5, -v * 0.8, 0.5] });
     }
     const sy = Math.round(yc + rw / 2 + 1); if (s.a(x, sy)) s.mul(x, sy, [0.55, 0.55, 0.62]); // the rope's shadow on the bark
   }
   for (const fx of [-34, -12, 12, 34]) shide(s, Math.round(cx + lean(62) + fx), Math.round(ropeY(cx + lean(62) + fx) + rw / 2), 125);
   // tassel bundle (房) at the front centre
   { const tx = Math.round(cx + lean(62)), ty = Math.round(ropeY(cx + lean(62)) + rw / 2);
-    for (let k = 0; k < 7; k++) for (let y = ty; y < ty + 10 + (k % 3); y++) s.pz(tx - 3 + k, y, PAL.straw[clamp(3 - (k === 0 ? 1 : 0) + (y > ty + 6 ? -1 : 0), 0, 5)], 126, { m: MAT.STRAW, b: 64 }); }
+    for (let k = 0; k < 7; k++) for (let y = ty; y < ty + 10 + (k % 3); y++) s.pz(tx - 3 + k, y, PAL.straw[clamp(3 - (k === 0 ? 1 : 0) + (y > ty + 6 ? -1 : 0), 0, 5)], 126, { m: MAT.STRAW, b: 10 }); }
   POST.ao(s, 3, 0.2); POST.outline(s, { k: 0.6, hue: 0.02 }); POST.normals(s, 0.9);
   return { s, meta: { ax: cx, ay: base + 1, sway: 0, foliage: false, occluder: true, kind: 'camphorTrunk' } };
+}
+
+/* ---------------- a surface root, lying on the ground ----------------
+   path in the ground plane (screen = ground for things that lie flat):
+   starts at the trunk, heading `ang` (radians, 0 = east, π/2 = south). */
+export function camphorRoot(seed, len = 90, w0 = 22, w1 = 5, ang = Math.PI / 2, curl = 0.6, h0 = 9) {
+  // A surface root: thick where it leaves the trunk, it dives into the ground after about half its
+  // length and surfaces again in one or two low arches further out — it snakes under the moss rather
+  // than ending in a point (pointed, fully exposed roots read as tentacles).
+  const R = RNG(seed * 53 + 1), pts = []; let x = 0, y = 0, a = ang;
+  const n = Math.ceil(len / 3);
+  for (let i = 0; i <= n; i++) { pts.push([x, y]); a += (R() - 0.5) * 0.3 + curl * 0.015 * Math.sin(i * 0.35 + seed); x += Math.cos(a) * 3; y += Math.sin(a) * 3; }
+  let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9; for (const p of pts) { x0 = Math.min(x0, p[0]); y0 = Math.min(y0, p[1]); x1 = Math.max(x1, p[0]); y1 = Math.max(y1, p[1]); }
+  const pad = w0 + h0 + 4, W = Math.ceil(x1 - x0 + pad * 2), H = Math.ceil(y1 - y0 + pad * 2), ox = pad - x0, oy = pad - y0, s = new SB(W, H);
+  if (!s.N) s.N = new Float32Array(W * H * 3);
+  const dive = R.range(0.5, 0.6), arches = [[dive + R.range(0.1, 0.14), dive + R.range(0.26, 0.32)]];
+  if (len > 60) arches.push([R.range(0.8, 0.84), R.range(0.92, 0.97)]);
+  // visible height (0..1 of h0) and width along the root
+  const vis = t => {
+    if (t <= dive) return Math.pow(1 - t / dive * 0.75, 1.3) * Math.min(1, (dive - t) / 0.08 + 0.15);
+    for (const [a0, a1] of arches) if (t > a0 && t < a1) return Math.pow(Math.sin(Math.PI * (t - a0) / (a1 - a0)), 0.7) * 0.32 * (1.15 - t);
+    return 0;
+  };
+  for (let i = 0; i < pts.length - 1; i++) {
+    const t0 = i / (pts.length - 1), t1 = (i + 1) / (pts.length - 1);
+    const vA = vis(t0), vB = vis(t1); if (vA <= 0.02 && vB <= 0.02) continue;
+    const wAt = t => (w1 + (w0 - w1) * Math.pow(Math.max(0, 1 - t / dive), 2.2)) * (0.62 + 0.38 * Math.min(1, vis(t) * 2.5)) * (1 + 0.12 * Math.sin(t * 23 + seed));
+    const hA = h0 * vA, hB = h0 * vB, wA = wAt(t0) / 2, wB = wAt(t1) / 2;
+    const [ax, ay] = pts[i], [bx, by] = pts[i + 1];
+    PX.stroke(ax + ox, ay + oy - hA * 0.8, bx + ox, by + oy - hB * 0.8, wA + hA * 0.3, wB + hB * 0.3, (px, py, t, sx) => {
+      const tt = lerp(t0, t1, t), v = vis(tt), hgt = h0 * v;
+      if (v <= 0.02) return;
+      // the top faces up-left and catches light; the lower edge (its south side) is shade and soil
+      const ww = w1 + (w0 - w1) * Math.pow(Math.max(0, 1 - tt / dive), 2.2), lanes = 2 + Math.round(ww / 7), lane = Math.floor((sx + 1) / 2 * lanes), fur = ((sx + 1) / 2 * lanes) % 1 < 0.24;
+      let tone = 3.2 - sx * 1.2 + (hash2(lane, Math.floor((i * 3 + t * 3) / 7), seed) - 0.5) * 0.5 - (fur ? 0.9 : 0);
+      if (sx > 0.55) tone -= (sx - 0.55) * 3;
+      let col = BARK[clamp(Math.round(tone + (bayer2(px, py) - 0.5) * 0.5), 0, 7)], mat = MAT.BARK;
+      // moss on the upper side, thicker where the root is low (it grows over from the ground)
+      const mz = vnoise(px * 0.08, py * 0.08, seed + 3) + (1 - v) * 0.25;
+      if (mz > 0.62 && sx < 0.3 && !fur) { col = PAL.moss[clamp(Math.round(2 + (mz - 0.62) * 7 - sx), 1, 5)]; mat = MAT.MOSS; }
+      // where it sinks, soil heaped against its sides
+      if (v < 0.22 && Math.abs(sx) > 0.6) { col = PAL.soil[clamp(Math.round(1.5 - sx), 0, 5)]; mat = MAT.SOIL; }
+      const lift = hgt * Math.sqrt(Math.max(0, 1 - sx * sx));
+      s.pz(px, py, col, 10 + lift, { m: mat, b: 0, n: [0, -sx * 0.7, 0.7] });
+      s.b[py * W + px] = lift; // corrected to the ground plane below
+    });
+  }
+  POST.outline(s, { k: 0.72 }); POST.normals(s, 1);
+  const ax = Math.round(ox), ay = Math.round(oy);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (s.c[i * 4 + 3]) s.b[i] = -2 * (ay - y) + s.b[i] * 1.2; }
+  return { s, meta: { ax, ay, sway: 0, kind: 'root' } };
 }
 
 /** 紙垂: paper folded into a four-step zigzag */
 export function shide(s, x, y, z) {
   const seq = [[0, 0], [1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [2, 2], [3, 2], [1, 3], [2, 3], [3, 3], [3, 4], [4, 4], [2, 5], [3, 5], [4, 5]];
-  for (const [dx, dy] of seq) s.pz(x + dx - 2, y + dy * 2, PAL.paper[dy % 2 ? 2 : 4], z, { m: MAT.PAPER, b: 64 });
-  for (const [dx, dy] of seq) s.pz(x + dx - 2, y + dy * 2 + 1, PAL.paper[1], z - 0.2, { m: MAT.PAPER, b: 64 });
+  for (const [dx, dy] of seq) s.pz(x + dx - 2, y + dy * 2, PAL.paper[dy % 2 ? 2 : 4], z, { m: MAT.PAPER, b: 10 });
+  for (const [dx, dy] of seq) s.pz(x + dx - 2, y + dy * 2 + 1, PAL.paper[1], z - 0.2, { m: MAT.PAPER, b: 10 });
 }
 
 /* ---------------- a crown lobe ----------------
    w, h: size in px; a cumulus of leaf masses with a hanging fringe. */
 export function camphorLobe(seed, w = 220, h = 130, o = {}) {
-  const R = RNG(seed * 41 + 3), W = w + 24, Hh = h + 36, s = new SB(W, Hh), cx = W / 2, base = h + 12;
-  const rr = PAL.camphor;
+  const R = RNG(seed * 41 + 3), W = Math.ceil(w * 1.4) + 24, Hh = h + 60, s = new SB(W, Hh), cx = Math.round(W / 2), base = h + 34; // (the anchor stays 22 px under the lobe's base)
+  const rr = PAL.camphor, young = mixRamp(rr, PAL.camphorNew);
   // limbs glimpsed through the lower gaps
-  for (let k = 0; k < 3; k++) { const x0 = cx + R.range(-w * 0.2, w * 0.2); PX.stroke(x0, base + 6, x0 + R.range(-w * 0.3, w * 0.3), base - h * 0.5, 5, 2, (x, y, t, sx) => s.pz(x, y, BARK[clamp(Math.round(1.6 - sx), 0, 7)], 1, { m: MAT.BARK, b: 2 })); }
-  const ms = [];
-  const nb = Math.max(3, Math.round(w / 58));
-  for (let k = 0; k < nb; k++) { const f = nb === 1 ? 0 : k / (nb - 1) * 2 - 1; ms.push({ x: cx + f * w * 0.36 + R.range(-6, 6), y: base - h * 0.22 + Math.abs(f) * h * 0.06 + R.range(-3, 3), rx: w / nb * 0.68 + R.range(-3, 5), ry: h * 0.26 + R.range(-3, 3), z: 40 + (1 - Math.abs(f)) * 6, droop: R.range(0.1, 0.3), seed: k, tone: -0.03 }); }
-  const nm = Math.max(2, nb - 1);
-  for (let k = 0; k < nm; k++) { const f = nm === 1 ? 0 : k / (nm - 1) * 2 - 1; ms.push({ x: cx + f * w * 0.28 + R.range(-6, 6), y: base - h * 0.5 + R.range(-4, 4), rx: w / nm * 0.6 + R.range(-3, 4), ry: h * 0.27, z: 30 + (1 - Math.abs(f)) * 5, droop: 0.15, seed: 10 + k, tone: 0.03 }); }
-  const nt = R() < 0.5 ? 1 : 2;
-  for (let k = 0; k < nt; k++) ms.push({ x: cx + (nt === 1 ? 0 : (k ? 1 : -1) * w * 0.16) + R.range(-8, 8), y: base - h * 0.74 + R.range(-3, 3), rx: w * (nt === 1 ? 0.3 : 0.22), ry: h * 0.26, z: 22, droop: 0.1, seed: 20 + k, tone: 0.07, top: true });
-  ms.sort((a, b) => a.z - b.z);
-  const group = { x: cx - w * 0.05, y: base - h * 0.42, rx: w * 0.56, ry: h * 0.62, k: 0.62 };
-  for (const m of ms) mass(s, m, { ramp: m.top && !o.dark ? mixRamp(rr, PAL.camphorNew) : rr, cell: 3.4, seed: seed * 3, tone: (o.tone || 0) - 0.04, under: 0.8, rim: 0.1, cellK: 0.45, group, base: 0.3, litK: 0.52 });
-  // the hanging fringe along the bottom edge
-  const nf = Math.round(w / 22);
-  for (let k = 0; k < nf; k++) { const x = cx + R.range(-w * 0.44, w * 0.44); const y = base + R.range(-2, 6); mass(s, { x, y, rx: R.range(6, 11), ry: R.range(5, 7), z: 46, droop: 0.6, seed: 40 + k, tone: -0.1 }, { ramp: rr, cell: 3, seed: seed * 3 + 1, under: 1.1, rim: 0.0, base: 0.3, litK: 0.4 }); }
+  for (let k = 0; k < 2; k++) { const x0 = cx + R.range(-w * 0.2, w * 0.2); PX.stroke(x0, base - 2, x0 + R.range(-w * 0.3, w * 0.3), base - h * 0.5, 4, 2, (x, y, t, sx) => s.pz(x, y, BARK[clamp(Math.round(1.6 - sx), 0, 7)], 1, { m: MAT.BARK, b: 2 })); }
+  crown(s, { x: cx, y: base - h * 0.5, w, h, ramp: rr, young: o.dark ? rr : young, seed, tone: o.tone || 0 });
   // dangling leaf clusters
-  for (let k = 0; k < w / 6; k++) { const x = Math.round(cx + R.range(-w * 0.45, w * 0.45)); let y = base; while (y < Hh - 2 && s.a(x, y)) y++; if (!s.a(x, y - 1)) continue; const L = R.int(1, 4); for (let j = 0; j < L; j++) s.pz(x + (j === L - 1 && R() < 0.5 ? (R() < 0.5 ? -1 : 1) : 0), y + j, rr[clamp(2 - (j >> 1), 0, 7)], 47, { m: MAT.LEAF, b: 46 }); }
-  // sky gaps near the rim
-  for (let k = 0; k < 7; k++) { const a = R.range(Math.PI * 1.05, Math.PI * 1.95), d = R.range(0.55, 0.85); const gx = cx + Math.cos(a) * w * 0.42 * d, gy = base - h * 0.45 + Math.sin(a) * h * 0.5 * d; const r = R.range(1.5, 3.2);
-    for (let y = Math.floor(gy - r); y <= gy + r; y++) for (let x = Math.floor(gx - r); x <= gx + r; x++) if (hyp(x - gx, (y - gy) * 1.3) < r) s.clear(x, y); }
-  POST.ao(s, 3, 0.18); POST.outline(s, { k: 0.58, hue: 0.03 }); POST.normals(s, 0.9);
+  for (let k = 0; k < w / 7; k++) { const x = Math.round(cx + R.range(-w * 0.45, w * 0.45)); let y = base; while (y < Hh - 2 && s.a(x, y)) y++; if (!s.a(x, y - 1)) continue; const L = R.int(1, 4); for (let j = 0; j < L; j++) s.pz(x + (j === L - 1 && R() < 0.5 ? (R() < 0.5 ? -1 : 1) : 0), y + j, rr[clamp(2 - (j >> 1), 0, 7)], 47, { m: MAT.LEAF, b: 46 }); }
+  POST.ao(s, 3, 0.26); POST.outline(s, { k: 0.58, hue: 0.03 }); POST.normals(s, 0.9);
   return { s, meta: { ax: cx, ay: Hh - 4, sway: 0.18, foliage: true, occluder: true, kind: 'camphorLobe' } };
 }
 function mixRamp(a, b) { return a.map((c, i) => i >= a.length - 3 ? b[Math.min(b.length - 1, i - (a.length - b.length))].map((v, k) => Math.round((v + c[k]) / 2)) : c); }
-function bayer2(x, y) { return [[0, 0.5], [0.75, 0.25]][y & 1][x & 1]; }
+function bayer2(x, y) { return 0.5 + ([[0, 0.5], [0.75, 0.25]][y & 1][x & 1] - 0.375) * 0.45; }
 
 /** crown layout around the trunk (metres): [name, dx, dz, y (lobe bottom height), w px, h px, seed] */
 export const LOBES = [
@@ -169,6 +211,11 @@ export const LOBES = [
 ];
 
 /** preview for tools/env/sheet.mjs */
+/** surface roots around the trunk: [dx, dz from the trunk centre (m), heading (rad), length px, w0, w1, h0] */
+export const ROOTS = [
+  [-2.5, 2.1, 2.3, 110, 26, 9, 8], [2.6, 2.2, 0.8, 120, 26, 9, 8],
+  [-0.9, 2.5, 1.85, 70, 16, 6, 5], [1.2, 2.5, 1.3, 76, 16, 6, 5], [-3.3, 1.5, 2.65, 64, 15, 6, 5], [3.4, 1.4, 0.45, 70, 15, 6, 5],
+];
 export function PREVIEW() {
-  return [['trunk', () => camphorTrunk(3)], ...LOBES.slice(0, 4).map(l => [l[0], () => camphorLobe(l[6], l[4], l[5])])];
+  return [['trunk', () => camphorTrunk(3)], ...ROOTS.slice(0, 3).map((r, i) => ['root' + i, () => camphorRoot(i + 1, r[3], r[4], r[5], r[2], 0.6, r[6])]), ...LOBES.slice(0, 2).map(l => [l[0], () => camphorLobe(l[6], l[4], l[5])])];
 }

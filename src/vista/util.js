@@ -88,6 +88,16 @@ export function keyed(keys, k, i) {
   return keys[keys.length - 1][i];
 }
 
+// ---------------------------------------------------------------- time-sliced builds
+
+// Builders are generators that yield every few milliseconds of work; run() drives one to the end
+// synchronously, the host can instead step it across frames (index.js: prepareAsync).
+export function run(gen) {
+  let r;
+  do { r = gen.next(); } while (!r.done);
+  return r.value;
+}
+
 // ---------------------------------------------------------------- canvases
 
 export function makeCanvas(w, h) {
@@ -175,7 +185,24 @@ export class IndexLayer {
     for (let i = 0; i < S.length; i++) { const v = S[i]; if (v) U[i] = lut[v]; }
     g.putImageData(id, 0, 0);
     this.maps.set(key, c);
-    if (this.maps.size > 6) this.maps.delete(this.maps.keys().next().value); // keep a few times of day
+    if (this.maps.size > 3) this.maps.delete(this.maps.keys().next().value); // keep a few times of day (the one shown, the one being prepared)
+    return c;
+  }
+  // the same, a band of rows per step (a generator: yields between bands), for swaps spread over frames
+  *canvasGen(key, palFn, band = 48) {
+    if (this.maps.has(key)) return this.maps.get(key);
+    const lut = new Uint32Array(65536);
+    for (const v of this.usedIndices()) lut[v] = palFn(v) >>> 0;
+    yield;
+    const c = makeCanvas(this.w, this.h), g = ctx2d(c), id = g.createImageData(this.w, this.h), U = new Uint32Array(id.data.buffer), S = this.idx, w = this.w;
+    for (let y0 = 0; y0 < this.h; y0 += band) {
+      const y1 = Math.min(this.h, y0 + band);
+      for (let i = y0 * w, e = y1 * w; i < e; i++) { const v = S[i]; if (v) U[i] = lut[v]; }
+      g.putImageData(id, 0, 0, 0, y0, w, y1 - y0);
+      if (y1 < this.h) yield;
+    }
+    this.maps.set(key, c);
+    if (this.maps.size > 3) this.maps.delete(this.maps.keys().next().value);
     return c;
   }
   // raw packed pixels for a palette (for per-pixel compositing such as the wave)

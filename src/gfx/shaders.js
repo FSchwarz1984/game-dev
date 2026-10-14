@@ -201,7 +201,7 @@ export const LIGHTING = `
 uniform highp sampler2DShadow uShM; uniform sampler2D uShC;
 uniform vec4 uLP[32]; uniform vec4 uLC[32]; uniform int uNL;
 uniform vec4 uChar[8];
-uniform vec4 uMist; uniform vec3 uFogCol; uniform float uMistZ;
+uniform vec4 uMist; uniform vec3 uFogCol; uniform float uMistZ; uniform sampler2D uZG; uniform vec4 uZGR;
 uniform float uCloud; uniform float uShafts; uniform float uNight; uniform float uShaftSteps;
 uniform vec3 uFarCol; uniform vec4 uBounds; uniform float uEdgeFar; uniform vec4 uCharK; uniform float uFlecks;
 vec3 worldAt(vec2 frag, float d){ vec2 ws=wsOf(frag); float D=uCam.y+DOFF-(d*2.-1.)*DR; return vec3(ws.x,(D+ws.y)*.5,(D-ws.y)*.5); }
@@ -240,15 +240,15 @@ vec3 shade(vec3 alb, vec3 N, vec3 P, float mat, float emi, float wet, float cls,
     if(uFlecks>0. && vis<.99 && leafy(P)>.5){ // sun-flecks leaking through the canopy: soft, slow
       vec2 q=(P.xy-uSunDir.xy/max(uSunDir.z,.3)*P.z)*.075; float sw=sin(uTime*.45+q.y*.4)*.18*(.3+uWind.z);
       float n=vn(q+vec2(sw,uTime*.02))*.62+vn(q*2.1+vec2(-uTime*.03,sw*1.3)+9.)*.38;
-      vis=max(vis, smoothstep(.6,.76,n)*.7*uFlecks);
+      vis=max(vis, smoothstep(.63,.7,n)*.7*uFlecks);
     }
   }
   vis*=clouds(P);
+  if(foliage) vis=mix(vis,1.,.3);   // leaves pass light on to the leaves below them
   visOut=vis;
   float wrap=foliage?.5:(isChar?.6:.3);
   float ndl=(dot(N,uShadeDir)+wrap)/(1.+wrap);
   float direct=clamp(ndl,0.,1.)*vis;
-  if(!isChar) direct=band(direct,f);
   vec3 amb=mix(uGndCol,uSkyCol,N.z*.5+.5);
   vec3 col=alb*(amb+uSunCol*direct);
   if(foliage){ float back=clamp(-dot(N,uSunDir)*.5+.45,0.,1.)*vis; col+=alb*uSunCol*back*.32*vec3(1.,1.06,.7); }
@@ -260,7 +260,6 @@ vec3 shade(vec3 alb, vec3 N, vec3 P, float mat, float emi, float wet, float cls,
   vec3 pl=vec3(0.);
   for(int i=0;i<32;i++){ if(i>=uNL) break; vec3 dl=uLP[i].xyz-P; float dist=length(dl); float a=clamp(1.-dist/uLP[i].w,0.,1.); a*=a;
     float nl=max(dot(N,dl/max(dist,1e-3)),0.)*.55+.45; float v=a*nl;
-    if(!isChar) v=floor(v*6.+bayer4(f+uDith)*.9)/6.;
     pl+=uLC[i].rgb*v; }
   col+=alb*pl;
   col+=alb*emi*3.;
@@ -272,24 +271,30 @@ vec3 shade(vec3 alb, vec3 N, vec3 P, float mat, float emi, float wet, float cls,
   return col;
 }
 vec3 farLook(vec3 col, float F){
+  // the Far: paler, lifted, drained toward a cool blue-grey, contrast compressed (not erased:
+  // the thing keeps its shapes, it only stands one step back)
   if(F<=0.) return col;
   float l=lum(col);
-  vec3 pale=mix(uFarCol*.66, uFarCol*1.1, smoothstep(0.,.75,l));
-  pale=mix(pale, uFarCol*(.72+l*.5), .35);
-  return mix(col, pale, clamp(F,0.,1.)*.88);
+  vec3 pale=mix(uFarCol*.56, uFarCol*1.06, smoothstep(0.,.8,l));
+  pale=mix(pale, mix(vec3(l),col,.25)*.45+uFarCol*.55, .3);
+  return mix(col, pale, clamp(F,0.,1.)*.86);
 }
-vec3 atmos(vec3 col, vec3 P, vec2 f, bool isChar){
-  // mist: a thin veil everywhere, thick in the hollows; light shafts through it
-  float hollow=clamp((uMistZ-P.z)/260.,0.,1.);
+vec3 atmos(vec3 col, vec3 P, vec2 f, bool isChar, float vis){
+  // mist: a thin veil everywhere, thick in the hollows (and far below the rims); lit where the sun reaches it
+  // how deep the land lies here (a blurred height grid): a treetop standing on a slope far below the
+  // rim is hazed by the depth of the slope, not by the height of its own leaves
+  float gz=texture(uZG,(P.xy-uZGR.xy)*uZGR.zw).r;
+  float hollow=clamp((uMistZ-min(P.z,gz+50.))/240.,0.,1.);
   float wisp=.62+.38*fbm(P.xy*.005+vec2(uTime*.011,uTime*.004));
-  float mist=uMist.a*(.18+hollow*.82)*wisp;
-  if(uShafts>0.){ float acc=0.; float j=bayer4(f+uDith); int n=int(uShaftSteps);
+  float mist=uMist.a*(.14+hollow*.86)*wisp + hollow*hollow*.22;
+  vec3 mistC=uMist.rgb*(.55+.45*vis);
+  if(uShafts>0.){ float acc=0.; float j=.5; int n=int(uShaftSteps);
     for(int k=0;k<12;k++){ if(k>=n) break; float t=(float(k)+j)*7.; vec3 S=P+vec3(0.,.70710678,.70710678)*t; vec4 lp=uLVP*vec4(S,1.); vec3 sc=lp.xyz*.5+.5;
       float sv=(sc.x<0.||sc.x>1.||sc.y<0.||sc.y>1.)?1.:texture(uShM,vec3(sc.xy,sc.z-.002)); acc+=sv; }
     acc/=max(1.,float(n));
-    float sh=isChar? acc : floor(acc*5.+bayer4(f+uDith)*.7)/5.;
-    col+=uSunCol*vec3(1.,.9,.72)*sh*uShafts*(uMist.a*.5+.08)*(isChar?.5:1.); }
-  col=mix(col, uMist.rgb, clamp(mist,0.,.85));
+    float sh=acc;
+    col+=uSunCol*vec3(1.,.88,.7)*sh*uShafts*(uMist.a*.35+.05)*(isChar?.5:1.); }
+  col=mix(col, mistC, clamp(mist,0.,.85));
   return col;
 }
 float edgeFar(vec3 P){
@@ -328,7 +333,7 @@ void main(){
     float dn=0.; for(int k=0;k<4;k++){ ivec2 o=ivec2(k==0?1:k==1?-1:0, k==2?1:k==3?-1:0); dn=max(dn,texelFetch(uDep,ip+o,0).r-d); }
     if(dn>.006 && mod(floor(cls/4.),2.)!=1.) col*=vec3(.74,.73,.8);
   }
-  col=atmos(col,P,f,isChar);
+  col=atmos(col,P,f,isChar,vis);
   float F=max(g2.r, edgeFar(P));
   col=farLook(col,F);
   oC=vec4(col,1.);
@@ -348,7 +353,7 @@ void main(){
   vec2 f=gl_FragCoord.xy; vec3 P=worldAt(f,dz);
   float cls=(fl&8)!=0?1.:0.; float vis;
   vec3 col=shade(a.rgb*vT.rgb,N,P,mat,emi,0.,cls,vB.z,f,vis);
-  col=atmos(col,P,f,false); col=farLook(col,max(vB.w,edgeFar(P)));
+  col=atmos(col,P,f,false,vis); col=farLook(col,max(vB.w,edgeFar(P)));
   // fade: strongest around the hidden character, softer further out; dithered so it stays pixel art
   float r=length(f-uFocusS); float k=vT.a*mix(.78,.42,smoothstep(26.,70.,r));
   if(bayer4(f+uDith)<k) discard;

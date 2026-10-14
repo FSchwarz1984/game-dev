@@ -16,17 +16,26 @@
 //   (Eastward-style); dynamic light adds on top.
 // - Anchors (per frame, px relative to the pivot, x right / y down; mirrored with the sprite):
 //     hand     where a held object sits (dango, lantern, the thing taken or given)
-//     loadTop  Tsuzumi with the back-frame: where Saji sits. Draw Saji AFTER Tsuzumi at
-//              tsuzumiPivot + loadTop - sajiSeat.
-//     hook     Tsuzumi with the back-frame: the peg a lantern hangs from
+//     loadTop  Tsuzumi with the back-frame ('load' and 'frame' sheets): the top rail, where Saji
+//              sits. Place Saji's pivot at tsuzumiPivot + loadTop - sajiSeat. Draw order depends
+//              on the view (riderOrder): front and side 'behind' (draw Saji first, so the hat
+//              brim covers her skirt), back 'over' (draw Saji after Tsuzumi).
+//     hook     Tsuzumi with the back-frame: the peg on her right post a lantern hangs from
 //     seat     sitting poses (Saji's sit*, Tsuzumi's sitBranch / sit / sitUp): the point she sits on
+//     beam     Saji's pinned: where the beam lies across her back
 //     log      Shione's carry*: centre of the log's bearing point on her shoulder
-// - Sheets: Tsuzumi 'load' (with the back-frame and its load) and 'plain' (without);
-//   Saji and Shione 'main'. anims[name].sheets lists where an animation exists.
+// - Sheets: Tsuzumi 'load' (the back-frame with the wicker box), 'frame' (the old empty frame of
+//   day 1, same animations; 'shoulder' puts it on) and 'plain' (without; strain / asleep / sitUp /
+//   sit exist only here). Saji and Shione 'main'. anims[name].sheets lists where an animation exists.
+// - Heights: Tsuzumi 38-40 px with the hat (the brim is 33 px wide); Saji 27 px standing. Saji on
+//   the frame's top rail: 52 px from Tsuzumi's soles to the tip of Saji's ahoge (53 on the walk's
+//   up-beat).
 
 import { CHARACTER_DATA } from './characters.data.js';
 import tsuzumiLoad from '../../assets/sprites/tsuzumi_load.png';
 import tsuzumiLoadN from '../../assets/sprites/tsuzumi_load_n.png';
+import tsuzumiFrame from '../../assets/sprites/tsuzumi_frame.png';
+import tsuzumiFrameN from '../../assets/sprites/tsuzumi_frame_n.png';
 import tsuzumiPlain from '../../assets/sprites/tsuzumi_plain.png';
 import tsuzumiPlainN from '../../assets/sprites/tsuzumi_plain_n.png';
 import sajiMain from '../../assets/sprites/saji_main.png';
@@ -36,6 +45,7 @@ import shioneMainN from '../../assets/sprites/shione_main_n.png';
 
 const URLS = {
   tsuzumi_load: [tsuzumiLoad, tsuzumiLoadN],
+  tsuzumi_frame: [tsuzumiFrame, tsuzumiFrameN],
   tsuzumi_plain: [tsuzumiPlain, tsuzumiPlainN],
   saji_main: [sajiMain, sajiMainN],
   shione_main: [shioneMain, shioneMainN],
@@ -49,7 +59,8 @@ function manifest(name) {
     const [albedo, normal] = URLS[s.file] || [];
     sheets[key] = { ...s, albedo, normal };
   }
-  return { name, frameW: d.frame[0], frameH: d.frame[1], pivot: { x: d.pivot[0], y: d.pivot[1] }, sheets, anims: d.anims };
+  return { name, frameW: d.frame[0], frameH: d.frame[1], pivot: { x: d.pivot[0], y: d.pivot[1] }, sheets, anims: d.anims,
+    rider: d.rider || null };
 }
 
 export const TSUZUMI = manifest('tsuzumi');
@@ -64,15 +75,19 @@ const FALLBACK = { front: ['front', 'side', 'back'], back: ['back', 'side', 'fro
  * The cell to draw for an animation at `time` seconds after it started.
  * dir: 'down' | 'up' | 'left' | 'right' (or a view name). Falls back to an existing view when the
  * animation lacks the requested one (e.g. 'climb' only exists from the back).
- * Returns { albedo, normal, sx, sy, sw, sh, mirror, index, count, done, anchors } or null.
+ * opts.rider: Saji is riding on the frame. Seen from the front, Tsuzumi's '<anim>Ride' cells are
+ * used where they exist (the same pose without the post tips, which would cross Saji's hair).
+ * Returns { albedo, normal, sx, sy, sw, sh, mirror, index, count, done, view, anchors } or null.
  */
-export function frameAt(char, sheetName, anim, dir, time = 0) {
+export function frameAt(char, sheetName, anim, dir, time = 0, opts = {}) {
   const sheet = char.sheets[sheetName];
-  const meta = char.anims[anim];
+  let meta = char.anims[anim];
   if (!sheet || !meta || !sheet.anims[anim]) return null;
   const want = VIEW_OF[dir] || 'front';
   const view = FALLBACK[want].find(v => sheet.anims[anim][v]);
-  const entry = sheet.anims[anim][view];
+  let entry = sheet.anims[anim][view];
+  const ride = opts.rider && view === 'front' && sheet.anims[anim + 'Ride']?.front;
+  if (ride) { entry = ride; meta = char.anims[anim + 'Ride'] || meta; }
   const n = entry.frames;
   let i = Math.floor(Math.max(0, time) * meta.fps);
   const done = !meta.loop && i >= n;
@@ -95,4 +110,12 @@ export function duration(char, anim, sheetName, dir = 'down') {
   if (!meta || !sheet?.anims[anim]) return 0;
   const view = FALLBACK[VIEW_OF[dir] || 'front'].find(v => sheet.anims[anim][v]);
   return sheet.anims[anim][view].frames / meta.fps;
+}
+
+/**
+ * Draw order of a rider (Saji) relative to the character carrying her, for a carrier frame:
+ * 'behind' = draw the rider first, 'over' = draw the rider after the carrier.
+ */
+export function riderOrder(carrier, frame) {
+  return (carrier.rider && frame && carrier.rider[frame.view]) || 'over';
 }

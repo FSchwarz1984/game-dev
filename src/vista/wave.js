@@ -3,7 +3,7 @@
 // it; pixels are switched to their "far" colour (pale, flat, blue-grey) incrementally as the
 // ring passes, with a bright pale front, and a curtain of motes rises from the front.
 
-import { clamp, lerp, smooth, rng, hash2, vnoise, makeCanvas, ctx2d, mix3, pack } from './util.js';
+import { clamp, lerp, smooth, rng, vnoise, makeCanvas, ctx2d, mix3, pack } from './util.js';
 
 // radius (fraction of R) for wave progress w: creeping over the far plain, then rushing in
 const RK = [[0, 0], [0.12, 0.07], [0.3, 0.27], [0.5, 0.56], [0.62, 0.74], [0.8, 0.9], [0.95, 0.985], [1, 1.04]];
@@ -29,7 +29,7 @@ export class Wave {
     for (let i = 0; i < N; i++) {
       if (!mask[i]) continue;
       const d = Math.hypot(X[i] - o.Xc, Z[i] - o.Zc) / o.R;
-      const jit = (vnoise(X[i] * 1.3, Z[i] * 1.3, 909) - 0.5) * 0.03;   // a ragged, not a compass-drawn, front
+      const jit = (vnoise(X[i] * 1.3, Z[i] * 1.3, 909) - 0.5) * 0.03 * smooth(20, 7, Z[i]);   // a ragged, not a compass-drawn, front (near only: no speckle far away)
       const a = clamp(Math.round((waveAt(d) + jit) * 250), 0, 254);
       arr[i] = a; cnt[a]++;
     }
@@ -47,16 +47,17 @@ export class Wave {
     this.motes = [];
     this.R = rng(977);
     this.band = 2; // buckets in the bright front
-    this.curtain = curtainSprite();
   }
   arrivalOf(X, Z) { return waveAt(Math.hypot(X - this.o.Xc, Z - this.o.Zc) / this.o.R); }
   // (re)base on the current palettes: normal, far and front colours as packed pixel arrays
   base(key, normal, far) {
     this.key = key; this.normal = normal; this.far = far;
     this.front = new Uint32Array(far.length);
+    const nf = this.o.noFront;
     for (let i = 0; i < far.length; i++) {
       const v = far[i];
       if (!v) continue;
+      if (nf && nf[i]) { this.front[i] = v; continue; }     // houses do not light up as the front passes
       const r = v & 255, g = (v >> 8) & 255, b = (v >> 16) & 255;
       this.front[i] = pack(mix3([r, g, b], [214, 224, 246], 0.42));
     }
@@ -64,15 +65,21 @@ export class Wave {
     this.B = -1;
     this.dirty = [0, this.o.h - 1];
   }
-  // advance to wave progress w (0..1); returns the composite canvas
+  // advance to wave progress w (0..1); returns the composite canvas. Only the pixels that change are
+  // touched, and only small rectangles around them are uploaded (blocks of 8 rows, their x extent).
   update(w) {
     const B = clamp(Math.floor(w * 250), -1, 254), nb = this.band;
     const { U, normal, far, front, start, cnt, list } = this;
-    let y0 = 1e9, y1 = -1;
-    const W = this.o.w;
+    const W = this.o.w, H = this.o.h, NB = Math.ceil(H / 8);
+    const bx0 = this.bx0 || (this.bx0 = new Int32Array(NB)), bx1 = this.bx1 || (this.bx1 = new Int32Array(NB));
+    bx0.fill(W); bx1.fill(-1);
     const setRange = (a, b, src) => { // buckets a..b inclusive
       for (let k = Math.max(0, a); k <= Math.min(254, b); k++) {
-        for (let j = start[k], e = start[k] + cnt[k]; j < e; j++) { const i = list[j]; U[i] = src[i]; const y = (i / W) | 0; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+        for (let j = start[k], e = start[k] + cnt[k]; j < e; j++) {
+          const i = list[j]; U[i] = src[i];
+          const y = (i / W) | 0, x = i - y * W, q = y >> 3;
+          if (x < bx0[q]) bx0[q] = x; if (x > bx1[q]) bx1[q] = x;
+        }
       }
     };
     if (B < this.B) { // scrubbed back: restore everything after B
@@ -81,74 +88,63 @@ export class Wave {
     } else if (B > this.B) {
       setRange(Math.max(0, this.B - nb + 1), B - nb, far);      // left the bright front
       setRange(Math.max(this.B + 1, B - nb + 1), B, front);      // newly reached
-      if (this.B < B - nb) setRange(this.B + 1, B - nb, far);
     }
     this.B = B;
-    if (this.dirty) { y0 = Math.min(y0, this.dirty[0]); y1 = Math.max(y1, this.dirty[1]); this.dirty = null; }
-    if (y1 >= y0) this.g.putImageData(this.img, 0, 0, 0, y0, W, y1 - y0 + 1);
+    if (this.dirty) { this.dirty = null; this.g.putImageData(this.img, 0, 0); return this.canvas; }
+    for (let q = 0; q < NB; q++) {
+      if (bx1[q] < bx0[q]) continue;
+      const y0 = q * 8, hh = Math.min(8, H - y0);
+      this.g.putImageData(this.img, 0, 0, bx0[q], y0, bx1[q] - bx0[q] + 1, hh);
+    }
     return this.canvas;
   }
-  // the curtain of pale motes rising from the front; occluded by anything nearer than the front
-  drawFront(g, ox, oy, w, t, dt, alpha = 1) {
+  // the curtain of pale motes rising from the front, summed into an AddBuffer (same coordinates as
+  // this layer); occluded by anything nearer than the front
+  drawFront(AB, w, t, dt, alpha = 1) {
     const B = this.B, nb = this.band, { arr, start, cnt, list } = this, { w: W, Z, f } = this.o;
     if (B < 0) { this.motes.length = 0; return; }
     const R = this.R;
-    // strips from the topmost front pixel of each run in a column
-    const strips = [];
+    let ns = 0;
+    if (!this.strips) this.strips = new Uint32Array(4096);
     for (let k = Math.max(0, B - nb + 1); k <= B; k++) {
       for (let j = start[k], e = start[k] + cnt[k]; j < e; j++) {
         const i = list[j];
         const up = i - W;
         if (up >= 0 && arr[up] <= B && arr[up] > B - nb) continue; // not the top of its run
-        strips.push(i);
+        if (ns === this.strips.length) { const n2 = new Uint32Array(ns * 2); n2.set(this.strips); this.strips = n2; }
+        this.strips[ns++] = i;
       }
     }
-    const spr = this.curtain;
-    g.globalCompositeOperation = 'lighter';
-    for (const i of strips) {
+    const strips = this.strips, col = CURTAIN;
+    for (let si = 0; si < ns; si++) {
+      const i = strips[si];
       const x = i % W, y = (i / W) | 0, z = Z[i];
       const hx = vnoise(x * 0.11, t * 0.4, 17);                 // a curtain, not a comb: heights vary smoothly
-      let hc = clamp((f * 0.2 / z) * (0.55 + 0.7 * hx), 2, 60);
-      // stop at anything nearer than the front
+      const hc = clamp((f * 0.2 / z) * (0.55 + 0.7 * hx), 2, 60);
       let top = y, lim = y - hc;
       while (top > lim && top > 0) { const zi = Z[(top - 1) * W + x]; if (zi && zi < z * 0.78) break; top--; }
       const hh = y - top;
       if (hh < 1) continue;
       const shimmer = 0.7 + 0.3 * Math.sin(t * 2.3 + x * 0.17);
-      g.globalAlpha = clamp(alpha * shimmer * (0.22 + 0.26 * smooth(20, 2, z)), 0, 1);
-      g.drawImage(spr, 0, 0, 1, 64, x + ox, top + oy, 1, hh + 1);
+      AB.strip(x, y, hh, col, clamp(alpha * shimmer * (0.08 + 0.4 * smooth(22, 4, z)), 0, 1));
     }
-    // motes: spawn on the front, rise, fade
-    const want = Math.min(24, Math.round(strips.length * 0.025) + 1);
-    for (let n = 0; n < want && strips.length; n++) {
-      const i = strips[Math.floor(R() * strips.length)], x = i % W, y = (i / W) | 0, z = Z[i];
+    const want = Math.min(24, Math.round(ns * 0.025) + 1);
+    for (let n = 0; n < want && ns; n++) {
+      const i = strips[Math.floor(R() * ns)], x = i % W, y = (i / W) | 0, z = Z[i];
       const sc = clamp(f * 0.012 / z, 0.25, 4);
-      this.motes.push({ x, y, vy: -(6 + 14 * R()) * sc, vx: (R() - 0.5) * 2 * sc, life: 0.8 + R() * 1.4, age: 0, big: sc > 1.6 && R() < 0.5 });
+      this.motes.push({ x, y, vy: -(6 + 14 * R()) * sc, vx: (R() - 0.5) * 2 * sc, life: 0.8 + R() * 1.4, age: 0, big: sc > 1.6 && R() < 0.5, far: z > 14 });
     }
-    const keep = [];
+    const keep = [], mc = MOTE;
     for (const m of this.motes) {
       m.age += dt; if (m.age >= m.life) continue;
       m.x += m.vx * dt; m.y += m.vy * dt;
-      const a = alpha * (1 - m.age / m.life) * smooth(0, 0.15, m.age) * 0.75;
-      g.globalAlpha = clamp(a, 0, 1);
-      g.fillStyle = '#e6ecff';
-      g.fillRect(Math.round(m.x + ox), Math.round(m.y + oy), m.big ? 2 : 1, m.big ? 2 : 1);
+      const a = alpha * (1 - m.age / m.life) * smooth(0, 0.15, m.age) * (m.far ? 0.4 : 0.75);
+      AB.px(m.x, m.y, mc, a, m.big ? 2 : 1, m.big ? 2 : 1);
       keep.push(m);
     }
     this.motes = keep.length > 700 ? keep.slice(-700) : keep;
-    g.globalAlpha = 1;
-    g.globalCompositeOperation = 'source-over';
   }
 }
 
-function curtainSprite() {
-  const c = makeCanvas(1, 64), g = ctx2d(c), id = g.createImageData(1, 64);
-  for (let y = 0; y < 64; y++) {
-    const u = y / 63; // 0 top .. 1 bottom
-    const a = Math.pow(u, 2.2) * 0.9;
-    const k = Math.round(a * 6) / 6; // stepped, like the glows
-    id.data[y * 4] = Math.round(176 * k); id.data[y * 4 + 1] = Math.round(190 * k); id.data[y * 4 + 2] = Math.round(226 * k); id.data[y * 4 + 3] = 255;
-  }
-  g.putImageData(id, 0, 0);
-  return c;
-}
+const CURTAIN = [176, 190, 226], MOTE = [230, 236, 255];
+

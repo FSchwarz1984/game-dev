@@ -4,7 +4,7 @@
 // shadow on the ones behind; edges facing the light get a rim. Limbs are bark cylinders with
 // fissures and moss. Painted once into an IndexLayer; palettes give the time of day.
 
-import { clamp, lerp, smooth, rng, hash2, fbm, vnoise, IndexLayer, I, iMat } from './util.js';
+import { clamp, lerp, smooth, rng, hash2, vnoise, IndexLayer, I, iMat } from './util.js';
 
 export const F = { deep: 1, leaf: 2, young: 3, rim: 4, glint: 5, bark: 6, moss: 7, twig: 8, dark: 9 };
 export const FOLIAGE_MATS = [];
@@ -13,7 +13,7 @@ FOLIAGE_MATS[F.leaf] = { albedo: [0.25, 0.33, 0.15], ambK: 1, sunK: 1 };
 FOLIAGE_MATS[F.young] = { albedo: [0.34, 0.39, 0.17], ambK: 1, sunK: 1 };
 FOLIAGE_MATS[F.rim] = { albedo: [0.3, 0.38, 0.2], rim: true, rimK: 0.5, warmRim: 0.7 };
 FOLIAGE_MATS[F.glint] = { albedo: [0.33, 0.41, 0.21], ambK: 1.0, sunK: 1.3, gloss: 0.25 };
-FOLIAGE_MATS[F.bark] = { albedo: [0.29, 0.28, 0.27], ambK: 1, sunK: 0.9 };
+FOLIAGE_MATS[F.bark] = { albedo: [0.23, 0.22, 0.21], ambK: 1, sunK: 0.95 };
 FOLIAGE_MATS[F.moss] = { albedo: [0.3, 0.35, 0.17], ambK: 1, sunK: 0.95 };
 FOLIAGE_MATS[F.twig] = { albedo: [0.28, 0.25, 0.21], ambK: 1, sunK: 0.8 };
 FOLIAGE_MATS[F.dark] = { albedo: [0.06, 0.08, 0.06], ambK: 0.5, sunK: 0.2 };
@@ -94,7 +94,7 @@ export function paintCanopy(w, h, spec, seed) {
       else if (m === F.bark || m === F.moss) L.idx[i] = I(m, Math.max(0, ((v >> 5) & 7) - 3), (v >> 3) & 3, 0);
     }
   }
-  rimPass(L, own, Lt);
+  if (spec.rimBelow) rimBelow(L, spec.rimBelow); else rimPass(L, own, Lt);
   L.despeckle(v => { const m = iMat(v); return m === F.leaf || m === F.deep || m === F.young; });
   L.own = own; L.depth = Zb;
   return L;
@@ -144,8 +144,9 @@ function clump(L, Zb, own, n, c, Lt, R, cells) {
     v -= smooth(0.2, 0.9, ny) * 0.12;              // the underside of the clump
     let band = v < 0.34 ? 0 : v < 0.52 ? 1 : v < 0.7 ? 2 : 3;
     band = band - ao < 0 ? 0 : band - ao;
+    if (c.dark && band > 1) band = 1;
     if (band > 0 && band < 3 && cv < 0.16) band--;                 // a few leaves turned away: irregular dark notches
-    else if (band === 2 && cv > 0.9 && nz > 0.4) band = 3;         // and a few catching the light
+    else if (band === 2 && !ao && cv > 0.95 && nz > 0.5) band = 3; // and a few catching the light
     let mat = band === 0 ? F.deep : leafMat, sun = BAND_SUN[band];
     if (glintOk && band === 3 && cv > 0.95 && nz > 0.6) { mat = F.glint; sun = HI_SUN; }
     let sky = Math.round((0.5 - ny * 0.5) * 3 + 0.3); sky = sky < 0 ? 0 : sky > 3 ? 3 : sky;
@@ -193,12 +194,30 @@ function limb(L, Zb, own, n, b, Lt, R) {
       if (c < -0.6) band = Math.min(band, 1);
       let mat = F.bark;
       if (c > 0.3 && vnoise(a * 0.2, c * 1.6 + seed, seed + 9) > 0.55 && (b.moss ?? 1)) mat = F.moss;
+      if (b.dark) { mat = F.dark; band = c < -0.75 ? 2 : 0; }
       const sky = clamp(Math.round((c * 0.5 + 0.5) * 3), 0, 3);
       Zb[i] = z; own[i] = n;
       L.idx[i] = I(mat, [1, 3, 5, 7][band], sky, 0);
     }
     along += len;
   }
+}
+
+// seen from below: the lower edges against the sky catch it (brighter near a light behind, e.g. the moon)
+function rimBelow(L, o) {
+  const { w, h, idx } = L, src = idx.slice();
+  for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+    const i = y * w + x, v = src[i];
+    if (!v) continue;
+    const below = !src[i + w], side = !src[i - 1] || !src[i + 1];
+    if (!below && !(side && !src[i + w - 1] && !src[i + w + 1])) continue;
+    const near = o.x != null ? clamp(1 - Math.hypot(x - o.x, y - o.y) / o.r, 0, 1) : 0;
+    const m = iMat(v);
+    const s = Math.round(2 + near * 5);
+    if (m === F.bark || m === F.moss) idx[i] = I(m, clamp(((v >> 5) & 7) + 2, 0, 7), 3, 0);
+    else idx[i] = I(F.rim, s, 3, 0);
+  }
+  L.used = null;
 }
 
 // edges: a leaf pixel with open sky above it (and toward the light) catches a rim of light
@@ -210,9 +229,44 @@ function rimPass(L, own, Lt) {
     if (!v) continue;
     const m = iMat(v);
     if (m === F.bark || m === F.moss || m === F.deep) continue;
-    const up = src[i - w], side = src[i + sx], diag = src[i - w + sx];
-    if (!up && (!diag || !side)) idx[i] = I(F.rim, !side ? 6 : 4, 3, 0);
-    else if (!side && !diag && ((v >> 5) & 7) >= 4) idx[i] = I(F.rim, 3, 3, 0);
+    const up = src[i - w], side = src[i + sx], diag = src[i - w + sx], lit = ((v >> 5) & 7) >= 4;
+    if (!up && (!diag || !side) && lit) idx[i] = I(F.rim, !side ? 6 : 4, 3, 0);
+    else if (!up && !lit && ((v >> 5) & 7) >= 2) idx[i] = I(F.rim, 1, 3, 0);
+    else if (!side && !diag && lit) idx[i] = I(F.rim, 3, 3, 0);
   }
   L.used = null;
+}
+
+// Foreground grass and ferns in silhouette, rimmed on one side by the moon. Blades are drawn as
+// curved 1-px strokes thickening to 2 px at the base; a few carry an early susuki plume.
+export function paintGrass(w, h, seed, { n = 110, rimSide = 1, plumes = 0.12, hMin = 0.25, hMax = 0.9 } = {}) {
+  const L = new IndexLayer(w, h), R = rng(seed);
+  const put = (x, y, v) => { x = Math.round(x); y = Math.round(y); if (x >= 0 && y >= 0 && x < w && y < h) L.idx[y * w + x] = v; };
+  // a dark ground mass with a ragged top
+  for (let x = 0; x < w; x++) {
+    const top = Math.round(h - 3 - 3 * vnoise(x * 0.08, 1, seed) - 2 * vnoise(x * 0.3, 2, seed));
+    for (let y = top; y < h; y++) put(x, y, I(F.dark, 1, 1, 0));
+  }
+  // tufts: several blades fanning out of one root, 2 px thick for most of their length
+  const tufts = Math.max(4, Math.round(n / 6));
+  for (let k = 0; k < tufts; k++) {
+    const rx = R() * w, size = hMin + R() * (hMax - hMin), nb = 4 + Math.floor(R() * 6);
+    for (let b = 0; b < nb; b++) {
+      const bh = h * size * (0.55 + R() * 0.45), lean = (b / (nb - 1 || 1) - 0.5) * 1.3 + (R() - 0.5) * 0.4, curl = lean * (0.3 + R() * 0.5);
+      const bx = rx + (R() - 0.5) * 4;
+      const steps = Math.ceil(bh * 1.1);
+      let x = bx, y = h - 1;
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        x = bx + lean * bh * 0.45 * t * t + curl * bh * 0.4 * t * t * t;
+        y = h - 1 - bh * (t - 0.22 * t * t * Math.abs(lean));
+        const lit = (rimSide > 0 ? lean + curl * t > 0.12 : lean + curl * t < -0.12) && t > 0.25;
+        const v = lit && R() < 0.75 ? I(F.rim, 3 + Math.round(t * 3), 3, 0) : I(F.dark, 1, 2, 0);
+        put(x, y, v);
+        if (t < 0.7) put(x - rimSide, y, I(F.dark, 0, 1, 0));   // the blade's body, 2 px
+      }
+      if (R() < plumes) for (let j = 0; j < 7; j++) put(x + j * 0.7 * Math.sign(lean || 1), y + j * 0.6, I(F.rim, 4 + (j > 4 ? 2 : 0), 3, 0));
+    }
+  }
+  return L;
 }

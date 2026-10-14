@@ -6,7 +6,7 @@
 // The same renderer draws the sky shore: a ceiling hanging upside down, marched the same way but
 // mirrored (surfaces project upward from the horizon, near ones to the top of the frame).
 
-import { clamp } from './util.js';
+import { clamp, run } from './util.js';
 
 /**
  * @param {object} o
@@ -19,20 +19,23 @@ import { clamp } from './util.js';
  *   ceiling     true: the surface hangs from above (height = height above camera of the underside)
  * @returns {{ X: Float32Array, Z: Float32Array, mask: Uint8Array }}
  */
-export function march(o) {
+export function march(o) { return run(marchGen(o)); }
+
+export function* marchGen(o) {
   const { w, h, cx, yh, f, camY = 1, z0, z1, height, ceiling = false } = o;
   const k = o.k || 0.012, kFar = o.kFar || k, zFar = o.zFar ?? Infinity;
   const PX = new Float32Array(w * h), PZ = new Float32Array(w * h), M = new Uint8Array(w * h);
   for (let x = 0; x < w; x++) {
+    if ((x & 31) === 31) yield;
     const dir = (x + 0.5 - cx) / f;
     let lim = ceiling ? 0 : h;          // first unwritten row (ground: rows above lim are free; ceiling: rows below)
-    let pZ = z0, pX = dir * z0, py = ceiling ? -1e9 : 1e9;
+    let pZ = z0, py = ceiling ? -1e9 : 1e9;
     let Z = z0;
     const gaps = o.gapsFor ? o.gapsFor(dir) : o.gaps;
     while (Z < z1) {
       if (gaps) { // flat stretches of plain: jump them (rows are filled analytically by the caller's fill)
         let jumped = false;
-        for (const [za, zb] of gaps) if (Z > za && Z < zb) {
+        for (let gi = 0; gi < gaps.length; gi++) { const za = gaps[gi][0], zb = gaps[gi][1]; if (!(Z > za && Z < zb)) continue;
           const yA = yh + f * camY / Z, yB = yh + f * camY / zb; // plain rows from here to the gap's far end
           const top = Math.max(0, Math.ceil(yB - 0.5));
           for (let y = Math.min(lim - 1, Math.floor(yA)); y >= top; y--) {
@@ -40,7 +43,7 @@ export function march(o) {
             if (zz < za || zz > zb) continue;
             const i = y * w + x; PX[i] = dir * zz; PZ[i] = zz; M[i] = 1;
           }
-          lim = Math.min(lim, top); Z = zb; pZ = zb; pX = dir * zb; py = yB; jumped = true; break;
+          lim = Math.min(lim, top); Z = zb; pZ = zb; py = yB; jumped = true; break;
         }
         if (jumped) continue;
       }
@@ -69,7 +72,7 @@ export function march(o) {
           if (lim >= h) break;
         }
       }
-      pZ = Z; pX = X; py = y;
+      pZ = Z; py = y;
       Z += Math.max(0.0015, (Z > zFar ? kFar : k) * Z);
     }
   }

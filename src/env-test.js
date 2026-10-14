@@ -6,7 +6,8 @@
      ?shot=<name>    camera framing from map.shots (path, dosojin, graves, saddle, camphorFull, hut, shrine, eastRoad, lookout, tower, waterfall)
      ?x=&z=          start position (metres)        ?q=high|mid|low   quality
      ?day1=1         the morning after the Far (hut far, scars, half-faded camphor)
-     ?lanterns=1     bon lanterns hung and lit at the graves
+     ?lanterns=1     bon lanterns hung and lit at the graves (evening/night also light the hut and
+                     give her a carried lantern; ?carry=1 forces the carried lantern)
      ?frames=N       set window.DONE after N frames  ?pause=1  freeze time
    Keys: WASD/arrows walk, T cycles the time, F toggles day-1, L lanterns.
    window.ENV exposes {R, map, actor, setTime, shot, walkTo} for scripted shots.
@@ -45,6 +46,10 @@ function boot() {
   R.debug = +(qs.get('debug') || 0); R.noTerrainShadow = qs.get('nots') === '1';
   if (qs.get('day1') === '1' && map.applyDay1) map.applyDay1(R);
   if (qs.get('lanterns') === '1' && map.hangLanterns) map.hangLanterns(R, true);
+  // evening and night: the hut is lit, and she carries her lantern on the back-frame (a light that moves with her)
+  const dark = hour >= 18.6 || hour < 5.5;
+  if (dark && map.lightHome) map.lightHome(R, true);
+  ENV.carry = dark || qs.get('carry') === '1' ? R.addLight({ x: pos.x, z: pos.z, y: map.heightAt(pos.x, pos.z) + 1.7, color: [1, 0.72, 0.42], radius: 3.4, intensity: 0.9, flicker: 0.35 }) : null;
   ENV.place(pos.x, pos.z);
   if (qs.get('shot')) ENV.shot(qs.get('shot'));
   const keys = new Set();
@@ -72,6 +77,7 @@ function boot() {
     const d = st.dir === 'w' ? 'e' : st.dir; const A = S.anims[(moving ? 'walk_' : 'idle_') + d];
     actor.frame = A[Math.floor(st.anim) % A.length]; actor.flip = st.dir === 'w';
     R.setFocus(actor.x, actor.z, actor.y);
+    if (ENV.carry) ENV.carry.set({ x: actor.x + (actor.flip ? 0.25 : -0.25), z: actor.z - 0.15, y: actor.y + 1.7 });
     if (st.follow) R.setCamera({ x: actor.x, z: actor.z, y: actor.y, lift: 0.9 }, 5);
     R.render(pause ? 0 : dt);
     frames++; window.FR = frames;
