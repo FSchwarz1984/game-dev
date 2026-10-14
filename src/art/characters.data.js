@@ -10,8 +10,8 @@ export const CHARACTER_DATA = {
    "idle": {"fps": 4, "loop": true, "views": ["front", "side", "back"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
    "walk": {"fps": 10, "loop": true, "views": ["front", "side", "back"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
    "heavyIdle": {"fps": 3, "loop": true, "views": ["front", "side", "back"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
-   "take": {"fps": 8, "loop": false, "views": ["front", "side"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
-   "give": {"fps": 8, "loop": false, "views": ["front", "side"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
+   "take": {"fps": 8, "loop": false, "views": ["front", "side", "back"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
+   "give": {"fps": 8, "loop": false, "views": ["front", "side", "back"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
    "shoulder": {"fps": 5, "loop": false, "views": ["front", "side"], "sheets": ["load", "frame"], "mirrorLeft": true},
    "push": {"fps": 8, "loop": false, "views": ["side"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
    "reachUp": {"fps": 6, "loop": false, "views": ["side", "back"], "sheets": ["load", "frame", "plain"], "mirrorLeft": true},
@@ -36,7 +36,7 @@ export const CHARACTER_DATA = {
    "giveRide": {"fps": 8, "loop": false, "views": ["front"], "sheets": ["load", "frame"], "mirrorLeft": false}
   },
   "sheets": {
-   "load": {"file": "tsuzumi_load", "width": 448, "height": 2944, "cols": 8, "rows": 46, "anims": {
+   "load": {"file": "tsuzumi_load", "width": 448, "height": 3072, "cols": 8, "rows": 48, "anims": {
     "idle": {
      "front": {"row":0,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]},
      "side": {"row":1,"frames":8,"anchors":[{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]}]},
@@ -54,83 +54,85 @@ export const CHARACTER_DATA = {
     },
     "take": {
      "front": {"row":9,"frames":4,"anchors":[{"hand":[-11,-7],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-11,-6],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-15],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":10,"frames":4,"anchors":[{"hand":[11,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[12,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "side": {"row":10,"frames":4,"anchors":[{"hand":[11,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[12,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":11,"frames":4,"anchors":[{"hand":[6,-19],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[6,-20],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[4,-17],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[4,-17],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "give": {
-     "front": {"row":11,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":12,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[10,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "front": {"row":12,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":13,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[10,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":14,"frames":4,"anchors":[{"hand":[0,-17],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-20],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-20],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-17],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "shoulder": {
-     "front": {"row":13,"frames":4,"anchors":[{"hand":[-2,-13],"loadTop":[0,-22],"hook":[-9,-29]},{"hand":[-2,-13],"loadTop":[0,-23],"hook":[-9,-30]},{"hand":[-2,-15],"loadTop":[0,-28],"hook":[-9,-35]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":14,"frames":4,"anchors":[{"hand":[3,-17],"loadTop":[-12,-22],"hook":[-16,-29]},{"hand":[3,-17],"loadTop":[-9,-23],"hook":[-13,-30]},{"hand":[3,-19],"loadTop":[-8,-28],"hook":[-12,-35]},{"hand":[3,-20],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "front": {"row":15,"frames":4,"anchors":[{"hand":[-2,-13],"loadTop":[0,-22],"hook":[-9,-29]},{"hand":[-2,-13],"loadTop":[0,-23],"hook":[-9,-30]},{"hand":[-2,-15],"loadTop":[0,-28],"hook":[-9,-35]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":16,"frames":4,"anchors":[{"hand":[3,-17],"loadTop":[-12,-22],"hook":[-16,-29]},{"hand":[3,-17],"loadTop":[-9,-23],"hook":[-13,-30]},{"hand":[3,-19],"loadTop":[-8,-28],"hook":[-12,-35]},{"hand":[3,-20],"loadTop":[-8,-32],"hook":[-12,-39]}]}
     },
     "push": {
-     "side": {"row":15,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-19],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]}]}
+     "side": {"row":17,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-19],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]}]}
     },
     "reachUp": {
-     "side": {"row":16,"frames":4,"anchors":[{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":17,"frames":4,"anchors":[{"hand":[13,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "side": {"row":18,"frames":4,"anchors":[{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":19,"frames":4,"anchors":[{"hand":[13,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "eat": {
-     "front": {"row":18,"frames":4,"anchors":[{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":19,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "front": {"row":20,"frames":4,"anchors":[{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":21,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
     },
     "bow": {
-     "front": {"row":20,"frames":5,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]}]},
-     "side": {"row":21,"frames":5,"anchors":[{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]}]},
-     "back": {"row":22,"frames":5,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]}]}
+     "front": {"row":22,"frames":5,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]}]},
+     "side": {"row":23,"frames":5,"anchors":[{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]}]},
+     "back": {"row":24,"frames":5,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]}]}
     },
     "climb": {
-     "back": {"row":23,"frames":4,"anchors":[{"hand":[-8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[-8,-40],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-40],"loadTop":[0,-33],"hook":[9,-40]}]}
+     "back": {"row":25,"frames":4,"anchors":[{"hand":[-8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[-8,-40],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-40],"loadTop":[0,-33],"hook":[9,-40]}]}
     },
     "shout": {
-     "back": {"row":24,"frames":3,"anchors":[{"hand":[0,-26],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "back": {"row":26,"frames":3,"anchors":[{"hand":[0,-26],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "sitBranch": {
-     "back": {"row":25,"frames":4,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]}]}
+     "back": {"row":27,"frames":4,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]}]}
     },
     "release": {
-     "front": {"row":26,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":27,"frames":3,"anchors":[{"hand":[8,-28],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[8,-30],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":28,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "front": {"row":28,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":29,"frames":3,"anchors":[{"hand":[8,-28],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[8,-30],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":30,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "hurt": {
-     "front": {"row":29,"frames":2,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":30,"frames":2,"anchors":[{"hand":[3,-8],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":31,"frames":2,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "front": {"row":31,"frames":2,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":32,"frames":2,"anchors":[{"hand":[3,-8],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":33,"frames":2,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "lookUp": {
-     "front": {"row":32,"frames":2,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]},
-     "side": {"row":33,"frames":2,"anchors":[{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]}]},
-     "back": {"row":34,"frames":2,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40]}]}
+     "front": {"row":34,"frames":2,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]},
+     "side": {"row":35,"frames":2,"anchors":[{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]}]},
+     "back": {"row":36,"frames":2,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40]}]}
     },
     "lift": {
-     "front": {"row":35,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":36,"frames":3,"anchors":[{"hand":[10,-11],"loadTop":[-8,-29],"hook":[-12,-36]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":37,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[0,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "front": {"row":37,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":38,"frames":3,"anchors":[{"hand":[10,-11],"loadTop":[-8,-29],"hook":[-12,-36]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":39,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[0,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "carryOverhead": {
-     "front": {"row":38,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]}]},
-     "side": {"row":39,"frames":8,"anchors":[{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]}]},
-     "back": {"row":40,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]}]}
+     "front": {"row":40,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]}]},
+     "side": {"row":41,"frames":8,"anchors":[{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]}]},
+     "back": {"row":42,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]}]}
     },
     "idleRide": {
-     "front": {"row":41,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]}
+     "front": {"row":43,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]}
     },
     "walkRide": {
-     "front": {"row":42,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]}
+     "front": {"row":44,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]}
     },
     "heavyIdleRide": {
-     "front": {"row":43,"frames":4,"anchors":[{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]}]}
+     "front": {"row":45,"frames":4,"anchors":[{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]}]}
     },
     "takeRide": {
-     "front": {"row":44,"frames":4,"anchors":[{"hand":[-11,-7],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-11,-6],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-15],"loadTop":[0,-32],"hook":[-9,-39]}]}
+     "front": {"row":46,"frames":4,"anchors":[{"hand":[-11,-7],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-11,-6],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-15],"loadTop":[0,-32],"hook":[-9,-39]}]}
     },
     "giveRide": {
-     "front": {"row":45,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]}
+     "front": {"row":47,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]}
     }
    }},
-   "frame": {"file": "tsuzumi_frame", "width": 448, "height": 2944, "cols": 8, "rows": 46, "anims": {
+   "frame": {"file": "tsuzumi_frame", "width": 448, "height": 3072, "cols": 8, "rows": 48, "anims": {
     "idle": {
      "front": {"row":0,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]},
      "side": {"row":1,"frames":8,"anchors":[{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]}]},
@@ -148,83 +150,85 @@ export const CHARACTER_DATA = {
     },
     "take": {
      "front": {"row":9,"frames":4,"anchors":[{"hand":[-11,-7],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-11,-6],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-15],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":10,"frames":4,"anchors":[{"hand":[11,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[12,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "side": {"row":10,"frames":4,"anchors":[{"hand":[11,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[12,-17],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":11,"frames":4,"anchors":[{"hand":[6,-19],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[6,-20],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[4,-17],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[4,-17],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "give": {
-     "front": {"row":11,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":12,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[10,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "front": {"row":12,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":13,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[10,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-14],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":14,"frames":4,"anchors":[{"hand":[0,-17],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-20],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-20],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-17],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "shoulder": {
-     "front": {"row":13,"frames":4,"anchors":[{"hand":[-2,-13],"loadTop":[0,-22],"hook":[-9,-29]},{"hand":[-2,-13],"loadTop":[0,-23],"hook":[-9,-30]},{"hand":[-2,-15],"loadTop":[0,-28],"hook":[-9,-35]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":14,"frames":4,"anchors":[{"hand":[3,-17],"loadTop":[-12,-22],"hook":[-16,-29]},{"hand":[3,-17],"loadTop":[-9,-23],"hook":[-13,-30]},{"hand":[3,-19],"loadTop":[-8,-28],"hook":[-12,-35]},{"hand":[3,-20],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "front": {"row":15,"frames":4,"anchors":[{"hand":[-2,-13],"loadTop":[0,-22],"hook":[-9,-29]},{"hand":[-2,-13],"loadTop":[0,-23],"hook":[-9,-30]},{"hand":[-2,-15],"loadTop":[0,-28],"hook":[-9,-35]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":16,"frames":4,"anchors":[{"hand":[3,-17],"loadTop":[-12,-22],"hook":[-16,-29]},{"hand":[3,-17],"loadTop":[-9,-23],"hook":[-13,-30]},{"hand":[3,-19],"loadTop":[-8,-28],"hook":[-12,-35]},{"hand":[3,-20],"loadTop":[-8,-32],"hook":[-12,-39]}]}
     },
     "push": {
-     "side": {"row":15,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-19],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]}]}
+     "side": {"row":17,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[11,-19],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]},{"hand":[13,-19],"loadTop":[-7,-32],"hook":[-11,-39]}]}
     },
     "reachUp": {
-     "side": {"row":16,"frames":4,"anchors":[{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":17,"frames":4,"anchors":[{"hand":[13,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "side": {"row":18,"frames":4,"anchors":[{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":19,"frames":4,"anchors":[{"hand":[13,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "eat": {
-     "front": {"row":18,"frames":4,"anchors":[{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":19,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
+     "front": {"row":20,"frames":4,"anchors":[{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-1,-25],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":21,"frames":4,"anchors":[{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[6,-23],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]}]}
     },
     "bow": {
-     "front": {"row":20,"frames":5,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]}]},
-     "side": {"row":21,"frames":5,"anchors":[{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]}]},
-     "back": {"row":22,"frames":5,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]}]}
+     "front": {"row":22,"frames":5,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]}]},
+     "side": {"row":23,"frames":5,"anchors":[{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[2,-32],"hook":[2,-39]},{"hand":[3,-9],"loadTop":[-1,-32],"hook":[-3,-39]}]},
+     "back": {"row":24,"frames":5,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-5],"loadTop":[0,-29],"hook":[9,-36]},{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]}]}
     },
     "climb": {
-     "back": {"row":23,"frames":4,"anchors":[{"hand":[-8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[-8,-40],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-40],"loadTop":[0,-33],"hook":[9,-40]}]}
+     "back": {"row":25,"frames":4,"anchors":[{"hand":[-8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[-8,-40],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[8,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[8,-40],"loadTop":[0,-33],"hook":[9,-40]}]}
     },
     "shout": {
-     "back": {"row":24,"frames":3,"anchors":[{"hand":[0,-26],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "back": {"row":26,"frames":3,"anchors":[{"hand":[0,-26],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-26],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "sitBranch": {
-     "back": {"row":25,"frames":4,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]}]}
+     "back": {"row":27,"frames":4,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40],"seat":[0,-9]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39],"seat":[0,-9]}]}
     },
     "release": {
-     "front": {"row":26,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":27,"frames":3,"anchors":[{"hand":[8,-28],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[8,-30],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":28,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "front": {"row":28,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":29,"frames":3,"anchors":[{"hand":[8,-28],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[8,-30],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[8,-29],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":30,"frames":3,"anchors":[{"hand":[0,-15],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-17],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "hurt": {
-     "front": {"row":29,"frames":2,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":30,"frames":2,"anchors":[{"hand":[3,-8],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":31,"frames":2,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "front": {"row":31,"frames":2,"anchors":[{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":32,"frames":2,"anchors":[{"hand":[3,-8],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":33,"frames":2,"anchors":[{"hand":[7,-7],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "lookUp": {
-     "front": {"row":32,"frames":2,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]},
-     "side": {"row":33,"frames":2,"anchors":[{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]}]},
-     "back": {"row":34,"frames":2,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40]}]}
+     "front": {"row":34,"frames":2,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]},
+     "side": {"row":35,"frames":2,"anchors":[{"hand":[3,-9],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[3,-10],"loadTop":[-8,-33],"hook":[-12,-40]}]},
+     "back": {"row":36,"frames":2,"anchors":[{"hand":[7,-8],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[7,-9],"loadTop":[0,-33],"hook":[9,-40]}]}
     },
     "lift": {
-     "front": {"row":35,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]}]},
-     "side": {"row":36,"frames":3,"anchors":[{"hand":[10,-11],"loadTop":[-8,-29],"hook":[-12,-36]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
-     "back": {"row":37,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[0,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
+     "front": {"row":37,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]}]},
+     "side": {"row":38,"frames":3,"anchors":[{"hand":[10,-11],"loadTop":[-8,-29],"hook":[-12,-36]},{"hand":[5,-15],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]}]},
+     "back": {"row":39,"frames":3,"anchors":[{"hand":[0,-6],"loadTop":[0,-30],"hook":[9,-37]},{"hand":[0,-29],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]}]}
     },
     "carryOverhead": {
-     "front": {"row":38,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]}]},
-     "side": {"row":39,"frames":8,"anchors":[{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]}]},
-     "back": {"row":40,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]}]}
+     "front": {"row":40,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[-9,-40]}]},
+     "side": {"row":41,"frames":8,"anchors":[{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-40],"loadTop":[-8,-31],"hook":[-12,-38]},{"hand":[1,-41],"loadTop":[-8,-32],"hook":[-12,-39]},{"hand":[1,-42],"loadTop":[-8,-33],"hook":[-12,-40]}]},
+     "back": {"row":42,"frames":8,"anchors":[{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-40],"loadTop":[0,-31],"hook":[9,-38]},{"hand":[0,-41],"loadTop":[0,-32],"hook":[9,-39]},{"hand":[0,-42],"loadTop":[0,-33],"hook":[9,-40]}]}
     },
     "idleRide": {
-     "front": {"row":41,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]}
+     "front": {"row":43,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]}]}
     },
     "walkRide": {
-     "front": {"row":42,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]}
+     "front": {"row":44,"frames":8,"anchors":[{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-7],"loadTop":[0,-31],"hook":[-9,-38]},{"hand":[-6,-8],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-6,-9],"loadTop":[0,-33],"hook":[-9,-40]}]}
     },
     "heavyIdleRide": {
-     "front": {"row":43,"frames":4,"anchors":[{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]}]}
+     "front": {"row":45,"frames":4,"anchors":[{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-6],"loadTop":[0,-30],"hook":[-9,-37]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]},{"hand":[-6,-5],"loadTop":[0,-29],"hook":[-9,-36]}]}
     },
     "takeRide": {
-     "front": {"row":44,"frames":4,"anchors":[{"hand":[-11,-7],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-11,-6],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-15],"loadTop":[0,-32],"hook":[-9,-39]}]}
+     "front": {"row":46,"frames":4,"anchors":[{"hand":[-11,-7],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-11,-6],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[-2,-15],"loadTop":[0,-32],"hook":[-9,-39]}]}
     },
     "giveRide": {
-     "front": {"row":45,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]}
+     "front": {"row":47,"frames":4,"anchors":[{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-12],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-11],"loadTop":[0,-32],"hook":[-9,-39]},{"hand":[0,-16],"loadTop":[0,-32],"hook":[-9,-39]}]}
     }
    }},
-   "plain": {"file": "tsuzumi_plain", "width": 448, "height": 2816, "cols": 8, "rows": 44, "anims": {
+   "plain": {"file": "tsuzumi_plain", "width": 448, "height": 2944, "cols": 8, "rows": 46, "anims": {
     "idle": {
      "front": {"row":0,"frames":8,"anchors":[{"hand":[-6,-8]},{"hand":[-6,-8]},{"hand":[-6,-8]},{"hand":[-6,-9]},{"hand":[-6,-9]},{"hand":[-6,-9]},{"hand":[-6,-8]},{"hand":[-6,-8]}]},
      "side": {"row":1,"frames":8,"anchors":[{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-10]},{"hand":[3,-10]},{"hand":[3,-10]},{"hand":[3,-9]},{"hand":[3,-9]}]},
@@ -242,74 +246,76 @@ export const CHARACTER_DATA = {
     },
     "take": {
      "front": {"row":9,"frames":4,"anchors":[{"hand":[-11,-7]},{"hand":[-11,-6]},{"hand":[-2,-16]},{"hand":[-2,-15]}]},
-     "side": {"row":10,"frames":4,"anchors":[{"hand":[11,-17]},{"hand":[12,-17]},{"hand":[5,-15]},{"hand":[5,-15]}]}
+     "side": {"row":10,"frames":4,"anchors":[{"hand":[11,-17]},{"hand":[12,-17]},{"hand":[5,-15]},{"hand":[5,-15]}]},
+     "back": {"row":11,"frames":4,"anchors":[{"hand":[6,-19]},{"hand":[6,-20]},{"hand":[4,-17]},{"hand":[4,-17]}]}
     },
     "give": {
-     "front": {"row":11,"frames":4,"anchors":[{"hand":[0,-16]},{"hand":[0,-12]},{"hand":[0,-11]},{"hand":[0,-16]}]},
-     "side": {"row":12,"frames":4,"anchors":[{"hand":[5,-15]},{"hand":[10,-14]},{"hand":[11,-14]},{"hand":[5,-15]}]}
+     "front": {"row":12,"frames":4,"anchors":[{"hand":[0,-16]},{"hand":[0,-12]},{"hand":[0,-11]},{"hand":[0,-16]}]},
+     "side": {"row":13,"frames":4,"anchors":[{"hand":[5,-15]},{"hand":[10,-14]},{"hand":[11,-14]},{"hand":[5,-15]}]},
+     "back": {"row":14,"frames":4,"anchors":[{"hand":[0,-17]},{"hand":[0,-20]},{"hand":[0,-20]},{"hand":[0,-17]}]}
     },
     "push": {
-     "side": {"row":13,"frames":4,"anchors":[{"hand":[5,-15]},{"hand":[11,-19]},{"hand":[13,-19]},{"hand":[13,-19]}]}
+     "side": {"row":15,"frames":4,"anchors":[{"hand":[5,-15]},{"hand":[11,-19]},{"hand":[13,-19]},{"hand":[13,-19]}]}
     },
     "reachUp": {
-     "side": {"row":14,"frames":4,"anchors":[{"hand":[8,-29]},{"hand":[1,-41]},{"hand":[1,-42]},{"hand":[1,-41]}]},
-     "back": {"row":15,"frames":4,"anchors":[{"hand":[13,-29]},{"hand":[8,-41]},{"hand":[8,-42]},{"hand":[8,-41]}]}
+     "side": {"row":16,"frames":4,"anchors":[{"hand":[8,-29]},{"hand":[1,-41]},{"hand":[1,-42]},{"hand":[1,-41]}]},
+     "back": {"row":17,"frames":4,"anchors":[{"hand":[13,-29]},{"hand":[8,-41]},{"hand":[8,-42]},{"hand":[8,-41]}]}
     },
     "eat": {
-     "front": {"row":16,"frames":4,"anchors":[{"hand":[-2,-16]},{"hand":[-1,-25]},{"hand":[-1,-25]},{"hand":[-2,-16]}]},
-     "side": {"row":17,"frames":4,"anchors":[{"hand":[5,-15]},{"hand":[6,-23]},{"hand":[6,-23]},{"hand":[5,-15]}]}
+     "front": {"row":18,"frames":4,"anchors":[{"hand":[-2,-16]},{"hand":[-1,-25]},{"hand":[-1,-25]},{"hand":[-2,-16]}]},
+     "side": {"row":19,"frames":4,"anchors":[{"hand":[5,-15]},{"hand":[6,-23]},{"hand":[6,-23]},{"hand":[5,-15]}]}
     },
     "bow": {
-     "front": {"row":18,"frames":5,"anchors":[{"hand":[-6,-7]},{"hand":[-6,-6]},{"hand":[-6,-5]},{"hand":[-6,-5]},{"hand":[-6,-7]}]},
-     "side": {"row":19,"frames":5,"anchors":[{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]}]},
-     "back": {"row":20,"frames":5,"anchors":[{"hand":[7,-7]},{"hand":[7,-6]},{"hand":[7,-5]},{"hand":[7,-5]},{"hand":[7,-7]}]}
+     "front": {"row":20,"frames":5,"anchors":[{"hand":[-6,-7]},{"hand":[-6,-6]},{"hand":[-6,-5]},{"hand":[-6,-5]},{"hand":[-6,-7]}]},
+     "side": {"row":21,"frames":5,"anchors":[{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]},{"hand":[3,-9]}]},
+     "back": {"row":22,"frames":5,"anchors":[{"hand":[7,-7]},{"hand":[7,-6]},{"hand":[7,-5]},{"hand":[7,-5]},{"hand":[7,-7]}]}
     },
     "climb": {
-     "back": {"row":21,"frames":4,"anchors":[{"hand":[-8,-41]},{"hand":[-8,-40]},{"hand":[8,-41]},{"hand":[8,-40]}]}
+     "back": {"row":23,"frames":4,"anchors":[{"hand":[-8,-41]},{"hand":[-8,-40]},{"hand":[8,-41]},{"hand":[8,-40]}]}
     },
     "shout": {
-     "back": {"row":22,"frames":3,"anchors":[{"hand":[0,-26]},{"hand":[0,-26]},{"hand":[0,-26]}]}
+     "back": {"row":24,"frames":3,"anchors":[{"hand":[0,-26]},{"hand":[0,-26]},{"hand":[0,-26]}]}
     },
     "sitBranch": {
-     "back": {"row":23,"frames":4,"anchors":[{"hand":[7,-8],"seat":[0,-9]},{"hand":[7,-8],"seat":[0,-9]},{"hand":[7,-9],"seat":[0,-9]},{"hand":[7,-8],"seat":[0,-9]}]}
+     "back": {"row":25,"frames":4,"anchors":[{"hand":[7,-8],"seat":[0,-9]},{"hand":[7,-8],"seat":[0,-9]},{"hand":[7,-9],"seat":[0,-9]},{"hand":[7,-8],"seat":[0,-9]}]}
     },
     "release": {
-     "front": {"row":24,"frames":3,"anchors":[{"hand":[0,-15]},{"hand":[0,-17]},{"hand":[0,-16]}]},
-     "side": {"row":25,"frames":3,"anchors":[{"hand":[8,-28]},{"hand":[8,-30]},{"hand":[8,-29]}]},
-     "back": {"row":26,"frames":3,"anchors":[{"hand":[0,-15]},{"hand":[0,-17]},{"hand":[0,-16]}]}
+     "front": {"row":26,"frames":3,"anchors":[{"hand":[0,-15]},{"hand":[0,-17]},{"hand":[0,-16]}]},
+     "side": {"row":27,"frames":3,"anchors":[{"hand":[8,-28]},{"hand":[8,-30]},{"hand":[8,-29]}]},
+     "back": {"row":28,"frames":3,"anchors":[{"hand":[0,-15]},{"hand":[0,-17]},{"hand":[0,-16]}]}
     },
     "hurt": {
-     "front": {"row":27,"frames":2,"anchors":[{"hand":[-6,-7]},{"hand":[-6,-8]}]},
-     "side": {"row":28,"frames":2,"anchors":[{"hand":[3,-8]},{"hand":[3,-9]}]},
-     "back": {"row":29,"frames":2,"anchors":[{"hand":[7,-7]},{"hand":[7,-8]}]}
+     "front": {"row":29,"frames":2,"anchors":[{"hand":[-6,-7]},{"hand":[-6,-8]}]},
+     "side": {"row":30,"frames":2,"anchors":[{"hand":[3,-8]},{"hand":[3,-9]}]},
+     "back": {"row":31,"frames":2,"anchors":[{"hand":[7,-7]},{"hand":[7,-8]}]}
     },
     "lookUp": {
-     "front": {"row":30,"frames":2,"anchors":[{"hand":[-6,-8]},{"hand":[-6,-9]}]},
-     "side": {"row":31,"frames":2,"anchors":[{"hand":[3,-9]},{"hand":[3,-10]}]},
-     "back": {"row":32,"frames":2,"anchors":[{"hand":[7,-8]},{"hand":[7,-9]}]}
+     "front": {"row":32,"frames":2,"anchors":[{"hand":[-6,-8]},{"hand":[-6,-9]}]},
+     "side": {"row":33,"frames":2,"anchors":[{"hand":[3,-9]},{"hand":[3,-10]}]},
+     "back": {"row":34,"frames":2,"anchors":[{"hand":[7,-8]},{"hand":[7,-9]}]}
     },
     "lift": {
-     "front": {"row":33,"frames":3,"anchors":[{"hand":[0,-6]},{"hand":[0,-16]},{"hand":[0,-41]}]},
-     "side": {"row":34,"frames":3,"anchors":[{"hand":[10,-11]},{"hand":[5,-15]},{"hand":[1,-41]}]},
-     "back": {"row":35,"frames":3,"anchors":[{"hand":[0,-6]},{"hand":[0,-29]},{"hand":[0,-41]}]}
+     "front": {"row":35,"frames":3,"anchors":[{"hand":[0,-6]},{"hand":[0,-16]},{"hand":[0,-41]}]},
+     "side": {"row":36,"frames":3,"anchors":[{"hand":[10,-11]},{"hand":[5,-15]},{"hand":[1,-41]}]},
+     "back": {"row":37,"frames":3,"anchors":[{"hand":[0,-6]},{"hand":[0,-29]},{"hand":[0,-41]}]}
     },
     "carryOverhead": {
-     "front": {"row":36,"frames":8,"anchors":[{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]},{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]}]},
-     "side": {"row":37,"frames":8,"anchors":[{"hand":[1,-41]},{"hand":[1,-40]},{"hand":[1,-41]},{"hand":[1,-42]},{"hand":[1,-41]},{"hand":[1,-40]},{"hand":[1,-41]},{"hand":[1,-42]}]},
-     "back": {"row":38,"frames":8,"anchors":[{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]},{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]}]}
+     "front": {"row":38,"frames":8,"anchors":[{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]},{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]}]},
+     "side": {"row":39,"frames":8,"anchors":[{"hand":[1,-41]},{"hand":[1,-40]},{"hand":[1,-41]},{"hand":[1,-42]},{"hand":[1,-41]},{"hand":[1,-40]},{"hand":[1,-41]},{"hand":[1,-42]}]},
+     "back": {"row":40,"frames":8,"anchors":[{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]},{"hand":[0,-41]},{"hand":[0,-40]},{"hand":[0,-41]},{"hand":[0,-42]}]}
     },
     "strain": {
-     "front": {"row":39,"frames":4,"anchors":[{"hand":[0,-6]},{"hand":[0,-6]},{"hand":[1,-6]},{"hand":[0,-7]}]},
-     "side": {"row":40,"frames":4,"anchors":[{"hand":[10,-11]},{"hand":[10,-11]},{"hand":[11,-11]},{"hand":[10,-12]}]}
+     "front": {"row":41,"frames":4,"anchors":[{"hand":[0,-6]},{"hand":[0,-6]},{"hand":[1,-6]},{"hand":[0,-7]}]},
+     "side": {"row":42,"frames":4,"anchors":[{"hand":[10,-11]},{"hand":[10,-11]},{"hand":[11,-11]},{"hand":[10,-12]}]}
     },
     "asleep": {
-     "side": {"row":41,"frames":2,"anchors":[{"hand":[13,-4]},{"hand":[13,-4]}]}
+     "side": {"row":43,"frames":2,"anchors":[{"hand":[13,-4]},{"hand":[13,-4]}]}
     },
     "sitUp": {
-     "side": {"row":42,"frames":4,"anchors":[{"hand":[13,-4]},{"hand":[1,-3]},{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]}]}
+     "side": {"row":44,"frames":4,"anchors":[{"hand":[13,-4]},{"hand":[1,-3]},{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]}]}
     },
     "sit": {
-     "side": {"row":43,"frames":4,"anchors":[{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]}]}
+     "side": {"row":45,"frames":4,"anchors":[{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]},{"hand":[3,-2],"seat":[-1,0]}]}
     }
    }}
   }

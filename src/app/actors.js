@@ -10,7 +10,7 @@
 //   actor.ride = 'tsuzumi'                     Saji sits on the frame (drawn at its loadTop)
 //   actor.climbTo = [x, z, heightM]            Tsuzumi up the camphor, hold by hold
 
-import { CHARACTERS, frameAt, duration } from '../art/characters.js';
+import { CHARACTERS, frameAt, duration, riderOrder } from '../art/characters.js';
 
 const DIR = { front: 'down', back: 'up', left: 'left', right: 'right' };
 
@@ -116,10 +116,13 @@ export class Actor {
     else if (this.ride) { anim = 'sit'; t = this.t; }
     else { anim = this.loopAnim; t = this.t; }
     const sheet = this.sheet(anim);
-    let f = frameAt(this.char, sheet, anim, DIR[this.face], t);
-    if (!f) f = frameAt(this.char, sheet, 'idle', DIR[this.face], this.t);
+    // someone riding on her frame: from the front, cells without the post tips (they would stripe Saji)
+    const carrying = this.id === 'tsuzumi' && stage.actor('saji')?.ride === 'tsuzumi' && stage.actor('saji').visible;
+    const opts = carrying ? { rider: true } : {};
+    let f = frameAt(this.char, sheet, anim, DIR[this.face], t, opts);
+    if (!f) f = frameAt(this.char, sheet, 'idle', DIR[this.face], this.t, opts);
     if (!f) return null;
-    if (reverse) f = frameAt(this.char, sheet, anim, DIR[this.face], (f.count - 1 - f.index) / (this.char.anims[anim]?.fps || 8));
+    if (reverse) f = frameAt(this.char, sheet, anim, DIR[this.face], (f.count - 1 - f.index) / (this.char.anims[anim]?.fps || 8), opts);
     let x = this.x, z = this.z, up = this.lift * 20;   // up: native pixels above the ground point
     if (this.ride) {
       // seated on Tsuzumi's frame: her loadTop, minus Saji's own seat point
@@ -127,7 +130,8 @@ export class Actor {
       if (lf?.anchors.loadTop) {
         const seat = f.anchors.seat || { x: 0, y: 0 };
         x = lead.x + (lf.anchors.loadTop.x - seat.x) / 20;
-        z = lead.z + 0.02;                                    // drawn just after her
+        // seen from the front or side she sits behind the hat (drawn first); from the back, over it
+        z = lead.z + (riderOrder(lead.char, lf) === 'behind' ? -0.02 : 0.02);
         up = lead.lift * 20 - (lf.anchors.loadTop.y - seat.y);
         this.face = lead.face;
       }

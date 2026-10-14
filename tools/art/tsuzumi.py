@@ -198,6 +198,11 @@ def take(view, load):
         seq = [(A.S_FWD, 0, (24, 21)), (A.S_FWD, 1, (25, 21)), (A.S_CHEST, 0, (18, 23)), (A.S_CHEST, 0, (18, 23))]
         for arm, dx, hand in seq:
             out.append(Frame(side(load, sleeve=at(arm, dx, 0)), _anchors(view, load, 0, (hand[0], hand[1]))))
+    else:
+        # from behind the reaching hand is hidden in front of her: the right sleeve lifts forward
+        # and comes back down
+        for sr, hand in [((-1, -2), (19, 19)), ((-1, -3), (19, 18)), ((0, -1), (17, 21)), ((0, -1), (17, 21))]:
+            out.append(Frame(back(load, sr=sr), _anchors(view, load, 0, hand)))
     return out
 
 
@@ -213,6 +218,11 @@ def give(view, load):
         seq = [(A.S_CHEST, 0, (18, 23)), (A.S_OFFER, 0, (23, 24)), (A.S_OFFER, 1, (24, 24)), (A.S_CHEST, 0, (18, 23))]
         for arm, dx, hand in seq:
             out.append(Frame(side(load, sleeve=at(arm, dx, 0)), _anchors(view, load, 0, hand)))
+    else:
+        # from behind: both sleeves draw in to the chest, lift forward, hold, settle
+        for sl, sr, hand in [((1, -1), (-1, -1), (13, 21)), ((1, -3), (-1, -3), (13, 18)),
+                             ((1, -3), (-1, -3), (13, 18)), ((1, -1), (-1, -1), (13, 21))]:
+            out.append(Frame(back(load, sl=sl, sr=sr), _anchors(view, load, 0, hand)))
     return out
 
 
@@ -579,8 +589,8 @@ ANIMS = {
     'idle':          (idle,           (F, S, Bk), 4,   True,  ALL),
     'walk':          (walk,           (F, S, Bk), 10,  True,  ALL),
     'heavyIdle':     (heavy_idle,     (F, S, Bk), 3,   True,  ALL),
-    'take':          (take,           (F, S),     8,   False, ALL),
-    'give':          (give,           (F, S),     8,   False, ALL),
+    'take':          (take,           (F, S, Bk), 8,   False, ALL),
+    'give':          (give,           (F, S, Bk), 8,   False, ALL),
     'shoulder':      (shoulder,       (F, S),     5,   False, ('load', 'frame')),
     'push':          (push,           (S,),       8,   False, ALL),
     'reachUp':       (reach_up,       (S, Bk),    6,   False, ALL),
