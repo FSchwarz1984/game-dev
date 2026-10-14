@@ -30,12 +30,19 @@ def main():
     ap.add_argument('--sources', default=None, help='directory with the CC0 scans (only to rebuild atlases)')
     ap.add_argument('--rebuild-atlases', action='store_true')
     ap.add_argument('--no-previews', action='store_true')
+    ap.add_argument('--godot', nargs='?', const='', default=None,
+                    help='also write the Godot-ready region (default godot/world/regions/<name>)')
     a = ap.parse_args()
     t0 = time.time()
     print('bake', a.layout)
     B = pipeline.run(a.layout, sources=a.sources, rebuild_atlases=a.rebuild_atlases)
     out = a.out or os.path.join(HERE, 'out', B.spec.get('name', 'region'))
-    export.export(B, out, chunk=a.chunk)
+    region = export.export(B, out, chunk=a.chunk)
+    if a.godot is not None:
+        root = os.path.normpath(os.path.join(HERE, '..', '..', 'godot'))
+        rdir = a.godot or os.path.join(root, 'world', 'regions', B.spec.get('name', 'region'))
+        export.export_godot(B, dict(region, label=B.spec.get('label', B.spec.get('name'))), out, rdir, root,
+                            os.path.join(HERE, 'godot', 'terrain.gdshader'), extra=B.spec.get('godot', {}))
     if not a.no_previews:
         pdir = os.path.join(out, 'preview')
         os.makedirs(pdir, exist_ok=True)

@@ -109,6 +109,16 @@
     {"id": "spring_path", "surface": "dirt", "width": 1.0, "wear": 0.4,
      "points": [[30, 45.0], [26, 38.0], [21.4, 31.6], [17.6, 29.4]]}
   ],
+  "godot": {
+    "label": "峠の大楠（地形ベンチマーク）: terrain only; trees, buildings and props come from their own generators",
+    "spawn": {"x": 41.2, "z": 44.6, "face": "back"},
+    "companion": {"id": "saji", "x": 43.0, "z": 45.0},
+    "shots": {
+      "saddle": {"x": 44.0, "z": 41.5}, "camphor": {"x": 52.0, "z": 33.0}, "graves": {"x": 80.0, "z": 57.0},
+      "graves_stairs": {"x": 88.0, "z": 55.0}, "switchbacks": {"x": 101.0, "z": 69.0}, "lookout": {"x": 40.5, "z": 58.5},
+      "spring": {"x": 17.5, "z": 27.5}, "dosojin": {"x": 108.0, "z": 77.5}, "north_stairs": {"x": 88.5, "z": 19.0}
+    }
+  },
   "markers": [
     {"id": "camphor", "kind": "tree.camphor", "at": [52.0, 28.8], "footprint": {"trunk_radius": 2.6, "root_radius": 8.5}, "note": "the great camphor; its crown should shade the whole clearing"},
     {"id": "hut", "kind": "building.hut", "at": [38.8, 37.0], "footprint": {"w": 5.2, "d": 3.8}, "note": "stands on the 0.5 m hut pad; door faces south toward hut_steps"},

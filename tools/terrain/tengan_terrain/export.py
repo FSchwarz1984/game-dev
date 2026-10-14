@@ -259,3 +259,107 @@ def export(B, out_dir, chunk=512, log=print):
     with open(os.path.join(out_dir, 'region.json'), 'w', encoding='utf-8') as fh:
         json.dump(region, fh, ensure_ascii=False, indent=1)
     return region
+
+
+IMPORT_IMAGE = """[remap]
+
+importer="image"
+type="Image"
+
+[deps]
+
+source_file="{src}"
+
+[params]
+
+"""
+
+IMPORT_TEXTURE = """[remap]
+
+importer="texture"
+type="CompressedTexture2D"
+
+[deps]
+
+source_file="{src}"
+
+[params]
+
+compress/mode=0
+mipmaps/generate=false
+process/fix_alpha_border={fix}
+process/premult_alpha=false
+detect_3d/compress_to=0
+"""
+
+
+def export_godot(B, region, bake_dir, region_dir, godot_root, shader_src, extra=None, log=print):
+    """Write the Godot-ready region: the core's contract (region.json keys read by
+    world/region_data.gd and world/world.gd, logic.png, a single ground.png for the
+    current single-sprite loader) plus the lit terrain (chunks + terrain.gdshader)."""
+    import shutil
+    os.makedirs(region_dir, exist_ok=True)
+    rid = region['id']
+    res_dir = 'res://' + os.path.relpath(region_dir, godot_root).replace(os.sep, '/')
+
+    def imp(rel, image=False, alpha=False):
+        src = res_dir + '/' + rel
+        path = os.path.join(region_dir, rel + '.import')
+        if os.path.exists(path):        # keep Godot's completed import (uid, dest) when it is there
+            return
+        with open(path, 'w') as fh:
+            fh.write(IMPORT_IMAGE.format(src=src) if image else IMPORT_TEXTURE.format(src=src, fix='true' if alpha else 'false'))
+
+    shutil.copyfile(os.path.join(bake_dir, 'masks', 'logic.png'), os.path.join(region_dir, 'logic.png'))
+    imp('logic.png', image=True)
+    tdir = os.path.join(region_dir, 'terrain')
+    os.makedirs(tdir, exist_ok=True)
+    chunks = []
+    for c in region['chunks']:
+        files = {}
+        for key, rel in c['files'].items():
+            fn = os.path.basename(rel)
+            shutil.copyfile(os.path.join(bake_dir, rel), os.path.join(tdir, fn))
+            imp('terrain/' + fn, alpha=(key == 'albedo'))
+            files[key] = 'terrain/' + fn
+        chunks.append(dict(c, files=files))
+    # one flat ground image for the current loader (world.gd: a single Sprite2D at art_offset_px)
+    alb = Image.new('RGBA', tuple(region['screen_size_px']))
+    for c in region['chunks']:
+        tile = Image.open(os.path.join(bake_dir, c['files']['albedo']))
+        alb.paste(tile, (c['pos_px'][0] - region['screen_origin_px'][0], c['pos_px'][1] - region['screen_origin_px'][1]))
+    alb.save(os.path.join(region_dir, 'ground.png'), optimize=True)
+    imp('ground.png', alpha=True)
+    shutil.copyfile(shader_src, os.path.join(region_dir, 'terrain.gdshader'))
+    for fn in ('walk_regions.json', 'markers.json'):
+        shutil.copyfile(os.path.join(bake_dir, fn), os.path.join(region_dir, fn))
+    with open(os.path.join(bake_dir, 'markers.json'), encoding='utf-8') as fh:
+        mk = json.load(fh)
+    x0, z0, x1, z1 = region['world_bounds_m']
+    out = {
+        'id': rid,
+        'label': region.get('label', rid),
+        'size_m': [x1 - x0, z1 - z0],
+        'origin_m': [x0, z0],
+        'cell_m': 0.25,
+        'max_step_m': region['step_m'],
+        'logic': 'logic.png',
+        'art': 'ground.png',
+        'art_offset_px': region['screen_origin_px'],
+        'entities': [],
+        'zones': [],
+    }
+    if extra:
+        out.update(extra)
+    terrain = {k: region[k] for k in ('format', 'ppm', 'datum_m', 'projection', 'screen_origin_px', 'screen_size_px',
+                                      'chunk_px', 'sun', 'encodings', 'top_materials', 'face_styles')}
+    terrain['chunks'] = chunks
+    terrain['shader'] = 'terrain.gdshader'
+    terrain['walk_regions'] = 'walk_regions.json'
+    terrain['generator'] = 'python3 tools/terrain/bake.py tools/terrain/layouts/%s.json --godot' % rid
+    out['terrain'] = terrain
+    out['markers'] = mk['markers']
+    out['stairs'] = mk['stairs']
+    with open(os.path.join(region_dir, 'region.json'), 'w', encoding='utf-8') as fh:
+        json.dump(out, fh, ensure_ascii=False, indent=1)
+    log(f'  godot region -> {region_dir}')
