@@ -9,6 +9,7 @@
 | 2026-10-14 | G0 方向评审 | <https://claude.ai/artifact/QRVQFsHfKNPYrzGwnwVRkt> | 已批准（答复见 decision-log.md） |
 | 2026-10-14 | G1 角色与故事 + G2 新手区地图 | <https://claude.ai/artifact/1u2fAfNyZTDjVUj3RfRKr3> | 已答复：G2 通过；G1 部分通过（见 decision-log.md） |
 | 2026-10-14 | G1 第二轮：宇宙观、主角真身、シオン、名字、作品名 | <https://claude.ai/artifact/3cvHsMaeU9aTw9gb26Lj8D> | 待审批（清单见 pending.md） |
+| 2026-10-14 | G3 可玩灰盒（技术预览） | <https://claude.ai/artifact/Q2VsSTbbjBM6nMqUMbJqJJ> | 待试玩反馈（问题见 pending.md） |
 
 ## 文档
 
