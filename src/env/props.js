@@ -174,19 +174,28 @@ export function shrine(o = {}) {
 
 /** the fallen eave beam: a ~2.4 m weathered timber lying on the ground, one end splintered */
 export function eaveBeam() {
-  const W = 56, H = 18, s = new SB(W, H), L = 48, ang = 0.22;
-  const x0 = 4, y0 = 5;
-  for (let k = 0; k < L; k++) for (let w = 0; w < 4; w++) {
-    const x = Math.round(x0 + k * Math.cos(ang)), y = Math.round(y0 + k * Math.sin(ang) + w);
-    const top = w < 2; const grain = hash2(k >> 2, w, 3);
-    let t = top ? 0.6 + grain * 0.14 - (w === 1 ? 0.06 : 0) : 0.3 + grain * 0.1;
-    if (k === 14 || k === 31) t -= 0.25; // nail holes
-    s.pz(x, y, rc(PAL.woodGrey, t, x, y), 3 - w * 0.2, { m: MAT.WOOD });
+  // the shrine's fallen eave beam: a 2.4 m squared timber lying in the grass (top face lit, side face
+  // in shade, a sawn end, a splintered end where it tore from the corner), with a few roof shingles
+  const W = 64, H = 26, s = new SB(W, H), L = 48, ang = 0.2, x0 = 6, y0 = 7;
+  const ca = Math.cos(ang), sa = Math.sin(ang);
+  for (let k = 0; k < L; k++) for (let w = 0; w < 7; w++) {
+    const x = Math.round(x0 + k * ca), y = Math.round(y0 + k * sa + w);
+    const top = w < 3; const grain = hash2(k >> 2, w, 3), crack = top && w === 1 && hash2(k >> 3, 9, 4) < 0.35;
+    let t = top ? 0.66 + grain * 0.12 - (w === 2 ? 0.1 : 0) - (crack ? 0.22 : 0) : 0.32 + grain * 0.08 - (w === 6 ? 0.1 : 0);
+    if (k === 14 || k === 31) t -= 0.25;                     // nail holes
+    if (hash2(k >> 1, w, 6) < 0.06 && !top) t -= 0.12;
+    s.pz(x, y, rc(PAL.woodGrey, t, x, y), 4 - w * 0.25, { m: MAT.WOOD });
+    if (top && hash2(k >> 2, w >> 1, 11) < 0.1) s.pz(x, y, PAL.moss[3], 4, { m: MAT.MOSS });
   }
-  for (let k = 0; k < 6; k++) { const x = Math.round(x0 + (L + k * 0.5) * Math.cos(ang)), y = Math.round(y0 + (L) * Math.sin(ang) + (k % 3)); s.pz(x, y, PAL.woodNew[2 + (k % 2)], 3, { m: MAT.WOOD }); } // splinters
-  POST.outline(s, { k: 0.66 }); POST.normals(s, 1);
-  flat(s, 13, 2);
-  return { s, meta: { ax: 28, ay: 13, sway: 0, kind: 'item' } };
+  // the sawn end (left): end grain, a little lighter
+  for (let w = 0; w < 7; w++) for (let e = 1; e <= 2; e++) s.pz(Math.round(x0 - e), Math.round(y0 + w - e * 0.2), rc(PAL.woodGrey, w < 3 ? 0.78 : 0.5, x0, w), 4, { m: MAT.WOOD });
+  // the torn end (right): pale splinters
+  for (let k = 0; k < 9; k++) { const x = Math.round(x0 + (L + (k % 4)) * ca), y = Math.round(y0 + L * sa + (k % 7)); if (hash2(k, 2, 7) < 0.8) s.pz(x, y, PAL.woodNew[2 + (k % 3)], 4, { m: MAT.WOOD }); }
+  // two broken shingles nearby
+  for (const [sx, sy, rot] of [[20, 20, 0.3], [44, 3, -0.4]]) for (let u = 0; u < 7; u++) for (let v = 0; v < 3; v++) { const x = Math.round(sx + u * Math.cos(rot) - v * Math.sin(rot)), y = Math.round(sy + u * Math.sin(rot) + v * Math.cos(rot)); s.pz(x, y, rc(PAL.woodDark, v === 0 ? 0.7 : 0.45, x, y), 2, { m: MAT.WOOD }); }
+  POST.outline(s, { k: 0.64 }); POST.normals(s, 1);
+  flat(s, 17, 2);
+  return { s, meta: { ax: 32, ay: 17, sway: 0, kind: 'item' } };
 }
 
 /* ===================== 道祖神: a pair of figures in relief, one under a very wide hat ===================== */
