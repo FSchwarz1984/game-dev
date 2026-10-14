@@ -10,7 +10,7 @@
 | 2026-10-14 | G1 角色与故事 + G2 新手区地图 | <https://claude.ai/artifact/1u2fAfNyZTDjVUj3RfRKr3> | 已答复：G2 通过；G1 部分通过（见 decision-log.md） |
 | 2026-10-14 | G1 第二轮：宇宙观、主角真身、シオン、名字、作品名 | <https://claude.ai/artifact/3cvHsMaeU9aTw9gb26Lj8D> | 已答复：宇宙观"还行但要更复杂"；真身、名字、作品名被否决（见 decision-log.md） |
 | 2026-10-14 | G1 第三轮：世界观三选一、真身、名字、作品名（按类型） | <https://claude.ai/artifact/WhsgJ2hB6q27ftCNVDXhc7> | 已答复：全部否决，改为采用第二轮（见 decision-log.md G1R3） |
-| 2026-10-14 | G3 可玩灰盒（技术预览） | <https://claude.ai/artifact/Q2VsSTbbjBM6nMqUMbJqJJ> | 待试玩反馈（问题见 pending.md） |
+| 2026-10-14 | G3 可玩灰盒（技术预览） | <https://claude.ai/artifact/Q2VsSTbbjBM6nMqUMbJqJJ> | 已撤回（P-1：只交付成品），不再更新 |
 
 ## 文档
 
