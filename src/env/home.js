@@ -309,9 +309,10 @@ function* populateG(K) {
   // the north wood behind the camphor and the north-east ridge (the tower window over x 92–110 stays open)
   for (const [x, z, r, n, sp] of [[64, 2, 6, 6, CEDARS], [74, 4, 4, 3, MIXED], [80, 13, 3.5, 3, CEDARS], [116, 11, 5, 4, MIXED], [125, 19, 4, 3, CEDARS], [86, 22, 2, 1, OPEN], [113, 22, 2, 1, OPEN]]) { grove(x, z, r, n, sp, { force: x < 82 }); yield; }
   // around the camphor: camellias and hydrangeas in its shade, a red maple at the edge of the clearing
-  for (const [n, x, z] of [['camellia0', 34.8, 31.8], ['camellia1', 36.4, 27.4], ['hydrangea1', 61.6, 33.9], ['camellia2', 63.2, 29.4], ['azalea1', 56.4, 25.4], ['azalea0', 35.4, 36.6], ['mapleRed0', 31.2, 12.6], ['maple2', 12.6, 20.6],
+  // (no hydrangeas behind the fallen eave beam: the beam, Saji under it and the prompt need that column clear)
+  for (const [n, x, z] of [['camellia0', 34.8, 31.8], ['camellia1', 36.4, 27.4], ['camellia2', 63.2, 29.4], ['azalea1', 56.4, 25.4], ['azalea0', 35.4, 36.6], ['mapleRed0', 31.2, 12.6], ['maple2', 12.6, 20.6],
     // by the shrine: the red maple the owner liked in v0.1, hydrangeas at its foot, a second stone lantern's worth of camellia
-    ['mapleRed1', 65.2, 30.6], ['hydrangea0', 63.6, 32.2], ['hydrangea2', 60.2, 35.2], ['fern2', 59.2, 32.0], ['camellia3', 54.0, 34.6], ['lily0', 66.4, 34.0], ['susuki3', 68.6, 37.2],
+    ['mapleRed1', 65.2, 30.6], ['hydrangea0', 63.6, 32.2], ['fern2', 59.2, 32.0], ['camellia3', 54.0, 34.6], ['lily0', 66.4, 34.0], ['susuki3', 68.6, 37.2],
     // the clearing's north-east and north-west rims under the crown: shrubs, ferns, a small layered pine
     ['azalea2', 58.8, 24.2], ['fern0', 57.0, 26.6], ['mapleS0', 62.4, 22.6], ['camellia0', 61.2, 26.2], ['fern3', 42.6, 24.0], ['hydrangea1', 38.4, 25.6], ['sasa2', 44.6, 22.8]]) if (ground(x, z)) place(n, x, z, { keep: 1.0, collide: n.startsWith('maple') ? 0.45 : undefined });
   // the open saddle east of the clearing: scattered pines in ones and twos, a cedar stand closing the east edge
@@ -375,6 +376,7 @@ function* populateG(K) {
       const x = R2.range(x0, x1), z = R2.range(z0, z1);
       if (!test(x, z) || !ground(x, z, 0.3) || Math.hypot(x - tx, z - tz) < 3.9 || onRoot(x, z)) continue;
       if (x > 37.6 && x < 44 && z > 30.5 && z < 34.7) continue;                                  // the hut
+      if (x > 58.2 && x < 62.2 && z > 32.4 && z < 36.4) continue;                                // the fallen beam (Saji, the prompt)
       if (worn(x, z) && T.topAt(x, z) === TM.CLEAR) continue;                                     // her worn ways
       if (keep.some(q => q[2] <= 2 && Math.hypot(q[0] - x, q[1] - z) < q[2] + 0.35)) continue;   // (the hut's and the trunk's keeps are the boxes above)
       place(names[(c + k) % names.length], x, z, { flip: R2() < 0.5 }); keep.push([x, z, 0.45]); c++;

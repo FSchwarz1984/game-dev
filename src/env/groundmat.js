@@ -158,16 +158,32 @@ export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0)
 }
 
 /* ---------------- yard / worn earth (v0.1 pathCol): trodden earth in three tones, pebbles, a few fallen leaves ---------------- */
-const YARD = [[98, 86, 62], [114, 101, 74], [130, 117, 89], [124, 122, 116]];
+const YARD = [[98, 86, 62], [114, 101, 74], [130, 117, 89]];
 export function yard(X, Y, x, y, leaves = 0.3) {
   const N = NZ, r = hash2(x, y, 85), big = N.mid.sample(X * 1.2, Y * 1.2);
   const v = r * 0.5 + big * 0.5;
   let c = v < 0.3 ? YARD[0] : v < 0.75 ? YARD[1] : YARD[2];
-  if (hash2(x >> 1, y >> 1, 86) > 0.975) c = YARD[3];
   const drift = N.warp.sample(X * 0.5 + 31, Y * 0.5);
   if (drift > 1 - leaves * 0.6) { const lh = hashi(X >> 1, Y, 89); if ((lh & 255) < 34) c = PAL.litter[(lh >> 8) & 3]; }
   set(c);
   OUT[3] = (r - 0.5) * 0.3; OUT[4] = 0; OUT[5] = MAT.PATH; OUT[6] = 0;
+  pebble(X, Y, 9);
+}
+/* pebbles in the dirt: few, in the dirt's own hue a step lighter (never a cold grey speck), a 2×1 or 3×2
+   glyph (half and half), about half of them lit on the upper left, a shadow tucked under the lower edge */
+const PEB = [[130, 117, 92], [152, 138, 110]];
+export function pebble(X, Y, dens = 8) {
+  const cx = Math.floor(X / 7), cy = Math.floor(Y / 5), h = hashi(cx, cy, 171);
+  if ((h & 255) >= dens) return;
+  const ox = X - cx * 7 - 1 - ((h >> 8) & 3), oy = Y - cy * 5 - ((h >> 10) & 1), big = ((h >> 11) & 3) < 2, lit = ((h >> 13) & 1) === 0;
+  const body = big ? (oy === 0 && ox >= 0 && ox <= 1) || (oy === 1 && ox >= 0 && ox <= 2) : oy === 0 && ox >= 0 && ox <= 1;
+  if (body) {
+    if (lit && ox === 0 && oy === 0) { set(PEB[1]); OUT[3] = -0.3; OUT[4] = 0.3; }
+    else { set(PEB[0]); OUT[3] = ox > 0 ? 0.15 : 0; OUT[4] = 0.1; }
+    OUT[5] = MAT.STONE; return;
+  }
+  const sy = big ? 2 : 1;   // the shadow under it, offset to the lower right
+  if (oy === sy && ox >= (big ? 0 : 1) && ox <= (big ? 2 : 1)) { OUT[0] *= 0.74; OUT[1] *= 0.73; OUT[2] *= 0.72; OUT[4] = -0.15; }
 }
 
 /* ---------------- clearing under the great tree: a patchwork, calm enough for the actors to pop ----------------
@@ -319,7 +335,6 @@ export function path(X, Y, x, y, edge = 0, d = 0, hw = 30, rut = 0) {
   let v = r * 0.5 + big * 0.5;
   if (rut > 0) { const u = Math.abs(d) / hw; const band = Math.exp(-Math.pow((u - 0.42) / 0.12, 2)); v -= band * 0.25 * rut; }
   let c = v < 0.3 ? YARD[0] : v < 0.75 ? YARD[1] : YARD[2];
-  if (hash2(x >> 1, y >> 1, 23) > 0.975) c = YARD[3];
   OUT[0] = c[0]; OUT[1] = c[1]; OUT[2] = c[2];
   if (edge > 0) {
     const g = edge - (hash2(x, y, 24) * 0.35 + cl * 0.5);
@@ -327,6 +342,7 @@ export function path(X, Y, x, y, edge = 0, d = 0, hw = 30, rut = 0) {
     if (g > 0.04) { OUT[0] *= 0.84; OUT[1] *= 0.85; OUT[2] *= 0.8; }
   }
   OUT[3] = (r - 0.5) * 0.3; OUT[4] = 0; OUT[5] = MAT.PATH; OUT[6] = 0;
+  pebble(X, Y, 11);
 }
 
 const JOINT = [52, 50, 38];
