@@ -14,7 +14,7 @@
 
 | 部分 | 做法 |
 |---|---|
-| 引擎 | Godot 4（最新稳定版），从源码编译：编辑器（带 X11，能在 Xvfb 里跑游戏截图）+ Windows、Linux、安卓导出模板。必要时改引擎源码。见 `docs/knowledge/10-godot-toolchain.md` |
+| 引擎 | Godot 4.7.2 官方版（从 godotengine.org 下载，用 godot-builds 仓库的 SHA512 校验）：编辑器（能在 Xvfb 里跑游戏截图）+ Windows（含 ANGLE、D3D12）、安卓、Linux 导出模板。需要改引擎时再用 `tools/godot/` 里的源码编译脚本。见 `docs/knowledge/10-godot-toolchain.md` |
 | 渲染 | 2D；Windows 用 Forward+（2D HDR、辉光、SDF、GPU 粒子碰撞），安卓用 Mobile；原生 480×270，viewport 拉伸、整数倍、expand 填满屏幕；手机只横屏（P-3）。不再做网页版（W-1） |
 | 世界 | 一张无缝的大地图，按区域拆成场景，走动中提前加载相邻区域，没有加载画面；边界用悬崖、深谷、河和**遠化之雾**（看得见、剧情里解释过，"远"的东西走不近），不用空气墙 |
 | 地形 | 统一 3/4 俯视透视的规则集：地面平铺、崖面一律朝向镜头、台阶按坡向画出踏面和立面、道路贴地；TileMap 地形自动拼接 + 有机形状（多边形 + 纹理边缘）+ 贴花，绝不出现网格感 |
