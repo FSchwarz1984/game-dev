@@ -422,6 +422,23 @@ function flute(t, m, dur, vel, st, o = {}) {
     chain(osc, g, st.i); chain(nz, bp, ng, st.i);
   });
 }
+// Humming with closed lips: a soft fundamental, a quiet octave and a nasal formant, gently
+// scooped onto each note; legato, so the notes overlap a little.
+function hum(t, m, dur, vel, st) {
+  return play("bg", (v) => {
+    const f = mtof(m), end = t + dur + 0.35;
+    const a = v.o("sine", f, t, end), b = v.o("triangle", f * 2, t, end), bp = v.f("bandpass", 280, 2.2), lp = v.f("lowpass", 1100, 0), g = v.g(0);
+    a.frequency.setValueAtTime(f * 0.985, t); a.frequency.setTargetAtTime(f, t, 0.04);
+    const lfo = v.o("sine", 5.2, t, end), lg = v.g(0); lfo.connect(lg); lg.connect(a.detune);
+    lg.gain.setValueAtTime(0, t + 0.15); lg.gain.linearRampToValueAtTime(8, t + Math.max(0.2, dur * 0.8));
+    chain(b, v.g(0.18), lp); a.connect(lp); a.connect(bp); chain(bp, v.g(0.5), lp);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(vel * 0.32, t + 0.06);
+    g.gain.setTargetAtTime(vel * 0.26, t + 0.06, 0.3); g.gain.setTargetAtTime(0, t + dur, 0.09);
+    chain(lp, g, st.i);
+  });
+}
+// The half phrase she hums in the prologue (yo scale on D), and the flute repeats exactly.
+const HALF_PHRASE = [[62, 0.42], [64, 0.42], [67, 0.62], [69, 0.9], [67, 0.42], [64, 1.1]];
 // Soft pad: detuned saws through a slowly opening lowpass.
 function pad(t, ms, dur, vel, st, o = {}) {
   return play("bg", (v) => {
@@ -1695,6 +1712,10 @@ const STING = {
     hit(t + 0.95, "shime", 0.35, s); hit(t + 0.95, "odaiko", 0.4, s); hit(t + 1, "rin", 0.14, s);
   },
   night(t, s) { [79, 76, 74, 71, 69].forEach((m, i) => cel(t + i * 0.42, m, 1, 0.4 - i * 0.04, s)); pad(t, [50, 57], 3, 0.4, s, { att: 1, rel: 3, cut: 600 }); },
+  // The prologue's call and response: she hums half a bon-dance phrase, close and dry; then a
+  // flute somewhere far off plays the same half phrase back, an octave up, through the far bus.
+  hum(t, s) { let at = t; for (const [m, d] of HALF_PHRASE) { hum(at, m, d, 0.5, s); at += d; } },
+  echo(t) { let at = t; for (const [m, d] of HALF_PHRASE) { flute(at, m + 12, d * 0.96, 0.5, { i: BUS.far.fwet }, { vib: 9 }); at += d; } },
   dawn(t, s) {
     pad(t, [62, 69, 76], 3, 0.6, s, { att: 1.5, rel: 2.5, cut: 1100 });
     [74, 76, 79, 81].forEach((m, i) => flute(t + 0.3 + i * 0.32, m, i === 3 ? 1.8 : 0.3, 0.45, s));

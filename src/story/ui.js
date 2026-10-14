@@ -21,9 +21,11 @@ const PAUSE_LONG = '。！？…—';
 const SILENT = '，。、！？…—「」（）『』 ';
 
 export class StoryUI {
-  constructor(root, { audio = null, portraits = {} } = {}) {
+  constructor(root, { audio = null, portraits = {}, wait = null } = {}) {
     injectStyle();
     this.audio = audio;
+    // cards and fades wait on the game clock when the director lends its own (src/story/cine.js)
+    this.wait = wait || (s => new Promise(r => setTimeout(r, s * 1000)));
     this.portraits = portraits;
     this.el = document.createElement('div');
     this.el.className = 'story';
@@ -164,8 +166,8 @@ export class StoryUI {
     return new Promise(res => {
       this.blockN++;
       const hide = show();
-      setTimeout(hide, visible * 1000);
-      setTimeout(() => { this.blockN--; res(); }, total * 1000);
+      this.wait(visible).then(hide);
+      this.wait(total).then(() => { this.blockN--; res(); });
     });
   }
 
@@ -175,7 +177,7 @@ export class StoryUI {
     this.fadeEl.style.background = color;
     this.fadeEl.style.transition = `opacity ${dur}s ease`;
     this.fadeEl.style.opacity = a;
-    return new Promise(r => setTimeout(r, dur * 1000));
+    return this.wait(dur);
   }
 
   /** A first-time hint anchored above a screen point (CSS px), or null to hide. */
