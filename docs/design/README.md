@@ -11,7 +11,8 @@
 | 2026-10-14 | G1 第二轮：宇宙观、主角真身、シオン、名字、作品名 | <https://claude.ai/artifact/3cvHsMaeU9aTw9gb26Lj8D> | 已答复：宇宙观"还行但要更复杂"；真身、名字、作品名被否决（见 decision-log.md） |
 | 2026-10-14 | G1 第三轮：世界观三选一、真身、名字、作品名（按类型） | <https://claude.ai/artifact/WhsgJ2hB6q27ftCNVDXhc7> | 已答复：全部否决，改为采用第二轮（见 decision-log.md G1R3） |
 | 2026-10-14 | G3 可玩灰盒（技术预览） | <https://claude.ai/artifact/Q2VsSTbbjBM6nMqUMbJqJJ> | 已撤回（P-1：只交付成品），不再更新 |
-| 2026-10-14 | G5 第一段成品：标题、序章「送魂夜」、第一天早上 | <https://claude.ai/artifact/We1nnVFD9GUdcWUT78uKaa> | 已交付，待用户反馈（电脑与手机横屏；竖屏只显示提示，P-3） |
+| 2026-10-14 | G5 第一段成品：标题、序章「送魂夜」、第一天早上 | <https://claude.ai/artifact/We1nnVFD9GUdcWUT78uKaa> | 已交付，用户已答复（E-1 迁移 Godot、R-1…R-8、F-1…F-3） |
+| 2026-10-14 | G5 开工前评审：身体材质、「移」的规则、操作、地图、小地图、美术标杆、立绘、字体、剧本语气、授权（十个决定） | <https://claude.ai/artifact/QcemFFSjDfjdyJR93yCtUw> | 待审 |
 
 ## 文档
 
@@ -24,3 +25,7 @@
 | [map.md](map.md)（[map-v2.svg](map-v2.svg)） | 新手区地图 v2 | 已批准 |
 | [scope-g5.md](scope-g5.md) | G5 垂直切片的范围 | 已批准 |
 | [g3-graybox.md](g3-graybox.md) | G3 可玩灰盒：站点、操作、要验证什么 | 技术预览（不是设计决定） |
+| [godot-plan.md](godot-plan.md) | Godot 迁移计划：架构、阶段 P0–P6、八个问题的修法 | 执行中（迁移是用户的决定 E-1） |
+| [body-effects-draft.md](body-effects-draft.md) | 「移」的身体效果：菅笠之身、三档、容量与回流、操作 | 草案（评审页决定 1–3） |
+| [map-v3-draft.md](map-v3-draft.md) | 地图 v3（= v2 + F-1）与小地图解锁 | 草案（评审页决定 4–5） |
+| [script-02-draft.md](script-02-draft.md) | 开场剧本重写（序章到第一天早上） | 草案（评审页决定 9） |
