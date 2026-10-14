@@ -20,6 +20,14 @@ import { HUD } from '../ui/hud.js';
 import { createStage } from './stage.js';
 import { loadSave, writeSave } from './save.js';
 import { portraits } from './portraits.js';
+import { createFieldAmbience } from '../audio/field.js';
+import night from '../../assets/audio/night.mp3';
+import night2 from '../../assets/audio/night2.mp3';
+import wind from '../../assets/audio/wind.mp3';
+import stream from '../../assets/audio/stream.mp3';
+import fall from '../../assets/audio/fall.mp3';
+import crow from '../../assets/audio/crow.mp3';
+import birds from '../../assets/audio/birds.mp3';
 
 const PX = 20; // native pixels per metre: the audio engine's distances are in pixels
 
@@ -29,8 +37,11 @@ export async function boot(app) {
 
   // ---- audio: silent until the first gesture; distances in metres become pixels
   let audioOn = false;
+  // real field recordings for wind, water, insects and birds (assets/audio, CC0 / public domain)
+  const fieldAmb = createFieldAmbience(AU, { sources: { night, night2, wind, stream, fall, crow, birds } });
   const startAudio = () => {
     if (audioOn) return; audioOn = AU.init(); AU.resume?.();
+    if (audioOn) fieldAmb.load();
     applyPrefs(loadPrefs());
   };
   const au = {
@@ -87,7 +98,11 @@ export async function boot(app) {
     story.update(dt * (D.rate || 1));
     stage.update(dt);
     hud.update(dt);
-    if (audioOn) AU.update(dt, { tod: G.hour ?? 12, listener: { x: f.player.x * PX, y: f.player.z * PX }, near: stage.nearness?.() ?? 1, cinematic: D.busy, wind: 0.3 });
+    if (audioOn) {
+      AU.update(dt, { tod: G.hour ?? 12, listener: { x: f.player.x * PX, y: f.player.z * PX }, near: stage.nearness?.() ?? 1, cinematic: D.busy, wind: 0.3, biome: stage.biome?.() });
+      const wf = stage.places?.waterfall;
+      fieldAmb.update(dt, wf ? { waterDist: Math.hypot(wf[0] - f.player.x, wf[1] - f.player.z), waterPan: Math.max(-1, Math.min(1, (wf[0] - f.player.x) / 30)) } : {});
+    }
   }
   window.APP.tick = tick;
   window.APP.render = () => stage.render();

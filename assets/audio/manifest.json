@@ -1,0 +1,387 @@
+{
+ "_about": {
+  "built_by": "tools/audio/build_field.py",
+  "licence_policy": "CC0 or public domain only",
+  "total_bytes": 1168763,
+  "note": "Public Domain Mark items are radio aporee uploads the recordists marked as public domain."
+ },
+ "night": {
+  "file": "assets/audio/night.mp3",
+  "kind": "loop",
+  "bytes": 244505,
+  "seconds": 30.5,
+  "source": {
+   "title": "773V+27 Mine, Yamaguchi, Japan - Night in Akiyoshidai (radio aporee ::: maps)",
+   "author": "thomasmartinnutt",
+   "licence": "Public Domain Mark 1.0",
+   "licence_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+   "page": "https://archive.org/details/aporee_65285_75402",
+   "url": "https://archive.org/download/aporee_65285_75402/akiyioshidai.flac",
+   "recorded": "2018-10-18 01:00 JST, forest near Akiyoshidai, Mine, Yamaguchi, Japan"
+  },
+  "edits": [
+   "segment 95.00-128.00 s of the source",
+   "mono = (L-R)/2 (channels are polarity-inverted against each other)",
+   "resampled to 44.1 kHz (soxr)",
+   "filters: highpass=f=150:p=2,highpass=f=150:p=2",
+   "seamless loop: last 3.0 s crossfaded (equal power, sin/cos) into the head; loop length 30.0 s",
+   "loudness -28.9 -> -23.1 LUFS integrated (gain +5.9 dB), true peak -12.0 dBFS",
+   "padded 0.25 s of periodic extension each side; loopStart=0.25, loopEnd=30.25",
+   "MP3 CBR 64 kbps mono 44.1 kHz (LAME q0), tags stripped"
+  ],
+  "_meta": {
+   "kind": "loop",
+   "loopStart": 0.25,
+   "loopEnd": 30.25,
+   "dur": 30.5
+  }
+ },
+ "night2": {
+  "file": "assets/audio/night2.mp3",
+  "kind": "loop",
+  "bytes": 164465,
+  "seconds": 20.5,
+  "source": {
+   "title": "Miuda insect nightlife_long grass (radio aporee ::: maps)",
+   "author": "abyssence",
+   "licence": "Public Domain Mark 1.0",
+   "licence_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+   "page": "https://archive.org/details/aporee_65627_75795",
+   "url": "https://archive.org/download/aporee_65627_75795/Miudainsectnightlifelonggrassaporee.mp3",
+   "recorded": "2024-09-30 23:20 JST, long grass at Miuda, Tsushima, Nagasaki, Japan"
+  },
+  "edits": [
+   "segment 300.00-322.50 s of the source",
+   "mono = (L+R)/2",
+   "resampled to 44.1 kHz (soxr)",
+   "filters: highpass=f=300:p=2,highpass=f=300:p=2",
+   "seamless loop: last 2.5 s crossfaded (equal power, sin/cos) into the head; loop length 20.0 s",
+   "loudness -28.0 -> -23.1 LUFS integrated (gain +5.0 dB), true peak -8.6 dBFS",
+   "padded 0.25 s of periodic extension each side; loopStart=0.25, loopEnd=20.25",
+   "MP3 CBR 64 kbps mono 44.1 kHz (LAME q0), tags stripped"
+  ],
+  "_meta": {
+   "kind": "loop",
+   "loopStart": 0.25,
+   "loopEnd": 20.25,
+   "dur": 20.5
+  }
+ },
+ "wind": {
+  "file": "assets/audio/wind.mp3",
+  "kind": "loop",
+  "bytes": 224443,
+  "seconds": 28.0,
+  "source": {
+   "title": "Wind in a Tree (BigSoundBank #0659)",
+   "author": "Joseph SARDIN",
+   "licence": "CC0 1.0",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "page": "https://bigsoundbank.com/wind-in-a-tree-s0659.html",
+   "url": "https://bigsoundbank.com/UPLOAD/mp3/0659.mp3",
+   "recorded": "France"
+  },
+  "edits": [
+   "segment 85.00-115.00 s of the source",
+   "mono = (L+R)/2",
+   "resampled to 44.1 kHz (soxr)",
+   "filters: highpass=f=70:p=2,highpass=f=70:p=2",
+   "spectral repair 1.5-10 kHz: cells more than 6 dB above the local time-frequency median pulled down to it (6.4 % of cells); removes faint bird chips",
+   "seamless loop: last 2.5 s crossfaded (equal power, sin/cos) into the head; loop length 27.5 s",
+   "loudness -39.3 -> -23.0 LUFS integrated (gain +16.3 dB), true peak -6.2 dBFS",
+   "padded 0.25 s of periodic extension each side; loopStart=0.25, loopEnd=27.75",
+   "MP3 CBR 64 kbps mono 44.1 kHz (LAME q0), tags stripped"
+  ],
+  "_meta": {
+   "kind": "loop",
+   "loopStart": 0.25,
+   "loopEnd": 27.75,
+   "dur": 28.0
+  }
+ },
+ "stream": {
+  "file": "assets/audio/stream.mp3",
+  "kind": "loop",
+  "bytes": 205584,
+  "seconds": 20.5,
+  "source": {
+   "title": "Small Stream #4 (BigSoundBank #1354)",
+   "author": "Joseph SARDIN",
+   "licence": "CC0 1.0",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "page": "https://bigsoundbank.com/small-stream-4-s1354.html",
+   "url": "https://bigsoundbank.com/UPLOAD/ogg/1354.ogg",
+   "recorded": "France, a small mountain stream"
+  },
+  "edits": [
+   "segment 47.60-69.60 s of the source",
+   "mono = left channel only (the pair is decorrelated; a sum would comb-filter)",
+   "resampled to 44.1 kHz (soxr)",
+   "filters: highpass=f=80:p=2,highpass=f=80:p=2",
+   "seamless loop: last 2.0 s crossfaded (equal power, sin/cos) into the head; loop length 20.0 s",
+   "loudness -28.2 -> -23.0 LUFS integrated (gain +5.2 dB), true peak -3.0 dBFS",
+   "padded 0.25 s of periodic extension each side; loopStart=0.25, loopEnd=20.25",
+   "MP3 CBR 80 kbps mono 44.1 kHz (LAME q0), tags stripped"
+  ],
+  "_meta": {
+   "kind": "loop",
+   "loopStart": 0.25,
+   "loopEnd": 20.25,
+   "dur": 20.5
+  }
+ },
+ "fall": {
+  "file": "assets/audio/fall.mp3",
+  "kind": "loop",
+  "bytes": 132492,
+  "seconds": 16.5,
+  "source": {
+   "title": "Small waterfall #2 (BigSoundBank #0219)",
+   "author": "gamin",
+   "licence": "CC0 1.0",
+   "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+   "page": "https://bigsoundbank.com/small-waterfall-2-s0219.html",
+   "url": "https://bigsoundbank.com/UPLOAD/ogg/0219.ogg",
+   "recorded": "France, a few metres above a small mountain waterfall"
+  },
+  "edits": [
+   "segment 2.00-20.00 s of the source",
+   "mono = (L+R)/2",
+   "resampled to 44.1 kHz (soxr)",
+   "filters: highpass=f=60:p=2,highpass=f=60:p=2,lowpass=f=8000:p=2",
+   "seamless loop: last 2.0 s crossfaded (equal power, sin/cos) into the head; loop length 16.0 s",
+   "loudness -20.5 -> -23.0 LUFS integrated (gain -2.5 dB), true peak -6.7 dBFS",
+   "padded 0.25 s of periodic extension each side; loopStart=0.25, loopEnd=16.25",
+   "MP3 CBR 64 kbps mono 44.1 kHz (LAME q0), tags stripped"
+  ],
+  "_meta": {
+   "kind": "loop",
+   "loopStart": 0.25,
+   "loopEnd": 16.25,
+   "dur": 16.5
+  }
+ },
+ "crow": {
+  "file": "assets/audio/crow.mp3",
+  "kind": "sprite",
+  "bytes": 37615,
+  "seconds": 4.64,
+  "sources": {
+   "crow_kyoto": {
+    "title": "Large-billed crow (Corvus macrorhynchos), iNaturalist observation 250986351 (sound 1247228)",
+    "author": "funnieanimals",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/250986351",
+    "url": "https://static.inaturalist.org/sounds/1247228.wav",
+    "recorded": "2024-11-09, Kyoto, Japan"
+   },
+   "crow_okinawa": {
+    "title": "Large-billed crow (Corvus macrorhynchos), iNaturalist observation 331178834 (sound 1718844)",
+    "author": "islander_iskander",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/331178834",
+    "url": "https://static.inaturalist.org/sounds/1718844.m4a",
+    "recorded": "2025-12-18, Okinawa, Japan"
+   }
+  },
+  "edits": [
+   "crow_a: crow_kyoto 0.05-2.32 s, filters highpass=f=250:p=2,highpass=f=250:p=2,lowpass=f=8000:p=2,lowpass=f=8000:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.02/0.12 s, -43.5 -> -18.3 LUFS (+25.5 dB), tp -5.0",
+   "crow_b: crow_okinawa 0.40-2.02 s, filters highpass=f=300:p=2,highpass=f=300:p=2,lowpass=f=8000:p=2,lowpass=f=8000:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.02/0.12 s, -47.0 -> -18.0 LUFS (+29.0 dB), tp -3.9",
+   "segments packed with 0.45 s silence between them; MP3 CBR 64 kbps mono 44.1 kHz (LAME q0)"
+  ],
+  "segments": {
+   "crow_a": [
+    0.15,
+    2.27
+   ],
+   "crow_b": [
+    2.87,
+    1.62
+   ],
+   "crow_a1": [
+    0.15,
+    0.8
+   ],
+   "crow_a3": [
+    1.73,
+    0.69
+   ],
+   "crow_b1": [
+    2.87,
+    0.45
+   ],
+   "crow_b2": [
+    3.45,
+    0.44
+   ]
+  },
+  "_meta": {
+   "kind": "sprite",
+   "segs": {
+    "crow_a": [
+     0.15,
+     2.27
+    ],
+    "crow_b": [
+     2.87,
+     1.62
+    ],
+    "crow_a1": [
+     0.15,
+     0.8
+    ],
+    "crow_a3": [
+     1.73,
+     0.69
+    ],
+    "crow_b1": [
+     2.87,
+     0.45
+    ],
+    "crow_b2": [
+     3.45,
+     0.44
+    ]
+   },
+   "dur": 4.64
+  }
+ },
+ "birds": {
+  "file": "assets/audio/birds.mp3",
+  "kind": "sprite",
+  "bytes": 159659,
+  "seconds": 19.89,
+  "sources": {
+   "bul_ueda": {
+    "title": "Brown-eared bulbul (Hypsipetes amaurotis), iNaturalist observation 111523106 (sound 394003)",
+    "author": "konoda",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/111523106",
+    "url": "https://static.inaturalist.org/sounds/394003.mp3",
+    "recorded": "2022-04-15, Ueda, Nagano, Japan"
+   },
+   "bul_ota": {
+    "title": "Brown-eared bulbul (Hypsipetes amaurotis), iNaturalist observation 188787166 (sound 836234)",
+    "author": "kalvinchan",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/188787166",
+    "url": "https://static.inaturalist.org/sounds/836234.wav",
+    "recorded": "2023-10-24, Ota City, Tokyo, Japan"
+   },
+   "tit_setagaya": {
+    "title": "Japanese tit (Parus minor), iNaturalist observation 356867013 (sound 1915066)",
+    "author": "quercus_e",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/356867013",
+    "url": "https://static.inaturalist.org/sounds/1915066.wav",
+    "recorded": "2026-04-18, Setagaya, Tokyo, Japan"
+   },
+   "tit_sagamihara": {
+    "title": "Japanese tit (Parus minor), iNaturalist observation 367885458 (sound 1998102)",
+    "author": "bko98212",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/367885458",
+    "url": "https://static.inaturalist.org/sounds/1998102.mp3",
+    "recorded": "2026-05-10, Sagamihara, Kanagawa, Japan"
+   },
+   "ugu_kyoto": {
+    "title": "Japanese bush warbler (Horornis diphone), iNaturalist observation 206776175 (sound 964225)",
+    "author": "ahikar",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/206776175",
+    "url": "https://static.inaturalist.org/sounds/964225.m4a",
+    "recorded": "2024-04-12, Nakagyo Ward, Kyoto, Japan"
+   },
+   "ugu_fujisawa": {
+    "title": "Japanese bush warbler (Horornis diphone), iNaturalist observation 367885761 (sound 1998112)",
+    "author": "bko98212",
+    "licence": "CC0 1.0",
+    "licence_url": "https://creativecommons.org/publicdomain/zero/1.0/",
+    "page": "https://www.inaturalist.org/observations/367885761",
+    "url": "https://static.inaturalist.org/sounds/1998112.mp3",
+    "recorded": "2026-05-12, Fujisawa, Kanagawa, Japan"
+   }
+  },
+  "edits": [
+   "bulbul_a: bul_ueda 0.15-2.78 s, filters highpass=f=1200:p=2,highpass=f=1200:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.02/0.15 s, -43.7 -> -18.2 LUFS (+25.7 dB), tp -7.4",
+   "bulbul_b: bul_ota 7.85-9.70 s, filters highpass=f=1500:p=2,highpass=f=1500:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.02/0.15 s, -29.2 -> -18.7 LUFS (+11.2 dB), tp -4.6",
+   "tit_a: tit_setagaya 2.95-5.78 s, filters highpass=f=2500:p=2,highpass=f=2500:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.02/0.12 s, -44.9 -> -18.1 LUFS (+26.9 dB), tp -5.2",
+   "tit_b: tit_sagamihara 0.12-2.88 s, filters highpass=f=3000:p=2,highpass=f=3000:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.02/0.12 s, -35.2 -> -18.1 LUFS (+17.2 dB), tp -2.6",
+   "ugu_a: ugu_kyoto 7.60-9.62 s, filters highpass=f=800:p=2,highpass=f=800:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.03/0.15 s, -19.5 -> -18.0 LUFS (+1.5 dB), tp -5.5",
+   "ugu_b: ugu_fujisawa 7.10-9.30 s, filters highpass=f=1000:p=2,highpass=f=1000:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.03/0.15 s, -14.9 -> -18.0 LUFS (-3.1 dB), tp -3.9",
+   "ugu_c: ugu_fujisawa 17.40-20.00 s, filters highpass=f=900:p=2,highpass=f=900:p=2,afftdn=nr=10:nf=-50:tn=1, fades 0.03/0.15 s, -20.7 -> -17.7 LUFS (+2.7 dB), tp -2.3",
+   "segments packed with 0.45 s silence between them; MP3 CBR 64 kbps mono 44.1 kHz (LAME q0)"
+  ],
+  "segments": {
+   "bulbul_a": [
+    0.15,
+    2.63
+   ],
+   "bulbul_b": [
+    3.23,
+    1.85
+   ],
+   "tit_a": [
+    5.53,
+    2.83
+   ],
+   "tit_b": [
+    8.81,
+    2.76
+   ],
+   "ugu_a": [
+    12.02,
+    2.02
+   ],
+   "ugu_b": [
+    14.49,
+    2.2
+   ],
+   "ugu_c": [
+    17.14,
+    2.6
+   ]
+  },
+  "_meta": {
+   "kind": "sprite",
+   "segs": {
+    "bulbul_a": [
+     0.15,
+     2.63
+    ],
+    "bulbul_b": [
+     3.23,
+     1.85
+    ],
+    "tit_a": [
+     5.53,
+     2.83
+    ],
+    "tit_b": [
+     8.81,
+     2.76
+    ],
+    "ugu_a": [
+     12.02,
+     2.02
+    ],
+    "ugu_b": [
+     14.49,
+     2.2
+    ],
+    "ugu_c": [
+     17.14,
+     2.6
+    ]
+   },
+   "dur": 19.89
+  }
+ }
+}

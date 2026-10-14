@@ -16,7 +16,7 @@ const ctx = await context({
   sourcemap: true,
   outfile: path.join(ROOT, '.dev/main.js'),
   logLevel: 'info',
-  loader: { '.png': 'dataurl', '.webp': 'dataurl' }, // art assets ship inside the single-file build
+  loader: { '.png': 'dataurl', '.webp': 'dataurl', '.mp3': 'dataurl' }, // art assets ship inside the single-file build
 });
 await ctx.watch();
 const { hosts } = await ctx.serve({ servedir: ROOT, port });
