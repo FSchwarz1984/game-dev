@@ -4,7 +4,7 @@
 
 ## 0. 结论
 
-- 目标平台：**Windows 用 Forward+，Android 用 Mobile 渲染器（只横屏）**。Web 不再需要（W-1，见 §11）。
+- 目标平台：Windows 和 Android（只横屏）。**两端都用 Mobile 渲染器**（主管决定，2026-10-14：2D 上 Forward+ 与 Mobile 只差辉光，统一后画面一致）。Web 不再需要（W-1，见 §11）。
 - **不自己编译引擎，用官方 4.7.2 二进制。** GitHub 的 release 资源在本容器里是 403，但 `downloads.godotengine.org` 可以下载（它会 302 跳到 Godot 自己的对象存储）。校验用 `github.com/godotengine/godot-builds` 里公布的 SHA512（这个仓库可以 git clone）。`tools/godot/setup-godot.sh` 首次 80 s 装好编辑器和模板，再次运行 1.6 s。
 - 官方编辑器在 Xvfb + Mesa 软件渲染下能真正开窗口运行游戏。Forward+、Mobile、Compatibility 三个渲染器都能截图、测 FPS，也能接收真实输入（xdotool 走 XTEST 发键盘、鼠标，鼠标再模拟成触摸）。
 - 导出都已产出并检查过：
