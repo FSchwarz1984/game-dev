@@ -56,7 +56,7 @@ ${js}
 `;
 
 // The artifact host allows Google Fonts; the standalone page stays offline (system fallbacks).
-const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Noto+Serif+SC:wght@700&display=swap">';
+const fonts = '<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@500;700&family=Noto+Serif+SC:wght@600;700&family=Noto+Serif+JP:wght@500;700&family=Shippori+Mincho+B1:wght@700&display=swap">';
 const artifact = `<title>${title}</title>
 ${fonts}
 <style>

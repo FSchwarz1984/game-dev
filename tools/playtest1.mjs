@@ -99,8 +99,35 @@ async function until(cond, label, max = 9000) {
   }
   throw new Error('timed out: ' + label);
 }
-async function walk([x, z], tol = 0.35) {
-  await until(s => s.control && !s.busy && !s.blocking, 'control before walking to ' + [x, z]);
+// A path over the map's walkable grid (0.5 m BFS, computed in the page), so the bot goes round
+// walls and up the stairs like a player who can see them.
+const route = (x, z) => page.evaluate(([tx, tz]) => {
+  const { G } = window.APP, map = G.stage.map, f = G.f, c = 0.5, X0 = -6, Z0 = -4, W = 270, H = 200;
+  const idx = (i, j) => j * W + i, ci = x => Math.round((x - X0) / c), cj = z => Math.round((z - Z0) / c);
+  const ok = (i, j) => i >= 0 && j >= 0 && i < W && j < H && map.walkable(X0 + i * c, Z0 + j * c) && f.canStand(X0 + i * c, Z0 + j * c);
+  const s = idx(ci(f.player.x), cj(f.player.z)), t = idx(ci(tx), cj(tz));
+  const prev = new Int32Array(W * H).fill(-1); prev[s] = s; const q = [s];
+  for (let h = 0; h < q.length && prev[t] < 0; h++) {
+    const k = q[h], i = k % W, j = (k / W) | 0;
+    for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const a = i + di, b = j + dj, n = idx(a, b);
+      if (prev[n] >= 0 || !ok(a, b) || (di && dj && (!ok(i + di, j) || !ok(i, j + dj)))) continue;
+      prev[n] = k; q.push(n);
+    }
+  }
+  if (prev[t] < 0) return null;
+  const pts = []; for (let k = t; k !== s; k = prev[k]) pts.push([X0 + (k % W) * c, Z0 + ((k / W) | 0) * c]);
+  pts.reverse();
+  return pts.filter((p, n) => n % 4 === 3 || n === pts.length - 1);
+}, [x, z]);
+async function walk(target, tol = 0.35) {
+  await until(s => s.control && !s.busy && !s.blocking, 'control before walking to ' + target);
+  const pts = await route(target[0], target[1]);
+  if (!pts) throw new Error('no route to ' + target);
+  for (const p of pts.slice(0, -1)) await walkStraight(p, 0.45);
+  return walkStraight(target, tol);
+}
+async function walkStraight([x, z], tol = 0.35) {
   for (let i = 0; i < 2400; i++) {
     const s = await state();
     if (s.dlg) { await steer(0, 0); await ticks(15); await advance(); continue; }
@@ -135,8 +162,7 @@ try {
   await until(s => s.dlg, 'statues line'); await shot('statues');
   await until(s => s.control && !s.busy, 'control on the road');
   // up the switchbacks: the road's own bends (map.objects.road.path), then the graves terrace
-  const road = await page.evaluate(() => window.APP.G.stage.map.objects.road.path);
-  for (const [x, z] of road) { if (x > 119) continue; if (x < 84 && z < 59) break; await walk([x, z], 0.8); }
+  await walk([96, 72.4], 0.8);
   await shot('switchbacks');
   await walk(P.gravesStand, 1.4);
   for (let i = 0; i < 9; i++) {

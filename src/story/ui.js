@@ -212,6 +212,7 @@ function injectStyle() {
   .st-name { position: absolute; top: -15px; display: flex; align-items: baseline; gap: 8px; padding: 4px 14px 5px 10px; background: #1a1418; border: 1px solid rgba(214,182,120,.5); border-radius: 3px; }
   .st-dlg.has-port .st-name { left: clamp(150px, 26%, 230px); } .st-dlg:not(.has-port) .st-name { left: 22px; }
   .st-name i { width: 9px; height: 9px; background: #c4462e; transform: rotate(45deg); align-self: center; }
+  .st-name b, .st-name small { font-family: "Noto Serif JP", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "IPAMincho", "IPAGothic", "Noto Serif SC", serif; }
   .st-name b { font-weight: 700; font-size: 17px; letter-spacing: .06em; color: #f6eedb; }
   .st-name small { font-family: "Noto Sans SC", system-ui, sans-serif; font-size: 11px; color: #bba985; letter-spacing: .12em; }
   .st-dlg.narr .st-name { display: none; }
