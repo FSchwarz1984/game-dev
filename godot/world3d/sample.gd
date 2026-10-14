@@ -224,8 +224,8 @@ func _place_marker_props() -> void:
 		["kakehi", t.marker("spring") + Vector3(3.3, 0, 0.4), 0.0, false],
 		["signpost", Vector3(-16.4, 0, 19.0), 0.25, false],
 		["waymark", Vector3(8.4, 0, 17.4), -0.1, false],
-		["basket_tall", door + Vector3(2.4, 0, 0.1), 0.4, false],
-		["basket_flat", door + Vector3(3.6, 0, 1.4), 0.0, false],
+		["basket_tall", door + Vector3(-1.75, 0, 0.15), 0.4, false],
+		["basket_flat", door + Vector3(-3.0, 0, 0.9), 0.0, false],
 		["straw_sheaves", Vector3(-22.2, 0, 11.4), 1.4, false],
 		["straw_heap", Vector3(-21.6, 0, 17.0), -0.3, false],
 	]
