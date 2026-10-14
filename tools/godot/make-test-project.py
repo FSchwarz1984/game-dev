@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 # Writes the Godot toolchain test project (not game content) into a directory:
-#   python3 -I tools/godot/make-test-project.py <project_dir> [--noto <dir with Sans/SubsetOTF>]
-# The project checks what the web build must do for this game: 480x270 viewport stretched by
-# integer steps, a Sprite2D with a CanvasTexture (diffuse + normal map) lit by a PointLight2D and a
-# DirectionalLight2D with shadows from LightOccluder2D, a TileMapLayer, CJK text with line wrapping
-# (including a kinsoku report for the active text server), keyboard and touch input moving the
-# sprite, and an OGG blip on input. main.gd prints BOOT_OK / FIRST_FRAME / FPS / EVT / WRAP lines
-# that tools/godot/webtest.mjs reads from the browser console.
+#   python3 -I tools/godot/make-test-project.py <project_dir> [--templates DIR] [--noto DIR]
+# It checks what the native builds must do for this game: a 480x270 viewport stretched by integer
+# steps (expand aspect), a Sprite2D with a CanvasTexture (diffuse + normal map) lit by a
+# PointLight2D and a DirectionalLight2D with LightOccluder2D shadows, 2D HDR with glow, a
+# TileMapLayer, CJK text and line wrapping (plus a kinsoku report for the active text server),
+# keyboard and touch input (touch is emulated from the mouse on desktop) moving the sprite, and an
+# OGG blip on input. The renderer is chosen on the command line (--rendering-method forward_plus |
+# mobile | gl_compatibility); Android uses rendering_method.mobile = "mobile".
+# main.gd prints BOOT_OK / RENDER / FIRST_FRAME / FPS / EVT / WRAP / SHOT lines on stdout, read by
+# tools/godot/xvfb-playtest.sh. User arguments after "--":
+#   --shot=<png>  save the engine's own viewport capture at frame --shot-frame (default 120)
+#   --quit-secs=<n>  quit after n seconds and print FPS_AVG
+# export_presets.cfg gets Linux, Windows Desktop and Android presets pointing at the custom
+# templates in --templates (default $GODOT_OUT/templates = /home/user/godotengine/out/templates).
 # Needs Pillow, fontTools (pip install fonttools) and ffmpeg with libvorbis. Noto Sans CJK (OFL) is
 # taken from --noto, or sparse-cloned from github.com/notofonts/noto-cjk into
 # $GODOT_HOME/fonts/noto-cjk (two subset OTFs, about 13 MB).
@@ -20,12 +27,10 @@ import sys
 
 from PIL import Image
 
-TEST_TITLE = "天岸 Godot web test"  # 天岸
-
 # All on-screen strings live in main.gd; the font subsets are cut to exactly these characters.
 MAIN_GD = r'''extends Node2D
 # Toolchain test scene (see tools/godot/make-test-project.py). Prints machine-readable lines:
-#   BOOT_OK, FIRST_FRAME, FPS, EVT, WRAP, WRAPLINES  (read by tools/godot/webtest.mjs)
+#   BOOT_OK, RENDER, FIRST_FRAME, FPS, FPS_AVG, EVT, WRAP, WRAPLINES, SHOT
 
 const SPEED := 80.0
 const ZWSP := "​"
@@ -40,24 +45,40 @@ const ZH_SAMPLE := "床前明月光，疑是地上霜。举头望明月，低头
 @onready var blip: AudioStreamPlayer = $Blip
 @onready var dbg: Label = $UI/Debug
 
-var _first_frame := true
-var _fps_t := 0.0
-var _last := "none"
+var _frame := 0
 var _target = null
+var _last := "none"
 var _keys := 0
 var _touches := 0
 var _drags := 0
+var _fps_t := 0.0
+var _fps_sum := 0.0
+var _fps_n := 0
+var _shot := ""
+var _shot_frame := 120
+var _quit_secs := 0.0
+var _elapsed := 0.0
 
 
 func _ready() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--shot="):
+			_shot = a.substr(7)
+		elif a.begins_with("--shot-frame="):
+			_shot_frame = int(a.substr(13))
+		elif a.begins_with("--quit-secs="):
+			_quit_secs = float(a.substr(12))
 	for a in [["ui_left", KEY_A], ["ui_right", KEY_D], ["ui_up", KEY_W], ["ui_down", KEY_S]]:
 		var ev := InputEventKey.new()
 		ev.physical_keycode = a[1]
 		InputMap.action_add_event(a[0], ev)
+	# Japanese glyph shapes first; simplified-Chinese-only characters (这, 们, 说) come from the SC font.
+	var jp: FontFile = load("res://fonts/cjk_jp.otf")
+	jp.fallbacks = [load("res://fonts/cjk_sc.otf")]
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 7
-	for y in range(-2, 24):
-		for x in range(-2, 44):
+	for y in range(-2, 30):
+		for x in range(-2, 50):
 			var t := 0
 			var r := rng.randf()
 			if r < 0.12:
@@ -67,19 +88,20 @@ func _ready() -> void:
 			if y == 12 or y == 13:
 				t = 1
 			ground.set_cell(Vector2i(x, y), 0, Vector2i(t, 0))
-	$UI/Title.text = "天岸 Godot %s web test  百々つゞみ・家守さぢ・垣外しをね" % Engine.get_version_info().string
+	$UI/Title.text = "天岸 Godot %s  百々つゞみ・家守さぢ・垣外しをね" % Engine.get_version_info().string
 	$UI/WrapSmart.text = JA_SAMPLE
 	$UI/WrapArbitrary.text = JA_SAMPLE
 	$UI/WrapKinsoku.text = kinsoku_zwsp(JA_SAMPLE)
 	$UI/Zh.text = ZH_SAMPLE
 	var ts := TextServerManager.get_primary_interface()
-	print("BOOT_OK ticks=%d text_server=%s viewport=%s window=%s" % [Time.get_ticks_msec(), ts.get_name(), get_viewport().get_visible_rect().size, DisplayServer.window_get_size()])
+	print("BOOT_OK ticks=%d os=%s text_server=%s viewport=%s window=%s" % [Time.get_ticks_msec(), OS.get_name(), ts.get_name(), get_viewport().get_visible_rect().size, DisplayServer.window_get_size()])
+	print("RENDER method=%s driver=%s adapter=%s api=%s hdr_2d=%s" % [RenderingServer.get_current_rendering_method(), RenderingServer.get_current_rendering_driver_name(), RenderingServer.get_video_adapter_name(), RenderingServer.get_video_adapter_api_version(), get_viewport().use_hdr_2d])
 	_wrap_report()
 
 
 func _process(delta: float) -> void:
-	if _first_frame:
-		_first_frame = false
+	_frame += 1
+	if _frame == 1:
 		print("FIRST_FRAME ticks=%d" % Time.get_ticks_msec())
 	var dir := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
 	if dir != Vector2.ZERO:
@@ -89,39 +111,52 @@ func _process(delta: float) -> void:
 		hero.position = hero.position.move_toward(_target, SPEED * delta)
 		if hero.position.distance_to(_target) < 0.5:
 			_target = null
+	$Spark.position = hero.position + Vector2(14, -18)
+	_elapsed += delta
 	_fps_t += delta
 	if _fps_t >= 1.0:
 		_fps_t = 0.0
-		print("FPS %d pos=%d,%d keys=%d touches=%d drags=%d" % [Engine.get_frames_per_second(), hero.position.x, hero.position.y, _keys, _touches, _drags])
-	dbg.text = "fps %d  pos %d,%d  %s" % [Engine.get_frames_per_second(), hero.position.x, hero.position.y, _last]
+		var fps := Engine.get_frames_per_second()
+		if _elapsed > 3.0:
+			_fps_sum += fps
+			_fps_n += 1
+		print("FPS %d pos=%d,%d keys=%d touches=%d drags=%d" % [fps, hero.position.x, hero.position.y, _keys, _touches, _drags])
+	dbg.text = "fps %d  pos %d,%d  %s  %s" % [Engine.get_frames_per_second(), hero.position.x, hero.position.y, RenderingServer.get_current_rendering_method(), _last]
+	if _shot != "" and _frame == _shot_frame:
+		var img := get_viewport().get_texture().get_image()
+		var err := img.save_png(_shot)
+		print("SHOT %s %dx%d err=%d" % [_shot, img.get_width(), img.get_height(), err])
+	if _quit_secs > 0.0 and _elapsed >= _quit_secs:
+		print("FPS_AVG %.1f over %d s (after 3 s warm-up) frames=%d" % [_fps_sum / max(_fps_n, 1), _fps_n, _frame])
+		get_tree().quit()
 
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and not event.echo:
-		_keys += 1
-		_last = "key %s" % OS.get_keycode_string(event.keycode)
-		blip.play()
-		print("EVT key %s pos=%d,%d" % [OS.get_keycode_string(event.keycode), hero.position.x, hero.position.y])
+	if event is InputEventKey and not event.echo:
+		if event.pressed:
+			_keys += 1
+			_last = "key %s" % OS.get_keycode_string(event.keycode)
+			blip.play()
+		print("EVT key %s %s hero=%d,%d" % [OS.get_keycode_string(event.keycode), "down" if event.pressed else "up", hero.position.x, hero.position.y])
 	elif event is InputEventScreenTouch:
 		_touches += 1
 		_last = "touch %d,%d" % [event.position.x, event.position.y]
 		if event.pressed:
 			_target = event.position
 			blip.play()
-		print("EVT touch index=%d pressed=%s at=%d,%d" % [event.index, event.pressed, event.position.x, event.position.y])
+		print("EVT touch index=%d pressed=%s at=%d,%d hero=%d,%d" % [event.index, event.pressed, event.position.x, event.position.y, hero.position.x, hero.position.y])
 	elif event is InputEventScreenDrag:
 		_drags += 1
 		_target = null
 		hero.position += event.relative
 		_last = "drag %d,%d" % [event.position.x, event.position.y]
-		if _drags % 5 == 1:
-			print("EVT drag at=%d,%d rel=%.1f,%.1f hero=%d,%d" % [event.position.x, event.position.y, event.relative.x, event.relative.y, hero.position.x, hero.position.y])
+		print("EVT drag at=%d,%d rel=%.1f,%.1f hero=%d,%d" % [event.position.x, event.position.y, event.relative.x, event.relative.y, hero.position.x, hero.position.y])
 	elif event is InputEventMouseButton and event.pressed:
 		print("EVT mouse button=%d at=%d,%d" % [event.button_index, event.position.x, event.position.y])
 
 
 # Inserts U+200B where CJK text may break, except before a no-line-start character or after a
-# no-line-end one. Fallback text server breaks only at whitespace (U+200B counts as whitespace).
+# no-line-end one. The Fallback text server breaks only at whitespace (U+200B counts as whitespace).
 static func kinsoku_zwsp(s: String) -> String:
 	var out := ""
 	for i in s.length():
@@ -188,6 +223,7 @@ MAIN_TSCN = '''[gd_scene format=3]
 [ext_resource type="Texture2D" path="res://sprites/pillar.png" id="6"]
 [ext_resource type="Texture2D" path="res://sprites/pillar_n.png" id="7"]
 [ext_resource type="AudioStream" path="res://sfx/blip.ogg" id="8"]
+[ext_resource type="Texture2D" path="res://sprites/spark.png" id="9"]
 
 [sub_resource type="CanvasTexture" id="hero_tex"]
 diffuse_texture = ExtResource("2")
@@ -230,8 +266,20 @@ polygon = PackedVector2Array(-7, -4, 7, -4, 7, 4, -7, 4)
 [sub_resource type="OccluderPolygon2D" id="hero_occ"]
 polygon = PackedVector2Array(-6, 10, 6, 10, 6, 15, -6, 15)
 
+[sub_resource type="Environment" id="env"]
+background_mode = 3
+glow_enabled = true
+glow_intensity = 1.2
+glow_strength = 1.0
+glow_bloom = 0.0
+glow_blend_mode = 1
+glow_hdr_threshold = 1.0
+
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
+
+[node name="Env" type="WorldEnvironment" parent="."]
+environment = SubResource("env")
 
 [node name="Ambient" type="CanvasModulate" parent="."]
 color = Color(0.42, 0.45, 0.6, 1)
@@ -253,6 +301,11 @@ texture = SubResource("hero_tex")
 
 [node name="Occluder" type="LightOccluder2D" parent="Hero"]
 occluder = SubResource("hero_occ")
+
+[node name="Spark" type="Sprite2D" parent="."]
+position = Vector2(254, 182)
+self_modulate = Color(4, 3, 1.4, 1)
+texture = ExtResource("9")
 
 [node name="Sun" type="DirectionalLight2D" parent="."]
 rotation = -0.7
@@ -340,134 +393,130 @@ config_version=5
 
 [application]
 
-config/name="GodotWebToolchainTest"
+config/name="GodotToolchainTest"
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.7", "GL Compatibility")
+config/features=PackedStringArray("4.7", "Forward Plus")
 boot_splash/show_image=false
 boot_splash/bg_color=Color(0.07, 0.07, 0.09, 1)
-
-[audio]
-
-general/default_playback_type.web=1
 
 [display]
 
 window/size/viewport_width=480
 window/size/viewport_height=270
+window/size/window_width_override=1280
+window/size/window_height_override=720
 window/stretch/mode="viewport"
 window/stretch/aspect="expand"
 window/stretch/scale_mode="integer"
+window/vsync/vsync_mode=0
+window/handheld/orientation=4
 
 [gui]
 
 theme/custom_font="res://fonts/cjk_jp.otf"
 
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
 [internationalization]
 
-locale/include_text_server_data=false
+locale/include_text_server_data=true
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method="forward_plus"
+renderer/rendering_method.mobile="mobile"
 textures/canvas_textures/default_texture_filter=0
 2d/snap/snap_2d_transforms_to_pixel=true
+viewport/hdr_2d=true
 environment/defaults/default_clear_color=Color(0.1, 0.1, 0.12, 1)
-'''
-
-# Body-only HTML shell: the delivery host wraps the page body in its own <html><head>, so nothing
-# here may rely on <head>. Same boot logic as Godot's misc/dist/html/full-size.html, minus the
-# service-worker branch (PWA is off and the host forbids service workers). Pure ASCII.
-BODY_SHELL = '''<style>
-html, body, #canvas { margin: 0; padding: 0; border: 0; }
-body { color: white; background-color: black; overflow: hidden; touch-action: none; }
-#canvas { display: block; }
-#canvas:focus { outline: none; }
-#status, #status-progress { position: absolute; left: 0; right: 0; }
-#status { top: 0; bottom: 0; background-color: $GODOT_SPLASH_COLOR; display: flex;
-  flex-direction: column; justify-content: center; align-items: center; visibility: hidden; }
-#status-progress, #status-notice { display: none; }
-#status-progress { bottom: 10%; width: 50%; margin: 0 auto; }
-#status-notice { background-color: #5b3943; border-radius: 0.5rem; border: 1px solid #9b3943;
-  color: #e0e0e0; font-family: sans-serif; line-height: 1.3; margin: 0 2rem; padding: 1rem;
-  text-align: center; z-index: 1; }
-</style>
-<canvas id="canvas">Your browser does not support the canvas tag.</canvas>
-<div id="status">
-  <progress id="status-progress"></progress>
-  <div id="status-notice"></div>
-</div>
-<script src="$GODOT_URL"></script>
-<script>
-(function () {
-  const GODOT_CONFIG = $GODOT_CONFIG;
-  const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
-  const engine = new Engine(GODOT_CONFIG);
-  const statusOverlay = document.getElementById('status');
-  const statusProgress = document.getElementById('status-progress');
-  const statusNotice = document.getElementById('status-notice');
-  let initializing = true;
-  function setStatusMode(mode) {
-    if (!initializing) { return; }
-    if (mode === 'hidden') { statusOverlay.remove(); initializing = false; return; }
-    statusOverlay.style.visibility = 'visible';
-    statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
-    statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
-  }
-  function fail(err) {
-    console.error(err);
-    statusNotice.textContent = (err && err.message) ? err.message : String(err);
-    setStatusMode('notice');
-    initializing = false;
-  }
-  const missing = Engine.getMissingFeatures({ threads: GODOT_THREADS_ENABLED });
-  if (missing.length !== 0) {
-    fail('Missing browser features: ' + missing.join(', '));
-    return;
-  }
-  setStatusMode('progress');
-  engine.startGame({
-    'onProgress': function (current, total) {
-      if (current > 0 && total > 0) { statusProgress.value = current; statusProgress.max = total; }
-    },
-  }).then(function () { setStatusMode('hidden'); }, fail);
-}());
-</script>
 '''
 
 EXPORT_PRESETS = '''[preset.0]
 
-name="Web"
-platform="Web"
+name="Linux"
+platform="Linux"
 runnable=true
 advanced_options=true
 dedicated_server=false
 custom_features=""
 export_filter="all_resources"
 include_filter=""
-exclude_filter=""
-export_path="export/index.html"
-encryption_include_filters=""
-encryption_exclude_filters=""
-seed=0
-encrypt_pck=false
-encrypt_directory=false
+exclude_filter="export/*"
+export_path="export/linux/GodotToolchainTest.x86_64"
 
 [preset.0.options]
 
-custom_template/debug="@TEMPLATE_DEBUG@"
-custom_template/release="@TEMPLATE_RELEASE@"
-variant/extensions_support=false
-variant/thread_support=false
-vram_texture_compression/for_desktop=false
-vram_texture_compression/for_mobile=false
-html/export_icon=false
-html/custom_html_shell="res://shell/body.html"
-html/head_include=""
-html/canvas_resize_policy=2
-html/focus_canvas_on_start=true
-html/experimental_virtual_keyboard=false
-progressive_web_app/enabled=false
+custom_template/debug="@TEMPLATES@/linux_debug.x86_64"
+custom_template/release="@TEMPLATES@/linux_release.x86_64"
+debug/export_console_wrapper=1
+binary_format/embed_pck=false
+texture_format/s3tc_bptc=true
+texture_format/etc2_astc=false
+binary_format/architecture="x86_64"
+
+[preset.1]
+
+name="Windows"
+platform="Windows Desktop"
+runnable=true
+advanced_options=true
+dedicated_server=false
+custom_features=""
+export_filter="all_resources"
+include_filter=""
+exclude_filter="export/*"
+export_path="export/windows/GodotToolchainTest.exe"
+
+[preset.1.options]
+
+custom_template/debug="@TEMPLATES@/windows_debug_x86_64.exe"
+custom_template/release="@TEMPLATES@/windows_release_x86_64.exe"
+debug/export_console_wrapper=1
+binary_format/embed_pck=false
+texture_format/s3tc_bptc=true
+texture_format/etc2_astc=false
+binary_format/architecture="x86_64"
+codesign/enable=false
+application/modify_resources=true
+application/product_name="GodotToolchainTest"
+application/file_version="0.1.0.0"
+application/product_version="0.1.0.0"
+
+[preset.2]
+
+name="Android"
+platform="Android"
+runnable=true
+advanced_options=true
+dedicated_server=false
+custom_features=""
+export_filter="all_resources"
+include_filter=""
+exclude_filter="export/*"
+export_path="export/android/GodotToolchainTest.apk"
+
+[preset.2.options]
+
+custom_template/debug="@TEMPLATES@/android_debug.apk"
+custom_template/release="@TEMPLATES@/android_release.apk"
+gradle_build/use_gradle_build=false
+gradle_build/export_format=0
+architectures/armeabi-v7a=false
+architectures/arm64-v8a=true
+architectures/x86=false
+architectures/x86_64=false
+version/code=1
+version/name="0.1"
+package/unique_name="org.tengan.toolchaintest"
+package/name="GodotToolchainTest"
+package/signed=true
+screen/immersive_mode=true
+screen/support_small=true
+screen/support_normal=true
+screen/support_large=true
+screen/support_xlarge=true
 '''
 
 
@@ -547,8 +596,7 @@ def make_pillar(path, npath):
     bump = [[0.0] * w for _ in range(h)]
     for y in range(2, h):
         for x in range(1, w - 1):
-            top = y < 8
-            if top and not (2 <= x <= 13):
+            if y < 8 and not (2 <= x <= 13):
                 continue
             v = 120 + rnd.randint(-14, 14) - (8 if x > 9 else 0)
             if y % 9 == 0:
@@ -558,6 +606,17 @@ def make_pillar(path, npath):
             alpha[y][x] = 1.0
     img.save(path)
     normal_map(alpha, 1.6, bump).save(npath)
+
+
+def make_spark(path):
+    # Small soft dot; drawn with an HDR self_modulate (> 1.0) so it should bloom with 2D glow.
+    img = Image.new("RGBA", (7, 7), (0, 0, 0, 0))
+    for y in range(7):
+        for x in range(7):
+            d = math.hypot(x - 3, y - 3)
+            if d <= 3.2:
+                img.putpixel((x, y), (255, 255, 255, int(255 * max(0.0, 1.0 - d / 3.4))))
+    img.save(path)
 
 
 def make_tiles(path, npath):
@@ -626,31 +685,32 @@ def subset_font(src, dst, text):
     subset.save_font(font, dst, opts)
 
 
+def arg(name, default=None):
+    return sys.argv[sys.argv.index(name) + 1] if name in sys.argv else default
+
+
 def main():
-    if len(sys.argv) < 2:
-        print(__doc__ or "usage: make-test-project.py <project_dir> [--noto DIR]")
+    if len(sys.argv) < 2 or sys.argv[1].startswith("--"):
+        print("usage: make-test-project.py <project_dir> [--templates DIR] [--noto DIR]")
         sys.exit(2)
     out = os.path.abspath(sys.argv[1])
-    noto = None
-    if "--noto" in sys.argv:
-        noto = sys.argv[sys.argv.index("--noto") + 1]
-    else:
-        home = os.environ.get("GODOT_HOME", "/home/user/godotengine")
-        noto = fetch_noto(os.path.join(home, "fonts", "noto-cjk"))
-    for d in ("sprites", "tiles", "fonts", "sfx", "shell"):
+    home = os.environ.get("GODOT_HOME", "/home/user/godotengine")
+    templates = os.path.abspath(arg("--templates", os.path.join(os.environ.get("GODOT_OUT", home + "/out"), "templates")))
+    noto = arg("--noto") or fetch_noto(os.path.join(home, "fonts", "noto-cjk"))
+    for d in ("sprites", "tiles", "fonts", "sfx"):
         os.makedirs(os.path.join(out, d), exist_ok=True)
     files = {
         "project.godot": PROJECT_GODOT,
         "main.gd": MAIN_GD,
         "main.tscn": MAIN_TSCN,
-        "shell/body.html": BODY_SHELL,
-        "export_presets.cfg.in": EXPORT_PRESETS,
+        "export_presets.cfg": EXPORT_PRESETS.replace("@TEMPLATES@", templates),
     }
     for name, text in files.items():
         with open(os.path.join(out, name), "w", encoding="utf-8", newline="\n") as f:
             f.write(text)
     make_hero(os.path.join(out, "sprites/hero.png"), os.path.join(out, "sprites/hero_n.png"))
     make_pillar(os.path.join(out, "sprites/pillar.png"), os.path.join(out, "sprites/pillar_n.png"))
+    make_spark(os.path.join(out, "sprites/spark.png"))
     make_tiles(os.path.join(out, "tiles/tiles.png"), os.path.join(out, "tiles/tiles_n.png"))
     # 0.15 s 880 Hz blip with a fast decay, OGG Vorbis.
     subprocess.check_call(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
@@ -658,8 +718,7 @@ def main():
                            "afade=t=out:st=0.01:d=0.14,volume=0.6", "-ac", "1", "-c:a", "libvorbis",
                            "-q:a", "4", os.path.join(out, "sfx/blip.ogg")])
     # Font subsets: every character in main.gd plus printable ASCII and the spaces used for wrapping.
-    chars = set(MAIN_GD) | set(TEST_TITLE) | {chr(c) for c in range(0x20, 0x7f)} | {"​", "　"}
-    chars |= set("0123456789.,:%")
+    chars = set(MAIN_GD) | {chr(c) for c in range(0x20, 0x7f)} | {"​", "　"}
     text = "".join(sorted(c for c in chars if c >= " "))
     subset_font(os.path.join(noto, "Sans/SubsetOTF/JP/NotoSansJP-Regular.otf"), os.path.join(out, "fonts/cjk_jp.otf"), text)
     subset_font(os.path.join(noto, "Sans/SubsetOTF/SC/NotoSansSC-Regular.otf"), os.path.join(out, "fonts/cjk_sc.otf"), text)

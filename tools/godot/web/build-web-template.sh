@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
+# W-1 (2026-10-14): the web target was dropped (native Windows + Android instead). Kept for
+# reference only. install-emsdk.sh was run once (Emscripten 4.0.11 installed fine); the template
+# build below was never run, so treat it as an untested draft.
 # Builds the size-optimized, single-threaded Web export templates (wasm32, no pthreads) with the
-# module set in tools/godot/custom.py, and packages them under the names the editor expects.
-#   bash tools/godot/build-web-template.sh [release|debug|both]        (default: release)
-#   GODOT_TEXT_SERVER=adv bash tools/godot/build-web-template.sh        Advanced text server variant
+# module set in tools/godot/web/custom.py, and packages them under the names the editor expects.
+#   bash tools/godot/web/build-web-template.sh [release|debug|both]        (default: release)
+#   GODOT_TEXT_SERVER=adv bash tools/godot/web/build-web-template.sh        Advanced text server variant
 # Output: $GODOT_OUT/templates/<fb|adv>/web_nothreads_release.zip and web_nothreads_debug.zip
 # (each holds godot.js, godot.wasm, godot.audio.worklet.js, godot.audio.position.worklet.js,
 # godot.html and the PWA files the exporter skips when PWA is off). Point an export preset at them
@@ -10,7 +13,7 @@
 # Object files are cached in $GODOT_HOME/scons-cache, so switching the text server or rebuilding
 # after a new session with the same cache only recompiles what changed.
 set -euo pipefail
-. "$(dirname "$0")/common.sh"
+. "$(dirname "$0")/../common.sh"
 
 WHICH="${1:-release}"
 TS="${GODOT_TEXT_SERVER:-fb}"
@@ -21,7 +24,7 @@ export GODOT_TEXT_SERVER="$TS"
 
 godot_fetch_source
 ensure_scons
-[ -f "$EMSDK_DIR/emsdk_env.sh" ] || bash "$TOOLS_GODOT/install-emsdk.sh"
+[ -f "$EMSDK_DIR/emsdk_env.sh" ] || bash "$TOOLS_GODOT/web/install-emsdk.sh"
 # shellcheck disable=SC1091
 . "$EMSDK_DIR/emsdk_env.sh" >/dev/null 2>&1
 emcc --version | head -1 | grep -q " $EM_VERSION " || { log "emcc is not $EM_VERSION; run install-emsdk.sh"; exit 1; }
@@ -33,7 +36,7 @@ for t in "${TARGETS[@]}"; do
   # On the command line because platform flags / production would override them in the profile
   # (see the header of custom.py).
   FLAGS=(platform=web target="template_$t" arch=wasm32 production=yes optimize=size_extra lto=full
-    profile="$TOOLS_GODOT/custom.py" cache_path="$GODOT_HOME/scons-cache")
+    profile="$TOOLS_GODOT/web/custom.py" cache_path="$GODOT_HOME/scons-cache")
   log "[$TS] scons ${FLAGS[*]} -j$JOBS"
   start=$(date +%s)
   scons "${FLAGS[@]}" -j"$JOBS"

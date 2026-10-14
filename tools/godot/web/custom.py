@@ -1,5 +1,8 @@
+# W-1 (2026-10-14): the web target was dropped (native Windows + Android instead). Kept for
+# reference only. No template was ever built with this profile, so treat it as an untested draft.
+#
 # SCons profile for the size-optimized Web export templates of this 2D game.
-# Used by tools/godot/build-web-template.sh as `scons ... profile=tools/godot/custom.py`.
+# Used by tools/godot/web/build-web-template.sh as `scons ... profile=tools/godot/web/custom.py`.
 # Arguments given on the scons command line override the values here. Some must be given there:
 # platform/target/optimize (platform/web/detect.py get_flags() overrides any of its keys that are
 # not on the command line, e.g. it forces optimize=size) and lto (production=yes resets lto to the
@@ -18,6 +21,8 @@ import os
 # --- Build-wide switches -------------------------------------------------------------------------
 threads = "no"  # Single-threaded wasm: no SharedArrayBuffer, no COOP/COEP headers, no pthread workers.
 use_closure_compiler = "yes"  # Minifies the Emscripten/Godot JS glue (needs Emscripten >= 4.0.11).
+# CAUTION: disable_3d also removes WorldEnvironment (registered in the 3D section of
+# scene/register_scene_types.cpp), so 2D glow/HDR tonemapping would be lost. Re-decide before use.
 disable_3d = "yes"  # No 3D nodes or servers; also turns off 3D physics, 3D navigation and XR.
 # JavaScriptBridge.eval() runs eval(); the game does not use it, and without it no engine code path
 # can call eval() (blocked by a CSP without 'unsafe-eval'). get_interface()/create_callback() stay.

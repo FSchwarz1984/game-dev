@@ -22,6 +22,10 @@ GODOT_BIN="${GODOT_BIN:-$GODOT_OUT/godot-editor}"
 # Directory the editor searches for official-style templates (version.py: 4.7.2 + "stable").
 GODOT_TEMPLATES_DIR="${GODOT_TEMPLATES_DIR:-$HOME/.local/share/godot/export_templates/${GODOT_TAG%-stable}.stable}"
 JOBS="${JOBS:-$(nproc)}"
+# Android: the editor takes its defaults for export/android/android_sdk_path and java_sdk_path
+# from these when it first creates its settings (~/.config/godot/editor_settings-4.7.tres).
+export ANDROID_HOME="${ANDROID_HOME:-$GODOT_HOME/android-sdk}"
+export JAVA_HOME="${JAVA_HOME:-/usr/lib/jvm/java-21-openjdk-amd64}"
 
 TOOLS_GODOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
