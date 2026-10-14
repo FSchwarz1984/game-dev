@@ -1,8 +1,9 @@
 class_name CharacterLibrary
 ## Sprite frames for the characters, built once from actors/characters.json (the layout of the
 ## sheets in art/sprites/, written by tools/art/sprite3d/build.py and copied by
-## tools/godot/sync_assets.py; docs/knowledge/20-sprites.md). Each frame is an AtlasTexture over a
-## CanvasTexture (albedo + normal map), so 2D lights shade the characters per pixel.
+## tools/godot/sync_assets.py; docs/knowledge/20-sprites.md §7). Each frame is an AtlasTexture over a
+## CanvasTexture (albedo + normal map), so 2D lights shade the characters per pixel. Frame i of a
+## strip is the cell (col + i, row); idle / walk / run strips always start at column 0.
 ## Animation names in the SpriteFrames: "<anim>_<view>". Views: the eight directions front,
 ## front_right, right, back_right, back, back_left, left, front_left (locomotion has all eight;
 ## scripted animations have the ones their scenes need). Left and right are drawn separately (the
@@ -91,10 +92,12 @@ static func frames(id: String, sheet: String) -> SpriteFrames:
 			sf.add_animation(name)
 			sf.set_animation_speed(name, float(meta.get("fps", 8)))
 			sf.set_animation_loop(name, bool(meta.get("loop", true)))
+			# a strip starts at its column: 0 for idle / walk / run; other strips share rows
+			var col := int(entry.get("col", 0))
 			for i in int(entry["frames"]):
 				var at := AtlasTexture.new()
 				at.atlas = tex
-				at.region = Rect2(i * fs.x, int(entry["row"]) * fs.y, fs.x, fs.y)
+				at.region = Rect2((col + i) * fs.x, int(entry["row"]) * fs.y, fs.x, fs.y)
 				sf.add_frame(name, at)
 			_anchors[key + "/" + name] = entry.get("anchors", [])
 	_frames[key] = sf

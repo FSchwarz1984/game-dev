@@ -13,7 +13,7 @@ import re
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
-from palettes import PALETTES, HAIR_KEYS, rgb
+from palettes import PALETTES, rgb
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATA = os.path.join(HERE, 'data')

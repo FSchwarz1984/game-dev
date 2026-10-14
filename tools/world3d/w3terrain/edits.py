@@ -81,6 +81,9 @@ def rect_sdf(X, Z, centre, size, angle_deg, corner=0.0):
 
 def apply_pad(h, X, Z, pad, seed=0):
     sdf, lx, lz = rect_sdf(X, Z, pad["centre"], pad["size"], pad.get("angle", 0.0), pad.get("corner", 0.0))
+    if "height_rel" in pad:
+        # levelled at the mean of the land it sits on, plus an offset (raised terraces, cut benches)
+        pad["height"] = float(np.mean(h[sdf < 0.0])) + float(pad["height_rel"])
     # organic outline: the edge wanders (nobody levels a yard with a ruler)
     sdf = sdf + (noise.fbm(X / 2.6, Z / 2.6, 3, seed) - 0.5) * 0.9
     f = pad.get("feather", 1.5)
@@ -92,6 +95,10 @@ def apply_pad(h, X, Z, pad, seed=0):
         return out, sdf
     k = geom.smoothstep(f, 0.0, sdf)
     walls = pad.get("wall", [])
+    if walls == "auto":
+        # stone-faced wherever the yard meets the land with a real step (cut or fill)
+        k_wall = geom.smoothstep(0.35, 0.0, sdf)
+        return h * (1.0 - k_wall) + target * k_wall, sdf
     if walls:
         # walled sides keep the fill steep (a retaining wall stands there); open sides feather
         a = np.radians(pad.get("angle", 0.0))
@@ -151,20 +158,27 @@ def terraces(h, X, Z, T, seed=0):
 
 
 def carve_stream(h, X, Z, S, cell):
+    """The stream: its floor follows the true bottom of the gully (the lowest ground near its line,
+    smoothed along the way and never rising downstream); the channel is cut below that floor."""
     P = geom.catmull(np.asarray(S["points"], np.float64), 8)
-    hs = ndimage.gaussian_filter(h, 2.0)
-    floor = ndimage.map_coordinates(hs, [(P[:, 1] - Z[0, 0]) / cell, (P[:, 0] - X[0, 0]) / cell], order=1, mode="nearest")
-    # monotonic downstream
+    low = ndimage.grey_erosion(h, size=(5, 5))
+    floor = ndimage.map_coordinates(low, [(P[:, 1] - Z[0, 0]) / cell, (P[:, 0] - X[0, 0]) / cell], order=1, mode="nearest")
+    k = 9
+    floor = np.convolve(np.pad(floor, (k, k), mode="edge"), np.ones(k) / k, mode="same")[k:-k]
     for i in range(1, len(floor)):
-        floor[i] = min(floor[i], floor[i - 1] - 0.005)
+        floor[i] = min(floor[i], floor[i - 1] - 0.004)
     d, arc, fl = geom.polyline_field(X, Z, P, floor)
     w = S["width"] * 0.5
     wob = (noise.fbm(arc / 3.0, 0.0 * arc + 3.0, 2, 5) - 0.5) * 0.4
     hw = w + wob
-    bed = fl - S["depth"] * geom.smoothstep(hw + 0.5, 0.0, d) ** 0.7
-    k = geom.smoothstep(hw + 1.6, hw - 0.1, d)
-    out = np.minimum(h, h * (1.0 - k) + bed * k)
-    surface = fl - S["depth"] * 0.45
+    # a rounded channel below the floor, banks easing back to the land
+    prof = np.clip(1.0 - (d / np.maximum(hw, 0.2)) ** 2, 0.0, 1.0)
+    bed = fl - 0.05 - S["depth"] * prof
+    bank = fl + 0.35 * np.maximum(d - hw, 0.0) ** 1.2
+    target = np.where(d < hw, bed, np.minimum(bank, h))
+    k2 = geom.smoothstep(hw + 2.2, hw, d)
+    out = np.minimum(h, h * (1.0 - k2) + target * k2)
+    surface = fl - 0.12
     return out, d, surface, P, floor
 
 

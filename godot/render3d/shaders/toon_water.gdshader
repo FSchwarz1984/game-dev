@@ -12,8 +12,8 @@ render_mode world_vertex_coords, blend_mix, depth_draw_never, ambient_light_disa
 
 uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
-uniform vec3 shallow_col : source_color = vec3(0.30, 0.42, 0.40);
-uniform vec3 deep_col : source_color = vec3(0.09, 0.17, 0.20);
+uniform vec3 shallow_col : source_color = vec3(0.20, 0.30, 0.30);
+uniform vec3 deep_col : source_color = vec3(0.06, 0.12, 0.15);
 uniform vec3 rice_col : source_color = vec3(0.42, 0.60, 0.24);
 
 varying vec3 v_wp;
@@ -47,21 +47,21 @@ void fragment() {
 	vec3 under = texture(screen_tex, SCREEN_UV + off / VIEWPORT_SIZE).rgb;
 	float dk = smoothstep(0.0, 0.9, depth);
 	vec3 body = mix(shallow_col, deep_col, dk) * (w3_sky * 1.3 + w3_sun * 0.55);
-	float a = clamp(0.25 + dk * 0.65, 0.0, 0.92);
+	float a = clamp(0.35 + dk * 0.55, 0.0, 0.9);
 	vec3 col = mix(under, body, a);
 	// sky in the surface, a little stronger where it is calm
-	float sky_k = (0.10 + 0.12 * dk) * (1.0 - moving * 0.4);
+	float sky_k = (0.05 + 0.08 * dk) * (1.0 - moving * 0.4);
 	col = mix(col, w3_sky * 1.25 + w3_fog_col * 0.2, sky_k);
 	// light bands of the ripples (crisp, never smooth)
 	float band = step(0.68, rip) * step(rip, 0.74);
 	col += band * (w3_sky * 0.25 + w3_sun * 0.18);
 	// flow lines in the stream
 	float streak = step(0.8, w3_vnoise(vec2(fq.x * 2.0, fq.y * 0.7 - t * 2.4)));
-	col = mix(col, col * 1.25 + vec3(0.03), streak * moving * 0.8);
+	col = mix(col, col * 1.35 + vec3(0.02), streak * moving * 0.7);
 	// foam where it is shallow (banks, stones), breaking and breathing
-	float lap = 0.06 + 0.03 * sin(t * 1.4 + w3_vnoise(cell / 6.0) * 6.0);
-	float foam = (1.0 - smoothstep(lap * 0.5, lap, depth)) * step(0.45, w3_vnoise(cell / 2.0 + vec2(t * 0.8 * (moving + 0.2), 0.0)));
-	col = mix(col, vec3(0.82, 0.88, 0.88) * (w3_sky * 0.6 + w3_sun * 0.6 + 0.1), foam * 0.75);
+	float lap = 0.035 + 0.02 * sin(t * 1.4 + w3_vnoise(cell / 6.0) * 6.0);
+	float foam = (1.0 - step(lap, depth)) * step(0.58, w3_vnoise(cell / 2.0 + vec2(t * 0.8 * (moving + 0.2), 0.0)));
+	col = mix(col, vec3(0.72, 0.78, 0.78) * (w3_sky * 0.6 + w3_sun * 0.6 + 0.1), foam * 0.6);
 	// sun glints on crests (bloom a little)
 	float glint = step(0.996, w3_hash(cell + floor(t * 3.0) * 7.31)) * step(0.55, rip) * (1.0 - w3_night * 0.7);
 	col += glint * w3_sun * 1.3;

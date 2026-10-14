@@ -66,7 +66,7 @@ func make_shape(seed: int, flat := 0.65, strata := 0.22, sharp := 0.35) -> Array
 		# ledges: heights pulled toward strata planes (layered rock, light tops)
 		if strata > 0.0:
 			var q := p.y / strata
-			var fl := floor(q)
+			var fl := floorf(q)
 			var fr := q - fl
 			p.y = (fl + smoothstep(0.5 - sharp * 0.5, 0.5 + sharp * 0.5, fr)) * strata
 		P.append(p)

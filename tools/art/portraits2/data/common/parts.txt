@@ -6,19 +6,24 @@
 t
 u
 
-# ---- mouths
+# ---- mouths (q = line, m = inside, n = tongue, y = teeth). neutral: short line; smile: U; grin: open, upper teeth;
+# laugh: wide open; o: surprise; frown: sad; wobble: crying; pout: a sideways 3; flat: serious (corners pressed);
+# side: doubt (crooked); hmm: think; small: tired / blank; wavy: embarrassed; shout: wide open with teeth;
+# teeth: angry (a snarl)
 == m_neutral @ 42,56
 uqqu
 
 == m_smile @ 40,55
-q....q
-.qqqq.
+u......u
+.q....q.
+..qqqq..
 
-== m_grin @ 40,55
-qqqqqqq
-qmmmmmq
-.qnnnq.
-..qqq..
+== m_grin @ 40,54
+qqqqqqqq
+qyyyyyyq
+qmmmmmmq
+.qmnnmq.
+..qqqq..
 
 == m_laugh @ 39,54
 qqqqqqqqq
@@ -28,26 +33,22 @@ qmmmmmmmq
 ..qnnnq..
 ...qqq...
 
-== m_o @ 42,56
+== m_o @ 42,55
 .qq.
+qmmq
 qmmq
 qmmq
 .qq.
 
-== m_frown @ 41,57
-.qqqq.
-q....q
+== m_frown @ 40,57
+..qqqq..
+.q....q.
+q......q
 
 == m_wobble @ 39,56
 ..qqq.qqq..
 .q...q...q.
 q.........q
-
-== m_wail @ 40,55
-..qqqq..
-.qmmmmq.
-qmmnnmmq
-qqqqqqqq
 
 == m_pout @ 43,55
 qq.
@@ -56,12 +57,14 @@ qq.
 ..q
 qq.
 
-== m_flat @ 41,56
-uqqqqu
+== m_flat @ 40,56
+.qqqqqq.
+q......q
 
-== m_side @ 42,55
-.....q
-uqqqq.
+== m_side @ 41,55
+......q
+uqq..q.
+...qq..
 
 == m_small @ 43,56
 qqq
@@ -86,7 +89,7 @@ qmnnnnmq
 qmmmmmmq
 q......q
 
-# ---- tears: streams from each eye's outer corner down the cheek
+# ---- tears: streams from each eye's outer corner down the cheek, inside the face; light core, blue edge
 == tearN @ 23,45
 .cz..
 .cCz.
@@ -119,11 +122,12 @@ zCCz.
 .bbbbb.......................bbbb.
 bbbbbbb.....................bbbbbb
 
-== blush_hatch @ 23,47
-..pbpbp........................pbpbp.
-.pbpbpb.......................pbpbpb.
-pbpbpb.......................pbpbpb..
-.p.p.p.......................p.p.p...
+# embarrassed: a flush right across the face, the cheeks hatched
+== blush_hatch @ 23,46
+..pbpbp...................pbpbp..
+.pbpbpbbbbbbbbbbbbbbbbbbbbpbpbpb.
+pbpbpbpbbbbbbbbbbbbbbbbbbpbpbpb..
+.p.p.p.p..................p.p.p..
 
 # ---- sweat drop (temple, far side)
 == sweat @ 57,35
@@ -135,7 +139,7 @@ zcCCz
 zCCCz
 .zzz.
 
-# ---- anger mark (on the hair, upper right)
+# ---- anger mark (upper right, beside the head: reads on any hair colour; on Tsuzumi it lands on the straw hat)
 == anger @ 63,2
 .xx.xx.
 xXx.xXx
@@ -145,7 +149,7 @@ xx...xx
 xXx.xXx
 .xx.xx.
 
-# ---- puffed cheek (pout): the far cheek bulges past the jaw line
+# ---- puffed cheeks (pout): both cheeks bulge past the jaw line
 == puffF @ 47,49
 .......stq.
 ......sstq.
@@ -411,49 +415,49 @@ jvEllEEEk
 ...www...
 ..jjjjj..
 
-# blank: open, no glint, the iris flat and dull
+# blank: open, pale flat irises with a pin pupil and no glint (an empty, faraway look)
 == eN_blank @ 22,37
 ..kkkkkkk..
-.kkEEEEEkkj
-kkEEEEEEEvj
-..eeeeeeew.
-..eeeEEeew.
-..eeeEEeew.
-..eeeeeeew.
-..eeeeeee..
+.kkeeeeekkj
+kkeiiiiiiej
+..eiiiiiie.
+..eiiEiiie.
+..eiiiiiie.
+..eiiiiiie.
+..eeiiiee..
 ...eeeee...
 ...jjjjj...
 
 == eF_blank @ 46,37
 ..kkkkk..
-jkkEEEEkk
-jvEEEEEEk
-.weeeeee.
-.weeEEee.
-.weeEEee.
-.weeeeee.
-..eeeee..
+jkkeeeekk
+jeiiiiiek
+.eiiiiie.
+.eiiEiie.
+.eiiiiie.
+.eiiiiie.
+..eiiie..
 ..eeeee..
 ..jjjjj..
 
-# serious: the lid lower and straighter, the lower lid raised: a steady look
+# serious: hard straight lids two rows down, the lower lid raised: half the iris shows
 == eN_serious @ 22,37
 ...........
-.kkkkkkkkk.
-kkkEEEEEEkj
+...........
+.kkkkkkkkkj
+kkEEEEEEEkj
 ..EllEEEew.
 ..ellEEeew.
-..eeEEEeew.
 ..jeeEeeij.
 ...jjjjjj..
 
 == eF_serious @ 46,37
 .........
+.........
 jkkkkkkkk
 jkEEEEEEk
 .wEllEEe.
 .wellEee.
-.weeEEee.
 .jeeeEej.
 ..jjjjjj.
 
@@ -471,3 +475,48 @@ kk.........
 .kkkk....
 .....kkk.
 ........k
+
+== m_hmm @ 43,56
+.uqq
+qq..
+
+== wellN @ 24,46
+cccccc
+C.....
+
+== wellF @ 47,46
+ccccc
+....C
+
+# think: a trail of thought dots rising off the head (upper right), white with a dark rim so they read anywhere
+== dots @ 63,3
+......kkkk
+......kllk
+......kllk
+...kkkkkkk
+...kllk...
+...kllk...
+kkkkkkk...
+klk.......
+kkk.......
+
+# doubt: a question mark beside the head (upper right), white with a dark rim
+== qmark @ 65,2
+.kkkkk.
+kklllkk
+klkkklk
+kkkkklk
+..kklkk
+..klkk.
+..kkk..
+..klk..
+..kkk..
+
+# pout: a little huff of air puffing out beside the cheek (white, dark rim)
+== huff @ 57,51
+.kkk....
+kllkkk..
+kllllk..
+.kkllkk.
+...kllk.
+....kk..

@@ -39,9 +39,9 @@ DDDDDDD
 DDDDDDD
 
 == bN_firm @ 24,34
-DDDD...
-....DDD
+DDD....
+.DDDDDD
 
 == bF_firm @ 47,34
-...DDDD
-DDD....
+....DDD
+DDDDDD.

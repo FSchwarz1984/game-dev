@@ -101,5 +101,5 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     m0 = np.stack([W["grass"], W["dirt"], W["gravel"], W["rock"]], -1)
     m1 = np.stack([W["moss"], W["litter"], W["bank"], W["paddy"]], -1)
     m2 = np.stack([ao, puddle, wear, flowers], -1)
-    m3 = np.stack([litter_kind, dryness, tufts, slope / 90.0], -1)
+    m3 = np.stack([litter_kind, dryness, tufts, np.clip(canopy, 0.0, 1.0)], -1)
     return {"m0": m0, "m1": m1, "m2": m2, "m3": m3, "slope": slope, "W": W}

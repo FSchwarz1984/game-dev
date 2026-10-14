@@ -258,17 +258,18 @@ def fall(m, view):
 
 
 def hang_lantern(m, view):
-    """Hangs the tenth... no: one of the nine lanterns on a grave's bamboo hook at face height: the
-    lantern from her hip, raised forward, stretched to the hook on her toes, let go, arm down."""
+    """Hangs one of the lanterns on a grave's bamboo hook at face height, a little to her right: the
+    lantern from her hip, raised forward and out to the side (so the arm and the lantern clear the
+    load from behind), stretched to the hook on her toes, let go, arm down."""
     r = rest(m)
     P = m.P
     toes = Po.legs_ik(P, {'L': (0.4, 0.6, 26), 'R': (-0.4, 0.6, 26)}, pelvis_y=P['hip'] + 1)
-    seq = [(Po.merged(r, Po.arm('R', swing=24, out=12, elbow=30)), {'prop': 'lantern'}),
-           (Po.merged(r, Po.arm('R', swing=82, out=8, elbow=40)), {'prop': 'lantern'}),
-           (Po.merged(r, Po.arm('R', swing=104, out=6, elbow=10), toes, {'spine': (4, 0, 0)}), {'prop': 'lantern'}),
-           (Po.merged(r, Po.arm('R', swing=104, out=6, elbow=10), toes, {'spine': (4, 0, 0)}), {'prop': 'lantern'}),
-           (Po.merged(r, Po.arm('R', swing=96, out=6, elbow=14), {'spine': (2, 0, 0)}), {'prop': 'lantern_left'}),
-           (Po.merged(r, Po.arm('R', swing=36, out=10, elbow=30)), {'prop': 'lantern_left'})]
+    seq = [(Po.merged(r, Po.arm('R', swing=24, out=16, elbow=30)), {'prop': 'lantern'}),
+           (Po.merged(r, Po.arm('R', swing=62, out=34, elbow=40)), {'prop': 'lantern'}),
+           (Po.merged(r, Po.arm('R', swing=86, out=36, elbow=10), toes, {'spine': (4, 0, 0)}), {'prop': 'lantern'}),
+           (Po.merged(r, Po.arm('R', swing=86, out=36, elbow=10), toes, {'spine': (4, 0, 0)}), {'prop': 'lantern'}),
+           (Po.merged(r, Po.arm('R', swing=78, out=34, elbow=14), {'spine': (2, 0, 0)}), {'prop': 'lantern_left'}),
+           (Po.merged(r, Po.arm('R', swing=30, out=14, elbow=30)), {'prop': 'lantern_left'})]
     return _f(m, seq)
 
 

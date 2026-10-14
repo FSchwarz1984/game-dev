@@ -1,19 +1,21 @@
 """Hand-drawn pixel dialogue portraits, v2 (rebuild: one command).
 
-    python3 tools/art/portraits2/build.py                  # write assets/portraits/pixel/<char>/<expr>.png + portraits.json
-    python3 tools/art/portraits2/build.py --check          # validate only (sizes, palette, alpha, stray pixels)
-    python3 tools/art/portraits2/build.py --preview DIR [--packs DIR]
+    python3 -I tools/art/portraits2/build.py               # write assets/portraits/pixel/<char>/<expr>.png + portraits.json
+    python3 -I tools/art/portraits2/build.py --check       # validate only (sizes, palette, alpha, stray pixels)
+    python3 -I tools/art/portraits2/build.py --preview DIR [--packs DIR]
                                                            # also write review sheets (x1 x2 x4 x8, dialogue box at
                                                            # 480x270, blind readability grids, ponytail check, v1 and
                                                            # pack side by side; --packs = the extracted owner packs)
 
-Nothing here is generated from the owner's illustrations. Every pixel lives in the text data under data/:
+The build reads only the text data under data/ (the owner's packs are opened only by --packs, for the side-by-side
+sheet). Every pixel lives in that data:
   data/<char>/base.txt   the bust without a face (80 rows of 80 palette keys)
-  data/<char>/parts.txt  the character's eyes and brows, drawn pixel by pixel
-  data/common/parts.txt  mouths, nose, tears, blush, sweat, anger mark, cheek puffs (face keys, any character)
-  data/<char>/faces.txt  each expression = the parts layered on the base
+  data/<char>/parts.txt  the character's own parts (brows; Shione's blush, which keeps her two red marks on top)
+  data/common/parts.txt  the house parts every face uses: eyes (all states), mouths, nose, tears, blush, sweat,
+                         anger mark, question mark, thought dots, huff, cheek puffs (face keys, any character)
+  data/<char>/faces.txt  each expression = the parts layered on the base, in order
 palettes.py maps the keys to colours. Method and conventions: docs/knowledge/13-pixel-portraits.md (section 8).
-Dependencies: Pillow, numpy.
+Dependencies: Pillow, numpy; fontTools (with brotli) only for the dialogue mock-up when FreeType cannot read WOFF2.
 """
 
 import argparse
@@ -29,7 +31,7 @@ sys.path.insert(0, HERE)
 from PIL import Image, ImageDraw, ImageFont  # noqa: E402
 
 import pxgrid  # noqa: E402
-from palettes import PALETTES, HAIR_KEYS  # noqa: E402
+from palettes import PALETTES  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
 OUT = os.path.join(ROOT, 'assets', 'portraits', 'pixel')
@@ -139,7 +141,7 @@ def sheets(out):
         pxgrid.zoom(ims[0], 10).save(os.path.join(out, f'{char}_neutral_grid_x10.png'))
 
 
-def readability(out, seed=20261014):
+def readability(out, seed=8080):
     """Unlabelled, shuffled grids at x1 and x2; the key goes to a separate file (read it only after guessing)."""
     rng = random.Random(seed)
     keys = []
@@ -159,6 +161,19 @@ def readability(out, seed=20261014):
                 d.text((x + 1, y + 1), str(n + 1), fill=(255, 255, 255), font=_font(9 if k == 1 else 12))
             sh.save(os.path.join(out, f'blind_{char}_x{k}.png'))
         keys.append(char + ': ' + ', '.join(f'{n + 1}={items[i][0]}' for n, i in enumerate(order)))
+    # all characters mixed in one grid (no position cue at all), x1 and x2
+    pool = [(c, e, im) for c in CHARS for e, im in _all(c)]
+    rng.shuffle(pool)
+    for k in (1, 2):
+        gap = 6 if k == 1 else 8
+        sh = pxgrid.sheet([im for _, _, im in pool], k, cols=10, gap=gap)
+        d = ImageDraw.Draw(sh)
+        for n in range(len(pool)):
+            x = gap + (n % 10) * (80 * k + gap)
+            y = gap + (n // 10) * (80 * k + gap)
+            d.text((x + 1, y + 1), str(n + 1), fill=(255, 255, 255), font=_font(9 if k == 1 else 12))
+        sh.save(os.path.join(out, f'blind_mixed_x{k}.png'))
+    keys.append('mixed: ' + ', '.join(f'{n + 1}={c}/{e}' for n, (c, e, _) in enumerate(pool)))
     with open(os.path.join(out, 'blind_KEY.txt'), 'w') as f:
         f.write('\n'.join(keys) + '\n')
 
@@ -257,6 +272,8 @@ def mocks(out):
         'saji': [('pout', '哪有座敷童子交房租的啦！'), ('cry', '我的家……我的家没有了啦！'),
                  ('laugh', '背负子也是房子嘛！有柱子有横梁！'), ('shout', '救命！压扁了！')],
     }
+    # a two-line line with the longest name: the text column must stay right of the portrait card
+    lines['tsuzumi'].append(('serious', '梁有多重，我现在就有多重。减掉的那部分在您的草鞋上，重量不会凭空消失，请您别乱动。'))
     tiles = []
     checks = []
     for ci, char in enumerate(CHARS):
@@ -267,13 +284,14 @@ def mocks(out):
             ok = layout_ok(geo)
             checks.append(f'{char}/{e}: portrait {geo["portrait"]} text x>={geo["text"][0]} lines={len(geo["lines"])} '
                           f'plate x>={geo["plate"][0]} -> {"OK" if ok else "FAIL"}')
+            img.convert('RGB').save(os.path.join(out, f'dialogue_{char}_{e}_native.png'))
             img.convert('RGB').resize((1920, 1080), Image.NEAREST).save(os.path.join(out, f'dialogue_{char}_{e}_x4.png'))
             tiles.append(img.convert('RGB'))
     # one overview at x2 (all twelve), and the phone landscape at 2400x1080 (x4, integer)
     W, H = 480 * 2, 270 * 2
-    ov = Image.new('RGB', (3 * (W + 8), 4 * (H + 8)), (20, 20, 24))
+    ov = Image.new('RGB', (3 * (W + 8), 5 * (H + 8)), (20, 20, 24))
     for i, t in enumerate(tiles):
-        ov.paste(t.resize((W, H), Image.NEAREST), ((i // 4) * (W + 8), (i % 4) * (H + 8)))
+        ov.paste(t.resize((W, H), Image.NEAREST), ((i // 5) * (W + 8), (i % 5) * (H + 8)))
     ov.save(os.path.join(out, 'dialogue_all_x2.png'))
     dev = Image.new('RGB', (2400, 1080), (0, 0, 0))
     dev.paste(tiles[1].resize((1920, 1080), Image.NEAREST), (240, 0))

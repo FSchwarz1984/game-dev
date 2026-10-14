@@ -32,6 +32,7 @@ var route: Array[Vector2] = []
 var route_i := 0
 var keys_down := {}
 var _haze_h := 0.0
+var atmos: W3Atmosphere
 
 
 func _ready() -> void:
@@ -66,6 +67,20 @@ func _ready() -> void:
 	pv.world_root.add_child(rocks)
 	rocks.build(terrain, terrain.info["placements"])
 	blockers.append_array(rocks.blockers)
+	var stones := W3Stonework.new()
+	stones.name = "Stonework"
+	pv.world_root.add_child(stones)
+	stones.build(terrain, rocks)
+	var g0 := Time.get_ticks_msec()
+	var grass := W3Grass.new()
+	grass.name = "Grass"
+	pv.world_root.add_child(grass)
+	grass.build(terrain)
+	print("GRASS tufts=", grass.count, " ms=", Time.get_ticks_msec() - g0)
+	atmos = W3Atmosphere.new()
+	atmos.name = "Atmosphere"
+	pv.world_root.add_child(atmos)
+	atmos.setup(env, terrain)
 	_spawn_characters()
 	focus = her.pos
 	if args.has("at"):
@@ -97,14 +112,27 @@ func _load_catalog() -> void:
 	print("CATALOG assets=", catalog.size())
 
 
-## The asset that stands for a placement kind, if the catalog has one.
+## Placement kinds (terrain generator) -> species / names the asset catalog may use.
+const KIND_ALIASES := {
+	"camphor": ["camphor"], "cedar": ["sugi", "cedar"], "pine": ["akamatsu", "matsu", "pine"],
+	"maple": ["momiji", "kaede", "maple"], "persimmon": ["kaki", "persimmon"], "bamboo": ["take", "madake", "bamboo"],
+	"beech": ["buna", "beech"], "broadleaf": ["konara", "kunugi", "keyaki", "nara", "broadleaf"],
+	"azalea": ["tsutsuji", "azalea"], "hydrangea": ["ajisai", "hydrangea"], "fern": ["shida", "fern"],
+	"shrub": ["shrub", "kanboku", "tsutsuji", "ajisai"], "choppable": ["choppable", "kare", "dead", "konara"],
+}
+
+
+## The asset that stands for a placement kind, if the catalog has one (variant picks among several).
 func _asset_for(kind: String, variant: int) -> String:
 	var names := []
+	var keys: Array = KIND_ALIASES.get(kind, [kind])
 	for name in catalog:
 		var a: Dictionary = catalog[name]
-		var kinds: Array = a.get("kinds", [])
-		if name == kind or name.begins_with(kind + "_") or kinds.has(kind):
-			names.append(name)
+		var sp := String(a.get("species", ""))
+		for k in keys:
+			if name == k or name.begins_with(k + "_") or sp == k:
+				names.append(name)
+				break
 	if names.is_empty():
 		return ""
 	names.sort()
@@ -115,7 +143,7 @@ func _place_props() -> void:
 	var n := 0
 	for p in terrain.info["placements"]:
 		var kind: String = p["kind"]
-		var name := "camphor_great" if kind == "camphor" else _asset_for(kind, int(p.get("variant", 0)))
+		var name := _asset_for(kind, int(p.get("variant", 0)))
 		if name == "" or not catalog.has(name):
 			continue
 		var a: Dictionary = catalog[name]
@@ -295,6 +323,10 @@ func _set_view(i: int) -> void:
 	var v: Array = _shot_list[i]
 	her.place(Vector3(v[0], 0.0, v[1]))
 	saji.place(her.pos + Vector3(-0.9, 0, -0.5))
+	trail.clear()
+	env.rain = float(args.get("rain", "0"))
+	if v.size() > 3:
+		env.rain = v[3]
 	env.set_time(v[2])
 	pv.follow(_cam_target, {"cut": true})
 
@@ -315,14 +347,19 @@ func _process(dt: float) -> void:
 	var chest := her.chest()
 	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 26.0))
 	pv.update_camera(dt)
+	if atmos:
+		atmos.update(dt, her.pos)
 	if args.has("shots"):
 		if _shot_list.is_empty():
 			var spec := String(args["shots"]).split(":", true, 1)
 			for v in spec[1].split(";"):
 				var p := v.split(",")
-				_shot_list.append([float(p[0]), float(p[1]), float(p[2]) if p.size() > 2 else 10.0])
+				var e := [float(p[0]), float(p[1]), float(p[2]) if p.size() > 2 else 10.0]
+				if p.size() > 3:
+					e.append(float(p[3]))
+				_shot_list.append(e)
 			_set_view(0)
-		if frame % 12 == 0:
+		if frame % int(args.get("settle", "40")) == 0:
 			var outdir := String(args["shots"]).split(":", true, 1)[0]
 			var v: Array = _shot_list[_shot_i]
 			var base := "%s/v%02d_%d_%d_%sh" % [outdir, _shot_i, int(v[0]), int(v[1]), String.num(v[2], 1)]

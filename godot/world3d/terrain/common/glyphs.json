@@ -38,5 +38,19 @@
  "bank": [
   87,
   8
+ ],
+ "tufts": [
+  "short_a",
+  "short_b",
+  "mid_a",
+  "mid_b",
+  "tall_a",
+  "tall_b",
+  "clover",
+  "daisy",
+  "yellow",
+  "blue",
+  "dry_a",
+  "fern"
  ]
 }

@@ -126,7 +126,9 @@
      "bN_sad",
      "bF_sad",
      "nose",
-     "m_frown"
+     "m_frown",
+     "wellN",
+     "wellF"
     ],
     "cry": [
      "eN_tear",
@@ -147,7 +149,8 @@
      "m_pout",
      "blush",
      "puffN",
-     "puffF"
+     "puffF",
+     "huff"
     ],
     "angry": [
      "eN_angry",
@@ -164,7 +167,8 @@
      "bN_flat",
      "bF_up",
      "nose",
-     "m_side"
+     "m_side",
+     "qmark"
     ],
     "think": [
      "eN_up",
@@ -172,7 +176,8 @@
      "bN_up",
      "bF_neutral",
      "nose",
-     "m_small"
+     "m_hmm",
+     "dots"
     ],
     "embarrassed": [
      "eN_away",
@@ -192,8 +197,8 @@
      "m_flat"
     ],
     "determined": [
-     "eN_serious",
-     "eF_serious",
+     "eN_angry",
+     "eF_angry",
      "bN_firm",
      "bF_firm",
      "nose",
@@ -338,7 +343,9 @@
      "bN_sad",
      "bF_sad",
      "nose",
-     "m_frown"
+     "m_frown",
+     "wellN",
+     "wellF"
     ],
     "cry": [
      "eN_tear",
@@ -359,7 +366,8 @@
      "m_pout",
      "blush",
      "puffN",
-     "puffF"
+     "puffF",
+     "huff"
     ],
     "angry": [
      "eN_angry",
@@ -376,7 +384,8 @@
      "bN_flat",
      "bF_up",
      "nose",
-     "m_side"
+     "m_side",
+     "qmark"
     ],
     "think": [
      "eN_up",
@@ -384,7 +393,8 @@
      "bN_up",
      "bF_neutral",
      "nose",
-     "m_small"
+     "m_hmm",
+     "dots"
     ],
     "embarrassed": [
      "eN_away",
@@ -501,8 +511,7 @@
      "bN_neutral",
      "bF_neutral",
      "nose",
-     "m_neutral",
-     "blush"
+     "m_neutral"
     ],
     "smile": [
      "eN_smile",
@@ -553,7 +562,9 @@
      "bN_sad",
      "bF_sad",
      "nose",
-     "m_frown"
+     "m_frown",
+     "wellN",
+     "wellF"
     ],
     "cry": [
      "eN_tear",
@@ -574,7 +585,8 @@
      "m_pout",
      "blush",
      "puffN",
-     "puffF"
+     "puffF",
+     "huff"
     ],
     "angry": [
      "eN_angry",
@@ -591,7 +603,8 @@
      "bN_flat",
      "bF_up",
      "nose",
-     "m_side"
+     "m_side",
+     "qmark"
     ],
     "think": [
      "eN_up",
@@ -599,7 +612,8 @@
      "bN_up",
      "bF_neutral",
      "nose",
-     "m_small"
+     "m_hmm",
+     "dots"
     ],
     "embarrassed": [
      "eN_away",

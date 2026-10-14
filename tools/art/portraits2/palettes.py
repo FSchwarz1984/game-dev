@@ -82,10 +82,6 @@ PALETTES = {
     },
 }
 
-# hair keys used by the cleanliness check (orphan pixels inside hair are allowed only for highlights)
-HAIR_KEYS = 'ODMLHh'
-
-
 def rgb(hexstr):
     h = hexstr.lstrip('#')
     return tuple(int(h[i:i + 2], 16) for i in (0, 2, 4))

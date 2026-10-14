@@ -118,8 +118,9 @@ def occluded(points, masses, d, start=0.5, steps=(0.5, 1.0, 1.8, 2.8, 4.0, 5.5, 
 
 def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.33, 0.45, 0.22),
                 young_tint=(0.40, 0.50, 0.22), old_tint=(0.27, 0.40, 0.24), overlap=1.9, base_y=None, top_y=None,
-                env_k=0.35, clump_k=0.18, interior_frac=0.22, spray_rate=1.0, clump_overlap=2.1, fill_density=0.5,
-                max_cards=None, trunk_axis=(0.0, 0.0), flex_r=None, tint_jitter=0.035, cull=True):
+                env_k=0.35, clump_k=0.18, interior_frac=0.35, spray_rate=1.0, clump_overlap=2.1, fill_density=0.5,
+                max_cards=None, trunk_axis=(0.0, 0.0), flex_r=None, tint_jitter=0.035, cull=True, up_bias=0.3,
+                hue_shift=True):
     """Scatter clumps and cards over the masses. tiles: dict name -> list of (tile index, w, h);
     'mass' and 'small' for the surface, 'interior', and 'spray0'..'spray7' (screen directions,
     0 = right, counter-clockwise in 45 degree steps with y up). Returns a list of Card."""
@@ -139,11 +140,13 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
         return normalize((p - cc) / cr ** 2)
 
     def buried(p, skip):
+        """How deep inside another mass (0..1), plus a crevice term for points just outside one."""
         d = np.zeros(len(p))
         for j, o in enumerate(masses):
             if j == skip:
                 continue
-            d = np.maximum(d, np.clip(1.0 - o.field(p), 0, 1))
+            f = o.field(p)
+            d = np.maximum(d, np.clip(1.0 - f, 0, 1) + 0.18 * np.clip(1 - (f - 1.0) / 0.25, 0, 1) * (f >= 1.0))
         return d
 
     def ao_of(p, n, extra):
@@ -176,7 +179,8 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
         nclump = int(m.clumps * area * 0.9 / (math.pi * np.mean(m.clump_r) ** 2))
         if nclump > 0:
             cand = fib_sphere(nclump * 3, m.seed + 3)
-            w = np.clip(0.35 + m.top_bias * cand[:, 1] + 0.25 * R.uniform(size=len(cand)), 0.02, None)
+            facing = cand @ back
+            w = np.clip(0.35 + 0.5 * m.top_bias * cand[:, 1] + 0.5 * facing + 0.25 * R.uniform(size=len(cand)), 0.02, None)
             order = np.argsort(-w * R.uniform(0.6, 1.0, size=len(cand)))
             cand = cand[order[:nclump]]
             sp, sn = m.surface(cand)
@@ -200,7 +204,7 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
                 for j in np.nonzero(keep)[0]:
                     t = pick('mass' if R.uniform() < 0.7 else 'small')
                     pos = pts[j] - ncard[j] * (t[1] / PPM) * R.uniform(0.1, 0.3)
-                    cards.append(Card(pos, ncard[j], t[1], t[2], t[0], float(ao[j]), tint_of(m, kind), float(fx[j]), 'clump', 1.0))
+                    cards.append(Card(pos, ncard[j], t[1], t[2], t[0], float(ao[j]), tint_of(m, kind), float(fx[j]), 'clump', 0.95))
         # ---- fill: the mass surface between the clumps (crevices, darker), all around
         nf = max(6, int(area * overlap * fill_density / (size_m * size_m * 0.62) * m.density))
         dirs = fib_sphere(nf, m.seed + 11)
@@ -218,7 +222,7 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
         for k in np.nonzero(keep)[0]:
             t = pick('mass')
             pos = sp[k] - nm[k] * size_m * R.uniform(0.2, 0.45)
-            cards.append(Card(pos, nm[k], t[1], t[2], t[0], float(ao[k]), tint_of(m, 'base'), float(fx[k]) * 0.7, 'fill', 0.8))
+            cards.append(Card(pos, nm[k], t[1], t[2], t[0], float(ao[k]), tint_of(m, 'base'), float(fx[k]) * 0.7, 'fill', 1.0))
         # ---- interior: dark cards inside the mass, so gaps look into shade
         if m.interior:
             # a dark shell just inside the surface: what shows through the gaps is shade, not sky
@@ -230,7 +234,7 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
             for k in np.nonzero(vis)[0]:
                 t = pick('interior')
                 nn = normalize(sn2[k] * 0.5 + env_normal(inner[k]) * 0.5)
-                cards.append(Card(inner[k], nn, t[1], t[2], t[0], 0.42, tint_of(m, 'old'), 0.2, 'interior', 0.9))
+                cards.append(Card(inner[k], nn, t[1], t[2], t[0], 0.55, tint_of(m, 'old'), 0.2, 'interior', 0.7))
         # ---- sprays out of the outline: lit rim and the lower edge
         if spray_rate > 0 and 'spray0' in tiles:
             ns = int(spray_rate * area / 7.0)
@@ -273,6 +277,20 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
             else:
                 keep.append(False)
         cards = [c for c, k in zip(cards, keep) if k]
+    # the contract's normals are spherised from the crown and squashed vertically: bias them up so
+    # the high sun lights the visible crown (and the tops of masses read as the lit planes)
+    if up_bias:
+        for c in cards:
+            c.n = normalize(c.n + np.array([0.0, up_bias, 0.0]))
+    if hue_shift:
+        yt = np.asarray(young_tint, np.float64)
+        ot = np.asarray(old_tint, np.float64)
+        for c in cards:
+            if c.kind in ('epi',):
+                continue
+            t = np.clip(0.45 + 0.45 * c.n[1] + 0.6 * (c.ao - 0.75), 0, 1)
+            base = ot * (1 - t) + yt * t
+            c.tint = np.clip(c.tint * 0.4 + base * 0.6, 0, 1)
     if max_cards is not None and len(cards) > max_cards:
         order = sorted(range(len(cards)), key=lambda i: -(cards[i].prio + R.uniform(0, 0.3)))
         cards = [cards[i] for i in sorted(order[:max_cards])]
@@ -316,3 +334,33 @@ def cards_mesh(cards, atlas_w, atlas_h, rects):
     md = MeshData()
     md.add(P, N, UV, idx, uv2=UV2, col=CO, cus=C0)
     return md
+
+
+def sky_visibility(points, normals, masses, n_rays=24, steps=(0.8, 1.6, 2.6, 3.8, 5.2, 7.0, 9.5, 12.5, 16.0),
+                   thresh=0.92, seed=3, chunk=4096):
+    """Fraction of the sky (upper hemisphere around the normal) a point sees past the leaf masses.
+    Used to bake ambient occlusion: wood under the crown, the inner and lower leaves."""
+    pts = np.asarray(points, np.float64)
+    nrm = normalize(np.asarray(normals, np.float64))
+    R = rng(seed)
+    # fixed ray set on the upper hemisphere (cosine-ish), then tilted toward each normal
+    u = R.uniform(size=n_rays)
+    v = R.uniform(size=n_rays)
+    th = np.arccos(np.sqrt(1 - u * 0.95))
+    ph = 2 * math.pi * v
+    rays = np.stack([np.sin(th) * np.cos(ph), np.cos(th), np.sin(th) * np.sin(ph)], axis=1)
+    out = np.zeros(len(pts))
+    for a in range(0, len(pts), chunk):
+        P = pts[a:a + chunk]
+        Nn = nrm[a:a + chunk]
+        vis = np.zeros(len(P))
+        for r in rays:
+            d = normalize(r[None, :] * 0.7 + Nn * 0.3 + np.array([0, 0.15, 0]))
+            hit = np.zeros(len(P), bool)
+            for t in steps:
+                q = P + d * t
+                for m in masses:
+                    hit |= m.field(q) < thresh
+            vis += ~hit
+        out[a:a + chunk] = vis / n_rays
+    return out

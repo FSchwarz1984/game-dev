@@ -61,8 +61,8 @@ LDDDDDDDL.
 bbbbRbR.....................bbbbbb
 ....r.r...........................
 
-== blush_hatch @ 23,47
-..pbpbp........................pbpbp.
-.pbpRbR.......................pbpbpb.
-pbpbRbR......................pbpbpb..
-.p.pr.r......................p.p.p...
+== blush_hatch @ 23,46
+..pbpbp...................pbpbp..
+.pbpRbRbbbbbbbbbbbbbbbbbbbpbpbpb.
+pbpbRbRbbbbbbbbbbbbbbbbbbpbpbpb..
+.p.pr.r...................p.p.p..

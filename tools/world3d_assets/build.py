@@ -40,6 +40,7 @@ ASSETS = os.environ.get('W3A_ASSETS', os.path.join(REPO, 'godot', 'world3d', 'as
 # generator modules; each build(out) adds its assets
 GENERATORS = [
     'w3a.species.camphor',
+    'w3a.species.sugi',
 ]
 
 
@@ -68,10 +69,15 @@ def write_catalog(out, dst_root, only):
     if only and os.path.exists(path):
         cat = json.load(open(path))
     for a in out.assets:
-        e = dict(a.catalog)
-        e.setdefault('category', a.category)
-        e.setdefault('scene', f'res://world3d/assets/{a.rel}/{a.name}.tscn')
-        cat['assets'][a.name] = e
+        if a.catalog:
+            e = dict(a.catalog)
+            e.setdefault('category', a.category)
+            e.setdefault('scene', f'res://world3d/assets/{a.rel}/{a.name}.tscn')
+            cat['assets'][a.name] = e
+        for vname, ve in a.entries.items():
+            e = dict(ve)
+            e.setdefault('category', a.category)
+            cat['assets'][vname] = e
     cat['assets'] = dict(sorted(cat['assets'].items()))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(cat, f, indent=1, ensure_ascii=False)

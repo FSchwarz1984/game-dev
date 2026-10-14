@@ -81,6 +81,29 @@ def render_job(job):
     return job, alb, nrm, anc
 
 
+LOCO = ('idle', 'walk', 'run')
+
+
+def pack(strips, cols):
+    """Places the (animation, view) strips on a sheet `cols` frames wide. strips: [(job, frames)] in
+    order. Locomotion strips (idle, walk, run) each start a row at column 0, so a reader that only
+    shows them can ignore 'col' (the 3D sample's walker does); every other strip goes into the
+    first row with room for it, else a new row. A strip never wraps. Returns {job: (row, col)} and
+    the number of rows."""
+    used, place = [], {}
+    for job, n in strips:
+        if job[2] not in LOCO:
+            room = [r for r, u in enumerate(used) if cols - u >= n]
+            if room:
+                r = room[0]
+                place[job] = (r, used[r])
+                used[r] += n
+                continue
+        place[job] = (len(used), 0)          # a new row
+        used.append(n)
+    return place, len(used)
+
+
 def anchors_rel(an, pivot):
     # model.render_frame gives screen px relative to the ground point; keep 1 decimal
     return {k: [round(v[0], 1), round(v[1], 1)] for k, v in an.items()}
@@ -120,19 +143,22 @@ def build(names, jobs, preview=None, out_dir=None, only_anims=None):
         for sheet in mod.SHEETS:
             rows = [w for w in work if w[1] == sheet]
             cols = max(len(res[w][1]) for w in rows)
-            alb = np.zeros((len(rows) * FH, cols * FW, 4), np.uint8)
+            place, nrows = pack([(w, len(res[w][1])) for w in rows], cols)
+            alb = np.zeros((nrows * FH, cols * FW, 4), np.uint8)
             nrm = np.zeros_like(alb)
             table = {}
             problems = []
-            for ri, w in enumerate(rows):
+            for w in rows:
                 _, A, N, AN = res[w]
+                ri, c0 = place[w]
                 for ci, (a, n) in enumerate(zip(A, N)):
-                    alb[ri * FH:(ri + 1) * FH, ci * FW:(ci + 1) * FW] = a
-                    nrm[ri * FH:(ri + 1) * FH, ci * FW:(ci + 1) * FW] = n
+                    x = (c0 + ci) * FW
+                    alb[ri * FH:(ri + 1) * FH, x:x + FW] = a
+                    nrm[ri * FH:(ri + 1) * FH, x:x + FW] = n
                     ys, xs = np.nonzero(a[..., 3])
                     if len(xs) and (xs.min() < 1 or ys.min() < 1 or xs.max() > FW - 2 or ys.max() > FH - 2):
                         problems.append(f'{w[2]}.{w[3]}[{ci}] touches the cell edge')
-                table.setdefault(w[2], {})[w[3]] = {'row': ri, 'frames': len(A),
+                table.setdefault(w[2], {})[w[3]] = {'row': ri, 'col': c0, 'frames': len(A),
                                                     'anchors': [anchors_rel(x, m.PIVOT) for x in AN]}
             base = f'{name}_{sheet}'
             out = out_dir
@@ -140,9 +166,9 @@ def build(names, jobs, preview=None, out_dir=None, only_anims=None):
             Image.fromarray(alb, 'RGBA').save(os.path.join(out, base + '.png'), optimize=True)
             Image.fromarray(nrm, 'RGBA').save(os.path.join(out, base + '_n.png'), optimize=True)
             man['sheets'][sheet] = {'file': base, 'width': int(alb.shape[1]), 'height': int(alb.shape[0]),
-                                    'cols': cols, 'rows': len(rows), 'anims': table}
+                                    'cols': cols, 'rows': nrows, 'anims': table}
             ncol = len({tuple(c) for c in alb[alb[..., 3] > 0][:, :3]})
-            print(f'  {base}: {alb.shape[1]}x{alb.shape[0]}, {len(rows)} rows, {ncol} colours', flush=True)
+            print(f'  {base}: {alb.shape[1]}x{alb.shape[0]}, {len(rows)} strips in {nrows} rows, {ncol} colours', flush=True)
             for p in problems:
                 print('   !', p)
             if preview:

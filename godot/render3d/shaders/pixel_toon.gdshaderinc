@@ -117,8 +117,9 @@ bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
 	vec2 ds = w3_screen(wp) - w3_screen(w3_player.xyz);
 	float r = length(ds * vec2(1.0, 0.8));
 	float R = w3_player.w * scale;
-	float k = smoothstep(R, R * 0.55, r) * smoothstep(0.3, 1.2, toward);
-	return w3_bayer4(cell) < k * 0.82;
+	float ring = min(12.0, R * 0.35);                 // a dithered edge, clear inside
+	float k = clamp((R - r) / ring, 0.0, 1.0) * smoothstep(0.3, 1.2, toward);
+	return w3_bayer4(cell) < k;
 }
 bool w3_cutaway(vec3 wp, vec2 cell) {
 	return w3_cutaway_r(wp, cell, 1.0);
@@ -188,11 +189,11 @@ vec3 w3_pattern(vec3 col, float id, float amount, vec3 wp, vec3 wn, vec2 cell) {
 		float strand = w3_hash(vec2(cell.x, floor(cell.y / 5.0)));
 		col *= 0.8 + strand * 0.32;
 		if (mod(cell.y, 6.0) < 1.0) col *= 0.78;
-	} else if (p == 4) {            // stone: soft blotches, a few cracks, moss where it faces up
-		float bl = w3_vnoise(cell / 5.0);
-		col *= 0.86 + bl * 0.22 + (r - 0.5) * 0.06;
-		if (w3_hash(floor(cell / vec2(3.0, 2.0)) + 5.0) > 0.94) col *= 0.7;
-		if (wn.y > 0.7 && w3_vnoise(cell / 3.0 + 9.0) > 0.62 - amount * 0.3) col = mix(col, vec3(0.065, 0.098, 0.023), 0.8);
+	} else if (p == 4) {            // stone: soft blotches, a few cracks, moss in clumps where it faces up
+		float bl = w3_vnoise(cell / 6.0);
+		col *= 0.95 + bl * 0.1;
+		if (w3_hash(floor(cell / vec2(3.0, 2.0)) + 5.0) > 0.95) col *= 0.78;
+		if (wn.y > 0.78 && w3_vnoise(cell / 7.0 + 9.0) > 0.68 - amount * 0.22) col = mix(col, vec3(0.065, 0.098, 0.023), 0.75);
 	} else if (p == 5) {            // roof tiles (kawara): rows across, joints
 		if (mod(cell.y, 4.0) < 1.0) col *= 0.7;
 		col *= 0.9 + w3_hash(vec2(floor(cell.x / 3.0), floor(cell.y / 4.0))) * 0.16;

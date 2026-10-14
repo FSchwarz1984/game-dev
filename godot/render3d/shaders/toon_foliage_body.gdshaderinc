@@ -25,6 +25,8 @@ uniform float porosity : hint_range(0.0, 1.0) = 0.5;
 uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // sunlit rim band (lighter, warmer)
 uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
+uniform float shadow_shrink = 0.86;               // cards cast slightly smaller shadows (sun flecks)
+uniform float shadow_sieve = 0.22;                // and let this share of their texels through
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;
 
 varying vec3 v_wp;
@@ -43,7 +45,8 @@ void vertex() {
 			// face the light: the shadow camera's axes
 			vec3 r = normalize(INV_VIEW_MATRIX[0].xyz);
 			vec3 u = normalize(INV_VIEW_MATRIX[1].xyz);
-			wp = a + (r * UV2.x + u * UV2.y) / w3_view.x;
+			// a little smaller in the shadow pass: light leaks between the leaf clusters
+			wp = a + (r * UV2.x + u * UV2.y) * shadow_shrink / w3_view.x;
 		} else {
 			a = w3_lean(a, origin.y, lean);
 			a += w3_snap(a);
@@ -67,6 +70,12 @@ void fragment() {
 	vec4 tx = foliage_mode == 1 ? texture(leaf_tex, UV) : vec4(1.0);
 	if (tx.a < 0.5) {
 		discard;
+	}
+	if (IN_SHADOW_PASS && foliage_mode == 1) {
+		vec2 tc = floor(UV * vec2(textureSize(leaf_tex, 0)) / 2.0);
+		if (w3_hash(tc + 17.0) < shadow_sieve) {
+			discard;
+		}
 	}
 	if (cutaway && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
 		discard;

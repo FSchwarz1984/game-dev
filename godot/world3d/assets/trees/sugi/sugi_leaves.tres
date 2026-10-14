@@ -1,0 +1,20 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://render3d/shaders/toon_foliage.gdshader" id="1"]
+[ext_resource type="Texture2D" path="res://world3d/assets/trees/sugi/sugi_leaves.png" id="2"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1")
+shader_parameter/foliage_mode = 1
+shader_parameter/leaf_tex = ExtResource("2")
+shader_parameter/tint = null
+shader_parameter/lean = null
+shader_parameter/wind_px = 1.0
+shader_parameter/porosity = 0.5
+shader_parameter/hi_band = 1.0
+shader_parameter/cutaway = true
+shader_parameter/cutaway_scale = null
+shader_parameter/shadow_shrink = null
+shader_parameter/shadow_sieve = null
+shader_parameter/vertex_ao = null

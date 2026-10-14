@@ -89,7 +89,8 @@ class Asset:
         self.dir = os.path.join(out.stage, category, name)
         os.makedirs(self.dir, exist_ok=True)
         self.res = RES_ROOT + self.rel + '/'
-        self.catalog = {}
+        self.catalog = {}            # the entry for <name> (scene <name>.tscn)
+        self.entries = {}            # extra entries: variant name -> entry (scene given in the entry)
         out.assets.append(self)
 
     def texture(self, key, rgba):

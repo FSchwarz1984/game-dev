@@ -36,6 +36,7 @@ varying vec3 v_wp;
 varying vec3 v_wn;
 varying vec3 v_alb;
 varying vec2 v_cell;
+varying float v_fleck;
 
 const float GC = 7.0;      // glyph cell, native px
 
@@ -208,6 +209,16 @@ void fragment() {
 		float ring = step(0.82, w3_vnoise(cell / 3.0 + w3_time * 0.4));
 		alb = mix(alb * 0.55, w3_sky * 0.8 + vec3(0.02), 0.55 * w3_wet) + ring * 0.04 * w3_wet;
 	}
+	// sun flecks under canopies: where the canopy shades the ground, a drifting pattern of crisp
+	// light spots gets through (strong on the ground; characters only see the soft shade)
+	float can = e3.a;
+	v_fleck = 0.0;
+	if (can > 0.15) {
+		vec2 fq = v_wp.xz / 0.9 + vec2(w3_time * 0.05 * w3_wind.x, w3_time * 0.03);
+		float sway = sin(w3_time * 0.7 + v_wp.x * 0.13) * 0.18 * w3_wind.z;
+		float fn = w3_vnoise(fq + vec2(sway, 0.0)) * 0.62 + w3_vnoise(fq * 2.3 + vec2(-sway, 5.0)) * 0.38;
+		v_fleck = step(0.69 - (1.0 - can) * 0.12, fn);
+	}
 	v_alb = alb;
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
@@ -220,6 +231,7 @@ void light() {
 		float th = (w3_bayer4(v_cell) - 0.5) * 0.05;
 		float lvl = ndl > 0.80 + th ? 1.0 : (ndl > 0.58 + th ? 0.86 : (ndl > 0.30 + th ? 0.68 : (ndl > 0.04 + th ? 0.5 : 0.0)));
 		float sh = step(0.5, ATTENUATION);
+		sh = max(sh, v_fleck * 0.85);
 		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * lvl * sh;
 	} else {
 		DIFFUSE_LIGHT += w3_point_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);

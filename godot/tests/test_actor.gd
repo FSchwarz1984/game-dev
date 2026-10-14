@@ -69,6 +69,37 @@ func test_left_and_right_are_separate_frames_for_everyone() -> void:
 		a.free()
 
 
+func test_every_strip_lies_on_its_sheet_and_no_two_share_a_cell() -> void:
+	# the build packs short strips into free row space (knowledge/20 §7): a wrong 'col' would show
+	# another animation's frames. Locomotion starts at column 0 (the 3D sample's walker reads only
+	# 'row'), and every sheet fits a 4096 texture (phones).
+	for id in ["tsuzumi", "saji", "shione"]:
+		var fs := CharacterLibrary.frame_size(id)
+		for sheet in CharacterLibrary.sheets(id):
+			var sd: Dictionary = CharacterLibrary.character(id)["sheets"][sheet]
+			var tex := load("res://art/sprites/%s.png" % sd["file"]) as Texture2D
+			eq(Vector2i(tex.get_size()), Vector2i(int(sd["width"]), int(sd["height"])), "%s/%s size" % [id, sheet])
+			check(int(sd["width"]) <= 4096 and int(sd["height"]) <= 4096, "%s/%s fits 4096" % [id, sheet])
+			var seen := {}
+			var bad := []
+			for anim in sd["anims"]:
+				for view in sd["anims"][anim]:
+					var e: Dictionary = sd["anims"][anim][view]
+					var col := int(e.get("col", 0))
+					var row := int(e["row"])
+					var n := int(e["frames"])
+					if anim in ["idle", "walk", "run"] and col != 0:
+						bad.append("%s_%s starts at column %d" % [anim, view, col])
+					if (col + n) * fs.x > int(sd["width"]) or (row + 1) * fs.y > int(sd["height"]):
+						bad.append("%s_%s runs off the sheet" % [anim, view])
+					for i in n:
+						var k := "%d,%d" % [col + i, row]
+						if seen.has(k):
+							bad.append("%s_%s and %s share cell %s" % [anim, view, seen[k], k])
+						seen[k] = "%s_%s" % [anim, view]
+			check(bad.is_empty(), "%s/%s: %s" % [id, sheet, ", ".join(bad)])
+
+
 func test_diagonal_motion_shows_the_diagonal_view_with_hysteresis() -> void:
 	var a := Actor.new("shione")
 	a.play("walk", {"loop": true})

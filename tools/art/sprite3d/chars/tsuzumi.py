@@ -79,6 +79,8 @@ class Tsuzumi(Model):
             St.Mat('rope', ['#8f6a3c', '#bf9558', '#e1c084'], '#2f1e12', [0.45, 0.72], prio=1.5),
             St.Mat('navy', ['#16122a', '#201e3f', '#2f305c'], '#16122a', [0.45, 0.72], prio=1.5),
             St.Mat('paper', ['#cbc0cd', '#ebe3d6', '#fbf7ef'], '#3b3150', [0.45, 0.72], prio=1.5),
+            # a lit bon lantern's paper (dusk): warm, so it reads against the white haori
+            St.Mat('lamp', ['#c9864a', '#efb466', '#fde2a4'], '#4a2616', [0.40, 0.68], prio=2.5),
             St.Mat('dangoP', ['#c97a8f', '#e6a1b4', '#f3d9df'], '#3e1424', [0.45, 0.72], prio=3.0),
             St.Mat('dangoG', ['#6f9a48', '#9bc46a', '#c3e09a'], '#1e2e14', [0.45, 0.72], prio=3.0),
         ], extra=C)
@@ -281,15 +283,16 @@ class Tsuzumi(Model):
             # the lantern hangs from her hand; once hooked ('lantern_left') it stays where the
             # hand let go (the hook's spot: the anchor 'hook' of the third frame)
             hand = bw['handR'] @ np.array([0, -0.7, 0, 1.0])
-            at = hand[:3] + np.array([0, -3.0, 0.4])
+            at = hand[:3] + np.array([0, -4.3, 0.4])
             if prop == 'lantern_left':
                 at = self._hooked if getattr(self, '_hooked', None) is not None else at
             else:
                 self._hooked = at
             bw['lantern'] = G.M4(np.eye(3), at)
-            S += [rcone('lantern', (0, 3.0, -0.4), (0, 1.9, 0), 0.22, 0.22, 'wood', part='lantern'),
-                  ell('lantern', (1.35, 1.75, 1.35), 'paper', part='lantern',
-                      bands=[(1, -1.8, -1.25, 'boot'), (1, 1.25, 1.8, 'boot'), (1, -0.3, 0.3, 'red')])]
+            # a bon lantern about 0.3 m tall (6 px), lit: warm paper, black rims, a red band
+            S += [rcone('lantern', (0, 4.3, -0.4), (0, 2.8, 0), 0.22, 0.22, 'wood', part='lantern'),
+                  ell('lantern', (2.1, 3.0, 2.1), 'lamp', part='lantern',
+                      bands=[(1, -3.1, -2.3, 'boot'), (1, 2.3, 3.1, 'boot'), (1, -0.5, 0.5, 'red')])]
         elif prop and prop.startswith('dango'):
             n = int(prop[5:] or 3)
             S += [rcone('handR', (0, -0.4, 0.2), (0, -4.4, 0.2), 0.16, 0.16, 'wood', part='dango')]

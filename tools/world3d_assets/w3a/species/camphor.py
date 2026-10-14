@@ -12,6 +12,7 @@ limbs going in. Budget (contract 2): <= 20k triangles for the great camphor.
 from __future__ import annotations
 
 import math
+import os
 
 import numpy as np
 
@@ -28,14 +29,14 @@ NAME = 'camphor_great'
 
 # ------------------------------------------------------------------------------- the trunk
 BUTTRESS = [  # angle (rad, 0 = north, pi/2 = west, pi = south, 3pi/2 = east), reach at ground (m), width
-    (0.35, 1.00, 0.38), (1.25, 0.85, 0.42), (2.05, 1.25, 0.34), (2.75, 0.70, 0.40),
-    (3.55, 1.30, 0.36), (4.35, 0.80, 0.42), (5.15, 1.15, 0.36), (5.85, 0.60, 0.40),
+    (0.40, 0.80, 0.55), (1.45, 1.10, 0.50), (2.35, 1.00, 0.50), (3.14, 0.45, 0.62),
+    (3.95, 1.00, 0.50), (4.85, 1.15, 0.50), (5.90, 0.70, 0.55),
 ]
 BURLS = [  # angle, height (m), amplitude (m), angular width, vertical width
     (2.55, 2.9, 0.42, 0.30, 0.7), (3.95, 1.9, 0.30, 0.25, 0.55), (1.6, 3.6, 0.36, 0.28, 0.6),
     (4.9, 3.2, 0.28, 0.22, 0.5), (3.2, 4.3, 0.22, 0.20, 0.45),
 ]
-HOLLOW_AT = (2.42, 0.62, 0.70, 0.30, 0.78)   # angle, centre height, depth, angular half-width, half-height
+HOLLOW_AT = (2.98, 0.75, 0.42, 0.34, 0.85)   # angle, centre height, depth, angular half-width, half-height
 TWIST = 0.08                                  # rad per metre
 ROPE_Y = 2.35                                 # shimenawa height
 
@@ -54,11 +55,11 @@ def trunk_radius(theta, y, r0):
     theta = np.asarray(theta, np.float64)
     th = theta + TWIST * y
     r = r0 * (1 + 0.06 * np.sin(5 * th + 0.7) + 0.04 * np.sin(3 * th + 2.1))
-    g = math.exp(-max(y, 0) / 1.1) * (1 if y > -0.4 else math.exp((y + 0.4) * 0.6))
+    g = math.exp(-max(y, 0) / 1.35) ** 1.3 * (1 if y > -0.4 else math.exp((y + 0.4) * 0.4))
     for a, reach, w in BUTTRESS:
         d = _angdiff(theta, a)
         r = r + reach * np.exp(-(d / w) ** 2) * g
-    r = r + 0.6 * g
+    r = r + 0.75 * g
     for a, h, amp, wa, wh in BURLS:
         d = _angdiff(th, a)
         r = r + amp * np.exp(-(d / wa) ** 2 - ((y - h) / wh) ** 2)
@@ -78,11 +79,11 @@ TRUNK_R = [3.15, 3.05, 2.85, 2.6, 2.3]
 
 def _trunk_step(f):
     y = TRUNK_PTS[0][1] + f * (TRUNK_PTS[-1][1] - TRUNK_PTS[0][1])
-    return 0.13 if y < 1.7 else 0.3
+    return 0.18 if y < 1.7 else 0.42
 
 
 def _limb_step(r0):
-    return lambda f: float(np.clip(r0 * (1 - 0.6 * f) * 0.5, 0.3, 0.6))
+    return lambda f: 0.85 if r0 > 0.9 else 0.75
 
 
 # Limbs, designed for the leaned camera (docs/knowledge/21 section 1: a point shows at screen
@@ -95,7 +96,7 @@ LIMBS = [  # name, control points, radii, moss
     ('NW', [[-0.6, 4.9, -0.7], [-3.4, 7.6, -3.6], [-6.6, 9.4, -5.4], [-9.4, 10.4, -6.4]], [1.2, 0.9, 0.6, 0.34], 0.5),
     ('NE', [[0.7, 4.9, -0.6], [3.6, 7.8, -3.2], [6.8, 9.6, -4.8], [9.4, 10.6, -5.8]], [1.15, 0.86, 0.56, 0.3], 0.5),
     ('N', [[0.0, 5.0, -0.6], [-0.3, 8.0, -4.6], [-0.7, 10.4, -8.4], [-1.0, 11.4, -10.8]], [1.05, 0.8, 0.52, 0.3], 0.4),
-    ('L', [[0.1, 5.0, -0.1], [-0.4, 9.0, -0.8], [0.4, 13.2, -1.2], [0.0, 17.0, -1.4], [-0.4, 19.4, -1.6]], [1.32, 0.96, 0.6, 0.32, 0.18], 0.3),
+    ('L', [[0.1, 5.0, -0.1], [-0.4, 9.0, -0.8], [0.4, 13.2, -1.2], [0.0, 16.0, -1.4], [-0.3, 17.6, -1.6]], [1.32, 0.96, 0.6, 0.34, 0.2], 0.3),
     ('SEu', [[-0.1, 8.6, -0.6], [3.6, 11.6, 0.8], [6.6, 13.4, 1.2], [8.0, 14.0, 1.0]], [0.62, 0.46, 0.3, 0.18], 0.25),
     ('SWu', [[0.0, 10.0, -0.9], [-3.8, 12.8, 0.6], [-6.8, 14.0, 1.2], [-8.2, 14.4, 1.0]], [0.56, 0.42, 0.28, 0.16], 0.25),
     ('SEs', [[0.5, 8.0, 3.0], [3.6, 10.0, 5.0], [6.4, 11.6, 6.6], [7.8, 12.2, 7.2]], [0.5, 0.4, 0.28, 0.16], 0.3),
@@ -105,7 +106,7 @@ LIMBS = [  # name, control points, radii, moss
 
 def skeleton(R):
     limbs = []
-    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=80, cap_end=True,
+    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=72, cap_end=True,
                     moss=0.35, step_fn=_trunk_step)
     limbs.append(trunk)
     named = {}
@@ -114,30 +115,31 @@ def skeleton(R):
                     step_fn=_limb_step(rr[0]))
         limbs.append(L)
         named[name] = L
-    # roots: out of the biggest buttresses, low along the ground, curving, sinking in
+    # roots: each big buttress runs on as a root along the ground, rounded, curving, sinking in
     for i, (a, reach, w) in enumerate(BUTTRESS):
-        if reach < 0.95:
+        if reach < 0.75:
             continue
         d = np.array([-math.sin(a), 0, -math.cos(a)])          # theta 0 = north (-z), pi/2 = west (-x)
         side = np.array([d[2], 0, -d[0]])
         bend = R.normal(0, 0.45)
-        L1 = R.uniform(1.6, 2.8)
-        r_in = 3.0 + reach * 0.55
-        pts = [d * r_in + [0, 0.42, 0],
-               d * (r_in + L1 * 0.35) + side * bend * 0.25 + [0, 0.2, 0],
-               d * (r_in + L1 * 0.7) + side * bend * 0.6 + [0, 0.02, 0],
-               d * (r_in + L1) + side * bend * 0.95 + [0, -0.28, 0]]
-        rr = [0.62, 0.44, 0.28, 0.14]
-        limbs.append(WD.Limb(f'root{i}', pts, rr, kind='root', n_around=10, moss=0.45,
-                             step_fn=lambda f: 0.28, yscale=lambda k, f: 0.62 - 0.12 * f))
+        L1 = R.uniform(2.2, 3.4)
+        r_in = 3.0 + reach * 0.6
+        pts = [d * (r_in - 0.9) + [0, 1.0, 0],
+               d * (r_in + L1 * 0.15) + side * bend * 0.1 + [0, 0.42, 0],
+               d * (r_in + L1 * 0.55) + side * bend * 0.5 + [0, 0.12, 0],
+               d * (r_in + L1) + side * bend * 0.95 + [0, -0.6, 0]]
+        rr = [0.95, 0.78, 0.6, 0.5]
+        limbs.append(WD.Limb(f'root{i}', pts, rr, kind='root', n_around=10, moss=0.45, cap_end=False,
+                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.55 - 0.1 * f))
     # a few thin surface roots wandering between the big ones
-    for j, a in enumerate((0.85, 2.45, 3.15, 4.75, 5.55)):
+    for j, a in enumerate((0.85, 2.0, 4.3, 5.55)):
         d = np.array([-math.sin(a), 0, -math.cos(a)])
         side = np.array([d[2], 0, -d[0]])
         bend = R.normal(0, 0.6)
         pts = [d * 3.4 + [0, 0.2, 0], d * 4.6 + side * bend * 0.4 + [0, 0.06, 0], d * 5.8 + side * bend + [0, -0.12, 0]]
-        limbs.append(WD.Limb(f'sroot{j}', pts, [0.22, 0.15, 0.08], kind='root', n_around=7, moss=0.3,
-                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.75))
+        limbs.append(WD.Limb(f'sroot{j}', [p + np.array([0, -0.12, 0]) * (q == 2) for q, p in enumerate(pts)], [0.24, 0.2, 0.16],
+                             kind='root', n_around=7, moss=0.3, cap_end=False,
+                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.7))
     return limbs, named
 
 
@@ -198,9 +200,9 @@ def fern_tile(W, seed):
 def leaf_tiles():
     S = SEED
     specs = {
-        'mass': [(LV.clumps, dict(W=22, seed=S + 100 + i, r=(1.6, 3.0), gloss=0.3, tips=7, fill=2.2)) for i in range(10)],
-        'small': [(LV.clumps, dict(W=15, seed=S + 200 + i, r=(1.5, 2.6), gloss=0.3, tips=5, shape=0.40)) for i in range(5)],
-        'interior': [(LV.clumps, dict(W=22, seed=S + 300 + i, r=(2.2, 3.4), gloss=0.0, tips=2, shape=0.44, ragged=0.1, top_p=0.3)) for i in range(2)],
+        'mass': [(LV.clumps, dict(W=22, seed=S + 100 + i, r=(2.0, 3.5), gloss=0.22, tips=7, fill=2.0, sep_p=0.55)) for i in range(10)],
+        'small': [(LV.clumps, dict(W=15, seed=S + 200 + i, r=(1.8, 3.0), gloss=0.22, tips=5, shape=0.40, sep_p=0.55)) for i in range(5)],
+        'interior': [(LV.clumps, dict(W=24, seed=S + 300 + i, r=(2.6, 4.0), gloss=0.0, tips=2, shape=0.46, ragged=0.1, top_p=0.3, sep_p=0.4)) for i in range(2)],
         'fern': [(fern_tile, dict(W=12, seed=S + 500 + i)) for i in range(3)],
         'moss': [(LV.clumps, dict(W=9, seed=S + 600 + i, r=(1.2, 2.0), gloss=0.0, tips=2, shape=0.42, aspect=0.6, top_p=0.6)) for i in range(2)],
     }
@@ -218,9 +220,9 @@ def _tint(hexcol, body=LV.BODY):
 
 def crown(M, sets):
     return CD.crown_cards(M, (0.0, 12.5, 0.5), (17.0, 7.0, 15.5), sets, seed=SEED + 9,
-                          base_tint=_tint('#5b7340'), young_tint=_tint('#687a40'), old_tint=_tint('#4d6740'),
-                          base_y=7.0, top_y=21.0, overlap=1.7, clump_overlap=1.9, fill_density=0.45,
-                          max_cards=3300)
+                          base_tint=_tint('#5a7340'), young_tint=_tint('#73823f'), old_tint=_tint('#40634a'),
+                          base_y=7.0, top_y=21.0, overlap=1.7, clump_overlap=1.3, fill_density=0.7,
+                          max_cards=3400)
 
 
 def epiphytes(R, named, sets):
@@ -308,7 +310,7 @@ def shimenawa(trunk):
     k = int(np.argmin(np.abs(sp.pos[:, 1] - ROPE_Y)))
     c = sp.pos[k]
     r0 = float(sp.rad[k])
-    rope_r = 0.17
+    rope_r = 0.24
     th = np.linspace(0, 2 * math.pi, 73)
     pts = []
     for t in th:
@@ -316,8 +318,8 @@ def shimenawa(trunk):
         d = np.array([-math.sin(t), 0, -math.cos(t)])
         sag = 0.22 * max(0.0, -math.cos(t)) ** 2
         pts.append(c + d * rr + np.array([0, -sag, 0]))
-    spine = Spine(pts, [rope_r] * len(pts), step=0.12)
-    md, info = tube(spine, n_around=8, cap_end=False)
+    spine = Spine(pts, [rope_r] * len(pts), step=0.3)
+    md, info = tube(spine, n_around=7, cap_end=False)
     a = md.arrays()
     rope = MeshData()
     rope.add(a['p'], a['n'], _tube_uv(info, len(a['p'])), a['idx'], uv2=np.tile([0.0, 0.0], (len(a['p']), 1)),
@@ -348,7 +350,7 @@ def shimenawa(trunk):
     return rope, shide
 
 
-def zigzag(top, facing, width=0.2, seg=0.16, n=4, thick=0.02):
+def zigzag(top, facing, width=0.3, seg=0.19, n=4, thick=0.03):
     """A shide: a paper strip cut and folded into n steps zigzagging down; both sides drawn."""
     facing = normalize(np.asarray(facing, np.float64) * np.array([1, 0, 1]))
     right = normalize(np.cross([0, 1, 0], facing))
@@ -413,14 +415,28 @@ def build(out):
     bark_res = a.texture('bark', WD.bark_texture(SEED, size=256))
     m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0, 'cutaway': True},
                         textures={'albedo_tex': bark_res})
-    wood = WD.wood_mesh(limbs, tex_size=256, colour_fn=wood_colour, ao_fn=wood_ao, moss_fn=wood_moss)
+    M = masses()
+
+    def ao_fn(P, N, L):
+        # baked AO: the folds and crotches, times how much sky the bark sees past the crown
+        return wood_ao(P, N, L) * (0.45 + 0.55 * CD.sky_visibility(P, N, M, n_rays=16))
+    wood = WD.wood_mesh(limbs, tex_size=256, colour_fn=wood_colour, ao_fn=ao_fn, moss_fn=wood_moss)
     rope, shide = shimenawa(limbs[0])
     rope_res = a.texture('rope', rope_texture())
     m_rope = a.material('rope', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0},
                         textures={'albedo_tex': rope_res})
     m_paper = a.material('shide', 'toon_solid.gdshader', params={'porosity': 0.6})
     atlas, rects, sets = leaf_tiles()
-    cards = crown(masses(), sets) + epiphytes(R, named, sets)
+    cards = crown(M, sets)
+    vis = CD.sky_visibility(np.array([c.p for c in cards]), np.array([c.n for c in cards]), M, n_rays=16)
+    for c, v in zip(cards, vis):
+        c.ao = float(np.clip(c.ao * (0.62 + 0.38 * v), 0.2, 1.0))
+    cards += epiphytes(R, named, sets)
+    if os.environ.get('W3A_DEBUG_KINDS'):
+        dbg = {'clump': (0.3, 0.9, 0.3), 'fill': (0.3, 0.4, 1.0), 'interior': (1.0, 0.2, 0.2), 'spray': (1.0, 1.0, 0.2), 'epi': (1.0, 0.2, 1.0)}
+        for c in cards:
+            c.tint = np.array(dbg.get(c.kind, (1, 1, 1)))
+            c.ao = 1.0
     leaf_md = CD.cards_mesh(cards, atlas.shape[1], atlas.shape[0], rects)
     leaf_res = a.texture('leaves', atlas)
     m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=1.0),

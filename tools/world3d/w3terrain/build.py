@@ -91,9 +91,9 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     water_h = np.where(pool_in, pool_surf, water_h)
     water_k = np.where(pool_in, 1, water_k)
     # stream surface along its line, a little wider than the bed so the banks hide the edge
-    sd2, sarc, ssurf = geom.polyline_field(X, Z, SP, sfloor - L["stream"]["depth"] * 0.45)
-    in_stream = (sd2 < L["stream"]["width"] * 0.5 + 0.3) & (~pool_in) & (h < ssurf + 0.02)
-    in_stream = ndimage.binary_dilation(in_stream, iterations=1) & (sd2 < L["stream"]["width"] * 0.5 + 0.9) & (~pool_in)
+    sd2, sarc, ssurf = geom.polyline_field(X, Z, SP, sfloor - 0.12)
+    in_stream = (sd2 < L["stream"]["width"] * 0.5 + 0.2) & (~pool_in) & (h < ssurf - 0.02)
+    in_stream = ndimage.binary_dilation(in_stream, iterations=1) & (sd2 < L["stream"]["width"] * 0.5 + 0.8) & (~pool_in)
     water_h = np.where(in_stream, ssurf, water_h)
     water_k = np.where(in_stream, 2, water_k)
     # flow direction: along the stream's tangent at the nearest point
@@ -210,6 +210,48 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     mats = materials.compute(L, F, Xs, Zs, Hs, cs, plc)
     log("materials", f"{time.time() - t0:.1f}s")
 
+    # ---------------- stonework: retaining walls along the walled sides of pads (their real edges)
+    from skimage import measure
+    walls = []
+    gzs_all = {}
+    for p in L["pads"]:
+        sides = p.get("wall", [])
+        if not sides:
+            continue
+        sdf = pad_sdf[p["id"]]
+        gzs, gxs = np.gradient(sdf)
+        for c in measure.find_contours(sdf, 0.0):
+            if len(c) < 6:
+                continue
+            pts = np.stack([x0 + c[:, 1] * cell, z0 + c[:, 0] * cell], -1)
+            P, _ = geom.resample_polyline(pts, 0.4)
+            rows = []
+            for q in P:
+                i_ = min(max(int(round((q[0] - x0) / cell)), 0), nx - 1)
+                j_ = min(max(int(round((q[1] - z0) / cell)), 0), nz - 1)
+                n_ = np.array([gxs[j_, i_], gzs[j_, i_]])
+                n_ /= (np.linalg.norm(n_) + 1e-9)
+                outside = float(edits.sample_point(h, X, Z, q + n_ * 1.0))
+                pad_h = float(p["height"])
+                rows.append((q, n_, pad_h, outside))
+            # keep only where there is a real step; split into runs
+            run = []
+            def flush(run):
+                if len(run) >= 3:
+                    walls.append({"pad": p["id"],
+                                  "points": [[round(float(r[0][0]), 3), round(float(r[0][1]), 3)] for r in run],
+                                  "normals": [[round(float(r[1][0]), 3), round(float(r[1][1]), 3)] for r in run],
+                                  "top": [round(max(r[2], r[3]), 3) for r in run],
+                                  "bottom": [round(min(r[2], r[3]), 3) for r in run],
+                                  "cut": [bool(r[3] > r[2]) for r in run]})
+            for r in rows:
+                if abs(r[3] - r[2]) > 0.28:
+                    run.append(r)
+                else:
+                    flush(run)
+                    run = []
+            flush(run)
+
     # ---------------- shared pixel art (palette + glyph atlas)
     table = pixelart.write(out_godot.parent / "common")
     (out_godot.parent / "common" / "glyphs.json").write_text(json.dumps(table, indent=1))
@@ -217,7 +259,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     # ---------------- export
     info = export.write(L, out_godot, out_tmp, dict(
         h=h, X=X, Z=Z, x0=x0, z0=z0, cell=cell, nx=nx, nz=nz, walk=walk, water_h=water_h, water_k=water_k,
-        flow=flow, mats=mats, cs=cs, Hs=Hs, placements=plc, road=(RP, rprof), paths=path_fields,
+        flow=flow, mats=mats, cs=cs, Hs=Hs, placements=plc, road=(RP, rprof), paths=path_fields, walls=walls,
         steps=step_info, pool_surf=pool_surf, stream=(SP, sfloor), slope=slope))
     log("done", f"{time.time() - t0:.1f}s", info)
     return info
