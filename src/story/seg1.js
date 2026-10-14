@@ -358,12 +358,16 @@ export async function day1(G) {
   // ---- 6 a thud by the shrine, then a scream: after the hut, or if she wanders long enough
   await Promise.race([D.until(() => hutSeen && !D.busy), D.wait(45)]);
   await D.until(() => !D.busy);
-  const beam = f.add({ id: 'beam', kind: 'beam', name: '梁', x: P.beam[0], z: P.beam[1], r: 0.7, solid: true, priority: 2, q: { w: 3 }, material: 'wood' });
+  // The beam lies east-west with Saji pinned under its east end, head and arms out to the east. Its
+  // handle (where she stands to lift it) is the west half: standing there, her hat does not hide Saji.
+  const beam = f.add({ id: 'beam', kind: 'beam', name: '梁', x: P.beam[0] - 0.45, z: P.beam[1], r: 0.7, solid: true, priority: 2, q: { w: 3 }, material: 'wood' });
+  let sajiBody = null;
   beam.data.showQualities = false;            // its pips appear when Saji's bell rings
   await cut(G, async () => {
     stage.beamFall?.();
     au.sfx('fall', { x: P.beam[0], y: P.beam[1], size: 1 });
-    saji.visible = true; saji.pose = 'pinned'; saji.x = P.beam[0]; saji.z = P.beam[1] + 0.15;
+    saji.visible = true; saji.pose = 'pinned'; saji.face = 'right'; saji.x = P.beam[0] + 1.15; saji.z = P.beam[1] + 0.15;
+    sajiBody = f.add({ id: 'sajiPinned', x: saji.x - 0.1, z: saji.z, r: 0.45, solid: true, targetable: false });   // nobody walks over her
     await D.wait(0.35);
     au.sfx('blip', { voice: 'saji', i: 3 }); au.sfx('blip', { voice: 'saji', i: 7 });
     D.face('tsuzumi', faceTo(her, P.shrine));
@@ -425,8 +429,9 @@ export async function day1(G) {
     au.sfx('unstone', { x: beam.x, y: beam.z });
     await D.wait(0.6);
     saji.pose = null;
+    if (sajiBody) f.remove(sajiBody);
     await D.play('saji', 'crawl', { hold: 0.9 });
-    await D.move('saji', [[beam.x + 0.9, beam.z + 0.8]], { speed: 1.2, anim: 'crawl' });
+    await D.move('saji', [[saji.x + 0.55, saji.z + 0.7]], { speed: 1.2, anim: 'crawl' });   // out from under the east end
     await D.play('saji', 'hop', { hold: 0.5 });
     D.face('saji', faceTo(saji, [her.x, her.z]));
     await D.wait(0.5);

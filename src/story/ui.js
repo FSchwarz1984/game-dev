@@ -31,6 +31,7 @@ export class StoryUI {
     this.el.className = 'story';
     this.el.innerHTML = `
       <div class="st-box st-top"></div><div class="st-box st-bot"></div>
+      <div class="st-fade"></div>
       <div class="st-dlg" role="dialog" aria-live="polite">
         <img class="st-port" alt="">
         <div class="st-panel">
@@ -43,8 +44,9 @@ export class StoryUI {
       <div class="st-card"><h2></h2><p></p></div>
       <div class="st-title"><h1></h1><p></p></div>
       <div class="st-hint"></div>
-      <div class="st-bark"><b></b><span></span></div>
-      <div class="st-fade"></div>`;
+      <div class="st-bark"><b></b><span></span></div>`;
+    // order is stacking: the fade covers the picture and the letterbox, never the words —
+    // a card, the title drop or a line said over black stays readable
     root.appendChild(this.el);
     const q = s => this.el.querySelector(s);
     Object.assign(this, {
@@ -175,9 +177,12 @@ export class StoryUI {
   letterbox(on) { this.el.classList.toggle('boxed', on); }
 
   fade(a, dur = 0.6, color = '#000') {
+    // already covering the screen in one colour and staying covered: blend into the other (white to black)
+    const blend = this.fadeA === 1 && a === 1;
+    this.fadeEl.style.transition = blend ? `background-color ${dur}s ease` : `opacity ${dur}s ease`;
     this.fadeEl.style.background = color;
-    this.fadeEl.style.transition = `opacity ${dur}s ease`;
     this.fadeEl.style.opacity = a;
+    this.fadeA = a;
     return this.wait(dur);
   }
 
@@ -252,11 +257,13 @@ function injectStyle() {
   .st-bark { position: absolute; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -6px); max-width: calc(100% - 200px); padding: 6px 14px 7px; background: rgba(12, 10, 16, .78); border: 1px solid rgba(214,182,120,.4); border-radius: 4px; font-size: 16px; letter-spacing: .04em; white-space: nowrap; opacity: 0; transition: opacity .2s, transform .2s; }
   .st-bark.on { opacity: 1; transform: translate(-50%, 0); }
   .st-bark b { margin-right: 10px; font-family: "Noto Serif JP", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "IPAMincho", "IPAGothic", "Noto Serif SC", serif; font-size: 13px; color: #d6b678; }
-  @media (max-width: 600px) {
+  /* upright phones: the bust stands on the box instead of inside it, so the line gets the full width
+     and the name plate sits clear of the bust (a wide hat brim reached over it) */
+  @media (max-width: 600px) and (min-height: 481px) {
     .st-panel { min-height: 104px; padding: 26px 16px 16px; }
-    .st-dlg.has-port .st-panel { padding-left: 108px; }
-    .st-dlg.has-port .st-name { left: 108px; }
-    .st-port { height: clamp(150px, 26vh, 210px); left: -4px; }
+    .st-dlg.has-port .st-panel { padding-left: 16px; }
+    .st-dlg.has-port .st-name { left: 156px; }
+    .st-port { height: clamp(140px, 21vh, 176px); left: 2px; bottom: calc(100% - 1px); }
     .st-txt { font-size: 17px; }
     .st-sub { font-size: 17px; }
   }

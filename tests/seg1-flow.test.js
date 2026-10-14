@@ -212,10 +212,10 @@ test('if she gives the beam its weight back, Saji objects, and she can still fin
   await B.walk([6, 2.0], 0.3);
   await B.verb('take', 'w', beam);
   assert.equal((await B.verb('take', 'w', beam)).reason, 'overload');
-  // the shrine puts her back to herself; then the beam
-  await B.walk([6, -0.4], 0.4);
+  // the shrine puts her back to herself; then the beam (round the west end: the beam and Saji under it bar the way)
+  for (const p of [[3.8, 2.0], [3.8, -0.4], [6, -0.4]]) await B.walk(p, 0.4);
   assert.equal(await B.press(f.get('shrine')), '归还');
-  await B.walk([6, 2.0], 0.3);
+  for (const p of [[3.8, -0.4], [3.8, 2.0], [6, 2.0]]) await B.walk(p, 0.3);
   // Saji is still pinned; the beam still holds what is left
   while (beam.holder.q.w > 0) await B.verb('take', 'w', beam);
   await B.until(() => G.log.some(l => l.startsWith('saji:昨晚全')));

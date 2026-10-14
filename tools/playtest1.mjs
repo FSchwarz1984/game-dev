@@ -34,6 +34,7 @@ await page.waitForFunction(() => window.APP && window.APP.G);
 const log = (...a) => console.log(`[${mode}]`, ...a);
 let shotN = 0;
 async function shot(name, settle = 900) {
+  if ((await state()).dlg) await ticks(45);  // a line just opened: let it type out, so the photo shows it
   await page.waitForTimeout(settle);         // let CSS fades and cards settle (they run on the wall clock)
   await page.evaluate(() => window.APP.render());
   await page.waitForTimeout(60);
@@ -45,7 +46,7 @@ async function shot(name, settle = 900) {
 }
 const state = () => page.evaluate(() => {
   const { G } = window.APP, f = G.f, P = f.player;
-  return { x: P.x, z: P.z, control: f.control, busy: G.D.busy, blocking: G.ui.blocking, dlg: !!G.ui.dlg, target: f.target?.id || null, label: f.contextLabel(), w: P.holder.q.w, saved: localStorage.getItem('amagishi.save'), vista: !!G.stage.vistaOn, card: document.querySelector('.st-card.on h2')?.textContent || '' };
+  return { x: P.x, z: P.z, control: f.control, busy: G.D.busy, blocking: G.ui.blocking, dlg: !!G.ui.dlg, target: f.target?.id || null, label: f.contextLabel(), w: P.holder.q.w, saved: localStorage.getItem('amagishi.save'), vista: !!G.stage.vistaOn, card: document.querySelector('.st-card.on h2')?.textContent || '', titleOn: !!document.querySelector('.st-title.on') };
 });
 // advance the clock n frames of 1/30 s without drawing; between frames the page gets a task
 // boundary, as it does between animation frames, so the scenes' awaits resume frame by frame
@@ -223,11 +224,13 @@ async function prologueRun() {
   }
   await until(s => s.dlg, 'ten lanterns'); await shot('graves-lit');
   await until(s => s.control && !s.busy, 'after the hayashi');
-  await shot('night-camphor');
+  await ticks(60); await shot('night-camphor');          // the camera glides back to her from the saddle
   await walk(P.camphorFoot, 0.4); await face('camphor'); await contextKey();
   await ticks(200); await shot('climb');
   await until(s => s.vista, 'the treetop view'); await play(270); await shot('vista-treetop');
   for (const [n, f] of [['rise', 700], ['sky', 500], ['wave', 400]]) { await play(f); await shot('vista-' + n); }
+  // the title drop over the white: the words must be on top of the fade, not under it
+  await until(s => s.titleOn, 'the title drop'); await ticks(40); await shot('title-drop', 1800);
   await until(s => s.saved && s.saved.includes('day1'), 'prologue saved');
 }
 
@@ -239,10 +242,12 @@ async function dayOneRun() {
   await walk([P.hutDoor[0], P.hutDoor[1] + 1.9], 0.4); await face('hut'); await contextKey();   // the far hut keeps her a step away
   await until(s => s.dlg, 'hut line'); await shot('hut');
   await until(s => s.control && !s.busy, 'beam falls');
-  await walk([P.beam[0], P.beam[1] + 1.6], 0.4);
+  // stand where a player would to lift it: in front of the beam's handle (the field entity)
+  const B = await page.evaluate(() => { const e = window.APP.G.f.get('beam'); return [e.x, e.z]; });
+  await walk([B[0], B[1] + 1.4], 0.4);
   await until(s => s.control && !s.busy && !s.blocking, 'Saji asks');
   await face('beam'); await contextKey();
-  await until(s => s.control && !s.busy, 'lift attempt'); await shot('beam-pips');
+  await until(s => s.control && !s.busy, 'lift attempt'); await ticks(12); await shot('beam-pips');
   for (let i = 0; i < 3; i++) { await face('beam'); await take(); await ticks(30); }
   await shot('beam-taken');
   await until(s => s.control && !s.busy && !s.blocking, 'Saji free');
