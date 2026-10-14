@@ -170,7 +170,7 @@ class Plant:
         u = cv.u[ys, xs]
         cid = cv.cell[ys, xs]
         jit = (hash01(cid, np.int64(self.seed) + 61) - 0.5) * o.get('blade_jitter', 0.25)
-        v = (o.get('blade_base', 0.22) + 0.62 * np.maximum(0, lam) * (0.35 + 0.65 * T)
+        v = (o.get('blade_base', 0.22) + o.get('blade_light', 0.62) * np.maximum(0, lam) * (0.35 + 0.65 * T)
              + o.get('blade_tip', 0.12) * u + jit + cv.tone[ys, xs])
         mats = cv.mat[ys, xs]
         nt = np.array([len(self.mats[int(m)].ramp) for m in mats])

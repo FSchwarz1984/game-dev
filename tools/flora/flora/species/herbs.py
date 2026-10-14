@@ -62,19 +62,20 @@ def susuki(name, seed):
                           for t in np.linspace(0, 1, 12)])
         p.blade(stalk, np.full(len(stalk), 0.5), stem, group=g, face=(0, 0, 1), fold=0.2, tone=0.08)
         tip = stalk[-1]
-        # the plume: a closed whisk of 7-10 silky threads from the top 0.3 m of the stalk,
-        # hanging to the lee, the outer ones longer; one-pixel lines with gaps between them
-        n_th = rng.int(7, 10)
+        # the plume: a narrow brush of silky spikelet threads around the top 0.3 m of the stalk,
+        # on both sides of it, nodding to the lee; one-pixel threads, light and dark alternating,
+        # so it reads as a feathery brush and not as a flag
+        n_th = rng.int(9, 13)
         for j in range(n_th):
             s = j / (n_th - 1)
-            st = tip - np.array([0, 0.30 * s, 0]) + np.array([bend * 0.3 * s, 0, 0])
-            L = rng.range(0.20, 0.32) * (0.75 + 0.5 * (1 - abs(s - 0.4)))
-            sp = side * (0.04 + 0.17 * s) + rng.range(-0.03, 0.03)
-            th = np.array([st, st + np.array([sp * 0.6, L * 0.10, 0]),
-                           st + np.array([sp * 1.1, -L * 0.35, 0.01]), st + np.array([sp * 1.3, -L * 0.85, 0.02])])
-            p.blade(th, np.array([0.5, 0.5, 0.5, 0.5]), plume, group=g, face=(side * 0.4, 0.6, 0.6),
-                    tone=rng.range(-0.25, 0.10) - 0.20 * s, fold=0.1)
-    p.leaf_opts.update(dict(blade_base=0.10, blade_tip=0.16, blade_jitter=0.20))
+            st = tip - np.array([0, 0.28 * s, 0]) + np.array([bend * 0.25 * s, 0, 0])
+            L = rng.range(0.10, 0.18) * (1.0 - 0.35 * s)
+            sd = 1.0 if j % 2 else -1.0
+            sp = sd * rng.range(0.02, 0.05) + side * 0.03
+            th = np.array([st, st + np.array([sp, L * 0.55, 0.01]), st + np.array([sp * 1.6 + side * 0.03, L * 0.75, 0.02])])
+            p.blade(th, np.array([0.5, 0.5, 0.5]), plume, group=g, face=(sd * 0.4, 0.6, 0.6),
+                    tone=(0.10 if j % 3 else -0.25) - 0.15 * s, fold=0.1)
+    p.leaf_opts.update(dict(blade_base=0.12, blade_tip=0.14, blade_jitter=0.20, blade_light=0.42))
     return p
 
 
@@ -107,7 +108,7 @@ def fern(name, seed):
             tip = P0 + side * sd * ln + d * ln * 0.6 + np.array([0, -ln * 0.35, 0])
             p.blade(np.array([P0, (P0 + tip) / 2 + [0, 0.012, 0], tip]), np.array([1.8, 2.2, 0.8]), fm, group=g,
                     face=face, tone=(0.02 if sd < 0 else -0.14) + (0.08 if young else -0.04), fold=0.45)
-    p.leaf_opts.update(dict(blade_base=0.20, blade_tip=0.10, blade_jitter=0.14))
+    p.leaf_opts.update(dict(blade_base=0.20, blade_tip=0.10, blade_jitter=0.14, blade_light=0.42))
     return p
 
 
