@@ -105,7 +105,8 @@ async function until(cond, label, max = 9000) {
 // A path over the map's walkable grid (0.5 m BFS, computed in the page), so the bot goes round
 // walls and up the stairs like a player who can see them.
 const route = (x, z) => page.evaluate(([tx, tz]) => {
-  const { G } = window.APP, map = G.stage.map, f = G.f, c = 0.5, X0 = -6, Z0 = -4, W = 270, H = 200;
+  // the nav grid's own 0.25 m: a coarser grid can step over a wall one cell thick
+  const { G } = window.APP, map = G.stage.map, f = G.f, c = 0.25, X0 = -6, Z0 = -4, W = 540, H = 400;
   const idx = (i, j) => j * W + i, ci = x => Math.round((x - X0) / c), cj = z => Math.round((z - Z0) / c);
   const ok = (i, j) => i >= 0 && j >= 0 && i < W && j < H && map.walkable(X0 + i * c, Z0 + j * c) && f.canStand(X0 + i * c, Z0 + j * c);
   const s = idx(ci(f.player.x), cj(f.player.z)), t = idx(ci(tx), cj(tz));
@@ -121,7 +122,7 @@ const route = (x, z) => page.evaluate(([tx, tz]) => {
   if (prev[t] < 0) return null;
   const pts = []; for (let k = t; k !== s; k = prev[k]) pts.push([X0 + (k % W) * c, Z0 + ((k / W) | 0) * c]);
   pts.reverse();
-  return pts.filter((p, n) => n % 2 === 1 || n === pts.length - 1);
+  return pts.filter((p, n) => n % 4 === 3 || n === pts.length - 1);
 }, [x, z]);
 async function walk(target, tol = 0.35) {
   await until(s => s.control && !s.busy && !s.blocking, 'control before walking to ' + target);
