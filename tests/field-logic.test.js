@@ -112,3 +112,14 @@ test('the director waits on the game clock and walks actors along a path', async
   assert.ok(a.idled);
   assert.equal(faceOf(-1, 0.2), 'left');
 });
+
+test('standing still, she still chooses the thing beside her even if a scene turned her away', () => {
+  const f = new Field();
+  const beam = f.add({ id: 'beam', x: 0, z: -1.6, r: 0.7, q: { w: 3 } });
+  f.player.fx = 1; f.player.fz = 0;          // turned to the east by a scene; the beam is north
+  for (let i = 0; i < 10; i++) f.update(DT);
+  assert.equal(f.target, beam);
+  // walking east, the cone narrows again and the beam behind her shoulder drops out
+  for (let i = 0; i < 10; i++) f.update(DT, { mx: 1, mz: 0 });
+  assert.notEqual(f.target, beam);
+});

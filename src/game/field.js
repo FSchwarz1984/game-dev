@@ -111,7 +111,17 @@ export class Field {
       if (e.hidden || !e.targetable) continue;
       cands.push({ x: e.x, z: e.z, priority: e.priority, reach: e.reach ?? 1.6 + e.r, ref: e });
     }
-    const t = this.control ? this.targeting.update(dt, P, cands) : null;
+    // what she faces decides; but standing still with nothing in front of her (a scene just turned
+    // her away), the thing beside her is still chosen
+    const T = this.targeting, cos75 = Math.cos(75 * Math.PI / 180);
+    const inFront = cands.some(c => {
+      const dx = c.x - P.x, dz = c.z - P.z, d = hyp(dx, dz);
+      return d <= c.reach && (d <= 0.9 || (dx * P.fx + dz * P.fz) / d >= cos75);
+    });
+    const wide = !P.moving && !inFront;
+    T.opt.coneDeg = wide ? 135 : 75;
+    T.opt.closeEnough = wide ? 1.6 : 0.9;
+    const t = this.control ? T.update(dt, P, cands) : null;
     const was = this.target;
     this.target = t ? t.ref : null;
     if (this.target && this.target !== was) this.events.push({ type: 'target', e: this.target });

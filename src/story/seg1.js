@@ -530,12 +530,12 @@ function bodyOff(f) {
   return Object.keys(h.q).some(k => h.q[k] !== h.base[k]);
 }
 
-/** A line spoken without stopping play (a bark). Queued if a scene or another bark is talking. */
+/** A line said without stopping play (a bark): a subtitle at the top; queued behind the last one. */
 function bark(G, line) {
   const { D, ui } = G;
   G.barkQ = (G.barkQ || Promise.resolve()).then(async () => {
     await D.until(() => !ui.blocking);
-    await ui.say([line]);
+    if (ui.bark) await ui.bark(line); else await ui.say([line]);
   });
   return G.barkQ;
 }

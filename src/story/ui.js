@@ -43,6 +43,7 @@ export class StoryUI {
       <div class="st-card"><h2></h2><p></p></div>
       <div class="st-title"><h1></h1><p></p></div>
       <div class="st-hint"></div>
+      <div class="st-bark"><b></b><span></span></div>
       <div class="st-fade"></div>`;
     root.appendChild(this.el);
     const q = s => this.el.querySelector(s);
@@ -180,6 +181,21 @@ export class StoryUI {
     return this.wait(dur);
   }
 
+  /**
+   * A line said in passing while she plays (a bark): a small subtitle at the top of the screen
+   * with the speaker's name. It never stops play and never waits for a key.
+   */
+  bark(line, dur) {
+    const el = this.el.querySelector('.st-bark'), who = CAST[line.who] || CAST.narr;
+    el.querySelector('b').textContent = who.name ? who.name.replace(/^.*?(?=[ぁ-ゟ])/, '') : '';
+    el.querySelector('span').textContent = line.text;
+    el.classList.remove('on'); void el.offsetWidth; el.classList.add('on');
+    if (who.voice) for (let i = 0; i < Math.min(6, line.text.length); i += 2) this.audio?.sfx?.('blip', { voice: who.voice, i });
+    const t = dur ?? Math.max(2.2, line.text.length * 0.17);
+    const token = (this.barkToken = (this.barkToken || 0) + 1);
+    return this.wait(t).then(() => { if (this.barkToken === token) el.classList.remove('on'); });
+  }
+
   /** A first-time hint anchored above a screen point (CSS px), or null to hide. */
   hint(text, x, y) {
     if (!text) { this.hintEl.classList.remove('on'); return; }
@@ -233,6 +249,9 @@ function injectStyle() {
   .st-hint { position: fixed; left: 0; top: 0; padding: 6px 12px; background: rgba(16,14,20,.85); border: 1px solid rgba(214,182,120,.55); border-radius: 4px; font-family: "Noto Sans SC", system-ui, sans-serif; font-size: 14px; color: #f3ecdc; opacity: 0; transition: opacity .25s; white-space: nowrap; }
   .st-hint.on { opacity: 1; }
   .st-fade { position: absolute; inset: 0; opacity: 0; background: #000; }
+  .st-bark { position: absolute; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -6px); max-width: calc(100% - 200px); padding: 6px 14px 7px; background: rgba(12, 10, 16, .78); border: 1px solid rgba(214,182,120,.4); border-radius: 4px; font-size: 16px; letter-spacing: .04em; white-space: nowrap; opacity: 0; transition: opacity .2s, transform .2s; }
+  .st-bark.on { opacity: 1; transform: translate(-50%, 0); }
+  .st-bark b { margin-right: 10px; font-family: "Noto Serif JP", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "IPAMincho", "IPAGothic", "Noto Serif SC", serif; font-size: 13px; color: #d6b678; }
   @media (max-width: 600px) {
     .st-panel { min-height: 104px; padding: 26px 16px 16px; }
     .st-dlg.has-port .st-panel { padding-left: 108px; }
@@ -240,6 +259,19 @@ function injectStyle() {
     .st-port { height: clamp(150px, 26vh, 210px); left: -4px; }
     .st-txt { font-size: 17px; }
     .st-sub { font-size: 17px; }
+  }
+  /* landscape phones: a short box, a smaller bust, two lines of text at most */
+  @media (max-height: 480px) {
+    .st-dlg { bottom: calc(6px + env(safe-area-inset-bottom, 0px)); width: min(780px, calc(100% - 24px)); }
+    .st-panel { min-height: 0; padding: 18px 18px 10px; }
+    .st-dlg.has-port .st-panel { padding-left: 128px; }
+    .st-dlg.has-port .st-name { left: 128px; }
+    .st-name { top: -13px; padding: 2px 10px 3px 8px; }
+    .st-name b { font-size: 15px; }
+    .st-port { height: clamp(110px, 40vh, 160px); left: -2px; }
+    .st-txt { font-size: 16px; line-height: 1.55; min-height: 3.1em; }
+    .st-card { bottom: 18vh; }
+    .st-bark { top: calc(8px + env(safe-area-inset-top, 0px)); font-size: 14px; }
   }
   @media (prefers-reduced-motion: reduce) { .st-port.in, .st-dlg.done .st-next { animation: none; } }
   `;
