@@ -182,6 +182,8 @@ async function prologueRun() {
   await walk([96, 72.4], 0.8);
   await shot('switchbacks');
   await walk(P.gravesStand, 1.4);
+  await until(s => s.control && !s.busy, 'the graves are offered');
+  await page.waitForFunction(() => !!window.APP.G.f.get('grave8'));
   for (let i = 0; i < 9; i++) {
     const g = await page.evaluate(i => { const e = window.APP.G.f.get('grave' + i); return [e.x, e.z + 1.1]; }, i);
     await walk(g, 0.4); await face('grave' + i); await contextKey(); await ticks(30);
