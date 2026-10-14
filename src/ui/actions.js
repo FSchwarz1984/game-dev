@@ -46,23 +46,27 @@ export class Actions {
     this.emit({ type: act });
   }
 
-  /** Build the touch pad. Call once when the device has touch (or with ?touch=1). */
-  mountTouchPad() {
+  /**
+   * Build the touch pad. Call once when the device has touch (or with ?touch=1).
+   * opts.secondary: which of dispatch / dodge / recall to show; opts.rotate: the camera keys
+   * (none in the 2D game); opts.qualities: the quality keys shown at first (see setQualities).
+   */
+  mountTouchPad({ secondary = ['dispatch', 'dodge', 'recall'], rotate = true, qualities = QUALITIES } = {}) {
     if (this.pad) return this.pad;
+    const SEC = { dispatch: ['派遣', '派'], dodge: ['闪避', '避'], recall: ['召回', '召'] };
     const pad = document.createElement('div');
     pad.className = 'act-pad';
     pad.innerHTML = `
       <button class="act-ctx" data-a="context" aria-label="情境动作"><span></span></button>
       ${QUALITIES.map(k => `<button class="act-q" data-k="${k}" style="--qc:${QUALITY_INFO[k].color}" aria-label="${QUALITY_INFO[k].kanji}：点一下取，上滑予，下滑放"><b>${QUALITY_INFO[k].kanji}</b><i></i></button>`).join('')}
-      <button class="act-s act-o" data-a="dispatch" aria-label="派遣">派</button>
-      <button class="act-s act-o" data-a="dodge" aria-label="闪避">避</button>
-      <button class="act-s act-o" data-a="recall" aria-label="召回">召</button>
-      <div class="act-rot">
+      ${secondary.map(a => `<button class="act-s act-o" data-a="${a}" aria-label="${SEC[a][0]}">${SEC[a][1]}</button>`).join('')}
+      ${rotate ? `<div class="act-rot">
         <button class="act-s" data-a="rotateLeft" aria-label="镜头左转">↺</button>
         <button class="act-s" data-a="rotateRight" aria-label="镜头右转">↻</button>
-      </div>`;
+      </div>` : ''}`;
     this.root.appendChild(pad);
     injectStyle();
+    this.shownQualities = [...qualities];
     // Layout: the five quality keys on a 108° arc around the context button (from just below
     // horizontal-left to just right of vertical), radius following the screen width, with at least
     // 6 px between keys; the secondary keys in a column on the right edge above the arc, or in a
@@ -74,7 +78,12 @@ export class Actions {
         el.style.right = (cx - half - Math.cos(a) * r).toFixed(1) + 'px';
         el.style.bottom = (cy - half + Math.sin(a) * r).toFixed(1) + 'px';
       };
-      pad.querySelectorAll('.act-q').forEach((b, i) => place(b, (190 - i * 27) * Math.PI / 180, R, 26));
+      let slot = 0;
+      pad.querySelectorAll('.act-q').forEach(b => {
+        const on = this.shownQualities.includes(b.dataset.k);
+        b.hidden = !on;
+        if (on) place(b, (190 - slot++ * 27) * Math.PI / 180, R, 26);
+      });
       const short = innerHeight < 520;
       pad.querySelectorAll('.act-o').forEach((b, i) => {
         const along = (cx + R + 56 + i * 60 - 24).toFixed(1) + 'px';
@@ -82,6 +91,7 @@ export class Actions {
         b.style.bottom = short ? '0px' : along;
       });
     };
+    this.layout = layout;
     layout();
     addEventListener('resize', layout);
     const glow = el => { el.classList.add('down'); try { navigator.vibrate?.(8); } catch (e) { /* not supported */ } };
@@ -112,6 +122,21 @@ export class Actions {
     this.pad = pad;
     return pad;
   }
+
+  /** Show only these quality keys (the ones she has learned); a newly shown key announces itself. */
+  setQualities(ks) {
+    const fresh = ks.filter(k => !(this.shownQualities || []).includes(k));
+    this.shownQualities = [...ks];
+    if (!this.pad) return;
+    this.layout();
+    for (const k of fresh) {
+      const b = this.pad.querySelector(`.act-q[data-k="${k}"]`);
+      b.classList.remove('fresh'); void b.offsetWidth; b.classList.add('fresh');
+    }
+  }
+
+  /** Show or hide the whole pad (hidden during scenes). */
+  setVisible(on) { if (this.pad) this.pad.classList.toggle('off', !on); }
 
   /** Keep the touch pad in sync with what the context button would do and what she carries. */
   setContext(label, amounts) {
@@ -151,6 +176,11 @@ function injectStyle() {
   .act-s { width: 48px; height: 48px; font-size: 16px !important; }
   .act-rot { position: fixed; right: calc(16px + env(safe-area-inset-right, 0px)); top: calc(16px + env(safe-area-inset-top, 0px)); display: flex; gap: 12px; }
   .act-rot .act-s { position: relative; }
+  .act-pad.off { opacity: 0; visibility: hidden; transition: opacity .25s, visibility 0s .25s; }
+  .act-pad { transition: opacity .25s; }
+  .act-q[hidden] { display: none; }
+  .act-q.fresh { animation: act-fresh 1.6s ease-out; }
+  @keyframes act-fresh { 0% { transform: scale(.2); opacity: 0; } 30% { transform: scale(1.25); opacity: 1; box-shadow: 0 0 0 10px color-mix(in srgb, var(--qc) 50%, transparent), inset 0 0 0 2px var(--qc); } 100% { transform: none; } }
   @media (prefers-reduced-motion: reduce) { .act-pad button::after { transition: none; } }
   `;
   document.head.appendChild(s);

@@ -106,7 +106,7 @@ export class StoryUI {
     const adv = this.advanceReq;
     this.advanceReq = false;
     if (!D.done) {
-      D.t += dt * (this.fastHeld ? 3 : 1);
+      D.t += dt * (this.fastHeld ? 3 : 1) * (this.speed || 1);
       const speed = L.slow ? 14 : 30;
       while (D.t > 1 / speed && D.ch < text.length) {
         const c = text[D.ch];
@@ -125,7 +125,7 @@ export class StoryUI {
         this.dlgEl.classList.remove('on');
         this.dlg = null;
         this.audio?.duck?.(0, 0.5);
-        setTimeout(() => D.res(), 120);
+        this.wait(0.12).then(() => D.res());
       } else this.showLine();
     }
   }

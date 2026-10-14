@@ -9,7 +9,7 @@ const REFUSAL_TEXT = {
   [REFUSAL.empty]: q => `没有${QUALITY_INFO[q].kanji}了`,
   [REFUSAL.full]: '装不下了',
   [REFUSAL.overload]: '身体承受不住了',
-  far: '太远了',
+  far: '够不着',
   none: '附近没有可以对它用的东西',
   heavy: '太重了，背不动',
 };
@@ -43,10 +43,12 @@ export class TargetPrompt {
     this.el.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
 
     const hd = target.holder;
-    const key = target.name + '|' + (target.status || '') + '|' + (hd ? QUALITIES.map(k => hd.q[k] + '/' + hd.max[k]).join(',') + (hd.sacred ? '!' : '') : '');
+    const key = target.name + '|' + (target.tag || '') + '|' + (target.status || '') + '|' + (hd ? QUALITIES.map(k => hd.q[k] + '/' + hd.max[k]).join(',') + (hd.sacred ? '!' : '') : '');
     if (key !== this.key) {
       this.key = key;
+      this.nameEl.innerHTML = '';
       this.nameEl.textContent = target.name;
+      if (target.tag) { const t = document.createElement('em'); t.textContent = target.tag; this.nameEl.appendChild(t); }
       this.stEl.textContent = target.status || '';
       this.qEl.innerHTML = hd ? QUALITIES.filter(k => hd.q[k] > 0 || hd.base[k] > 0).map(k => {
         const n = hd.q[k], cap = Math.max(n, hd.base[k], 1);
@@ -75,6 +77,7 @@ function injectStyle() {
   .tgt { position: fixed; left: 0; top: 0; z-index: 15; pointer-events: none; opacity: 0; transition: opacity .12s; font: 500 13px/1.35 "Noto Sans SC", "PingFang SC", system-ui, sans-serif; color: #f4f1ea; text-shadow: 0 1px 2px rgba(0,0,0,.6); }
   .tgt.on { opacity: 1; }
   .tgt-name { font: 700 14px/1.2 "Noto Serif SC", "Shippori Mincho", serif; text-align: center; }
+  .tgt-name em { font-style: normal; font-weight: 500; font-size: 11px; margin-left: 5px; padding: 0 4px; border-radius: 3px; color: #dfe8f2; background: rgba(170, 190, 215, .32); vertical-align: 1px; }
   .tgt-q { display: flex; gap: 6px; justify-content: center; margin-top: 2px; white-space: nowrap; }
   .tgt-q span { color: var(--qc); letter-spacing: 1px; }
   .tgt-q b { color: #f4f1ea; margin-right: 2px; font-weight: 700; }

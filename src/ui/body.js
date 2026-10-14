@@ -15,6 +15,15 @@ export class BodyGauge {
     this.last = {};
   }
 
+  /** Show only the rows of qualities she has learned (none: the gauge hides). */
+  setQualities(ks) {
+    this.shown = [...ks];
+    for (const k of QUALITIES) this.rows[k].hidden = !ks.includes(k);
+    this.el.classList.toggle('off', !ks.length);
+  }
+
+  setVisible(on) { this.el.classList.toggle('hide', !on); }
+
   update(holder) {
     for (const k of QUALITIES) {
       const n = holder.q[k], base = holder.base[k], max = Math.max(holder.max[k] ?? 9, n);
@@ -39,6 +48,8 @@ function injectStyle() {
   s.textContent = `
   .body-g { position: fixed; left: calc(12px + env(safe-area-inset-left, 0px)); top: calc(12px + env(safe-area-inset-top, 0px)); z-index: 14; pointer-events: none; padding: 7px 9px 6px; border-radius: 8px; background: rgba(20, 16, 24, .42); backdrop-filter: blur(2px); font: 700 13px/1 "Noto Serif SC", "Shippori Mincho", serif; color: #f4f1ea; }
   .bg-row { display: flex; align-items: center; gap: 6px; height: 17px; }
+  .bg-row[hidden] { display: none; }
+  .body-g.off, .body-g.hide { opacity: 0; } .body-g { transition: opacity .25s; }
   .bg-row b { width: 14px; text-align: center; text-shadow: 0 1px 2px rgba(0,0,0,.7); }
   .bg-row span { display: flex; gap: 2px; }
   .bg-row i { width: 7px; height: 7px; border-radius: 50%; box-sizing: border-box; border: 1.5px solid color-mix(in srgb, var(--qc) 55%, transparent); }
