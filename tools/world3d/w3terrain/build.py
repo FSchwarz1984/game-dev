@@ -11,7 +11,7 @@ from pathlib import Path
 import numpy as np
 from scipy import ndimage
 
-from . import edits, export, geom, landform, materials, noise, placement
+from . import edits, export, geom, landform, materials, noise, pixelart, placement
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -56,7 +56,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     # the road: profile from the land, grade-limited, then cut and fill
     R = L["road"]
     rpts = geom.catmull(np.asarray(R["points"], np.float64), 10)
-    RP, rs, rprof = edits.road_profile(h, x0, z0, cell, rpts, R["max_grade"], window=12.0)
+    RP, rs, rprof = edits.road_profile(h, x0, z0, cell, rpts, R["max_grade"], window=6.0)
     h_before_road = h.copy()
     h, road_d, road_arc, road_h = edits.cut_corridor(h, X, Z, RP, rprof, R["width"], R["bank"], bank_slope=0.95, wobble_seed=int(L["seed"]) + 5)
     # pads (yard, shrine terrace, graves bench, lookout top)
@@ -207,6 +207,10 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     F["litter_kind"] = kind
     mats = materials.compute(L, F, Xs, Zs, Hs, cs, plc)
     log("materials", f"{time.time() - t0:.1f}s")
+
+    # ---------------- shared pixel art (palette + glyph atlas)
+    table = pixelart.write(out_godot.parent / "common")
+    (out_godot.parent / "common" / "glyphs.json").write_text(json.dumps(table, indent=1))
 
     # ---------------- export
     info = export.write(L, out_godot, out_tmp, dict(

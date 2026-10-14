@@ -161,7 +161,6 @@ def bark_texture(seed, size=256, plate_w=(4, 7), plate_h=(7, 20), base='#6f685b'
         # horizontal crack at some plate tops
         crack_plate = R.uniform(size=len(hs)) < crack_p
         crack[m] = is_top & crack_plate[np.clip(idx, 0, len(hs) - 1)]
-    pv = np.vectorize(lambda k: 0)(plate_id) if False else None
     # plate tone from a hash of its id
     h = (plate_id * 2654435761 + seed * 97) % 1000 / 1000.0
     base_c, light_c, dark_c = C(base), C(light), C(dark)

@@ -4,6 +4,8 @@
     python3 -I tools/art/sprite3d/build.py --only saji        # one character
     python3 -I tools/art/sprite3d/build.py --preview DIR      # also contact sheets and GIFs (x4)
     python3 -I tools/art/sprite3d/build.py --jobs 4           # worker processes (default: CPUs)
+    python3 -I tools/art/sprite3d/build.py --pitch 39.33 --out DIR --anims idle,walk,run
+                                                              # another camera pitch, elsewhere
 
 Outputs (deterministic: the same sources give byte-identical PNGs):
     assets/sprites/<character>_<sheet>.png     albedo, RGBA, alpha 0/255
@@ -84,7 +86,9 @@ def anchors_rel(an, pivot):
     return {k: [round(v[0], 1), round(v[1], 1)] for k, v in an.items()}
 
 
-def build(names, jobs, preview=None):
+def build(names, jobs, preview=None, out_dir=None, only_anims=None):
+    import geom as G
+    out_dir = out_dir or os.path.join(ROOT, 'assets', 'sprites')
     layout = {}
     for name in names:
         mod, m = load_model(name)
@@ -92,7 +96,7 @@ def build(names, jobs, preview=None):
         work = []
         for sheet in mod.SHEETS:
             for anim, spec in mod.ANIMS.items():
-                if sheet not in spec['sheets']:
+                if sheet not in spec['sheets'] or (only_anims and anim not in only_anims):
                     continue
                 for view in spec['views']:
                     work.append((name, sheet, anim, view))
@@ -103,8 +107,11 @@ def build(names, jobs, preview=None):
         else:
             results = [render_job(w) for w in work]
         res = {r[0]: r for r in results}
-        man = {'frame': [FW, FH], 'pivot': list(m.PIVOT), 'anims': {}, 'sheets': {}}
+        man = {'frame': [FW, FH], 'pivot': list(m.PIVOT),
+               'camera': {'pitch': round(G.PITCH, 3), 'ppm': 20}, 'anims': {}, 'sheets': {}}
         for anim, spec in mod.ANIMS.items():
+            if only_anims and anim not in only_anims:
+                continue
             man['anims'][anim] = {'fps': spec['fps'], 'loop': spec['loop'], 'views': list(spec['views']),
                                   'sheets': [s for s in spec['sheets'] if s in mod.SHEETS], 'mirrorLeft': False}
             for k in ('speed', 'kind', 'from'):
@@ -128,7 +135,7 @@ def build(names, jobs, preview=None):
                 table.setdefault(w[2], {})[w[3]] = {'row': ri, 'frames': len(A),
                                                     'anchors': [anchors_rel(x, m.PIVOT) for x in AN]}
             base = f'{name}_{sheet}'
-            out = os.path.join(ROOT, 'assets', 'sprites')
+            out = out_dir
             os.makedirs(out, exist_ok=True)
             Image.fromarray(alb, 'RGBA').save(os.path.join(out, base + '.png'), optimize=True)
             Image.fromarray(nrm, 'RGBA').save(os.path.join(out, base + '_n.png'), optimize=True)
@@ -145,7 +152,7 @@ def build(names, jobs, preview=None):
         if getattr(mod, 'RIDER', None):
             man['rider'] = dict(mod.RIDER)
         layout[name] = man
-    path = os.path.join(ROOT, 'assets', 'sprites', 'characters.json')
+    path = os.path.join(out_dir, 'characters.json')
     old = {}
     if os.path.exists(path):
         try:
@@ -156,7 +163,7 @@ def build(names, jobs, preview=None):
     ordered = {k: old[k] for k in CHARACTERS if k in old}
     with open(path, 'w', encoding='utf-8') as f:
         f.write(compact_json(ordered))
-    print('wrote', os.path.relpath(path, ROOT))
+    print('wrote', path)
 
 
 def compact_json(data) -> str:
@@ -166,6 +173,8 @@ def compact_json(data) -> str:
     for ci, (cname, c) in enumerate(chars):
         out.append(f' {json.dumps(cname)}: {{')
         out.append(f'  "frame": {json.dumps(c["frame"])}, "pivot": {json.dumps(c["pivot"])}, "palette": {c.get("palette", 0)},')
+        if 'camera' in c:
+            out.append(f'  "camera": {json.dumps(c["camera"])},')
         if 'rider' in c:
             out.append(f'  "rider": {json.dumps(c["rider"])},')
         out.append('  "anims": {')
@@ -197,9 +206,16 @@ def main():
     ap.add_argument('--only', default=None)
     ap.add_argument('--jobs', type=int, default=os.cpu_count() or 1)
     ap.add_argument('--preview', default=None)
+    ap.add_argument('--pitch', type=float, default=None, help='camera pitch in degrees (default 20)')
+    ap.add_argument('--out', default=None, help='output directory (default assets/sprites)')
+    ap.add_argument('--anims', default=None, help='only these animations (comma separated)')
     args = ap.parse_args()
+    if args.pitch is not None:
+        if args.out is None:
+            sys.exit('--pitch needs --out: the sheets in assets/sprites are the 20 degree set')
+        os.environ['TENGAN_SPRITE_PITCH'] = str(args.pitch)
     names = args.only.split(',') if args.only else CHARACTERS
-    build(names, args.jobs, args.preview)
+    build(names, args.jobs, args.preview, args.out, set(args.anims.split(',')) if args.anims else None)
 
 
 if __name__ == '__main__':

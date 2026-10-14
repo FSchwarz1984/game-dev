@@ -2,12 +2,12 @@ class_name PixelView3D
 extends Control
 ## The 3D world rendered as pixel art (docs/knowledge/21-3d-pixel-render.md).
 ##
-## The world renders into a low-res SubViewport at the native size (480x270 at the 1080p baseline,
-## growing with the window like the 2D core's PixelStage: s = floor(min(w / 480, h / 270)), logical
-## = window / s) plus a 1-pixel border. An orthographic camera with fixed yaw (north up) and a fixed
-## pitch looks at it; the camera is snapped to whole native texels in view space and the sub-pixel
-## remainder shifts the upscaled image (in whole window pixels), so following is smooth while every
-## texel stays on the world's pixel lattice (no shimmer). Outlines and fog are a screen post per
+## The world renders into a low-res SubViewport at the native size (480x270 at the 1080p baseline;
+## the canvas follows the window like the 2D core's PixelStage, see fit()) plus a 1-pixel border.
+## An orthographic camera with fixed yaw (north up) and a fixed pitch looks at it; the camera is
+## snapped to whole native texels in view space and the sub-pixel remainder shifts the upscaled
+## image (in whole window pixels), so following is smooth while every texel stays on the world's
+## pixel lattice (no shimmer). Outlines and fog are a screen post per
 ## outline class (stencil-gated quads, see shaders/post_*.gdshader); grading is the composite.
 ##
 ## Camera space here is "screen px": native pixels, x east, y up the screen (w3_screen() in the
@@ -16,6 +16,7 @@ extends Control
 signal logical_resized(size: Vector2)
 
 const BASE := Vector2(480, 270)
+const MIN_W := 400.0
 const PPM := 20.0
 
 @export var pitch_deg := 55.0
@@ -126,13 +127,18 @@ func apply_view_globals() -> void:
 	cam.rotation = Vector3(-p, 0.0, 0.0)
 
 
-## Integer scale from the window; the logical canvas grows to fill it (no black bars).
+## Integer scale from the window, the same rule as the 2D core (core/pixel_stage.gd fit(),
+## knowledge/16 §13): s = round(h / 270), lowered while the canvas would be narrower than 400;
+## the canvas is the window divided by s (1280x720 -> 426x240 x3, 1920x1080 -> 480x270 x4,
+## 2560x1440 -> 512x288 x5, 1200x540 -> 600x270 x2). No black bars, no fractional scale.
 func fit() -> void:
 	var win := get_window()
 	var size := Vector2(win.size)
 	if size.x < 1 or size.y < 1:
 		return
-	var s := maxi(1, floori(minf(size.x / BASE.x, size.y / BASE.y)))
+	var s := maxi(1, roundi(size.y / BASE.y))
+	while s > 1 and size.x / s < MIN_W:
+		s -= 1
 	var cs := Vector2i(floori(size.x / s), floori(size.y / s))
 	scale_factor = s
 	if win.content_scale_size != cs:

@@ -39,11 +39,15 @@ class Bench:
         self.shots = defaultdict(list)
 
     def shot(self, out, items, focus=(0, 1, 0), hour='noon', window=(1440, 810), fig=None, cut_px=0.0,
-             ground=True, ground_tint=(0.42, 0.47, 0.30), wind=1.0, rain=0.0, frames=6, clock=3.0):
+             ground=True, ground_tint=(0.42, 0.47, 0.30), wind=1.0, rain=0.0, frames=6, clock=3.0, shadows=True,
+             canvas=None):
         h = HOURS.get(hour, hour) if isinstance(hour, str) else hour
         s = {'out': os.path.abspath(out), 'items': items, 'focus': list(focus), 'hour': float(h),
              'fig': list(fig) if fig is not None else None, 'cut_px': cut_px, 'ground': ground,
-             'ground_tint': list(ground_tint), 'wind': wind, 'rain': rain, 'frames': frames, 'clock': clock}
+             'ground_tint': list(ground_tint), 'wind': wind, 'rain': rain, 'frames': frames, 'clock': clock,
+             'shadows': shadows, 'canvas': list(canvas) if canvas is not None else None}
+        if canvas is not None:
+            window = (960, 540)
         self.shots[tuple(window)].append(s)
 
     def run(self, timeout=900):
@@ -62,6 +66,9 @@ class Bench:
                 f.write(log)
             bad = [l for l in log.splitlines() if ('ERROR' in l or 'SCRIPT ERROR' in l) and 'ALSA' not in l
                    and 'audio' not in l.lower() and 'status < 0' not in l]
+            for s in shots:
+                if s.get('canvas') is not None:
+                    grade_raw(s['out'])
             missing = [s['out'] for s in shots if not os.path.exists(s['out'])]
             if bad or missing:
                 print('bench problems (%dx%d):' % window)
@@ -71,6 +78,25 @@ class Bench:
                     print('   missing', m)
             print(f'bench {window[0]}x{window[1]}: {len(shots)} shots in {time.time() - t0:.1f} s')
         self.shots = defaultdict(list)
+
+
+def grade_raw(out):
+    """Apply the renderer's composite grading (render3d/shaders/composite.gdshader, without the
+    vignette) to <out>_raw.png -> <out>.png, using the parameters the bench saved."""
+    import numpy as np
+    base = os.path.splitext(out)[0]
+    if not os.path.exists(base + '_raw.png'):
+        return
+    g = json.load(open(base + '_grade.json'))
+    c = np.asarray(Image.open(base + '_raw.png').convert('RGB'), np.float64) / 255.0
+    l = c @ np.array([0.299, 0.587, 0.114])
+    c = l[..., None] + (c - l[..., None]) * g['saturation']
+    lift = np.array(g['lift']); gain = np.array(g['gain'])
+    c = lift + c * (gain - lift)
+    l2 = c @ np.array([0.299, 0.587, 0.114])
+    sm = lambda a, b, x: np.clip((x - a) / (b - a), 0, 1) ** 2 * (3 - 2 * np.clip((x - a) / (b - a), 0, 1))
+    c = c + np.array(g['shadow_tone']) * (1 - sm(0.0, 0.5, l2))[..., None] + np.array(g['high_tone']) * sm(0.45, 1.0, l2)[..., None]
+    Image.fromarray(np.clip(np.round(c * 255), 0, 255).astype(np.uint8)).save(out)
 
 
 def _ensure_xvfb():

@@ -207,8 +207,8 @@ def edge_pose(m, swing=0.0, look=0.0, breath=0):
 
 
 def sit_edge(m, view, hat='head'):
-    """Sitting on an edge, calves swinging: the cliff top in the morning (hat on), the camphor's
-    branch at dusk (sitBranch: the hat hangs on her back since the climb)."""
+    """Sitting on an edge, calves swinging: the camphor's limb at dusk and the cliff top in the
+    morning (the hat stays on her head in both)."""
     c = {'hat': hat}
     seq = [(edge_pose(m, 10, 0, 0), c), (edge_pose(m, 4, 0, 0), c), (edge_pose(m, -6, 0, 1), c),
            (edge_pose(m, -10, 0, 1), c), (edge_pose(m, -4, 0, 0), dict(c, expr='blink')), (edge_pose(m, 6, 0, 0), c)]
@@ -227,6 +227,22 @@ def stand_up(m, view):
     crouch = Po.merged(rest(m), Po.legs_ik(P, {'L': (1.6, 0, 0), 'R': (-1.6, 0, 0)}, pelvis_y=P['hip'] - 4.0),
                        {'spine': (18, 0, 0)})
     return _f(m, [(e, {}), (lean, {}), (crouch, {}), (rest(m), {'expr': 'wide'})])
+
+
+def shout(m, view):
+    """Standing on the limb, calling to the plain ("喂——那边的人——", story.md prologue 4): a
+    breath in, then both hands cupped at the mouth with the elbows out wide (from behind, the
+    raised sleeves are what reads), leaning out, held with a tremble (one-shot: the host holds the
+    last frame for as long as the line lasts)."""
+    r = rest(m)
+    def cup(lean, k=0.0):
+        hand = dict(swing=40 + k, out=70, elbow=125, twist=40)
+        return Po.merged(r, Po.arms(L=dict(hand), R=dict(hand)),
+                         {'spine': (lean, 0, 0), 'chest': (2 + k * 0.4, 0, 0), 'neck': (-4, 0, 0), 'head': (-8, 0, 0)})
+    breath = Po.merged(r, Po.arms(L=dict(swing=30, out=50, elbow=100, twist=30), R=dict(swing=30, out=50, elbow=100, twist=30)),
+                       {'spine': (-4, 0, 0), 'chest': (-3, 0, 0), 'head': (-6, 0, 0)})
+    sh = {'expr': 'shut', 'mouth': 'shout'}
+    return _f(m, [(breath, {'mouth': 'open'}), (cup(7), sh), (cup(9, 2.5), sh), (cup(8), sh)])
 
 
 def fall(m, view):

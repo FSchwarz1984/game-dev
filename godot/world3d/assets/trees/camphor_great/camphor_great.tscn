@@ -1,0 +1,15 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/trees/camphor_great/camphor_great_wood.res" id="1"]
+[ext_resource type="ArrayMesh" path="res://world3d/assets/trees/camphor_great/camphor_great_leaves.res" id="2"]
+
+[node name="CamphorGreat" type="Node3D" unique_id=1862965537]
+metadata/w3a_kind = "tree"
+metadata/w3a_species = "camphor"
+
+[node name="Wood" type="MeshInstance3D" parent="." unique_id=945301223]
+mesh = ExtResource("1")
+
+[node name="Leaves" type="MeshInstance3D" parent="." unique_id=263299009]
+extra_cull_margin = 4.0
+mesh = ExtResource("2")

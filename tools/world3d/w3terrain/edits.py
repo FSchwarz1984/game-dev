@@ -65,22 +65,24 @@ def flatten_path(h, X, Z, pts, width, depth=0.06, smooth_m=4.0, cell=0.5):
     return h * (1.0 - k * 0.75) + target * k * 0.75, d, arc
 
 
-def rect_sdf(X, Z, centre, size, angle_deg):
+def rect_sdf(X, Z, centre, size, angle_deg, corner=0.0):
+    """Signed distance to a rotated rounded rectangle; also returns its local coordinates."""
     a = np.radians(angle_deg)
     c, s = np.cos(a), np.sin(a)
     lx = (X - centre[0]) * c + (Z - centre[1]) * s
     lz = -(X - centre[0]) * s + (Z - centre[1]) * c
-    qx = np.abs(lx) - size[0] * 0.5
-    qz = np.abs(lz) - size[1] * 0.5
+    r = min(corner, size[0] * 0.5, size[1] * 0.5)
+    qx = np.abs(lx) - (size[0] * 0.5 - r)
+    qz = np.abs(lz) - (size[1] * 0.5 - r)
     outside = np.hypot(np.maximum(qx, 0), np.maximum(qz, 0))
     inside = np.minimum(np.maximum(qx, qz), 0.0)
-    return outside + inside, lx, lz
+    return outside + inside - r, lx, lz
 
 
 def apply_pad(h, X, Z, pad, seed=0):
-    sdf, lx, lz = rect_sdf(X, Z, pad["centre"], pad["size"], pad.get("angle", 0.0))
-    # organic corners: perturb the edge by noise
-    sdf = sdf + (noise.fbm(X / 3.0, Z / 3.0, 2, seed) - 0.5) * 0.5
+    sdf, lx, lz = rect_sdf(X, Z, pad["centre"], pad["size"], pad.get("angle", 0.0), pad.get("corner", 0.0))
+    # organic outline: the edge wanders (nobody levels a yard with a ruler)
+    sdf = sdf + (noise.fbm(X / 2.6, Z / 2.6, 3, seed) - 0.5) * 0.9
     f = pad.get("feather", 1.5)
     target = pad["height"]
     if pad.get("raised"):

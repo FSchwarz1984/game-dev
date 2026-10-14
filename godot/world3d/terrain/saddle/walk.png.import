@@ -2,3 +2,13 @@
 
 importer="image"
 type="Image"
+uid="uid://ddxa8d6xesici"
+path="res://.godot/imported/walk.png-1917c92d9b18ee9e09a0c9d44ffc6090.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/walk.png"
+dest_files=["res://.godot/imported/walk.png-1917c92d9b18ee9e09a0c9d44ffc6090.image"]
+
+[params]
+

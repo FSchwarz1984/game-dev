@@ -5,11 +5,15 @@ toward the camera, so the model frame equals the world frame.
 
 Camera: orthographic, pitched down by PITCH degrees, looking north. Heights keep full scale (one
 unit up = one pixel up): the camera's y axis is stretched by 1/cos(pitch), so ground depth shows
-at tan(pitch) (the shadow-ellipse ratio the game already uses for characters)."""
+at tan(pitch) (the shadow-ellipse ratio the game already uses for characters). On screen this is
+the oblique projection  screen_y_up = y - tan(PITCH) * z  (z toward the viewer), screen_x = x.
+PITCH is 20 for the 2D game; TENGAN_SPRITE_PITCH overrides it (build.py --pitch), e.g. 39.33 =
+atan(sin 55) matches the 3D sample's leaned upright objects (knowledge/21: y - sin55 * z)."""
 
 from __future__ import annotations
 
 import math
+import os
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -181,7 +185,7 @@ def skirt(bone, h, r_hem, r_waist, mat, sx=1.0, sz=1.0, wave=(0, 0, 0), flare=(0
 # ---------------------------------------------------------------------------------------------
 # Camera and assembly
 
-PITCH = 20.0
+PITCH = float(os.environ.get('TENGAN_SPRITE_PITCH', '20.0'))
 
 
 def camera(pitch=PITCH):

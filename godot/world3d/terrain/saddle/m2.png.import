@@ -2,3 +2,13 @@
 
 importer="image"
 type="Image"
+uid="uid://cb5kbxe3qkbuj"
+path="res://.godot/imported/m2.png-707eb8189f8e99ce8be01b16ba6667dd.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/m2.png"
+dest_files=["res://.godot/imported/m2.png-707eb8189f8e99ce8be01b16ba6667dd.image"]
+
+[params]
+

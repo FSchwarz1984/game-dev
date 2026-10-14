@@ -33,8 +33,17 @@ func _material(path: String) -> Material:
 	var m: Dictionary = manifest.materials[path]
 	var mat := ShaderMaterial.new()
 	mat.shader = load(m.shader)
+	var types := {}
+	for u in mat.shader.get_shader_uniform_list():
+		types[u.name] = int(u.type)
 	for k in m.params:
 		var v = m.params[k]
+		if not types.has(k):
+			push_error("%s: the shader has no uniform '%s'" % [path, k])
+		elif types[k] == TYPE_INT:
+			v = int(v)
+		elif types[k] == TYPE_BOOL:
+			v = bool(v)
 		if v is Array:
 			match v.size():
 				2: v = Vector2(v[0], v[1])

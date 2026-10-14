@@ -1,0 +1,336 @@
+# Saji's own parts. Same face geometry as the others. Brows lie over her spiky bangs (rows 30-34), drawn in the
+# hair's darkest red so they read on the red hair.
+
+== eN_open @ 22,37
+...kkkkkk..
+.kkkkkkkkkj
+kkvEEEEEEvj
+..wllEEEew.
+..wllEEeew.
+..weEEEeew.
+..weeEeeiw.
+...ieeeii..
+....iiii...
+...jjjjj...
+
+== eF_open @ 46,37
+..kkkkk..
+jkkkkkkk.
+jvEEEEEkk
+.wllEEew.
+.wllEeew.
+.weEEeew.
+.weeEeiw.
+..ieeii..
+...iii...
+..jjjj...
+
+== eN_smile @ 22,37
+...kkkkkk..
+.kkkkkkkkkj
+kkvEEEEEEvj
+..wllEEEew.
+..wllEEeew.
+..jeEEEeej.
+...jjeeejj.
+.....jjj...
+
+== eF_smile @ 46,37
+..kkkkk..
+jkkkkkkk.
+jvEEEEEkk
+.wllEEew.
+.wllEeew.
+.jeEEeej.
+..jjeejj.
+....jj...
+
+== eN_happy @ 22,39
+....kkk....
+..kk...kk..
+.k.......k.
+k.........k
+
+== eF_happy @ 46,39
+...kkk...
+.kk...kk.
+k.......k
+k.......k
+
+== eN_calm @ 22,41
+k.........j
+kkk.....kk.
+..kkkkkkk..
+
+== eF_calm @ 46,41
+j.......k
+.kk...kkk
+..kkkkk..
+
+== eN_wide @ 22,36
+....kkkkk..
+..kkkkkkkkj
+.kvwwwwwwvj
+kkwwweeewwj
+..wwelEeww.
+..wweEEeww.
+..wwweeeww.
+..wwwwwwww.
+...wwwwww..
+....jjjj...
+
+== eF_wide @ 46,36
+..kkkkk..
+jkkkkkkk.
+jvwwwwwvk
+jwweeewkk
+.wwelEew.
+.wweEEew.
+.wwweeew.
+.wwwwwww.
+..wwwww..
+...jjjj..
+
+== eN_sad @ 22,37
+.......kkk.
+....kkkkkkj
+..kkkEEEEvj
+kkkwllEEEw.
+..wwllEEew.
+..weEEEeew.
+..weeEeeiw.
+...ieeeii..
+....iiii...
+...jjjjj...
+
+== eF_sad @ 46,37
+.kkk.....
+jkkkkkk..
+jvEEEEkkk
+.wllEEwkkk
+.wllEeew.
+.weEEeew.
+.weeEeiw.
+..ieeii..
+...iii...
+..jjjj...
+
+== eN_tear @ 22,37
+.......kkk.
+....kkkkkkj
+..kkkEEEEvj
+kkkwllEElw.
+..wwllEEew.
+..wceEEEcw.
+..cclEeelcc
+.cCCcccCCc.
+..zCCCCCCz.
+...zzzzzz..
+
+== eF_tear @ 46,37
+.kkk.....
+jkkkkkk..
+jvEEEEkkk
+.wllElwkkk
+.wllEeew.
+.wceEecw.
+cclEeelcc
+.cCcccCc.
+.zCCCCCz.
+..zzzzz..
+
+== eN_angry @ 22,37
+...........
+.kkkk......
+kkvEEkkk...
+..wllEEkkkj
+..wllEEeew.
+..weEEEeew.
+..weeEeeiw.
+...ieeeii..
+....iiii...
+...jjjjj...
+
+== eF_angry @ 46,37
+.........
+.....kkk.
+...kkEEkk
+jkkkEEew.
+.wllEeew.
+.weEEeew.
+.weeEeiw.
+..ieeii..
+...iii...
+..jjjj...
+
+== eN_half @ 22,38
+...jjjjjj..
+...........
+.kkkkkkkkkj
+kkjEEEEEEjj
+..wEEEEeew.
+..weeEeeiw.
+...ieeeii..
+....iiii...
+...jjjjj...
+
+== eF_half @ 46,38
+..jjjjj..
+.........
+jkkkkkkkk
+jjEEEEEkk
+.wEEEeew.
+.weeEeiw.
+..ieeii..
+...iii...
+..jjjj...
+
+== eN_away @ 22,37
+...kkkkkk..
+.kkkkkkkkkj
+kkvvvvEEEEj
+..wwwllEEEj
+..wwwllEEe.
+..wwweEEee.
+..wwweeEei.
+...wwiieei.
+....wwiii..
+...jjjjj...
+
+== eF_away @ 46,37
+..kkkkk..
+jkkkkkkk.
+jvvvEEEkk
+.wwlEEEe.
+.wwlEEee.
+.wweEEee.
+.wweeEei.
+..wwieei.
+...wiii..
+..jjjj...
+
+== eN_up @ 22,37
+...kkkkkk..
+.kkkkkkkkkj
+kkvvEEEEEEj
+..wwllEEEej
+..wwllEEee.
+..wwweEeei.
+..wwwwiii..
+...wwwww...
+....wwww...
+...jjjjj...
+
+== eF_up @ 46,37
+..kkkkk..
+jkkkkkkk.
+jvvEEEEEk
+.wwllEEek
+.wwllEee.
+.wwweEei.
+.wwwwiii.
+..wwwww..
+...www...
+..jjjj...
+
+== eN_blank @ 22,37
+...kkkkkk..
+.kkkkkkkkkj
+kkvEEEEEEvj
+..weeeeeew.
+..weeEEeew.
+..weeEEeew.
+..weeeeeew.
+...eeeeee..
+....eeee...
+...jjjjj...
+
+== eF_blank @ 46,37
+..kkkkk..
+jkkkkkkk.
+jvEEEEEkk
+.weeeeew.
+.weeEeew.
+.weeEeew.
+.weeeeew.
+..eeeee..
+...eee...
+..jjjj...
+
+== eN_serious @ 22,37
+...........
+.kkkkkkkkk.
+kkkEEEEEEkj
+..wllEEEew.
+..wllEEeew.
+..weEEEeew.
+..jeeEeeij.
+...jjjjjj..
+
+== eF_serious @ 46,37
+.........
+jkkkkkkk.
+jkEEEEEkk
+.wllEEew.
+.wllEeew.
+.weEEeew.
+.jeeEeij.
+..jjjjj..
+
+== eN_shut @ 22,38
+kk.........
+..kkk......
+.....kkkk..
+..kkk......
+kk.........
+
+== eF_shut @ 46,38
+........k
+.....kkk.
+.kkkk....
+.....kkk.
+........k
+
+== bN_neutral @ 23,32
+..OOOOO.
+OO.....O
+
+== bF_neutral @ 47,32
+.OOOO..
+O....OO
+
+== bN_up @ 23,30
+..OOOO..
+.O....O.
+O.......
+
+== bF_up @ 47,30
+..OOO..
+.O...O.
+......O
+
+== bN_sad @ 23,31
+......OO
+....OO..
+.OOO....
+
+== bF_sad @ 47,31
+OO.....
+..OO...
+....OOO
+
+== bN_angry @ 23,31
+OO......
+..OOO...
+.....OOO
+
+== bF_angry @ 47,31
+.....OO
+..OOO..
+OO.....
+
+== bN_flat @ 23,32
+.OOOOOOO
+
+== bF_flat @ 47,32
+OOOOOO.

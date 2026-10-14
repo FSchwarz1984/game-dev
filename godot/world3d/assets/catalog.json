@@ -1,0 +1,59 @@
+{
+ "version": 1,
+ "assets": {
+  "camphor_great": {
+   "category": "tree",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     3.3
+    ],
+    [
+     3.4,
+     0.4,
+     1.0
+    ],
+    [
+     -3.4,
+     0.2,
+     1.0
+    ],
+    [
+     0.3,
+     3.4,
+     1.0
+    ],
+    [
+     -0.3,
+     -3.4,
+     1.0
+    ]
+   ],
+   "height": 21.5,
+   "crown": {
+    "centre": [
+     0.0,
+     13.0,
+     0.5
+    ],
+    "radius": 17.0,
+    "base": 7.0
+   },
+   "tags": [
+    "landmark",
+    "climbable",
+    "sacred"
+   ],
+   "anchors": {
+    "shimenawa_front": [
+     0.0,
+     2.15,
+     3.3
+    ]
+   },
+   "notes": "御神木. Trunk 6.5 m across, buttresses to ~9.5 m, low limbs reach 16.5 m. Shimenawa at 2.35 m.",
+   "scene": "res://world3d/assets/trees/camphor_great/camphor_great.tscn"
+  }
+ }
+}

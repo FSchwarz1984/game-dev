@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://davcq3ks8ehrk"
+path="res://.godot/imported/glyphs.png-25ea2fbf04e84d969b264b76cb507a28.image"
+
+[deps]
+
+source_file="res://world3d/terrain/common/glyphs.png"
+dest_files=["res://.godot/imported/glyphs.png-25ea2fbf04e84d969b264b76cb507a28.image"]
+
+[params]
+

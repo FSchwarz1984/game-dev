@@ -57,6 +57,12 @@ class Model:
         self.sk = Hu.build_skeleton(self.P)
         self.pal = self.palette()
         self.chains = self.chain_specs()
+        if G.PITCH > 20.0:
+            # a steeper camera shows ground depth deeper (tan(pitch) instead of tan 20): feet put
+            # forward and bodies lying toward the camera reach further down and up the cell
+            extra = int(math.ceil((math.tan(math.radians(G.PITCH)) - math.tan(math.radians(20.0))) * 15))
+            self.FRAME = (self.FRAME[0], self.FRAME[1] + 2 * extra)
+            self.PIVOT = (self.PIVOT[0], self.PIVOT[1] + extra)
 
     # --- to override
     def props(self) -> dict: raise NotImplementedError
@@ -244,6 +250,9 @@ class Model:
             M = cam @ bw[bone]
             q = M @ np.array([p[0], p[1], p[2], 1.0])
             nn = M[:3, :3] @ np.asarray(n, float)
+            # the face stamps' classes were tuned at a 20 degree camera: measure the turn as it
+            # would be there, so another pitch keeps the same stamps for the same pose
+            nn = G.Rx(20.0 - G.PITCH) @ nn
             nn /= max(np.linalg.norm(nn), 1e-9)
             out[name] = (q[0] + PVX + 0.5, -q[1] / c + PVY, q[2], nn)
         return out

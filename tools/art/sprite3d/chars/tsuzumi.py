@@ -31,7 +31,8 @@ C = {
     'm': '#b06a62', 'M': '#7a2e3a', 'b': '#f5a0a2',
 }
 
-HAT_TILT = 13.0          # degrees the hat is tipped back on her head (front brim up)
+HAT_TILT = G.PITCH - 7.0  # degrees the hat is tipped back toward the camera (front brim up): the
+                          # camera sees its top at 7 degrees from any side (13 at the 20 degree camera)
 HAT_MIN_VIEW = 4.0       # the camera always sees the hat's top at least this steeply (a bow seen
                          # from behind would otherwise turn the near brim's navy underside up)
 
@@ -404,6 +405,7 @@ ANIMS = {
     'climb': _a(T.climb, 6, True, ('back',), ('plain',)),
     'sitEdge': _a(T.sit_edge, 3, True, ('front', 'back', 'right', 'left'), ('plain',)),
     'standUp': _a(T.stand_up, 5, False, FB, ('plain',)),
+    'shout': _a(T.shout, 6, False, ('back', 'front', 'right', 'left'), ('plain',)),
     'fall': _a(T.fall, 8, True, ('front', 'back', 'right', 'left'), ('plain',)),
     'asleep': _a(T.asleep, 1.5, True, LR, ('plain',)),
     'sitUp': _a(T.sit_up, 4, False, LR, ('plain',)),

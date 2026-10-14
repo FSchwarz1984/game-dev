@@ -86,6 +86,11 @@ func _next() -> void:
 		n.position = Vector3(p[0], p[1], p[2])
 		n.rotation_degrees = Vector3(0, float(it.get("yaw", 0.0)), 0)
 		pv.world_root.add_child(n)
+		if it.has("hide"):
+			for h in it.hide:
+				var c := n.get_node_or_null(NodePath(String(h)))
+				if c:
+					c.visible = false
 		if it.has("state") and n.has_method("set_state"):
 			n.call("set_state", it.state)
 		placed.append(n)
@@ -104,7 +109,20 @@ func _next() -> void:
 	env.rain = float(shot.get("rain", 0.0))
 	env.wind = float(shot.get("wind", 1.0))
 	env.set_time(float(shot.get("hour", 12.5)))
+	env.sun.shadow_enabled = bool(shot.get("shadows", true))
 	RenderingServer.global_shader_parameter_set("w3_wind", Vector4(1.0, 0.2, env.wind, 0.3))
+	if shot.get("canvas") != null:
+		# overview: a native canvas bigger than any window gives (captured raw, graded in Python)
+		var cv: Array = shot.canvas
+		if pv.get_window().size_changed.is_connected(pv.fit):
+			pv.get_window().size_changed.disconnect(pv.fit)
+		pv.vp.size = Vector2i(int(cv[0]) + 2, int(cv[1]) + 2)
+		pv.cam.size = float(pv.vp.size.y) / PixelView3D.PPM
+		pv.logical = Vector2(float(cv[0]), float(cv[1]))
+	else:
+		if not pv.get_window().size_changed.is_connected(pv.fit):
+			pv.get_window().size_changed.connect(pv.fit)
+		pv.fit()
 	var fc: Array = shot.get("focus", [0, 1, 0])
 	var focus := Vector3(fc[0], fc[1], fc[2])
 	# put the focus on a whole screen pixel so the window image maps texel for pixel
@@ -120,6 +138,20 @@ func _capture() -> void:
 	var raw := pv.vp.get_texture().get_image()
 	raw = raw.get_region(Rect2i(1, 1, raw.get_width() - 2, raw.get_height() - 2))
 	raw.save_png(out.get_basename() + "_raw.png")
+	var c := pv.composite
+	var grade := {"lift": c.get_shader_parameter("lift"), "gain": c.get_shader_parameter("gain"),
+		"saturation": c.get_shader_parameter("saturation"), "shadow_tone": c.get_shader_parameter("shadow_tone"),
+		"high_tone": c.get_shader_parameter("high_tone")}
+	var gj := {}
+	for k in grade:
+		var v = grade[k]
+		gj[k] = [v.x, v.y, v.z] if v is Vector3 else v
+	var fa := FileAccess.open(out.get_basename() + "_grade.json", FileAccess.WRITE)
+	fa.store_string(JSON.stringify(gj))
+	fa.close()
+	if shot.get("canvas") != null:
+		print("shot ", i, " -> ", out, " (raw canvas)")
+		return
 	# the graded image the player sees: the window, one sample per native pixel
 	var win := get_viewport().get_texture().get_image()
 	var s := pv.scale_factor

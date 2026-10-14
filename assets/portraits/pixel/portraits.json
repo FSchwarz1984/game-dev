@@ -1,11 +1,14 @@
 {
  "size": 80,
+ "version": 2,
  "eye_line": [
-  40.0,
-  41.6
+  39.0,
+  41.5
  ],
+ "source": "tools/art/portraits2 (hand-drawn pixel data)",
  "characters": {
   "tsuzumi": {
+   "name": "百々つゞみ",
    "expressions": [
     "neutral",
     "smile",
@@ -16,6 +19,7 @@
     "sad",
     "cry",
     "pout",
+    "angry",
     "doubt",
     "think",
     "embarrassed",
@@ -24,50 +28,197 @@
     "tired",
     "calm"
    ],
-   "palette": [
-    "#16122a",
-    "#241a2e",
-    "#33263e",
-    "#4b3a58",
-    "#6f5c80",
-    "#2f305c",
-    "#42487d",
-    "#fbf7ef",
-    "#ebe3d6",
-    "#cbc0cd",
-    "#9d90aa",
-    "#c03e5a",
-    "#8c2b45",
-    "#3e1424",
-    "#fde7d8",
-    "#efbca8",
-    "#d4907f",
-    "#6a3438",
-    "#f5a0a2",
-    "#2a2444",
-    "#707c97",
-    "#a5aec2"
-   ],
-   "sources": {
-    "neutral": "A_35",
-    "smile": "A_01",
-    "grin": "A_28",
-    "laugh": "A_22",
-    "surprise": "A_13",
-    "shout": "A_12",
-    "sad": "A_23",
-    "cry": "A_24",
-    "pout": "A_04",
-    "doubt": "A_09",
-    "think": "A_34",
-    "embarrassed": "A_03",
-    "serious": "A_25",
-    "determined": "A_10",
-    "tired": "A_19",
-    "calm": "A_29"
+   "palette": {
+    "C": "#a8d9f2",
+    "D": "#241a2e",
+    "E": "#2a2444",
+    "H": "#6f5c80",
+    "I": "#45508a",
+    "L": "#4b3a58",
+    "M": "#33263e",
+    "N": "#2f345e",
+    "O": "#16122a",
+    "P": "#3e1424",
+    "Q": "#1d1f3c",
+    "R": "#c63f5c",
+    "U": "#c9bccb",
+    "V": "#e9e0d3",
+    "W": "#fbf7ef",
+    "X": "#931f35",
+    "Y": "#9a8ca6",
+    "b": "#f7a8a6",
+    "c": "#e9f7ff",
+    "e": "#6e7a98",
+    "i": "#a7b1c8",
+    "j": "#4b3a58",
+    "k": "#16122a",
+    "l": "#ffffff",
+    "m": "#5e1d2d",
+    "n": "#de6f7c",
+    "p": "#e57683",
+    "q": "#7a3a3c",
+    "r": "#8c2b45",
+    "s": "#fde7d8",
+    "t": "#f2c4b0",
+    "u": "#d99a88",
+    "v": "#d9d3e3",
+    "w": "#faf8fb",
+    "x": "#e23b4e",
+    "y": "#fffaf5",
+    "z": "#5f9fd0"
+   },
+   "recipes": {
+    "neutral": [
+     "eN_open",
+     "eF_open",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_neutral"
+    ],
+    "smile": [
+     "eN_smile",
+     "eF_smile",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_smile",
+     "blush"
+    ],
+    "grin": [
+     "eN_smile",
+     "eF_smile",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_grin",
+     "blush"
+    ],
+    "laugh": [
+     "eN_happy",
+     "eF_happy",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_laugh",
+     "blush"
+    ],
+    "surprise": [
+     "eN_wide",
+     "eF_wide",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_o"
+    ],
+    "shout": [
+     "eN_wide",
+     "eF_wide",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_shout"
+    ],
+    "sad": [
+     "eN_sad",
+     "eF_sad",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_frown"
+    ],
+    "cry": [
+     "eN_tear",
+     "eF_tear",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_wobble",
+     "tearN",
+     "tearF"
+    ],
+    "pout": [
+     "eN_angry",
+     "eF_angry",
+     "bN_angry",
+     "bF_angry",
+     "nose",
+     "m_pout",
+     "blush",
+     "puffN",
+     "puffF"
+    ],
+    "angry": [
+     "eN_angry",
+     "eF_angry",
+     "bN_angry",
+     "bF_angry",
+     "nose",
+     "m_teeth",
+     "anger"
+    ],
+    "doubt": [
+     "eN_half",
+     "eF_open",
+     "bN_flat",
+     "bF_up",
+     "nose",
+     "m_side"
+    ],
+    "think": [
+     "eN_up",
+     "eF_up",
+     "bN_up",
+     "bF_neutral",
+     "nose",
+     "m_small"
+    ],
+    "embarrassed": [
+     "eN_away",
+     "eF_away",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_wavy",
+     "blush_hatch"
+    ],
+    "serious": [
+     "eN_serious",
+     "eF_serious",
+     "bN_flat",
+     "bF_flat",
+     "nose",
+     "m_flat"
+    ],
+    "determined": [
+     "eN_serious",
+     "eF_serious",
+     "bN_firm",
+     "bF_firm",
+     "nose",
+     "m_flat"
+    ],
+    "tired": [
+     "eN_half",
+     "eF_half",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_small",
+     "sweat"
+    ],
+    "calm": [
+     "eN_calm",
+     "eF_calm",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_smile"
+    ]
    }
   },
   "shione": {
+   "name": "垣外しをね",
    "expressions": [
     "neutral",
     "smile",
@@ -78,6 +229,7 @@
     "sad",
     "cry",
     "pout",
+    "angry",
     "doubt",
     "think",
     "embarrassed",
@@ -86,49 +238,198 @@
     "calm",
     "blank"
    ],
-   "palette": [
-    "#2a0f1a",
-    "#3b3150",
-    "#73647c",
-    "#a08ea1",
-    "#c6b3c1",
-    "#e3d3da",
-    "#fcf9f6",
-    "#ede5e3",
-    "#cdbfcc",
-    "#73526b",
-    "#563b50",
-    "#3f2a3b",
-    "#cc4b5d",
-    "#9e3548",
-    "#6d2333",
-    "#fde7d8",
-    "#efbca8",
-    "#d4907f",
-    "#6a3438",
-    "#f5a0a2",
-    "#ec9a96"
-   ],
-   "sources": {
-    "neutral": "B_10",
-    "smile": "B_01",
-    "grin": "B_02",
-    "laugh": "B_22",
-    "surprise": "B_13",
-    "shout": "B_12",
-    "sad": "B_23",
-    "cry": "B_24",
-    "pout": "B_04",
-    "doubt": "B_09",
-    "think": "B_34",
-    "embarrassed": "B_03",
-    "serious": "B_25",
-    "tired": "B_19",
-    "calm": "B_29",
-    "blank": "B_35"
+   "palette": {
+    "5": "#86607c",
+    "6": "#5f4058",
+    "7": "#432c40",
+    "8": "#2a0f1a",
+    "C": "#a8d9f2",
+    "D": "#73647c",
+    "E": "#6d2333",
+    "H": "#e6d8de",
+    "L": "#c6b3c1",
+    "M": "#a08ea1",
+    "O": "#3b3150",
+    "P": "#6d2333",
+    "R": "#cc4b5d",
+    "V": "#ece3e2",
+    "W": "#fcf9f6",
+    "X": "#931f35",
+    "Y": "#9c8a9f",
+    "b": "#f7a8a6",
+    "c": "#e9f7ff",
+    "e": "#c84a5c",
+    "h": "#f7f0f2",
+    "i": "#ec9a96",
+    "j": "#7a5470",
+    "k": "#2a0f1a",
+    "l": "#ffffff",
+    "m": "#5e1d2d",
+    "n": "#de6f7c",
+    "p": "#e57683",
+    "q": "#7a3a3c",
+    "r": "#9e3548",
+    "s": "#fde7d8",
+    "t": "#f2c4b0",
+    "u": "#d99a88",
+    "v": "#d9d3e3",
+    "w": "#faf8fb",
+    "x": "#e23b4e",
+    "y": "#fffaf5",
+    "z": "#5f9fd0"
+   },
+   "recipes": {
+    "neutral": [
+     "eN_open",
+     "eF_open",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_neutral"
+    ],
+    "smile": [
+     "eN_smile",
+     "eF_smile",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_smile",
+     "blush"
+    ],
+    "grin": [
+     "eN_smile",
+     "eF_smile",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_grin",
+     "blush"
+    ],
+    "laugh": [
+     "eN_happy",
+     "eF_happy",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_laugh",
+     "blush"
+    ],
+    "surprise": [
+     "eN_wide",
+     "eF_wide",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_o"
+    ],
+    "shout": [
+     "eN_wide",
+     "eF_wide",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_shout"
+    ],
+    "sad": [
+     "eN_sad",
+     "eF_sad",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_frown"
+    ],
+    "cry": [
+     "eN_tear",
+     "eF_tear",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_wobble",
+     "tearN",
+     "tearF"
+    ],
+    "pout": [
+     "eN_angry",
+     "eF_angry",
+     "bN_angry",
+     "bF_angry",
+     "nose",
+     "m_pout",
+     "blush",
+     "puffN",
+     "puffF"
+    ],
+    "angry": [
+     "eN_angry",
+     "eF_angry",
+     "bN_angry",
+     "bF_angry",
+     "nose",
+     "m_teeth",
+     "anger"
+    ],
+    "doubt": [
+     "eN_half",
+     "eF_open",
+     "bN_flat",
+     "bF_up",
+     "nose",
+     "m_side"
+    ],
+    "think": [
+     "eN_up",
+     "eF_up",
+     "bN_up",
+     "bF_neutral",
+     "nose",
+     "m_small"
+    ],
+    "embarrassed": [
+     "eN_away",
+     "eF_away",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_wavy",
+     "blush_hatch"
+    ],
+    "serious": [
+     "eN_serious",
+     "eF_serious",
+     "bN_flat",
+     "bF_flat",
+     "nose",
+     "m_flat"
+    ],
+    "tired": [
+     "eN_half",
+     "eF_half",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_small",
+     "sweat"
+    ],
+    "calm": [
+     "eN_calm",
+     "eF_calm",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_smile"
+    ],
+    "blank": [
+     "eN_blank",
+     "eF_blank",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_small"
+    ]
    }
   },
   "saji": {
+   "name": "家守さぢ",
    "expressions": [
     "neutral",
     "smile",
@@ -139,6 +440,7 @@
     "sad",
     "cry",
     "pout",
+    "angry",
     "doubt",
     "think",
     "embarrassed",
@@ -146,47 +448,191 @@
     "tired",
     "calm"
    ],
-   "palette": [
-    "#36101c",
-    "#f0533f",
-    "#cf3439",
-    "#9b2434",
-    "#691a2b",
-    "#4fa8a0",
-    "#2f7d7a",
-    "#215a5d",
-    "#13282c",
-    "#e3f1dc",
-    "#c2dfc4",
-    "#94c0a6",
-    "#702e5e",
-    "#4e2045",
-    "#ffe58c",
-    "#e2ae3c",
-    "#a5702a",
-    "#fcf8ef",
-    "#fde7d8",
-    "#efbca8",
-    "#d4907f",
-    "#6a3438",
-    "#f5a0a2"
-   ],
-   "sources": {
-    "neutral": "C_10",
-    "smile": "C_01",
-    "grin": "C_28",
-    "laugh": "C_22",
-    "surprise": "C_13",
-    "shout": "C_12",
-    "sad": "C_23",
-    "cry": "C_24",
-    "pout": "C_04",
-    "doubt": "C_09",
-    "think": "C_34",
-    "embarrassed": "C_03",
-    "serious": "C_25",
-    "tired": "C_19",
-    "calm": "C_29"
+   "palette": {
+    "1": "#4fa8a0",
+    "2": "#2f7d7a",
+    "3": "#215a5d",
+    "4": "#13282c",
+    "5": "#e6f3df",
+    "6": "#c2dfc4",
+    "7": "#94c0a6",
+    "8": "#702e5e",
+    "9": "#4e2045",
+    "A": "#a5702a",
+    "C": "#a8d9f2",
+    "D": "#9b2434",
+    "E": "#173c42",
+    "F": "#e2ae3c",
+    "G": "#ffe58c",
+    "H": "#ff8f6c",
+    "L": "#ef5340",
+    "M": "#cf3439",
+    "O": "#4a1222",
+    "R": "#d8443c",
+    "X": "#931f35",
+    "b": "#f59a98",
+    "c": "#e9f7ff",
+    "e": "#2c7a78",
+    "i": "#4fa8a0",
+    "j": "#8c3a3e",
+    "k": "#36101c",
+    "l": "#ffffff",
+    "m": "#5e1d2d",
+    "n": "#de6f7c",
+    "p": "#e57683",
+    "q": "#7a3a3c",
+    "r": "#a52a33",
+    "s": "#fde7d8",
+    "t": "#f2c4b0",
+    "u": "#d99a88",
+    "v": "#d9d3e3",
+    "w": "#faf8fb",
+    "x": "#e23b4e",
+    "y": "#fffaf5",
+    "z": "#5f9fd0"
+   },
+   "recipes": {
+    "neutral": [
+     "eN_open",
+     "eF_open",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_neutral",
+     "blush"
+    ],
+    "smile": [
+     "eN_smile",
+     "eF_smile",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_smile",
+     "blush"
+    ],
+    "grin": [
+     "eN_smile",
+     "eF_smile",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_grin",
+     "blush"
+    ],
+    "laugh": [
+     "eN_happy",
+     "eF_happy",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_laugh",
+     "blush"
+    ],
+    "surprise": [
+     "eN_wide",
+     "eF_wide",
+     "bN_up",
+     "bF_up",
+     "nose",
+     "m_o"
+    ],
+    "shout": [
+     "eN_shut",
+     "eF_shut",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_shout"
+    ],
+    "sad": [
+     "eN_sad",
+     "eF_sad",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_frown"
+    ],
+    "cry": [
+     "eN_tear",
+     "eF_tear",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_wobble",
+     "tearN",
+     "tearF"
+    ],
+    "pout": [
+     "eN_angry",
+     "eF_angry",
+     "bN_angry",
+     "bF_angry",
+     "nose",
+     "m_pout",
+     "blush",
+     "puffN",
+     "puffF"
+    ],
+    "angry": [
+     "eN_angry",
+     "eF_angry",
+     "bN_angry",
+     "bF_angry",
+     "nose",
+     "m_teeth",
+     "anger"
+    ],
+    "doubt": [
+     "eN_half",
+     "eF_open",
+     "bN_flat",
+     "bF_up",
+     "nose",
+     "m_side"
+    ],
+    "think": [
+     "eN_up",
+     "eF_up",
+     "bN_up",
+     "bF_neutral",
+     "nose",
+     "m_small"
+    ],
+    "embarrassed": [
+     "eN_away",
+     "eF_away",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_wavy",
+     "blush_hatch"
+    ],
+    "serious": [
+     "eN_serious",
+     "eF_serious",
+     "bN_flat",
+     "bF_flat",
+     "nose",
+     "m_flat"
+    ],
+    "tired": [
+     "eN_half",
+     "eF_half",
+     "bN_sad",
+     "bF_sad",
+     "nose",
+     "m_small",
+     "sweat"
+    ],
+    "calm": [
+     "eN_calm",
+     "eF_calm",
+     "bN_neutral",
+     "bF_neutral",
+     "nose",
+     "m_smile",
+     "blush"
+    ]
    }
   }
  }

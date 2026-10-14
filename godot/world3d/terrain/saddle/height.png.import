@@ -2,3 +2,13 @@
 
 importer="image"
 type="Image"
+uid="uid://7dsewb1aufrw"
+path="res://.godot/imported/height.png-b154e376bcaf5b2124cf307dd6739b3f.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/height.png"
+dest_files=["res://.godot/imported/height.png-b154e376bcaf5b2124cf307dd6739b3f.image"]
+
+[params]
+

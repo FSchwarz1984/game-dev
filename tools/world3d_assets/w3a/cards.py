@@ -11,7 +11,7 @@ The card's light normal (one per card, the renderer's model) blends the mass nor
 the clump normal (relief) and the whole crown's normal. Cards that neither the camera (as the leaned
 view sees upright objects) nor the noon sun can see are dropped.
 
-Vertex layout per card (4 vertices, triangles (0,1,2), (0,2,3)):
+Vertex layout per card (4 vertices; triangles (0,2,1), (0,3,2): front-facing, see cards_mesh):
   CUSTOM0.xyz anchor (object space), CUSTOM0.w flex 0..1
   UV2         corner offset in native px, whole numbers: BL, BR, TR, TL
   UV          atlas uv of that corner
@@ -304,9 +304,12 @@ def cards_mesh(cards, atlas_w, atlas_h, rects):
         C0[b:b + 4, 3] = cd.flex
         CO[b:b + 4, :3] = cd.tint
         CO[b:b + 4, 3] = cd.ao
-        # export flips (a, b, c) -> (a, c, b): write (0,2,1), (0,3,2) to get (0,1,2), (0,2,3)
-        idx[i * 2] = (b, b + 2, b + 1)
-        idx[i * 2 + 1] = (b, b + 3, b + 2)
+        # Front-facing for the camera: Godot's front faces are clockwise on screen, and with
+        # cull_disabled a back face gets its NORMAL flipped (DO_SIDE_CHECK), which would light the
+        # card from the wrong side. BL, BR, TR is counter-clockwise on screen (y up), so the
+        # triangles are (0,2,1), (0,3,2); export flips once, hence (0,1,2), (0,2,3) here.
+        idx[i * 2] = (b, b + 1, b + 2)
+        idx[i * 2 + 1] = (b, b + 2, b + 3)
     md = MeshData()
     md.add(P, N, UV, idx, uv2=UV2, col=CO, cus=C0)
     return md

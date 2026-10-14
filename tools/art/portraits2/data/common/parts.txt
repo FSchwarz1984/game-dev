@@ -135,7 +135,7 @@ zCCCz
 .zzz.
 
 # ---- anger mark (on the hair, upper right)
-== anger @ 55,13
+== anger @ 63,2
 .xx.xx.
 xXx.xXx
 xx...xx

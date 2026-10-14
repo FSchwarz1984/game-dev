@@ -2,3 +2,13 @@
 
 importer="image"
 type="Image"
+uid="uid://d3bq7schibvge"
+path="res://.godot/imported/water.png-53332814c5bf594dc24eed8010e8a8c8.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/water.png"
+dest_files=["res://.godot/imported/water.png-53332814c5bf594dc24eed8010e8a8c8.image"]
+
+[params]
+

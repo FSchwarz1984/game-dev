@@ -23,8 +23,8 @@ def base(L, X, Z):
     hw = float(r["half_width"])
     u = X / hw
     zr = r["z0"] + r["z_curve"] * u * u
-    # the ridge itself undulates a little (it is not a parabola)
-    hr = r["h_curve"] * u * u + (noise.fbm(X / 37.0, 0.5, 3, seed + 3) - 0.5) * 2.2
+    # the ridge undulates (two-dimensional noise, strongest on the shoulders)
+    hr = r["h_curve"] * u * u + (noise.fbm(X / 37.0, Z / 53.0, 3, seed + 3) - 0.5) * 2.0 * (0.4 + 0.6 * np.abs(u))
 
     # south: grades steepen away from the crest; a gentler bench in the south-east hosts the paddies
     ds = np.maximum(Z - zr, 0.0)
@@ -35,26 +35,21 @@ def base(L, X, Z):
     drop_s_g = integrate_grades(ds, [[d, g * bench["grade_scale"]] for d, g in L["south_grades"]])
     h_south = hr - (drop_s * (1.0 - bench_k) + drop_s_g * bench_k)
 
-    # north: the saddle's north flank falls into the gully; beyond it the far slope rises
+    # north: smooth terms only (no case splits, so no creases): the flank keeps falling north and
+    # eases out; the far slope rises beyond the gully; the gully is carved where it exists
     n = L["north"]
     gl = np.asarray(n["gully_line"], np.float64)
-    gf = np.asarray(n["gully_floor"], np.float64)
-    zg = np.interp(X, gl[:, 0], gl[:, 1])
-    gfloor = np.interp(X, gf[:, 0], gf[:, 1])
-    # the gully head: west of the spring the floor climbs back onto the slope
-    gfloor = gfloor + np.maximum(0.0, -32.0 - X) * 0.45
+    zg = np.interp(X, gl[:, 0], gl[:, 1]) + (noise.fbm(X / 21.0, Z / 40.0, 2, seed + 61) - 0.5) * 3.0
     dn = np.maximum(zr - Z, 0.0)
-    flank = hr - integrate_grades(dn, [[0, 0.04], [6, 0.12], [14, n["flank_grade"]], [60, n["flank_grade"]]])
-    dz = Z - zg                                  # < 0 north of the gully line
-    w = n["gully_floor_width"] * 0.5
-    a = np.abs(dz)
-    bankp = np.where(a < w, 0.0, np.where(a < w + 3.0, 0.5 * (a - w) ** 2 / 3.0 * 0.55, 0.5 * 3.0 * 0.55 + 0.55 * (a - w - 3.0)))
-    # far side: climbs, then eases toward the north ridge
-    far = np.where(dz < 0, np.minimum(bankp, n["far_rise_max"] * np.tanh(bankp / n["far_rise_max"]) * 1.0), bankp)
-    h_gully = gfloor + far
-    h_north = np.where(dz >= 0, geom.smin(flank, h_gully, 2.5), h_gully)
-    t = geom.smoothstep(-2.0, 2.0, Z - zr)
+    fall = integrate_grades(dn, [[0, 0.04], [6, 0.12], [14, n["flank_grade"]], [40, 0.2], [70, 0.08], [140, 0.05]])
+    rise = n["far_rise_max"] * geom.smoothstep(0.0, 1.0, np.clip(((zg - 3.0) - Z) / 48.0, 0.0, 1.0)) ** 1.25
+    head = geom.smoothstep(-44.0, -30.0, X)              # the gully exists east of its head
+    carve = n.get("gully_depth", 2.6) * head * np.exp(-((Z - zg) ** 2) / (2.0 * 4.5 ** 2))
+    h_north = hr - fall + rise - carve
+
+    t = geom.smoothstep(-1.5, 1.5, Z - zr)
     h = h_north * (1.0 - t) + h_south * t
+    h = ndimage.gaussian_filter(h, 1.0)
 
     # organic noise at three scales, domain-warped so nothing lines up
     wx, wz = noise.warp(X, Z, 30.0, 9.0, seed + 11)
@@ -66,38 +61,54 @@ def base(L, X, Z):
 
 
 def spur_and_ravine(L, X, Z, h):
+    seed = int(L["seed"])
     sp = L["spur"]
     axis = np.asarray(sp["axis"], np.float64)
     crest = np.asarray(sp["crest"], np.float64)
     pts = geom.catmull(axis, 10)
-    # crest heights along the smoothed axis (interpolate by nearest original vertex arc)
-    _, s_raw = geom.resample_polyline(axis, 0.5)
     seg = np.hypot(*(np.diff(axis, axis=0).T))
     cum = np.concatenate([[0.0], np.cumsum(seg)])
     seg2 = np.hypot(*(np.diff(pts, axis=0).T))
     cum2 = np.concatenate([[0.0], np.cumsum(seg2)])
     crest2 = np.interp(cum2 / cum2[-1] * cum[-1], cum, crest)
-    d, arc, ch = geom.polyline_field(X, Z, pts, crest2)
-    # a rounded ridge: flat-ish crest, rocky sides
+    wx, wz = noise.warp(X, Z, 7.0, 1.6, seed + 71)
+    d, arc, ch = geom.polyline_field(wx, wz, pts, crest2)
+    # a broad promontory: a rounded crest, then rocky sides
     side = sp["side_grade"]
-    prof = ch - side * np.maximum(d - 1.2, 0.0) - 0.15 * np.minimum(d, 1.2) ** 2
-    # beyond the tip the spur ends in a drop (the ravine head takes over)
+    half = sp.get("crest_half", 2.0)
+    prof = ch - side * np.maximum(d - half, 0.0) - 0.12 * np.minimum(d, half) ** 2
     tip = pts[-1]
     beyond = arc >= cum2[-1] - 0.01
-    dtip = np.hypot(X - tip[0], Z - tip[1])
-    prof = np.where(beyond, ch - side * 1.6 * np.maximum(dtip - 1.0, 0.0), prof)
-    near = geom.smoothstep(16.0, 8.0, d)
-    h2 = geom.smax(h, prof, 1.6)
+    dtip = np.hypot(wx - tip[0], wz - tip[1])
+    prof = np.where(beyond, ch - 0.12 * np.minimum(dtip, half) ** 2 - side * 1.5 * np.maximum(dtip - half, 0.0), prof)
+    near = geom.smoothstep(18.0, 9.0, d)
+    h2 = geom.smax(h, prof, 1.8)
     h = h * (1.0 - near) + h2 * near
 
+    # the ravine: an open valley that starts as a steep head scarp under the lookout and runs
+    # down the slope, deepening, so water has somewhere to go
     rv = L["ravine"]
-    c = np.asarray(rv["centre"], np.float64)
-    rx, rz = rv["radius"]
-    wx, wz = noise.warp(X, Z, 14.0, 3.0, int(L["seed"]) + 77)
-    e = np.hypot((wx - c[0]) / rx, (wz - c[1]) / rz)          # 1 at the rim of the floor ellipse
-    out_m = np.maximum(e - 1.0, 0.0) * (rx + rz) * 0.5
-    h_rav = rv["floor"] + rv["wall_grade"] * out_m + 0.08 * (out_m ** 1.5)
-    h = geom.smin(h, h_rav, 2.5)
+    ax = geom.catmull(np.asarray(rv["axis"], np.float64), 10)
+    a_seg = np.hypot(*(np.diff(np.asarray(rv["axis"]), axis=0).T))
+    a_cum = np.concatenate([[0.0], np.cumsum(a_seg)])
+    ax_seg = np.hypot(*(np.diff(ax, axis=0).T))
+    ax_cum = np.concatenate([[0.0], np.cumsum(ax_seg)])
+    tt = ax_cum / ax_cum[-1] * a_cum[-1]
+    dep = np.interp(tt, a_cum, rv["depth"])
+    hwv = np.interp(tt, a_cum, rv["half_width"])
+    wx2, wz2 = noise.warp(X, Z, 9.0, 2.2, seed + 79)
+    dr, arc_r, vals = geom.polyline_field(wx2, wz2, ax, np.stack([dep, hwv], -1))
+    depth = vals[..., 0]
+    halfw = vals[..., 1]
+    uu = np.clip(dr / halfw, 0.0, 1.0)
+    fw = rv["floor_width"] * 0.5 / halfw
+    prof_r = np.where(uu < fw, 1.0, (1.0 - ((uu - fw) / (1.0 - fw)) ** 2) ** 1.6)
+    # the head: before the first vertex the valley closes in a steep, rounded scarp
+    start = ax[0]
+    ds = np.hypot(wx2 - start[0], wz2 - start[1])
+    head = arc_r <= 0.01
+    prof_r = np.where(head, np.clip(1.0 - ds / (halfw * 0.75), 0.0, 1.0) ** 1.3, prof_r)
+    h = h - depth * prof_r
     return h
 
 
@@ -107,20 +118,18 @@ def erode(L, X, Z, h, cell, protect):
     nz, nx = h.shape
     offs = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
     dist = np.array([np.hypot(a, b) * cell for a, b in offs])
+    idx = np.arange(nx * nz).reshape(nz, nx)
+    padi = np.pad(idx, 1, mode="edge")
     for _ in range(int(er["iterations"])):
-        # D8 receivers
         pad = np.pad(h, 1, mode="edge")
         best = np.zeros_like(h)
         rec = np.full(h.shape, -1, np.int64)
-        idx = np.arange(nx * nz).reshape(nz, nx)
-        padi = np.pad(idx, 1, mode="edge")
         for k, (dj, di) in enumerate(offs):
             nb = pad[1 + dj:1 + dj + nz, 1 + di:1 + di + nx]
             s = (h - nb) / dist[k]
             m = s > best
             best = np.where(m, s, best)
             rec = np.where(m, padi[1 + dj:1 + dj + nz, 1 + di:1 + di + nx], rec)
-        # flow accumulation in descending height order
         order = np.argsort(-h, axis=None)
         acc = np.ones(nx * nz)
         recf = rec.ravel()
@@ -130,9 +139,8 @@ def erode(L, X, Z, h, cell, protect):
                 acc[r] += acc[i]
         A = acc.reshape(nz, nx) * cell * cell
         inc = er["k"] * np.power(A, er["m"]) * best
-        inc = np.minimum(inc, 0.35) * (1.0 - protect)
+        inc = np.minimum(inc, 0.3) * (1.0 - protect)
         h = h - inc
-        # hillslope diffusion (keeps the rills soft, never V-cut)
         lap = ndimage.laplace(h)
         h = h + er["diffusion"] * lap * (1.0 - protect * 0.7)
     return h
