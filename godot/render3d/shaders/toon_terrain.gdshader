@@ -257,10 +257,11 @@ void fragment() {
 	v_fleck = 0.0;
 	if (can > 0.2 && w3_night < 0.5) {
 		float sway = sin(w3_time * 0.8 + w3_hash(floor(v_wp.xz / 1.5)) * 6.28) * 0.35 * w3_wind.z;
-		vec2 fq = v_wp.xz / 0.32 + vec2(sway, sway * 0.5);
+		vec2 fq = v_wp.xz / 0.42 + vec2(sway, sway * 0.5);
 		float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
-		float cluster = w3_vnoise(v_wp.xz / 2.2 + 9.0);
-		v_fleck = step(0.73, fn) * step(0.42 + (1.0 - can) * 0.25, cluster);
+		float cluster = w3_vnoise(v_wp.xz / 2.6 + 9.0);
+		// toward the rim of a crown (thinner canopy) the flecks are many and larger; in its heart few
+		v_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
 	}
 	v_alb = alb;
 	v_cell = cell;

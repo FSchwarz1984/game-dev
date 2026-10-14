@@ -1,6 +1,9 @@
-// Light shafts through the canopy: additive ribbons from the canopy down to the ground along the
-// sun's direction (follows the time of day through w3_sun_dir), soft across, faded at both ends,
-// breathing slowly, quantised and dithered on the texel lattice. Only while the sun is up.
+// Light shafts through the canopy: additive ribbons from a crown's rim down to the ground along the
+// sun's direction (they follow the time of day through w3_sun_dir, so they come from the upper left
+// like the rest of the light), soft across, faded at both ends, breathing and drifting slowly.
+// Strongest with a low sun (morning, late afternoon), weaker at noon, gone at night and in rain.
+// Brightness in whole steps; a scattered stipple only in the narrow seam between steps (no ordered
+// dither: it reads as a printed screen). They thin out over her, so they never lie hard on her face.
 // Instance: origin = ground point; INSTANCE_CUSTOM = (length m, width px, strength, phase).
 shader_type spatial;
 render_mode world_vertex_coords, unshaded, blend_add, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
@@ -12,8 +15,10 @@ varying flat vec4 v_cus;
 
 void vertex() {
 	vec3 g = MODEL_MATRIX[3].xyz;
+	// a slow sideways drift (the leaves above move): about 30 cm over half a minute
+	g.x += sin(w3_time * 0.11 + INSTANCE_CUSTOM.w) * 0.3;
 	vec3 sd = normalize(w3_sun_dir);
-	vec3 t = g + sd * min(INSTANCE_CUSTOM.x / max(sd.y, 0.5), 11.0);
+	vec3 t = g + sd * min(INSTANCE_CUSTOM.x / max(sd.y, 0.5), 14.0);
 	vec2 d = w3_screen(t) - w3_screen(g);
 	vec2 pn = normalize(vec2(-d.y, d.x) + vec2(1e-4));
 	vec3 wp = mix(g, t, UV.y) + w3_px_to_world(pn * (UV.x - 0.5) * INSTANCE_CUSTOM.y);
@@ -26,13 +31,18 @@ void vertex() {
 void fragment() {
 	vec2 cell = w3_ptex(v_wp);
 	float across = 1.0 - abs(v_uv.x - 0.5) * 2.0;
-	float along = smoothstep(0.0, 0.25, v_uv.y) * (1.0 - smoothstep(0.55, 1.0, v_uv.y));
-	float breath = 0.75 + 0.25 * sin(w3_time * 0.6 + v_cus.w);
-	// strongest when the sun is low (dawn, late afternoon), gone at noon and at night
-	float low = smoothstep(0.16, 0.32, w3_sun_dir.y) * (1.0 - smoothstep(0.5, 0.72, w3_sun_dir.y));
-	float sun_up = low * (1.0 - w3_night) * (1.0 - w3_wet);
-	float a = across * across * along * breath * v_cus.z * sun_up;
-	float aq = floor(a * 4.0 + w3_bayer4(cell) * 0.999) / 4.0;
+	float along = smoothstep(0.0, 0.3, v_uv.y) * (1.0 - smoothstep(0.5, 1.0, v_uv.y));
+	float breath = 0.7 + 0.3 * sin(w3_time * 0.5 + v_cus.w);
+	float sy = w3_sun_dir.y;
+	float day = smoothstep(0.1, 0.25, sy) * (1.0 - w3_night) * (1.0 - w3_wet);
+	float low = mix(1.0, 0.55, smoothstep(0.55, 0.85, sy));
+	// over her: thinned out within a few pixels of her body
+	vec2 me = w3_screen(w3_player.xyz);
+	float dme = length((w3_screen(v_wp) - me) * vec2(1.0, 0.6));
+	float clear = w3_player.w > 0.0 ? smoothstep(12.0, 30.0, dme) : 1.0;
+	float a = across * across * along * breath * v_cus.z * day * low * clear;
+	float sc = w3_hash(cell * 1.29 + 4.3) * 0.7 + w3_vnoise(cell / 2.3 + 1.7) * 0.3;
+	float aq = floor(a * 3.0 + 0.35 + (sc - 0.5) * 0.3) / 3.0;
 	if (aq <= 0.0) discard;
-	ALBEDO = w3_sun * vec3(1.0, 0.94, 0.78) * aq * 0.11;
+	ALBEDO = w3_sun * vec3(1.0, 0.93, 0.74) * aq * 0.075;
 }

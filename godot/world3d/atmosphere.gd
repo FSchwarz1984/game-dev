@@ -34,19 +34,40 @@ func _build_shafts() -> void:
 	q.size = Vector2(1, 1)
 	q.center_offset = Vector3(0.5, 0.5, 0)
 	mm.mesh = q
+	# Shafts fall where the light gets through a crown's rim: around the great camphor, and under the
+	# broadleaf trees, maples and pines of the woods and the spur (a crown, a little off its trunk).
+	# Each is a ground point; the shader raises the ribbon toward the sun whatever the hour.
 	var pts := []
-	# gaps around the camphor's crown, a few at the forest edges
-	# a few gaps in the great camphor's crown, toward its rim
-	for i in 6:
-		var a := TAU * (float(i) + rng.randf_range(0.1, 0.9)) / 6.0
-		var r := rng.randf_range(8.0, 14.0)
+	var cus := []
+	for i in 9:
+		var a := TAU * (float(i) + rng.randf_range(0.15, 0.85)) / 9.0
+		var r := rng.randf_range(9.0, 15.0)
 		pts.append(Vector2(cos(a) * r, sin(a) * r * 0.9))
+		cus.append(Color(rng.randf_range(9.0, 14.0), [8.0, 11.0, 15.0, 20.0][i % 4], rng.randf_range(0.6, 1.0), rng.randf() * TAU))
+	var taken: Array[Vector2] = []
+	for p in terrain.info.get("placements", []):
+		var kind := String(p["kind"])
+		if not kind in ["broadleaf", "beech", "maple", "pine", "persimmon"]:
+			continue
+		var at := Vector2(float(p["x"]), float(p["z"]))
+		var near := false
+		for seen in taken:
+			if seen.distance_to(at) < 7.5:
+				near = true
+				break
+		if near or taken.size() >= 22:
+			continue
+		taken.append(at)
+		var a2 := rng.randf_range(0.0, TAU)
+		var off := Vector2(cos(a2), sin(a2)) * rng.randf_range(1.6, 3.2) * float(p.get("scale", 1.0))
+		pts.append(at + off)
+		cus.append(Color(rng.randf_range(5.0, 9.0), [6.0, 9.0, 12.0][taken.size() % 3], rng.randf_range(0.45, 0.85), rng.randf() * TAU))
 	mm.instance_count = pts.size()
 	for i in pts.size():
 		var p: Vector2 = pts[i]
 		var y := terrain.height_at(p.x, p.y)
 		mm.set_instance_transform(i, Transform3D(Basis(), Vector3(p.x, y, p.y)))
-		mm.set_instance_custom_data(i, Color(rng.randf_range(6.0, 9.0), [6.0, 9.0, 14.0, 20.0][i % 4], rng.randf_range(0.5, 1.0), rng.randf() * TAU))
+		mm.set_instance_custom_data(i, cus[i])
 	shafts.multimesh = mm
 	var m := ShaderMaterial.new()
 	m.shader = load("res://render3d/shaders/light_shaft.gdshader")

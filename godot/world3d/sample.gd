@@ -230,7 +230,7 @@ func _place_props() -> void:
 		elif kind != "camphor":
 			_scale_cutaway(inst, 1.8)
 		if kind == "camphor":
-			_scale_cutaway(inst, 5.0)
+			_scale_cutaway(inst, 5.0, true)
 			# the trunk and limbs only open where they really cover her (a wide hole would eat the
 			# trunk above her head and the front of the shimenawa)
 			_solid_cutaway(inst, 1.3)
@@ -315,6 +315,22 @@ func _place_marker_props() -> void:
 		if nm == "offering_box":
 			var gl: Array = a.get("anchors", {}).get("glint", [0.0, 0.45, 0.0])
 			dressing.glints.append([p + Vector3(gl[0], gl[1], float(gl[2]) - lean * float(gl[1])), 0.0])
+	# two red maples by the way down to the lookout and south of the road (v0.1's red maples were
+	# the accent the user liked); both stand where nothing she needs to see lies north of them
+	for mp in [["maple_red_a", Vector2(-22.5, 26.5), 0.7], ["maple_red_b", Vector2(-7.5, 22.0), 2.1]]:
+		if not catalog.has(mp[0]):
+			continue
+		var tree := _instance(String(catalog[mp[0]]["scene"]))
+		if tree == null:
+			continue
+		var at: Vector2 = mp[1]
+		tree.position = Vector3(at.x, t.height_at(at.x, at.y), at.y)
+		tree.rotation.y = float(mp[2])
+		props_root.add_child(tree)
+		_scale_cutaway(tree, 1.8)
+		for fp in catalog[mp[0]].get("footprint", []):
+			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(mp[2]))
+			blockers.append([tree.position + off, float(fp[2])])
 
 
 func _instance(path: String) -> Node3D:
@@ -343,7 +359,7 @@ func _crown_proxy(parent: Node3D, a: Dictionary) -> void:
 	if cr.is_empty():
 		return
 	var c: Array = cr["centre"]
-	var r := float(cr["radius"]) * 0.78
+	var r := float(cr["radius"]) * 0.55
 	var base := float(cr["base"])
 	var top := float(a.get("height", base + r))
 	var cy := (base + top) * 0.5 + 0.5
@@ -372,7 +388,7 @@ func _crown_proxy(parent: Node3D, a: Dictionary) -> void:
 
 
 ## Big canopies fade over a wide disc while she is under them (foreground that thins out).
-func _scale_cutaway(n: Node, k: float) -> void:
+func _scale_cutaway(n: Node, k: float, dense := false) -> void:
 	if n is GeometryInstance3D:
 		var gi := n as GeometryInstance3D
 		var mats: Array = []
@@ -387,14 +403,16 @@ func _scale_cutaway(n: Node, k: float) -> void:
 		for m in mats:
 			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("foliage"):
 				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
-				# a dense evergreen crown: deep shade under it, the light gets through only as the
-				# small sun flecks the ground draws (toon_terrain), not as big holes
-				(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.3)
-				(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.0)
-				# seen from its shaded side at midday: keep the masses, not a black lid
-				(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.42)
+				if dense:
+					# the great evergreen crown: a deep shade in its heart (the crown proxy), dappled
+					# toward its rim where the leaf masses part (the cards cast a little larger than
+					# drawn, and let a few texels through); other trees keep their own lacy shade
+					(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.12)
+					(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.02)
+					# seen from its shaded side at midday: keep the masses, not a black lid
+					(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.42)
 	for c in n.get_children():
-		_scale_cutaway(c, k)
+		_scale_cutaway(c, k, dense)
 
 
 ## The great tree's limbs and trunk also thin out around her when they stand between her and us.
