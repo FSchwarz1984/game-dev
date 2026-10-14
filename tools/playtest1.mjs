@@ -121,21 +121,23 @@ const route = (x, z) => page.evaluate(([tx, tz]) => {
   if (prev[t] < 0) return null;
   const pts = []; for (let k = t; k !== s; k = prev[k]) pts.push([X0 + (k % W) * c, Z0 + ((k / W) | 0) * c]);
   pts.reverse();
-  return pts.filter((p, n) => n % 4 === 3 || n === pts.length - 1);
+  return pts.filter((p, n) => n % 2 === 1 || n === pts.length - 1);
 }, [x, z]);
 async function walk(target, tol = 0.35) {
   await until(s => s.control && !s.busy && !s.blocking, 'control before walking to ' + target);
   const pts = await route(target[0], target[1]);
   if (!pts) throw new Error('no route to ' + target);
-  for (const p of pts.slice(0, -1)) await walkStraight(p, 0.45);
+  for (const p of pts.slice(0, -1)) await walkStraight(p, 0.45, true);
   return walkStraight(target, tol);
 }
-async function walkStraight([x, z], tol = 0.35) {
+async function walkStraight([x, z], tol = 0.35, soft = false) {
+  let best = 1e9, still = 0;
   for (let i = 0; i < 2400; i++) {
     const s = await state();
     if (s.dlg) { await steer(0, 0); await ticks(15); await advance(); continue; }
     const dx = x - s.x, dz = z - s.z, d = Math.hypot(dx, dz);
     if (d < tol) { await steer(0, 0); await ticks(2); return; }
+    if (d < best - 0.05) { best = d; still = 0; } else if (++still > 40) { if (soft) return; throw new Error(`stuck short of ${x},${z} at ${s.x.toFixed(2)},${s.z.toFixed(2)}`); }
     await steer(dx / d, dz / d);
     await ticks(3);
   }

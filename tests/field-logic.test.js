@@ -40,8 +40,11 @@ test('a deep-far thing cannot be touched or reached', () => {
   f.allow('w');
   const hut = f.add({ id: 'hut', name: '小屋', x: 3, z: 0, r: 1.5, deep: true });
   f.player.fx = 1; f.player.fz = 0;
-  for (let i = 0; i < 90; i++) f.update(DT, { mx: 1, mz: 0 });
-  assert.ok(f.player.x <= 3 - 1.5 - 0.5, `she stays a step away (x=${f.player.x.toFixed(2)})`);
+  let closest = 1e9;
+  for (let i = 0; i < 90; i++) { f.update(DT, { mx: 1, mz: 0 }); closest = Math.min(closest, Math.hypot(f.player.x - 3, f.player.z)); }
+  assert.ok(closest >= 1.5 + 0.5, `she stays a step away (closest ${closest.toFixed(2)} m)`);
+  f.player.x = 0; f.player.z = 0; f.player.fx = 1; f.player.fz = 0;
+  for (let i = 0; i < 5; i++) f.update(DT);
   assert.equal(f.target, hut);
   const e = f.transfer('give', 'w');
   assert.equal(e.type, 'refused');
@@ -122,4 +125,13 @@ test('standing still, she still chooses the thing beside her even if a scene tur
   // walking east, the cone narrows again and the beam behind her shoulder drops out
   for (let i = 0; i < 10; i++) f.update(DT, { mx: 1, mz: 0 });
   assert.notEqual(f.target, beam);
+});
+
+test('pushing into a slanted wall, she slides along it instead of sticking', () => {
+  // ground below the line z = x is walkable; above it is a wall (a diagonal bank)
+  const f = new Field({ ground: (x, z) => (z > x ? 'ground' : 'wall') });
+  f.player.x = 0; f.player.z = 1;
+  for (let i = 0; i < 60; i++) f.update(DT, { mx: 1, mz: 0 });   // push east, straight into the slant
+  assert.ok(f.player.x > 1, `she moved along the bank (x=${f.player.x.toFixed(2)})`);
+  assert.ok(f.player.z > f.player.x, 'and never through it');
 });

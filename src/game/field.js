@@ -151,8 +151,16 @@ export class Field {
       const sx = P.x + tx * along, sz = P.z + tz * along;
       if (Math.abs(along) > 1e-5 && !this.blocker(sx, sz)) { P.x = sx; P.z = sz; return; }
     }
-    if (!this.blocker(nx, P.z)) P.x = nx;
-    else if (!this.blocker(P.x, nz)) P.z = nz;
+    if (Math.abs(nx - P.x) > 1e-6 && !this.blocker(nx, P.z)) { P.x = nx; return; }
+    if (Math.abs(nz - P.z) > 1e-6 && !this.blocker(P.x, nz)) { P.z = nz; return; }
+    // a slanted wall or bank: slide along it by trying the nearby directions, the closest first
+    const dx = nx - P.x, dz = nz - P.z, len = hyp(dx, dz);
+    if (len < 1e-6) return;
+    for (const a of [0.5, -0.5, 1.0, -1.0, 1.35, -1.35]) {
+      const c = Math.cos(a), s = Math.sin(a), k = Math.max(0.35, c);
+      const tx = P.x + (dx * c - dz * s) * k, tz = P.z + (dx * s + dz * c) * k;
+      if (!this.blocker(tx, tz)) { P.x = tx; P.z = tz; return; }
+    }
   }
 
   canStand(x, z) { return !this.blocker(x, z); }
