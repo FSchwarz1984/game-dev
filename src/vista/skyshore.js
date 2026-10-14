@@ -15,7 +15,7 @@ export const S = {
   land: 1, forest: 2, rock: 3, river: 4, rim: 5, funnel: 6, mouth: 7, funnelRim: 8,
   field: 9, paddy: 10, levee: 11, tree: 12, town: 13, wall: 14, roof: 15, bank: 16,
 };
-const HAZE_Z = [40, 52, 64, 78];
+const HAZE_Z = [42, 52, 60, 68];
 
 /**
  * @param o { w, h, cx, yh, f, Hs, funnel: {X, Z, D, R}, towns: [{X, Z, r}], hazeEdgeY, pagoda: {X, Z}, seed }
@@ -37,6 +37,7 @@ export function* buildSkyShoreGen(o) {
     }
     return fl;
   };
+  const nearTown = (X, Z) => towns.some(t => Math.hypot(X - t.X, (Z - t.Z) * 0.8) < t.r * 2.6);
   const riverAt = (X, Z) => {
     let best = 1e9;
     for (let k = 0; k < rivers.length; k++) { const d = distRiver(rivers[k], X, Z); if (d < best) best = d; }
@@ -58,12 +59,15 @@ export function* buildSkyShoreGen(o) {
     return best;
   };
   // rounded hanging hills (wooded), mostly beyond the near fields; then the land's own far ranges
-  const hillAt = (X, Z) => smooth(0.47, 0.68, fbm(X * 0.085 + 3, Z * 0.07, 3, 83)) * smooth(38, 50, Z);
+  // a band of rounded wooded hills across the land (its "near range"), a few knolls nearer
+  const hillAt = (X, Z) => Math.max(
+    smooth(0.36, 0.6, fbm(X * 0.06 + 3, Z * 0.05, 3, 83)) * smooth(43, 49, Z) * (1 - smooth(57, 63, Z)),
+    smooth(0.62, 0.8, fbm(X * 0.11 + 9, Z * 0.1, 2, 87)) * smooth(32, 38, Z));
   const depth = (X, Z) => {
     const flat = flatAt(X, Z);
     let d = 0.12 + 0.08 * fbm(X * 0.12, Z * 0.12, 2, 81);
     const hl = hillAt(X, Z);
-    d += (1 - flat) * hl * hl * (3 - 2 * hl) * (1.4 + 1.6 * smooth(46, 66, Z)) * (0.8 + 0.4 * vnoise(X * 0.3, Z * 0.3, 86));
+    d += (1 - flat) * hl * hl * (3 - 2 * hl) * (1.5 + 1.1 * smooth(40, 52, Z)) * (0.8 + 0.4 * vnoise(X * 0.3, Z * 0.3, 86));
     const far = smooth(58, 72, Z);
     if (far > 0) d += (1 - flat) * far * (0.6 + Math.pow(ridged(X * 0.045 + 7, Z * 0.035, 3, 84), 1.4) * 4.2);
     const dr = riverAt(X, Z);
@@ -102,23 +106,26 @@ export function* buildSkyShoreGen(o) {
       const fl = flatAt(X, Z), hl = hillAt(X, Z), gv = Z < 58 ? groveAt(X, Z) : 0;
       if (dr < rw) { mat = S.river; sun = 4 + (hash2(x, y, 3) < 0.3 ? 2 : 0); }
       else if (dr < rw + px * 1.1 && Z < 56) mat = S.bank;
-      else if (hl > 0.25 || gv > 0.04 || Z > 62 || flatness < 0.7) {
+      else if (hl > 0.12 && hl < 0.42 && Z < 58 && nearTown(X, Z) && flatness > 0.5) {
+        // terraces on the lower slopes by the villages: the contour lines of the hill, lit
+        const c = dd * 10 + vnoise(X * 0.4, Z * 0.4, 66) * 0.3;
+        mat = c - Math.floor(c) < 0.24 ? S.levee : S.field;
+        if (mat === S.field) sun = 2 + 2 * (Math.floor(c) % 3);
+      } else if (hl > 0.25 || gv > 0.04 || Z > 62 || flatness < 0.7) {
         // woods: a carpet of hanging crowns, tips catching the light from below
         mat = S.forest;
         if (hash2(x >> 1, y, 7) < 0.34 && (y & 1) && sun < 6) sun += 2;
       } else if (fl > 0.55) mat = S.town;
       else {
-        // fields: long strips of parcels in zones of their own direction, tones varying, the
-        // flooded ones catching the glow; a lit levee here and there
-        const th = (vnoise(X * 0.07 + 5, Z * 0.07, 61) - 0.5) * 0.7, c = Math.cos(th), sn = Math.sin(th);
-        const u = X * c - Z * sn * 0.4, v = X * sn * 0.4 + Z * c;
-        const su = 0.6 + 0.5 * vnoise(X * 0.12, Z * 0.12, 62), sv = 0.42 + 0.2 * vnoise(X * 0.11 + 4, Z * 0.11, 64);
-        const iu = Math.floor(u / su), iv = Math.floor(v / sv), fv = v / sv - iv;
-        const pz = Z * Z / (f * Hs);                        // world depth of a pixel row
+        // fields: a patchwork of parcels in zones of their own direction, each its own tone (crops,
+        // stubble, fallow), the flooded ones catching the glow
+        const th = (vnoise(X * 0.06 + 5, Z * 0.06, 61) - 0.5) * 1.2, c = Math.cos(th), sn = Math.sin(th);
+        const u = X * c - Z * sn * 0.5, v = X * sn * 0.5 + Z * c;
+        const su = 0.9 + 0.7 * vnoise(X * 0.1, Z * 0.1, 62), sv = 0.8 + 0.5 * vnoise(X * 0.09 + 4, Z * 0.09, 64);
+        const iu = Math.floor(u / su), iv = Math.floor(v / sv);
         const hp = hash2(iu, iv, 63);
-        if (fv * sv < pz * 0.6 && sv / pz > 3 && hash2(iu, iv, 65) < 0.35) mat = S.levee;
-        else if (hp < 0.24) { mat = S.paddy; sun = hp < 0.09 ? 6 : 4; }
-        else { mat = S.field; sun = hp < 0.5 ? 2 : hp < 0.8 ? 4 : 6; }
+        if (hp < 0.22) { mat = S.paddy; sun = hp < 0.08 ? 6 : hp < 0.15 ? 4 : 2; }
+        else { mat = S.field; sun = hp < 0.45 ? 2 : hp < 0.75 ? 4 : 6; }
       }
     }
     L.idx[i] = I(mat, sun, 3, hazeOf(Z));
@@ -139,58 +146,39 @@ export function* buildSkyShoreGen(o) {
   }
   // conifers hanging tips down along the lit edges: the edge of a wood, upside down
   {
-    const SHAPES = [[], [0], [1, 0], [1, 0, 0], [2, 1, 1, 0], [2, 1, 1, 0, 0], [2, 2, 1, 1, 0, 0]];
-    const ref = L.idx.slice();
-    let next = -1;
-    for (let x = 0; x < w; x++) {
-      for (let y = 1; y < h - 2; y++) {
-        const i = y * w + x;
-        if (!rimAt[i] || x < next) continue;
-        const Z = m.Z[i];
-        if (Z > 76 || hash2(x, y, 97) > 0.72) continue;
-        const ht = clamp(Math.round((110 / Z) * (0.75 + 0.5 * hash2(x, y, 98))), 2, 6), shape = SHAPES[ht];
-        const hz = ref[i] & 7;
-        for (let k = 0; k < ht; k++) {
-          const yy = y + 1 + k; if (yy >= h) break;
-          for (let q = -shape[k]; q <= shape[k]; q++) {
-            const xx = x + q; if (xx < 0 || xx >= w) continue;
-            const j = yy * w + xx;
-            if (ref[j] && m.Z[j] < Z * 1.06) continue;      // only over what lies beyond
-            const tipPx = k === ht - 1;
-            L.idx[j] = tipPx ? I(S.rim, 5, 3, hz) : I(S.tree, q > 0 ? 4 : 2, 3, hz);
-          }
-        }
-        next = x + 2 + (hash2(x, 7, 99) < 0.5 ? 1 : 0);
-        break;
-      }
-    }
-    // a second pass at a lower density for the rims below the first one in each column (inner edges)
-    for (let x = 1; x < w - 1; x += 3) {
-      let seen = 0;
-      for (let y = 1; y < h - 2; y++) {
-        const i = y * w + x;
-        if (!rimAt[i]) continue;
-        if (seen++ === 0) continue;
-        const Z = m.Z[i];
-        if (Z > 66 || hash2(x, y, 91) > 0.6) continue;
-        const ht = clamp(Math.round(80 / Z), 2, 4), shape = SHAPES[ht], hz = ref[i] & 7;
-        for (let k = 0; k < ht; k++) {
-          const yy = y + 1 + k; if (yy >= h) break;
-          for (let q = -shape[k]; q <= shape[k]; q++) {
-            const j = yy * w + x + q;
-            if (ref[j] && m.Z[j] < Z * 1.06) continue;
-            L.idx[j] = k === ht - 1 ? I(S.rim, 5, 3, hz) : I(S.tree, q > 0 ? 4 : 2, 3, hz);
-          }
+    const SHAPES = [[], [0], [1, 0], [1, 1, 0], [2, 1, 1, 0], [2, 1, 1, 0, 0], [2, 2, 1, 1, 0, 0]];
+    const ref = L.idx.slice(), last = new Int32Array(h).fill(-9);
+    for (let x = 0; x < w; x++) for (let y = 1; y < h - 2; y++) {
+      const i = y * w + x;
+      if (!rimAt[i]) continue;
+      const Z = m.Z[i];
+      if (Z > 72 || x - last[y] < 2 || Math.abs(x - last[y - 1]) < 2 || Math.abs(x - last[y + 1]) < 2) continue;
+      if (hash2(x, y, 97) > 0.8) continue;
+      const ht = clamp(Math.round((120 / Z) * (0.6 + 0.8 * hash2(x, y, 98))), 2, 6), shape = SHAPES[ht];
+      const hz = ref[i] & 7;
+      for (let k = 0; k < ht; k++) {
+        const yy = y + 1 + k; if (yy >= h) break;
+        for (let q = -shape[k]; q <= shape[k]; q++) {
+          const xx = x + q; if (xx < 0 || xx >= w) continue;
+          const j = yy * w + xx;
+          if (ref[j] && m.Z[j] < Z * 1.06) continue;      // only over what lies beyond
+          L.idx[j] = k === ht - 1 ? I(S.rim, 5, 3, hz) : I(S.tree, q > 0 ? 4 : 2, 3, hz);
         }
       }
+      last[y] = x + (hash2(x, 7, 99) < 0.5 ? 1 : 0);
     }
   }
   yield;
-  // the hem: cut off where the haze takes it, frayed a little (nothing beyond is seen)
+  // its far edge: the land ends in the haze beyond a distance (frayed a little); its ranges nearer
+  // than that hang below the edge, dark against the light between the shores
   const hazeEdgeY = o.hazeEdgeY;
-  if (hazeEdgeY) for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const k = (y - hazeEdgeY) / 6 + (vnoise(x * 0.07, 3, 95) - 0.5) * 1.4;
-    if (k > 0.5) L.idx[y * w + x] = 0;
+  if (hazeEdgeY) {
+    const zCut = f * Hs / Math.max(8, yh - hazeEdgeY);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (!L.idx[i]) continue;
+      if (m.Z[i] > zCut * (1 + (vnoise(x * 0.06, 3, 95) - 0.5) * 0.12) || y > hazeEdgeY + 20) L.idx[i] = 0;
+    }
   }
   const keep = new Set([S.river, S.rim, S.levee, S.tree, S.funnelRim, S.wall, S.roof]);
   L.despeckle(v => !keep.has(v >> 8));
@@ -340,10 +328,10 @@ const BASE = {
   [S.forest]: [[15, 21, 39], [20, 28, 48], [27, 37, 58]],
   [S.tree]: [[12, 17, 33], [17, 24, 42], [24, 33, 52]],
   [S.rock]: [[30, 37, 60], [40, 48, 72], [50, 60, 84]],
-  [S.field]: [[23, 30, 52], [27, 35, 58], [32, 41, 64]],
-  [S.paddy]: [[38, 52, 74], [48, 66, 88], [62, 84, 106]],
+  [S.field]: [[32, 41, 64], [42, 53, 76], [54, 66, 88]],
+  [S.paddy]: [[46, 62, 86], [60, 80, 102], [78, 100, 120]],
   [S.levee]: [[62, 82, 104], [76, 98, 118], [92, 116, 134]],
-  [S.town]: [[30, 36, 58], [35, 42, 64], [40, 48, 70]],
+  [S.town]: [[36, 42, 64], [42, 49, 70], [48, 56, 76]],
   [S.wall]: [[52, 62, 86], [70, 82, 104], [88, 100, 120]],
   [S.roof]: [[14, 19, 35], [22, 29, 48], [34, 44, 64]],
   [S.bank]: [[34, 44, 66], [40, 52, 74], [46, 60, 82]],
@@ -353,7 +341,7 @@ const BASE = {
   [S.funnelRim]: [[56, 80, 100], [68, 96, 114], [82, 112, 128]],
   [S.mouth]: [[104, 146, 152], [124, 168, 170], [146, 190, 188]],
 };
-const HAZE_K = [0, 0.2, 0.38, 0.56, 0.72];
+const HAZE_K = [0, 0.18, 0.42, 0.66, 0.84];
 export function skyShorePalette(hazeCol) {
   return i => {
     const m = i >> 8, s = (i >> 5) & 7, hz = i & 7;

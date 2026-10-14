@@ -16,7 +16,7 @@
    Light from the top-left (baked tones) — the renderer adds the sun.
    ===================================================================== */
 import { SB, PX, POST, MAT } from './paint.js';
-import { RNG, clamp, lerp, hash2, hyp, ramp, TAU } from './core.js';
+import { RNG, clamp, lerp, hash2, hyp, ramp, TAU, drain } from './core.js';
 
 /* v0.1's palette (legacy/v0.1/src/pixel.js), the colours the owner saw */
 export const V1 = {
@@ -156,7 +156,9 @@ export function pine(seed, H = 110, lean = 0) {
 /* ---------------- the camphor's crown lobe, in v0.1's language: a dark interior, then layered leaf
    masses — the broad ones in front and low, new growth on the top — each mass a cluster of cells
    lit on its own upper-left, separated by the dark of the interior ---------------- */
-export function camphorLobe(seed, w = 220, h = 130, o = {}) {
+export function camphorLobe(seed, w = 220, h = 130, o = {}) { return drain(camphorLobeG(seed, w, h, o)); }
+/** the lobe painter as a generator (yields between masses, for the async bake) */
+export function* camphorLobeG(seed, w = 220, h = 130, o = {}) {
   const R = RNG(seed * 41 + 3), W = Math.ceil(w * 1.3) + 24, Hh = h + 60, s = new SB(W, Hh), cx = Math.round(W / 2), base = h + 34;
   // the interior: deep, cool green; limbs show in it
   PX.ell(cx, base - h * 0.48, w * 0.43, h * 0.4, (x, y) => s.pz(x, y, V1.cedarDeep[1 + ((x ^ y) & 1 && hash2(x, y, seed) < 0.4 ? 1 : 0)], 2, { m: MAT.LEAF, b: 2 }), { amp: 0.22, seed });
@@ -173,12 +175,13 @@ export function camphorLobe(seed, w = 220, h = 130, o = {}) {
   for (let i = 0; i < Math.round(w / 30); i++) ms.push({ x: cx + R.range(-w * 0.34, w * 0.34), y: base - h * R.range(0.2, 0.28), r: R.range(12, 16), z: 30 + R() * 8, low: true });
   ms.sort((a, b) => a.z - b.z);
   for (const [k, m] of ms.entries()) {
+    if ((k & 3) === 3) yield;
     const top = m.y < base - h * 0.7;
     clump(s, m.x, m.y, m.r * 1.1, m.r * 0.88, m.z, top && !o.dark && R() < 0.75 ? V1.camphorNew : V1.camphor, { seed: seed * 101 + k, base: top ? 2.6 : m.low ? 2.7 : 3.1, cell: 4.2, zk: 0.65, bulge: 10 + m.z * 0.35, rim: 0.1 });
   }
   // a few leaves hanging under the lowest masses
   for (let k = 0; k < w / 8; k++) { const x = Math.round(cx + R.range(-w * 0.44, w * 0.44)); let y = Hh - 1; while (y > 0 && !s.a(x, y)) y--; if (y <= 0) continue; const Ln = R.int(1, 3); for (let j = 1; j <= Ln; j++) s.pz(x + (j === Ln && R() < 0.5 ? (R() < 0.5 ? -1 : 1) : 0), y + j, V1.camphor[clamp(2 - (j >> 1), 0, 6)], 60, { m: MAT.LEAF, b: 20 }); }
-  POST.ao(s, 2, 0.26); POST.outline(s, { k: 0.7 }); POST.normals(s, 0.75);
+  yield; POST.ao(s, 2, 0.26); yield; POST.outline(s, { k: 0.7 }); POST.normals(s, 0.75);
   return { s, meta: { ax: cx, ay: Hh - 4, sway: 0.18, foliage: true, occluder: true, kind: 'camphorLobe' } };
 }
 

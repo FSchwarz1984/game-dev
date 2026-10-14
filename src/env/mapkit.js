@@ -9,7 +9,7 @@
         backdrop layer, particle emitters, bounds).
    Pure JS (no DOM), so it also runs in Node for tests and previews.
    ===================================================================== */
-import { Terrain, PPM } from './terrain.js';
+import { Terrain, PPM, drain } from './terrain.js';
 import { Atlas } from '../gfx/atlas.js';
 import { clamp, RNG } from './core.js';
 
@@ -21,12 +21,25 @@ export class MapKit {
     this.emitters = []; this.shots = {}; this.lights = []; this.R = RNG(o.seed || 1);
     this.spriteNames = new Set();
   }
-  /** register a painter: fn() → SB, meta; painted lazily on first use */
+  /** register a painter: fn() → SB, meta (or a generator function yielding while it paints, returning
+      the same); painted lazily on first use */
   sprite(name, fn, meta = {}) { this.painters[name] = { fn, meta }; return name; }
+  /** paint a sprite in steps (for the async bake): yields while a generator painter works */
+  *rectG(name) {
+    if (this.atlas.rects[name]) return this.atlas.rects[name];
+    const p = this.painters[name]; if (!p) throw new Error('unknown sprite ' + name);
+    const it = p.fn(); const out = it && typeof it.next === 'function' ? yield* it : it;
+    yield;
+    return this._add(name, p, out);
+  }
   rect(name) {
     if (this.atlas.rects[name]) return this.atlas.rects[name];
     const p = this.painters[name]; if (!p) throw new Error('unknown sprite ' + name);
-    const out = p.fn(); const s = out.s || out; const meta = Object.assign({}, p.meta, out.meta || {});
+    const it = p.fn(); const out = it && typeof it.next === 'function' ? drain(it) : it;
+    return this._add(name, p, out);
+  }
+  _add(name, p, out) {
+    const s = out.s || out; const meta = Object.assign({}, p.meta, out.meta || {});
     this.spriteNames.add(name);
     return this.atlas.add(name, s, meta);
   }
@@ -43,10 +56,13 @@ export class MapKit {
   object(name, o) { this.objects[name] = Object.assign({ name }, o); return this.objects[name]; }
 
   /** bake everything; returns the map object */
-  bake(o = {}) {
+  bake(o = {}) { return drain(this.bakeG(o)); }
+  /** the bake as a generator: yields between small steps (see createHomeMapAsync) */
+  *bakeG(o = {}) {
     const t0 = Date.now(), T = this.T, ms = {};
-    T.paint(); ms.paint = Date.now() - t0; T.paintWater(); ms.water = Date.now() - t0 - ms.paint;
-    const ground = T.pack(256);
+    yield* T.paintG(); ms.paint = Date.now() - t0; yield* T.paintWaterG(); ms.water = Date.now() - t0 - ms.paint;
+    const ground = yield* T.packG(256);
+    yield 0.99;
     // coarse height grid (world px) for the shadow pass: 4 px cells
     const cell = 4, gw = Math.floor(T.W / cell) + 1, gh = Math.floor(T.H / cell) + 1, zg = new Float32Array(gw * gh);
     for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) { const X = Math.min(T.W - 1, i * cell), Y = Math.min(T.H - 1, j * cell); zg[j * gw + i] = T.Z[Y * T.W + X] / 4; }
@@ -59,7 +75,7 @@ export class MapKit {
     const bounds = { x0: pl.x0 * PPM, y0: pl.z0 * PPM, x1: pl.x1 * PPM, y1: pl.z1 * PPM };
     const camBounds = this.o.camBounds ? { x0: this.o.camBounds.x0 * PPM, y0: this.o.camBounds.y0 * PPM, x1: this.o.camBounds.x1 * PPM, y1: this.o.camBounds.y1 * PPM }
       : { x0: pa.x0 * PPM + 4, x1: pa.x1 * PPM - 4, y0: T.rowMin + 4, y1: T.rowMin + T.rows - 4 };
-    this.buildNav();
+    yield* this.buildNavG();
     ms.total = Date.now() - t0;
     const map = this.gameMap();
     map.render = {
@@ -74,12 +90,14 @@ export class MapKit {
   freeBake() { const T = this.T; T.alb = T.nrm = T.sz = T.sm = T.sf = T.wfl = T.wdep = T.wsz = T.wflag = T.wshore = null; }
 
   /* ---------------- gameplay data ---------------- */
-  buildNav() {
+  buildNav() { return drain(this.buildNavG()); }
+  *buildNavG() {
     const T = this.T, cell = 0.25, cp = cell * PPM;
     const x0 = this.o.painted.x0, z0 = this.o.painted.z0;
     const w = Math.floor((this.o.painted.x1 - x0) / cell), h = Math.floor((this.o.painted.z1 - z0) / cell);
     const hgt = new Float32Array(w * h), nav = new Uint8Array(w * h);
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      if (i === 0 && (j & 63) === 63) yield 1;
       const x = x0 + (i + 0.5) * cell, z = z0 + (j + 0.5) * cell; hgt[j * w + i] = T.heightAt(x, z);
       const wt = T.waterAt(x, z); nav[j * w + i] = wt && wt.depth > 0.3 ? 0 : 1;
     }
@@ -99,6 +117,8 @@ export class MapKit {
     for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const x = x0 + (i + 0.5) * cell, z = z0 + (j + 0.5) * cell; if (x < pl.x0 || x > pl.x1 || z < pl.z0 || z > pl.z1) nav[j * w + i] = 0; }
     this.nav = { x0, z0, cell, w, h, data: nav, hgt };
   }
+  /** the sprite names in the atlas: an array that also answers by name (map.sprites.shrineIntact === true) */
+  spriteList() { const a = [...this.spriteNames]; for (const n of a) a[n] = true; return a; }
   gameMap() {
     const T = this.T, N = this.nav, pl = this.o.playable;
     const navAt = (x, z) => { const i = Math.floor((x - N.x0) / N.cell), j = Math.floor((z - N.z0) / N.cell); if (i < 0 || j < 0 || i >= N.w || j >= N.h) return 0; return N.data[j * N.w + i]; };
@@ -113,7 +133,7 @@ export class MapKit {
       /** ground material name at a point */
       material: (x, z) => MATNAME[T.topAt(x, z)] || 'grass',
       walkable: (x, z) => navAt(x, z) === 1,
-      nav: N, colliders: this.colliders, objects: this.objects, spawn: this.spawn, shots: this.shots, sprites: [...this.spriteNames],
+      nav: N, colliders: this.colliders, objects: this.objects, spawn: this.spawn, shots: this.shots, sprites: this.spriteList(),
     };
   }
 }

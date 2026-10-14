@@ -87,7 +87,7 @@ export function* southGen(W, H, seed) {
   const ringC = { X: (0.2 * W) * 31 / f, Z: 31, r: 0.95 };
   towns.push({ X: ringC.X, Z: ringC.Z, r: 2.0 });
   const hazeEdgeY = yl - Math.round(clamp(yh * 0.36, 26, 58));
-  const shoreH = hazeEdgeY + 10;
+  const shoreH = hazeEdgeY + 24;
   yield;
   const shore = yield* buildSkyShoreGen({ w: W, h: shoreH, cx, yh: yl, f, Hs, funnel: Fn, towns, hazeEdgeY, pagoda: { X: ringC.X + 1.15, Z: ringC.Z + 0.5 }, seed });
   lap('lights+shore');
@@ -265,7 +265,7 @@ export function* southGen(W, H, seed) {
     const env = envOf(k), hazeCol = skyAt(env, 0.3, 0.5);
     // the land overhead is lit only near the horizon (by the plain's glow); far above, its underside
     // goes dark, so a tall frame does not get a ceiling of rock pressing down
-    const raw = shore.layer.canvas('s' + k, skyShorePalette(mix3(hazeCol, [80, 90, 128], 0.55)));
+    const raw = shore.layer.canvas('s' + k, skyShorePalette(mix3(hazeCol, [104, 128, 152], 0.7)));
     sc = makeCanvas(W, raw.height); const sg = ctx2d(sc);
     sg.drawImage(raw, 0, 0);
     const y1 = yl - Math.min(yh, 124) * 1.05, y0 = y1 - 46;
@@ -290,15 +290,15 @@ export function* southGen(W, H, seed) {
     }
     // the far edge dissolves into the cloud sea instead of ending on a line
     sg.globalCompositeOperation = 'destination-out';
-    for (let y = hazeEdgeY - 16; y < sc.height; y++) {
-      const a = smooth(hazeEdgeY - 16, hazeEdgeY + 2, y);
+    for (let y = hazeEdgeY - 6; y < sc.height; y++) {
+      const a = smooth(hazeEdgeY - 6, hazeEdgeY + 21, y);
       sg.fillStyle = `rgba(0,0,0,${a.toFixed(3)})`; sg.fillRect(0, y, W, 1);
     }
     // behind its far edge, the light between the shores: its ranges hang dark against it
     sg.globalCompositeOperation = 'destination-over';
     const gc = mix3(hazeCol, [118, 150, 164], 0.6).map(Math.round);
-    for (let y = Math.max(0, hazeEdgeY - 44); y < sc.height; y++) {
-      const a = smooth(hazeEdgeY - 44, hazeEdgeY - 8, y) * (1 - smooth(hazeEdgeY - 2, hazeEdgeY + 9, y)) * 0.62;
+    for (let y = Math.max(0, hazeEdgeY - 34); y < sc.height; y++) {
+      const a = smooth(hazeEdgeY - 34, hazeEdgeY - 2, y) * (1 - smooth(hazeEdgeY + 6, hazeEdgeY + 22, y)) * 0.6;
       if (a < 0.01) continue;
       sg.fillStyle = `rgba(${gc[0]},${gc[1]},${gc[2]},${a.toFixed(3)})`; sg.fillRect(0, y, W, 1);
     }

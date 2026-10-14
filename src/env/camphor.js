@@ -18,13 +18,15 @@
    ===================================================================== */
 import { SB, PX, POST, MAT, mass, crown, cylN } from './paint.js';
 import { PAL } from './palette.js';
-import { RNG, clamp, lerp, hash2, hyp, vnoise } from './core.js';
+import { RNG, clamp, lerp, hash2, hyp, vnoise, drain } from './core.js';
 import { fern } from './flora.js';
 
 const BARK = PAL.barkCamphor;
 
 /* ---------------- the trunk ---------------- */
-export function camphorTrunk(seed = 3) {
+export function camphorTrunk(seed = 3) { return drain(camphorTrunkG(seed)); }
+/** the trunk painter as a generator (yields between stages, for the async bake) */
+export function* camphorTrunkG(seed = 3) {
   const W = 400, H = 300, s = new SB(W, H), cx = 200, base = 284;
   const R = RNG(seed);
   if (!s.N) s.N = new Float32Array(W * H * 3);
@@ -48,11 +50,13 @@ export function camphorTrunk(seed = 3) {
   limb([[cx + 16, base - 164], [cx + 34, base - 212], [cx + 64, base - 254], [cx + 108, base - 296]], 58, 18, 40, 0, 4);
   limb([[cx + 2, base - 176], [cx + 6, base - 232], [cx - 4, base - 300]], 56, 26, 36, 0, 5);
   limb([[cx - 30, base - 214], [cx - 18, base - 262], [cx - 26, base - 300]], 26, 12, 20, 0, 3);
+  yield;
   // the trunk proper: half width over height, buttresses near the foot
   const butt = [-0.98, -0.52, 0.04, 0.5, 0.96].map((a, i) => ({ a, w: [22, 15, 12, 16, 24][i], lift: [26, 18, 12, 18, 28][i] }));
   const hwAt = h => lerp(53, 44, clamp(h / 200, 0, 1)) + 40 * Math.exp(-h / 24) - Math.max(0, h - 168) * 0.9;
   const lean = h => Math.sin(h * 0.012) * 4 + h * 0.03;
   for (let h = -2; h <= 186; h++) {
+    if ((h & 31) === 31) yield;
     const y = base - h, hw = hwAt(h), xc = cx + lean(h);
     // silhouette with buttress bumps at the foot
     let xl = xc - hw, xr = xc + hw;
@@ -96,6 +100,7 @@ export function camphorTrunk(seed = 3) {
   { const xc = cx - 30, yc = base - 26;
     PX.ell(xc, yc, 13, 17, (x, y, u, v, d) => { const deep = d < 0.75; const t = deep ? 0.3 + v * 0.3 : 1.4 - u * 0.6; const c = deep ? [34 + v * 10, 28 + v * 8, 26 + v * 6] : BARK[clamp(Math.round(t), 0, 7)]; s.pz(x, y, c, 82, { m: MAT.BARK, b: deep ? -30 : 4, n: deep ? [0, 0, 1] : [-u * 0.6, v * 0.5, 0.6] }); }, { amp: 0.12, seed: 5 });
     for (let x = xc - 9; x <= xc + 9; x++) { const y = Math.round(yc + 16 + Math.abs(x - xc) * 0.15); if (s.a(x, y)) s.px(x, y, PAL.moss[3], { m: MAT.MOSS, z: 83, b: 5 }); } }
+  yield;
   // low limbs reaching west over the hut and east over the shrine (in front of the trunk)
   limb([[cx - 26, base - 112], [cx - 66, base - 132], [cx - 118, base - 136], [cx - 176, base - 128], [cx - 196, base - 122]], 40, 9, 54, 80, 90);
   limb([[cx - 120, base - 136], [cx - 146, base - 160], [cx - 160, base - 176]], 9, 4, 72, 76, 91);
@@ -106,6 +111,7 @@ export function camphorTrunk(seed = 3) {
   for (const [fx, fy, sz] of [[cx - 52, base - 118, 0.7], [cx + 44, base - 126, 0.6], [cx - 62, base - 6, 0.8], [cx + 58, base - 10, 0.7], [cx - 6, base - 186, 0.6]]) {
     const f = fern(Math.round(fx * 7 + fy), sz).s; s.blit(f, Math.round(fx - f.w / 2), Math.round(fy - f.h + 3), { dz: 95, db: -2 });
   }
+  yield;
   // the shimenawa: a fat twisted straw rope across the front at ~3 m, shide hanging from it, a tassel at the front
   const ry = base - 62, rw = 9;
   const ropeY = x => { const sx = (x - cx - lean(62)) / (hwAt(62) + 2); return ry + (1 - sx * sx) * 7; };
@@ -122,7 +128,7 @@ export function camphorTrunk(seed = 3) {
   // tassel bundle (房) at the front centre
   { const tx = Math.round(cx + lean(62)), ty = Math.round(ropeY(cx + lean(62)) + rw / 2);
     for (let k = 0; k < 7; k++) for (let y = ty; y < ty + 10 + (k % 3); y++) s.pz(tx - 3 + k, y, PAL.straw[clamp(3 - (k === 0 ? 1 : 0) + (y > ty + 6 ? -1 : 0), 0, 5)], 126, { m: MAT.STRAW, b: 10 }); }
-  POST.ao(s, 3, 0.2); POST.outline(s, { k: 0.6, hue: 0.02 }); POST.normals(s, 0.9);
+  yield; POST.ao(s, 2, 0.24); yield; POST.outline(s, { k: 0.6, hue: 0.02 }); yield; POST.normals(s, 0.9);
   return { s, meta: { ax: cx, ay: base + 1, sway: 0, foliage: false, occluder: true, kind: 'camphorTrunk' } };
 }
 

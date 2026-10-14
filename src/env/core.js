@@ -183,3 +183,6 @@ export function inPoly(x, y, pts) {
   }
   return ins;
 }
+
+/** run a generator to completion (the synchronous path of a stepped job), returning its value */
+export function drain(g) { let r; do { r = g.next(); } while (!r.done); return r.value; }

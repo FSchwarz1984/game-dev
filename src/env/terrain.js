@@ -16,7 +16,7 @@
    the renderer draws as screen-aligned quads with per-pixel depth.
    Units inside: world px (X east, Y south, Z up). Inputs: metres.
    ===================================================================== */
-import { clamp, lerp, hash2, hashi, fbm, smoothPath, NoiseTile, bayer } from './core.js';
+import { clamp, lerp, hash2, hashi, fbm, smoothPath, NoiseTile, bayer, drain } from './core.js';
 import { TM, WM, FLAG, OUT, noise, grass, clearing, moss, floor, path, paving, tread, gravel, bed, rootTop, wall } from './groundmat.js';
 import { MAT } from './paint.js';
 import { PAL } from './palette.js';
@@ -150,7 +150,7 @@ export class Terrain {
   }
   /** a road / path material along a polyline (metres); o.mat TM.PATH|TM.PAVE, o.rut */
   road(ptsM, width, o = {}) {
-    const P = smoothPath(ptsM.map(p => [p[0] * PPM, p[1] * PPM]), 4);
+    const P = smoothPath(ptsM.map(p => [p[0] * PPM, p[1] * PPM]), 8);
     const hw = width * PPM / 2, edge = (o.edge ?? 0.6) * PPM; const mat = o.mat ?? TM.PATH;
     const N = noise();
     this.near(P, hw + edge, (i, X, Y, d, s, t, side, along) => {
@@ -211,7 +211,9 @@ export class Terrain {
   topAt(x, z) { const X = Math.floor(x * PPM), Y = Math.floor(z * PPM); return this.inb(X, Y) ? this.top[this.idx(X, Y)] : 0; }
 
   /* ---------------- the screen-space painter ---------------- */
-  paint(o = {}) {
+  paint(o = {}) { return drain(this.paintG(o)); }
+  /** the painter as a generator: yields every few columns (createHomeMapAsync keeps the page responsive) */
+  *paintG(o = {}) {
     const t0 = Date.now();
     const W = this.W, H = this.H, Z = this.Z;
     // screen rows: row = Y − Z − rowMin
@@ -222,10 +224,11 @@ export class Terrain {
     const alb = this.alb = new Uint8ClampedArray(n * 4), nrm = this.nrm = new Int8Array(n * 2), sz = this.sz = new Int16Array(n), sm = this.sm = new Uint8Array(n), sf = this.sf = new Uint8Array(n);
     sz.fill(-32768);
     // blurred height for face orientation
-    const Zb = boxBlur(Z, W, H, 7);
+    const Zb = yield* boxBlurG(Z, W, H, 7);
     const LX = -0.99, LY = 0.11; // horizontal part of the top-left light (world)
     const N = noise();
     for (let x = 0; x < W; x++) {
+      if ((x & 7) === 7) yield x / W * 0.9;
       const X = x + this.ox; let prev = null, footAO = 0, lip = -1;
       for (let y = 0; y < H; y++) {
         const Y = y + this.oy, i = y * W + x, zq = Z[i], zi = Math.round(zq / ZS);
@@ -280,7 +283,7 @@ export class Terrain {
         prev = zi;
       }
     }
-    this._sideEdges();
+    yield* this._sideEdgesG();
     this.paintMs = Date.now() - t0;
     return this;
   }
@@ -311,9 +314,10 @@ export class Terrain {
     this.sz[j] = clamp(Math.round(zpx * 8), -32767, 32767); this.sm[j] = o[5]; this.sf[j] = o[6];
   }
   /** dark line where a higher level's side edge meets lower ground (N–S running edges) */
-  _sideEdges() {
+  *_sideEdgesG() {
     const W = this.W, R = this.rows, sz = this.sz, alb = this.alb;
     for (let r = 0; r < R; r++) for (let x = 1; x < W - 1; x++) {
+      if (x === 1 && (r & 127) === 127) yield 0.95;
       const j = r * W + x; if (sz[j] === -32768) continue; const z = sz[j];
       for (const dx of [-1, 1]) {
         const k = j + dx; if (sz[k] === -32768) continue;
@@ -327,12 +331,14 @@ export class Terrain {
   /* ---------------- water layer (screen space) ----------------
      For each water pixel: surface height, flow, depth, shore and fall flags.
      Falls are filled where the surface drops going south. */
-  paintWater() {
+  paintWater() { return drain(this.paintWaterG()); }
+  *paintWaterG() {
     const W = this.W, H = this.H, rows = this.rows, rowMin = this.rowMin;
     const n = W * rows; const wf = this.wfl = new Int8Array(n * 2), wd = this.wdep = new Uint8Array(n), wsz = this.wsz = new Int16Array(n), wfg = this.wflag = new Uint8Array(n);
     wsz.fill(-32768);
     // shore distance (cheap): count dry neighbours in a 7×7 box
     for (let x = 0; x < W; x++) {
+      if ((x & 63) === 63) yield 0.97;
       let prev = null;
       for (let y = 0; y < H; y++) {
         const i = y * W + x; const w = this.wz[i]; const X = x + this.ox, Y = y + this.oy;
@@ -359,9 +365,11 @@ export class Terrain {
   /* ---------------- packing into chunk textures ----------------
      T0: albedo rgb + material id; T1: normal x,y (0..255), Z (16 bit, 1/8 px + 4096 bias)
      Water chunks: W0: flow x,y, depth, flags; W1: Z (16 bit), shore, 0 */
-  pack(CH = 256) {
+  pack(CH = 256) { return drain(this.packG(CH)); }
+  *packG(CH = 256) {
     const W = this.W, R = this.rows, out = [];
     for (let cy = 0; cy < R; cy += CH) for (let cx = 0; cx < W; cx += CH) {
+      yield 0.99;
       const w = Math.min(CH, W - cx), h = Math.min(CH, R - cy); let any = false, anyW = false;
       const t0 = new Uint8Array(CH * CH * 4), t1 = new Uint8Array(CH * CH * 4);
       let w0 = null, w1 = null;
@@ -391,15 +399,19 @@ function overhang(X) { // sod hangs over in clumps (a smooth per-column length p
   const h = hash2(X, 0, 102); return Math.max(1, Math.round(n * 4.2 - 0.6) + (h < 0.18 ? 1 : 0));
 }
 
-/** separable box blur of an Int16 field (returns Float32, units = input units / ZS → px) */
-function boxBlur(src, W, H, r) {
+export { drain };
+
+/** separable box blur of an Int16 field (returns Float32, units = input units / ZS → px); a generator */
+function* boxBlurG(src, W, H, r) {
   const tmp = new Float32Array(W * H), out = new Float32Array(W * H), k = 1 / (2 * r + 1);
   for (let y = 0; y < H; y++) {
+    if ((y & 255) === 255) yield 0;
     let acc = 0; const o = y * W;
     for (let x = -r; x <= r; x++) acc += src[o + clamp(x, 0, W - 1)];
     for (let x = 0; x < W; x++) { tmp[o + x] = acc * k / ZS; acc += src[o + Math.min(W - 1, x + r + 1)] - src[o + Math.max(0, x - r)]; }
   }
   for (let x = 0; x < W; x++) {
+    if ((x & 255) === 255) yield 0;
     let acc = 0;
     for (let y = -r; y <= r; y++) acc += tmp[clamp(y, 0, H - 1) * W + x];
     for (let y = 0; y < H; y++) { out[y * W + x] = acc * k; acc += tmp[Math.min(H - 1, y + r + 1) * W + x] - tmp[Math.max(0, y - r) * W + x]; }
