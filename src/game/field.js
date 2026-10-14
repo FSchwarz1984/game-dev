@@ -156,8 +156,9 @@ export class Field {
     // a slanted wall or bank: slide along it by trying the nearby directions, the closest first
     const dx = nx - P.x, dz = nz - P.z, len = hyp(dx, dz);
     if (len < 1e-6) return;
-    for (const a of [0.5, -0.5, 1.0, -1.0, 1.35, -1.35]) {
-      const c = Math.cos(a), s = Math.sin(a), k = Math.max(0.35, c);
+    // (sideways last, at a fair pace: one step off a corner cell is enough to get round it)
+    for (const a of [0.5, -0.5, 1.0, -1.0, 1.35, -1.35, Math.PI / 2, -Math.PI / 2]) {
+      const c = Math.cos(a), s = Math.sin(a), k = Math.max(0.6, c);
       const tx = P.x + (dx * c - dz * s) * k, tz = P.z + (dx * s + dz * c) * k;
       if (!this.blocker(tx, tz)) { P.x = tx; P.z = tz; return; }
     }

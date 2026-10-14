@@ -135,3 +135,12 @@ test('pushing into a slanted wall, she slides along it instead of sticking', () 
   assert.ok(f.player.x > 1, `she moved along the bank (x=${f.player.x.toFixed(2)})`);
   assert.ok(f.player.z > f.player.x, 'and never through it');
 });
+
+test('a single blocked cell at a corner does not pin her: she steps round it', () => {
+  // one 0.25 m cell blocked just east of her, at the row she stands on
+  const f = new Field({ ground: (x, z) => (x >= 0.25 && x < 0.5 && z >= 0 && z < 0.25 ? 'wall' : 'ground') });
+  f.player.x = 0.24; f.player.z = 0.14;
+  const fx = Math.cos(0.4), fz = Math.sin(0.4);   // pushing east-south-east, into the corner cell
+  for (let i = 0; i < 30; i++) f.update(DT, { mx: fx, mz: fz });
+  assert.ok(f.player.x > 0.6, `she got past the corner (x=${f.player.x.toFixed(2)})`);
+});
