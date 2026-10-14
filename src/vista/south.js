@@ -294,6 +294,14 @@ export function* southGen(W, H, seed) {
       const a = smooth(hazeEdgeY - 16, hazeEdgeY + 2, y);
       sg.fillStyle = `rgba(0,0,0,${a.toFixed(3)})`; sg.fillRect(0, y, W, 1);
     }
+    // behind its far edge, the light between the shores: its ranges hang dark against it
+    sg.globalCompositeOperation = 'destination-over';
+    const gc = mix3(hazeCol, [118, 150, 164], 0.6).map(Math.round);
+    for (let y = Math.max(0, hazeEdgeY - 44); y < sc.height; y++) {
+      const a = smooth(hazeEdgeY - 44, hazeEdgeY - 8, y) * (1 - smooth(hazeEdgeY - 2, hazeEdgeY + 9, y)) * 0.62;
+      if (a < 0.01) continue;
+      sg.fillStyle = `rgba(${gc[0]},${gc[1]},${gc[2]},${a.toFixed(3)})`; sg.fillRect(0, y, W, 1);
+    }
     sg.globalCompositeOperation = 'source-over';
     shoreCache.set(k, sc); if (shoreCache.size > 2) shoreCache.delete(shoreCache.keys().next().value);
     return sc;

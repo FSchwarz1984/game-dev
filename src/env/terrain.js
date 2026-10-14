@@ -268,7 +268,11 @@ export class Terrain {
         }
         // ---- the top surface
         if (row >= 0 && row < rows) {
-          this._top(i, X, Y, x, row);
+          // ragged material borders (v0.1): the material is looked up a couple of pixels away along a
+          // fine noise, on the same level only — so every border between grass, moss, earth and road frays
+          const jx = Math.round((N.cl.sample(x * 0.84, row * 0.84) - 0.5) * 4.2), jy = Math.round((N.cl2.sample(x * 0.84 + 9, row * 0.84) - 0.5) * 4.2);
+          let i2 = i; if ((jx || jy) && this.inb(X + jx, Y + jy)) { const k2 = i + jy * W + jx; if (Z[k2] === zq && this.top[k2] !== TM.NONE && this.top[k2] !== TM.STEP && this.top[i] !== TM.STEP) i2 = k2; }
+          this._top(i2, X, Y, x, row);
           if (footAO > 0) { const k = 1 - footAO * 0.055; OUT[0] *= k; OUT[1] *= k; OUT[2] *= k * 1.02; footAO -= 1; }
           const j = row * W + x; this._put(j, OUT, Y, zi, OUT[3], OUT[4]);
           lip = j;

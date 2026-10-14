@@ -98,94 +98,92 @@ export function clump(X, Y, dens, flat = 0, round = false, tall = 0) {
   return true;
 }
 
-/* ---------------- meadow grass ----------------
-   calm 0..1 lowers contrast and clump density (clearings), moist 0..1,
-   flowers 0..1 (patch coverage), dry 0..1 (sun-bleached saddle) */
+/* ---------------- meadow grass: v0.1's terrainFS painting, baked ----------------
+   (legacy/v0.1/src/shaders.js grassCol) Painted, not noisy: big meadow patches (two greens mixed
+   by a very slow field) → clumps of a few pixels in three tones → sparse 1×2 blade highlights on
+   the lit tops of clumps, crevices only in the hollows → dry and olive patches → wildflowers and
+   clover by mask. calm 0..1 pulls the tones together and thins the blades (clearings, verges),
+   moist 0..1, flowers 0..1 (patch coverage), dry 0..1 (sun-bleached). The colours are v0.1's. */
+const GV = { d0: [42, 70, 50], d1: [52, 90, 47], m0: [74, 114, 50], m1: [91, 132, 54], l0: [122, 154, 66], l1: [147, 171, 82], dry: [129, 129, 73], olive: [106, 119, 67], blade: [168, 188, 106] };
+const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+const sst = (a, b, v) => { const t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const FLW = [[236, 235, 220], [230, 210, 90], [138, 146, 220], [216, 154, 166], [240, 240, 236]];
 export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0) {
   const N = NZ;
-  const big = N.big.sample(X * 0.3, Y * 0.3), mid = N.mid.sample(X * 0.6, Y * 0.6);
-  // hue zones: cool and warm greens, sun-bleached dry patches (large, clean boundaries)
-  const dz = big + (1 - moist) * 0.3 + dry * 0.35;
-  const R = dz > 0.86 ? G.dry : big > 0.54 ? G.warm : G.cool;
-  // base value: two broad tones, the darker in the hollows of the big noise
-  const base = mid > 0.5 - calm * 0.05 ? 3 : 2;
-  const dens = clamp((0.5 + (mid - 0.5) * 1.7 + (big - 0.5) * 0.5) * (1 - calm * 0.7), 0.05, 0.9);
-  // lush and short stretches (a slow field of its own), so the carpet is not one even pattern
-  const lush = N.warp.sample(X * 0.16 + 50, Y * 0.16 + 9);
-  let flags = 0;
-  const has = clump(X, Y, dens, calm > 0.55 ? 2 : calm > 0.25 ? 1 : lush < 0.36 ? 1 : 0, false, calm < 0.3 && lush > 0.62 ? 1 : 0);
-  let k = base + CL.off;
-  if (!has && (hashi(X, Y, 3) & 1023) < 40 * (1 - calm)) k -= 1;   // a few deep crevices in the gaps
-  if (CL.tip) flags |= FLAG.BLADE;
-  if (calm > 0.5 && k > 3) k = 3;
-  k = k < 0 ? 0 : k > 5 ? 5 : k;
-  let c = R[k];
-  // flowers: clustered in patches, 2 px with a stem pixel
+  const big = N.big.sample(X * 0.3, Y * 0.3), mid = N.mid.sample(X * 0.7 + 30, Y * 0.7);
+  const cl = N.cl.sample(x * 0.8, y * 0.8) * 0.6 + N.cl2.sample(x * 1.9 + 5, y * 1.9) * 0.4, r = hash2(x, y, 3);
+  const hue = sst(0.35, 0.75, big);
+  let t = mid * 0.45 + cl * 0.55; t = 0.5 + (t - 0.5) * (1 - calm * 0.45);
+  const dark = mix3(GV.d0, GV.d1, hue), lite = mix3(GV.l0, GV.l1, hue);
+  let c = t < 0.4 ? dark : t < 0.62 ? mix3(GV.m0, GV.m1, hue) : lite, flags = 0;
+  // blade highlights only on the lit tops of clumps, crevices only in the hollows
+  const blade = hash2(x, y >> 1, 7) > 0.84 + calm * 0.1;
+  if (t > 0.5 && blade) { c = mix3(lite, GV.blade, 0.5); flags |= FLAG.BLADE; }
+  if (t < 0.45 && r < 0.07 * (1 - calm * 0.6)) c = [dark[0] * 0.82, dark[1] * 0.82, dark[2] * 0.82];
+  // dry and olive patches where the slow field is high (the sun-bleached saddle)
+  const dk = sst(0.6, 0.82, big + (1 - moist) * 0.28 + dry * 0.22) * 0.6;
+  if (dk > 0) c = mix3(c, mix3(GV.dry, GV.olive, mid), dk);
+  // clover: trefoils in patches, a few white heads
+  const cv = N.warp.sample(X * 0.3 + 170, Y * 0.3 + 40);
+  if (cv > 0.66 - flowers * 0.04 && calm < 0.7) {
+    const cx = Math.floor(X / 4), cy = Math.floor(Y / 3), ch = hashi(cx, cy, 91);
+    if ((ch & 255) < (cv - 0.6) * 1100) {
+      const ox = X - cx * 4 - 1 - ((ch >> 8) & 1), oy = Y - cy * 3 - 1;
+      if ((ox === 0 && oy === -1) || (Math.abs(ox) === 1 && oy === 0)) c = mix3(GV.m1, GV.l1, 0.55 + ((ch >> 10) & 1) * 0.2);
+      else if (ox === 0 && oy === 0) c = ((ch >> 12) & 7) === 0 ? [232, 226, 214] : GV.m0;
+    }
+  }
+  // wildflowers: clustered in patches, 2 px with a darker pixel under
   if (flowers > 0) {
-    const patch = N.warp.sample(X * 0.45 + 99, Y * 0.45);
-    const th = 1 - flowers * 0.42;
+    const patch = N.warp.sample(X * 0.45 + 99, Y * 0.45), th = 1 - flowers * 0.4;
     if (patch > th) {
       const fx = Math.floor(X / 5), fy = Math.floor(Y / 4), fh = hashi(fx, fy, 71);
-      if ((fh & 255) < (patch - th) * 900) {
-        const ox = X - fx * 5 - ((fh >> 8) & 3), oy = Y - fy * 4 - ((fh >> 10) & 1);
-        const q = (fh >> 12) & 15;
-        const fc = q < 6 ? PAL.flowerWhite : q < 10 ? PAL.flowerYellow : q < 13 ? PAL.flowerBlue : PAL.flowerPink;
+      if ((fh & 255) < (patch - th) * 700) {
+        const ox = X - fx * 5 - ((fh >> 8) & 3), oy = Y - fy * 4 - ((fh >> 10) & 1), q = (fh >> 12) & 15;
+        const fc = FLW[q < 6 ? 0 : q < 10 ? 1 : q < 13 ? 2 : q < 15 ? 3 : 4];
         if (oy === 0 && (ox === 0 || ox === 1)) { c = ox === 0 ? fc : [fc[0] * 0.82, fc[1] * 0.8, fc[2] * 0.86]; flags |= FLAG.BLADE; }
-        else if (oy === 1 && ox === 0) c = R[Math.max(0, k - 1)];
+        else if (oy === 1 && ox === 0) c = dark;
       }
     }
   }
   OUT[0] = c[0]; OUT[1] = c[1]; OUT[2] = c[2];
-  OUT[3] = CL.nx; OUT[4] = CL.ny + (mid - 0.5) * 0.15; OUT[5] = MAT.GRASS; OUT[6] = flags;
+  OUT[3] = (cl - 0.5) * 0.5; OUT[4] = (t - 0.5) * 0.7 + (blade ? 0.15 : 0); OUT[5] = MAT.GRASS; OUT[6] = flags;
 }
 
-/* ---------------- yard: the trodden earth round the house ----------------
-   packed grey-brown earth in broad soft patches, a few pebbles and fallen camphor leaves */
-const YARD = [[70, 58, 46], [86, 72, 56], [101, 86, 66], [116, 101, 78], [132, 118, 92]];
+/* ---------------- yard / worn earth (v0.1 pathCol): trodden earth in three tones, pebbles, a few fallen leaves ---------------- */
+const YARD = [[119, 108, 75], [139, 129, 96], [158, 147, 122], [139, 139, 139]];
 export function yard(X, Y, x, y, leaves = 0.3) {
-  const N = NZ;
-  const big = N.mid.sample(X * 0.7, Y * 0.7), r = hashi(X, Y, 85);
-  const v = big * 0.8 + N.cl.sample(X * 0.35, Y * 0.35) * 0.2 + (bayer(x, y) - 0.5) * 0.1;
-  let k = v < 0.34 ? 1 : v < 0.62 ? 2 : 3, c;
-  // pebbles: 2×2, lit top-left
-  const px = X >> 1, py = Y >> 1, ph = hashi(px, py, 87);
-  if ((ph & 1023) < 5) { const q = (X & 1) + (Y & 1) * 2; c = q === 0 ? PAL.stoneWarm[4] : q === 3 ? YARD[0] : PAL.stoneWarm[3]; }
-  else {
-    c = YARD[k];
-    // fallen leaves: 2-px flecks in drifts
-    const drift = N.warp.sample(X * 0.5 + 31, Y * 0.5);
-    if (drift > 1 - leaves * 0.6) { const lh = hashi(X >> 1, Y, 89); if ((lh & 255) < 40 && (X & 1) === 0) c = PAL.litter[(lh >> 8) & 3]; else if ((lh & 255) < 40) c = PAL.litter[2]; }
-  }
+  const N = NZ, r = hash2(x, y, 85), big = N.mid.sample(X * 1.2, Y * 1.2);
+  const v = r * 0.5 + big * 0.5;
+  let c = v < 0.3 ? YARD[0] : v < 0.75 ? YARD[1] : YARD[2];
+  if (hash2(x >> 1, y >> 1, 86) > 0.975) c = YARD[3];
+  const drift = N.warp.sample(X * 0.5 + 31, Y * 0.5);
+  if (drift > 1 - leaves * 0.6) { const lh = hashi(X >> 1, Y, 89); if ((lh & 255) < 34) c = PAL.litter[(lh >> 8) & 3]; }
   set(c);
-  OUT[3] = ((r & 255) / 255 - 0.5) * 0.2; OUT[4] = (big - 0.5) * 0.25; OUT[5] = MAT.PATH; OUT[6] = 0;
+  OUT[3] = (r - 0.5) * 0.3; OUT[4] = 0; OUT[5] = MAT.PATH; OUT[6] = 0;
 }
 
-/* ---------------- clearing under the great tree: yard, moss cushions, short grass ---------------- */
+/* ---------------- clearing under the great tree: worn earth, moss, short grass ----------------
+   the borders are ragged at the pixel scale (a fine noise added to the mask), never clean lines */
 export function clearing(X, Y, x, y, wear = 0.3) {
   const N = NZ;
-  const w = N.warp.sample(X * 0.5, Y * 0.5) * 0.6 + N.mid.sample(X * 1.1, Y * 1.1) * 0.4 + wear * 0.3 - 0.18;
-  if (w > 0.62) { yard(X, Y, x, y, 0.5); return; }
-  if (w > 0.56) { // the yard's ragged border: sparse clumps on earth
-    if (!clump(X, Y, 0.35, 2)) { yard(X, Y, x, y, 0.2); return; }
-    grass(X, Y, x, y, 0.8, 0.8, 0); return;
-  }
-  if (w < 0.42) { moss(X, Y, x, y, 0.25); return; }
-  grass(X, Y, x, y, 0.75, 0.8, 0.1);
+  const w = N.warp.sample(X * 0.5, Y * 0.5) * 0.6 + N.mid.sample(X * 1.1, Y * 1.1) * 0.4 + wear * 0.3 - 0.18 + (N.cl.sample(x * 1.3, y * 1.3) - 0.5) * 0.12;
+  if (w > 0.6) { yard(X, Y, x, y, 0.5); return; }
+  if (w < 0.43) { moss(X, Y, x, y, 0.25); return; }
+  grass(X, Y, x, y, 0.75, 0.8, 0.12);
 }
 
-/* ---------------- moss carpet: soft round cushions, a few bright fruiting specks ---------------- */
+/* ---------------- moss carpet (v0.1): three greens by a slow field and the pixel hash, bright fruiting specks ---------------- */
 const MOSS = PAL.moss;
+const MV = [[60, 92, 42], [72, 108, 48], [88, 127, 58], [154, 168, 96]];
 export function moss(X, Y, x, y, dark = 0) {
-  const N = NZ;
-  const v = N.mid.sample(X * 0.8, Y * 0.8) - dark * 0.15;
-  const base = v < 0.42 ? 2 : 3;
-  clump(X, Y, 0.8, 1, true);
-  let k = base + CL.off;
-  const h = hashi(X, Y, 15) & 1023;
-  if (CL.off >= 1 && h < 22) k = 5;
-  k = k < 1 ? 1 : k > 5 ? 5 : k;
-  set(MOSS[k]);
-  OUT[3] = CL.nx * 0.8; OUT[4] = CL.ny * 0.8; OUT[5] = MAT.MOSS; OUT[6] = 0;
+  const N = NZ, r = hash2(x, y, 15), big = N.mid.sample(X * 0.9, Y * 0.9) - dark * 0.12;
+  const v = r * 0.4 + big * 0.6;
+  let c = v < 0.35 ? MV[0] : v < 0.8 ? MV[1] : MV[2];
+  if (hash2(x + 2, y, 16) > 0.985) c = MV[3];
+  else if (r < 0.03) c = [MV[0][0] * 0.8, MV[0][1] * 0.8, MV[0][2] * 0.8];
+  set(c);
+  OUT[3] = (r - 0.5) * 0.5; OUT[4] = (big - 0.5) * 0.5; OUT[5] = MAT.MOSS; OUT[6] = 0;
 }
 
 /* ---------------- forest floor: dark soil, leaf litter, needles, twigs ---------------- */
@@ -212,24 +210,20 @@ export function floor(X, Y, x, y, leafy = 0.5) {
    edge 0 inside → 1 at the grass, d distance from the centreline, hw half width, rut 0..1 */
 const PATH = PAL.path;
 export function path(X, Y, x, y, edge = 0, d = 0, hw = 30, rut = 0) {
-  const N = NZ;
-  const r = hashi(X, Y, 21), big = N.mid.sample(X * 1.1, Y * 1.1), cl = N.cl.sample(X * 0.7, Y * 0.7);
-  let v = big * 0.55 + cl * 0.3 + (r & 255) / 255 * 0.15 + (bayer(x, y) - 0.5) * 0.18;
-  if (rut > 0) { const u = Math.abs(d) / hw; const band = Math.exp(-Math.pow((u - 0.45) / 0.13, 2)); v -= band * 0.2 * rut; }
-  let k = v < 0.3 ? 1 : v < 0.5 ? 2 : v < 0.72 ? 3 : 4;
-  let c = PATH[k];
-  // pebbles: 2×2 with a lit top-left pixel and a dark bottom-right one
-  const px = X >> 1, py = Y >> 1, ph = hashi(px, py, 23);
-  if ((ph & 1023) < 22) { const q = (X & 1) + (Y & 1) * 2; c = q === 0 ? PAL.stone[5] : q === 3 ? PAL.stone[1] : PAL.stone[3]; }
-  else if ((ph & 1023) < 34 && (X & 1) === 0 && (Y & 1) === 0) c = PATH[k > 1 ? k - 2 : 0];
+  // v0.1's trodden earth (three tones by the pixel hash and a slow field), two worn ruts, pebbles;
+  // the verge spills over the edge: grass in ragged tongues, a darker band where earth meets grass
+  const N = NZ, r = hash2(x, y, 21), big = N.mid.sample(X * 1.2, Y * 1.2), cl = N.cl.sample(X * 0.7, Y * 0.7);
+  let v = r * 0.5 + big * 0.5;
+  if (rut > 0) { const u = Math.abs(d) / hw; const band = Math.exp(-Math.pow((u - 0.42) / 0.12, 2)); v -= band * 0.25 * rut; }
+  let c = v < 0.3 ? YARD[0] : v < 0.75 ? YARD[1] : YARD[2];
+  if (hash2(x >> 1, y >> 1, 23) > 0.975) c = YARD[3];
   OUT[0] = c[0]; OUT[1] = c[1]; OUT[2] = c[2];
-  // the grass edge: ragged, grass blades poking into the road
   if (edge > 0) {
-    const g = edge - (((r >> 8) & 255) / 255 * 0.4 + cl * 0.45);
-    if (g > 0.18) { const keep0 = OUT[0], keep1 = OUT[1], keep2 = OUT[2]; grass(X, Y, x, y, 0.35, 0.5, 0); if (g < 0.3 && !(OUT[6] & FLAG.BLADE) && bayer(x, y) > 0.5) { OUT[0] = keep0 * 0.86; OUT[1] = keep1 * 0.86; OUT[2] = keep2 * 0.84; } return; }
-    if (g > 0.08) { OUT[0] *= 0.88; OUT[1] *= 0.88; OUT[2] *= 0.86; }
+    const g = edge - (hash2(x, y, 24) * 0.35 + cl * 0.5);
+    if (g > 0.16) { grass(X, Y, x, y, 0.3, 0.5, 0.1); return; }
+    if (g > 0.04) { OUT[0] *= 0.84; OUT[1] *= 0.85; OUT[2] *= 0.8; }
   }
-  OUT[3] = ((r & 255) / 255 - 0.5) * 0.3; OUT[4] = 0; OUT[5] = MAT.PATH; OUT[6] = 0;
+  OUT[3] = (r - 0.5) * 0.3; OUT[4] = 0; OUT[5] = MAT.PATH; OUT[6] = 0;
 }
 
 const JOINT = [52, 50, 38];
