@@ -1,66 +1,56 @@
 # Saji's own parts. Same face geometry as the others. Her brows lie over the spiky bangs (rows 29-33): dark red
 # strokes on a clean one-pixel field of the hair's mid red, so the bangs' strand texture never tangles with them.
 
-== bN_neutral @ 22,29
+== bN_neutral @ 22,30
 ..MMMMMM..
 .MMOOOOMM.
 .MOMMMMOM.
-.MM....MM.
 
-== bF_neutral @ 46,29
+== bF_neutral @ 46,30
 .MMMMMM..
 MMOOOOMM.
 MOMMMMOMM
-MM....MM.
 
-== bN_up @ 22,28
+== bN_up @ 22,29
 ..MMMMMM..
 .MMOOOOMM.
 MMOMMMMOMM
 MOMM..MMOM
-MM......MM
 
-== bF_up @ 46,28
+== bF_up @ 46,29
 .MMMMMM..
 MMOOOOMM.
 MOMMMMOMM
 OMM..MMOM
-MM....MMM
 
-== bN_sad @ 22,29
+== bN_sad @ 22,30
 .....MMMM.
 ...MMMOOMM
 .MMMOOMMM.
 MOOOMM....
-MMMM......
 
-== bF_sad @ 46,29
+== bF_sad @ 46,30
 MMMM.....
 MMOOMMM..
 .MMMOOMMM
 ...MMMOOO
-.....MMMM
 
-== bN_angry @ 22,29
+== bN_angry @ 22,30
 MMMM......
 MOOOMM....
 MMMMOOMMM.
 ...MMMOOOM
-.....MMMMM
 
-== bF_angry @ 46,29
+== bF_angry @ 46,30
 .....MMMM
 ...MMOOOM
 .MMMOOMMM
 MOOOMMM..
-MMMMM....
 
-== bN_flat @ 22,30
+== bN_flat @ 22,31
 MMMMMMMMM.
 MOOOOOOOM.
-MMMMMMMMM.
 
-== bF_flat @ 46,30
+== bF_flat @ 46,31
 .MMMMMMMM
 .MOOOOOOM
-.MMMMMMMM

@@ -14,4 +14,5 @@ shader_parameter/wind_px = 1.0
 shader_parameter/porosity = 0.5
 shader_parameter/hi_band = 1.0
 shader_parameter/cutaway = true
+shader_parameter/cutaway_scale = null
 shader_parameter/vertex_ao = null

@@ -28,8 +28,8 @@ NAME = 'camphor_great'
 
 # ------------------------------------------------------------------------------- the trunk
 BUTTRESS = [  # angle (rad, 0 = north, pi/2 = west, pi = south, 3pi/2 = east), reach at ground (m), width
-    (0.35, 1.55, 0.22), (1.25, 1.35, 0.26), (2.05, 1.65, 0.20), (2.75, 1.15, 0.24),
-    (3.55, 1.70, 0.21), (4.35, 1.30, 0.25), (5.15, 1.60, 0.22), (5.85, 0.95, 0.20),
+    (0.35, 1.00, 0.38), (1.25, 0.85, 0.42), (2.05, 1.25, 0.34), (2.75, 0.70, 0.40),
+    (3.55, 1.30, 0.36), (4.35, 0.80, 0.42), (5.15, 1.15, 0.36), (5.85, 0.60, 0.40),
 ]
 BURLS = [  # angle, height (m), amplitude (m), angular width, vertical width
     (2.55, 2.9, 0.42, 0.30, 0.7), (3.95, 1.9, 0.30, 0.25, 0.55), (1.6, 3.6, 0.36, 0.28, 0.6),
@@ -54,11 +54,11 @@ def trunk_radius(theta, y, r0):
     theta = np.asarray(theta, np.float64)
     th = theta + TWIST * y
     r = r0 * (1 + 0.06 * np.sin(5 * th + 0.7) + 0.04 * np.sin(3 * th + 2.1))
-    g = math.exp(-max(y, 0) / 1.25) * (1 if y > -0.4 else math.exp((y + 0.4) * 0.8))
+    g = math.exp(-max(y, 0) / 1.1) * (1 if y > -0.4 else math.exp((y + 0.4) * 0.6))
     for a, reach, w in BUTTRESS:
         d = _angdiff(theta, a)
         r = r + reach * np.exp(-(d / w) ** 2) * g
-    r = r + 0.45 * g
+    r = r + 0.6 * g
     for a, h, amp, wa, wh in BURLS:
         d = _angdiff(th, a)
         r = r + amp * np.exp(-(d / wa) ** 2 - ((y - h) / wh) ** 2)
@@ -105,7 +105,7 @@ LIMBS = [  # name, control points, radii, moss
 
 def skeleton(R):
     limbs = []
-    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=80, cap_end=False,
+    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=80, cap_end=True,
                     moss=0.35, step_fn=_trunk_step)
     limbs.append(trunk)
     named = {}
@@ -114,22 +114,22 @@ def skeleton(R):
                     step_fn=_limb_step(rr[0]))
         limbs.append(L)
         named[name] = L
-    # roots: out of the biggest buttresses, curving along the ground and diving in
+    # roots: out of the biggest buttresses, low along the ground, curving, sinking in
     for i, (a, reach, w) in enumerate(BUTTRESS):
-        if reach < 1.3:
+        if reach < 0.95:
             continue
         d = np.array([-math.sin(a), 0, -math.cos(a)])          # theta 0 = north (-z), pi/2 = west (-x)
         side = np.array([d[2], 0, -d[0]])
-        bend = R.normal(0, 0.5)
-        L1 = R.uniform(1.8, 3.2)
-        r_in = 3.0 + reach * 0.8
-        pts = [d * (r_in - 0.8) + [0, 0.55, 0],
-               d * (r_in + 0.3) + side * bend * 0.2 + [0, 0.22, 0],
-               d * (r_in + L1 * 0.6) + side * bend * 0.7 + [0, 0.02, 0],
-               d * (r_in + L1) + side * bend * 1.2 + [0, -0.3, 0]]
-        rr = [0.55, 0.4, 0.26, 0.14]
+        bend = R.normal(0, 0.45)
+        L1 = R.uniform(1.6, 2.8)
+        r_in = 3.0 + reach * 0.55
+        pts = [d * r_in + [0, 0.42, 0],
+               d * (r_in + L1 * 0.35) + side * bend * 0.25 + [0, 0.2, 0],
+               d * (r_in + L1 * 0.7) + side * bend * 0.6 + [0, 0.02, 0],
+               d * (r_in + L1) + side * bend * 0.95 + [0, -0.28, 0]]
+        rr = [0.62, 0.44, 0.28, 0.14]
         limbs.append(WD.Limb(f'root{i}', pts, rr, kind='root', n_around=10, moss=0.45,
-                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.7 - 0.2 * f))
+                             step_fn=lambda f: 0.28, yscale=lambda k, f: 0.62 - 0.12 * f))
     # a few thin surface roots wandering between the big ones
     for j, a in enumerate((0.85, 2.45, 3.15, 4.75, 5.55)):
         d = np.array([-math.sin(a), 0, -math.cos(a)])
