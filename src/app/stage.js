@@ -96,7 +96,9 @@ export async function createStage({ root, field, vistaView, onProgress = null })
       get state() { return ln.state; },
       set state(v) {
         ln.state = v;
-        ln.sp.set({ hidden: !v, image: v === 'lit' ? 'bonLanternLit' : 'bonLantern', emissive: v === 'lit' });
+        // the lit lantern's paper glows per pixel in its own sprite; marking the whole sprite
+        // emissive would blow it out to a white blob (renderer note)
+        ln.sp.set({ hidden: !v, image: v === 'lit' ? 'bonLanternLit' : 'bonLantern' });
         if (v === 'lit' && !ln.light) ln.light = R.addLight({ x: 0, z: 0, y: 0, color: [1, 0.68, 0.38], radius: 3.6, intensity: 1.05, flicker: 0.5 });
         if (v !== 'lit' && ln.light) { ln.light.remove(); ln.light = null; }
         placeLantern(ln);
