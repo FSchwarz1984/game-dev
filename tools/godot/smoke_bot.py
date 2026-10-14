@@ -7,6 +7,7 @@
 # core/debug_bridge.gd, --bot-state); nothing here calls game functions.
 #
 #   python3 -I tools/godot/smoke_bot.py --out DIR [--size 1280x720] [--mode keys|touch] [--display :93]
+#                                       [--binary exported_debug_build]
 #
 # keys mode (desktop): arrows walk her across the terraces and up both staircases (a cliff must stop
 #   her), 1 takes 重 from the stone lantern, Shift+1 gives it to the old back-frame, E opens the
@@ -33,7 +34,8 @@ class Fail(Exception):
 
 
 class Bot:
-    def __init__(self, out, size, mode, display):
+    def __init__(self, out, size, mode, display, binary=None):
+        self.binary = binary
         self.out = out
         self.w, self.h = (int(v) for v in size.split("x"))
         self.mode = mode
@@ -61,7 +63,8 @@ class Bot:
             if subprocess.run(["xdpyinfo"], env=self.env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0:
                 break
             time.sleep(0.1)
-        args = [GODOT, "--path", os.path.join(ROOT, "godot"), "--rendering-method", "mobile", "--rendering-driver", "vulkan",
+        head = [self.binary] if self.binary else [GODOT, "--path", os.path.join(ROOT, "godot")]
+        args = head + ["--rendering-method", "mobile", "--rendering-driver", "vulkan",
                 "--resolution", "%dx%d" % (self.w, self.h), "--position", "0,0", "--",
                 "--bot-state=" + self.state_path, "--bot-cmd=" + self.cmd_path, "--bot-log",
                 "--scheme=explicit", "--body=draft", "--font=pixel", "--touch-ui=" + ("on" if self.mode == "touch" else "off")]
@@ -491,9 +494,10 @@ def main():
     ap.add_argument("--size", default="1280x720")
     ap.add_argument("--mode", default="keys", choices=["keys", "touch"])
     ap.add_argument("--display", default=":93")
+    ap.add_argument("--binary", default=None, help="an exported DEBUG build to run instead of the project")
     a = ap.parse_args()
-    out = os.path.join(os.path.abspath(a.out), "%s-%s" % (a.mode, a.size))
-    bot = Bot(out, a.size, a.mode, a.display)
+    out = os.path.join(os.path.abspath(a.out), "%s-%s%s" % (a.mode, a.size, "-export" if a.binary else ""))
+    bot = Bot(out, a.size, a.mode, a.display, os.path.abspath(a.binary) if a.binary else None)
     ok = True
     print("smoke playtest: %s at %s -> %s" % (a.mode, a.size, out), flush=True)
     try:
