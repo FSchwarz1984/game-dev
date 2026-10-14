@@ -12,7 +12,7 @@
 | 2026-10-14 | G1 第三轮：世界观三选一、真身、名字、作品名（按类型） | <https://claude.ai/artifact/WhsgJ2hB6q27ftCNVDXhc7> | 已答复：全部否决，改为采用第二轮（见 decision-log.md G1R3） |
 | 2026-10-14 | G3 可玩灰盒（技术预览） | <https://claude.ai/artifact/Q2VsSTbbjBM6nMqUMbJqJJ> | 已撤回（P-1：只交付成品），不再更新 |
 | 2026-10-14 | G5 第一段成品：标题、序章「送魂夜」、第一天早上 | <https://claude.ai/artifact/We1nnVFD9GUdcWUT78uKaa> | 已交付，用户已答复（E-1 迁移 Godot、R-1…R-8、F-1…F-3） |
-| 2026-10-14 | G5 开工前评审：身体材质、「移」的规则、操作、地图、小地图、美术标杆、立绘、字体、剧本语气、授权（十个决定） | <https://claude.ai/artifact/QcemFFSjDfjdyJR93yCtUw> | 待审 |
+| 2026-10-14 | G5 开工前评审：身体材质、「移」的规则、操作、地图、小地图、美术标杆、立绘、字体、剧本语气、授权（十个决定） | <https://claude.ai/artifact/QcemFFSjDfjdyJR93yCtUw> | 已答复（decision-log G5R-1…10）：菅笠、地图迷雾、样章、像素字、授权通过；名字、「移」、操作、地图、立绘、剧本要重做 |
 
 ## 文档
 
