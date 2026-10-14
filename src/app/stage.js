@@ -148,7 +148,7 @@ export async function createStage({ root, field, vistaView, onProgress = null })
   }
 
   // ---- camera
-  let follow = true, lastHour = 12;
+  let follow = true, followSpeed = 4, lastHour = 12;
   const P = field.player;
   const camTo = (o, speed) => { follow = false; R.setCamera(o, speed); };
 
@@ -178,7 +178,7 @@ export async function createStage({ root, field, vistaView, onProgress = null })
       camTo(s, cut ? 0 : speed ?? 1.4);
     },
     cam(x, z, { cut = false, speed = 1.4, y } = {}) { camTo({ x, z, y: ground(x, z) + (y || 0) }, cut ? 0 : speed); },
-    follow() { follow = true; },
+    follow({ speed = 4 } = {}) { follow = true; followSpeed = speed; },
     tod(h) { lastHour = h; R.setTime(h); },
     actor: id => actors[id],
     prop: id => propTable[id] || (propTable[id] = {}),
@@ -272,7 +272,7 @@ export async function createStage({ root, field, vistaView, onProgress = null })
       // the camera follows her, leading a little where she walks
       if (follow) {
         const a = actors.tsuzumi;
-        R.setCamera({ x: a.x + P.fx * 0.9, z: a.z + P.fz * 0.6, y: ground(a.x, a.z) + a.lift, lift: 0.9 }, 4);
+        R.setCamera({ x: a.x + P.fx * 0.9, z: a.z + P.fz * 0.6, y: ground(a.x, a.z) + a.lift, lift: 0.9 }, followSpeed);
       }
       R.setFocus(actors.tsuzumi.x, actors.tsuzumi.z, ground(actors.tsuzumi.x, actors.tsuzumi.z) + actors.tsuzumi.lift);
       figureT.t += dt;

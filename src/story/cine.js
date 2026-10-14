@@ -5,7 +5,8 @@
 //
 //   stage.shot(name, { cut, speed })    frame a named camera shot from the map
 //   stage.cam(x, z, { cut, speed, y })  frame a point (metres; y lifts the view, e.g. up a tree)
-//   stage.follow()                      give the camera back to the player
+//   stage.follow({ speed })             give the camera back to the player (speed: how tightly it
+//                                       follows; lower is a slower, lagging crane)
 //   stage.tod(hour)                     time of day
 //   stage.actor(id)                     { x, z, face, play(anim, opts) -> seconds, idle() }
 //
@@ -71,7 +72,7 @@ export class Director {
 
   shot(name, opts) { this.stage?.shot(name, opts); }
   cam(x, z, opts) { this.stage?.cam(x, z, opts); }
-  follow() { this.stage?.follow(); }
+  follow(opts) { this.stage?.follow(opts); }
   tod(hour) { this.stage?.tod(hour); }
 
   /** Run the clock from hour a to b over dur seconds. */

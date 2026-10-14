@@ -207,14 +207,16 @@ async function climb(G) {
     her.variant = 'none';
     au.sfx('drop');
     await D.wait(0.8);
-    D.shot('camphorFull', { speed: 0.5 });
+    // the camera climbs with her, a little behind: the trunk fills the frame on the way up (that is
+    // its size), and she stays in it the whole way, up into the crown (the leaves open round her)
+    D.follow({ speed: 1.8 });
     // up the roots and the trunk, hold by hold; it cannot fail
     for (const p of stage.climbPoints()) {
       her.climbTo = p;
       await D.play('tsuzumi', 'climb', { hold: 0.75 });
       au.sfx('rustle', { x: P.camphor[0], y: P.camphor[1] });
     }
-    await D.wait(0.4);
+    await D.wait(1.4);                 // she has arrived: a breath in the leaves before the view
   }, { follow: false });
   f.push({ type: 'climbed' });
 }
