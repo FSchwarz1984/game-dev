@@ -126,10 +126,14 @@ const route = (x, z) => page.evaluate(([tx, tz]) => {
 }, [x, z]);
 async function walk(target, tol = 0.35) {
   await until(s => s.control && !s.busy && !s.blocking, 'control before walking to ' + target);
-  const pts = await route(target[0], target[1]);
-  if (!pts) throw new Error('no route to ' + target);
-  for (const p of pts.slice(0, -1)) await walkStraight(p, 0.45, true);
-  return walkStraight(target, tol);
+  // follow the route; if she snags somewhere, plan again from where she stands (up to 4 times)
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const pts = await route(target[0], target[1]);
+    if (!pts) throw new Error('no route to ' + target);
+    for (const p of pts.slice(0, -1)) await walkStraight(p, 0.45, true);
+    try { return await walkStraight(target, tol); }
+    catch (e) { if (attempt === 3) throw e; }
+  }
 }
 async function walkStraight([x, z], tol = 0.35, soft = false) {
   let best = 1e9, still = 0;
