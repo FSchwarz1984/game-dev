@@ -171,6 +171,12 @@ export function camphorRoot(seed, len = 90, w0 = 22, w1 = 5, ang = Math.PI / 2, 
       s.b[py * W + px] = lift; // corrected to the ground plane below
     });
   }
+  // where it dives (and where each arch ends) the soil is heaped over it, moss on the heap — so the root
+  // goes into the ground instead of tapering to a claw
+  const mound = (t, r) => { const i = Math.min(pts.length - 1, Math.round(t * (pts.length - 1))); const [mx, my] = pts[i];
+    PX.ell(mx + ox, my + oy - 1, r, r * 0.55, (px, py, u, v, d) => { const top = v < 0.1; const c = top && d < 0.8 ? PAL.moss[clamp(Math.round(3 - v * 2 - u + (hash2(px, py, seed) - 0.5)), 1, 4)] : PAL.soil[clamp(Math.round(2.4 - v * 1.5 - u * 0.5), 0, 5)];
+      s.pz(px, py, c, 10 + (1 - d) * 3, { m: top ? MAT.MOSS : MAT.SOIL, b: 0, n: [u * 0.5, -v * 0.6, 0.7] }); s.b[py * W + px] = (1 - d) * 3; }, { amp: 0.3, seed: seed + 9 }); };
+  mound(dive - 0.02, Math.max(5, w1 * 0.9)); for (const [, a1] of arches) mound(a1 - 0.015, Math.max(3.5, w1 * 0.55));
   POST.outline(s, { k: 0.72 }); POST.normals(s, 1);
   const ax = Math.round(ox), ay = Math.round(oy);
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const i = y * W + x; if (s.c[i * 4 + 3]) s.b[i] = -2 * (ay - y) + s.b[i] * 1.2; }
@@ -194,7 +200,7 @@ export function camphorLobe(seed, w = 220, h = 130, o = {}) {
   crown(s, { x: cx, y: base - h * 0.5, w, h, ramp: rr, young: o.dark ? rr : young, seed, tone: o.tone || 0 });
   // dangling leaf clusters
   for (let k = 0; k < w / 7; k++) { const x = Math.round(cx + R.range(-w * 0.45, w * 0.45)); let y = base; while (y < Hh - 2 && s.a(x, y)) y++; if (!s.a(x, y - 1)) continue; const L = R.int(1, 4); for (let j = 0; j < L; j++) s.pz(x + (j === L - 1 && R() < 0.5 ? (R() < 0.5 ? -1 : 1) : 0), y + j, rr[clamp(2 - (j >> 1), 0, 7)], 47, { m: MAT.LEAF, b: 46 }); }
-  POST.ao(s, 3, 0.26); POST.outline(s, { k: 0.58, hue: 0.03 }); POST.normals(s, 0.9);
+  POST.ao(s, 3, 0.2); POST.outline(s, { k: 0.58, hue: 0.03 }); POST.normals(s, 0.9);
   return { s, meta: { ax: cx, ay: Hh - 4, sway: 0.18, foliage: true, occluder: true, kind: 'camphorLobe' } };
 }
 function mixRamp(a, b) { return a.map((c, i) => i >= a.length - 3 ? b[Math.min(b.length - 1, i - (a.length - b.length))].map((v, k) => Math.round((v + c[k]) / 2)) : c); }

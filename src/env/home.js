@@ -82,7 +82,7 @@ export function layoutTerrain(T) {
   // material zones
   T.zone([[33, 25], [44, 22.5], [58, 23], [68, 27.5], [70, 36], [66, 45], [56, 49.5], [42, 48.5], [33, 42], [31, 33]], { top: TM.CLEAR, pa: 110, only: [TM.MEADOW], seed: 61, amp: 1.2 });
   T.zone([[40.5, 22.5], [49, 20.5], [58, 22], [61.5, 27.5], [60.8, 33.5], [55, 31], [50, 30.6], [45, 31], [39, 31.5]], { top: TM.MOSS, pa: 60, only: [TM.CLEAR, TM.MEADOW], seed: 63, amp: 0.8 });
-  T.zone([[66, 58], [81, 58], [81, 62.5], [66, 62.5]], { top: TM.MOSS, pa: 90, raw: true, only: [TM.GRASS] }); // graves terrace
+  T.zone([[65.5, 57.6], [74, 57.4], [81.5, 57.8], [82.4, 60.2], [80.6, 62.8], [73, 62.2], [66.4, 62.9]], { top: TM.MOSS, pa: 90, only: [TM.GRASS], seed: 69, amp: 0.7, scale: 1.6 }); // graves terrace
   T.zone([[18, 6], [33, 5], [34, 13], [26, 15.5], [19, 14]], { top: TM.MOSS, pa: 40, only: [TM.MEADOW, TM.GRASS], seed: 65 }); // around the pool
   T.zone([[18, 14], [24, 15], [21, 40], [16, 40]], { top: TM.GRASS, pb: 60, only: [TM.MEADOW], seed: 66 });
   T.zone([[44, 13], [80, 12], [80, 17], [44, 18]], { top: TM.FLOOR, pb: 140, only: [TM.MEADOW, TM.CLEAR], seed: 67, amp: 1.6 }); // litter under the north side of the crown

@@ -80,24 +80,31 @@ export class Terrain {
       }
     }
   }
-  /** visit pixels within r px of a px polyline; fn(i, X, Y, d, segIndex, t, side, along) */
+  /** visit pixels within r px of a px polyline; fn(i, X, Y, d, segIndex, t, side, along).
+      Nearest segment per pixel, kept in typed arrays over the polyline's bounding box (no Map, no garbage). */
   near(pts, r, fn) {
-    const best = new Map(); let acc = 0; const lens = [];
-    for (let s = 0; s < pts.length - 1; s++) lens.push(Math.hypot(pts[s + 1][0] - pts[s][0], pts[s + 1][1] - pts[s][1]));
+    let bx0 = 1e9, by0 = 1e9, bx1 = -1e9, by1 = -1e9;
+    for (const p of pts) { if (p[0] < bx0) bx0 = p[0]; if (p[0] > bx1) bx1 = p[0]; if (p[1] < by0) by0 = p[1]; if (p[1] > by1) by1 = p[1]; }
+    const X0 = Math.max(this.ox, Math.floor(bx0 - r)), X1 = Math.min(this.ox + this.W - 1, Math.ceil(bx1 + r));
+    const Y0 = Math.max(this.oy, Math.floor(by0 - r)), Y1 = Math.min(this.oy + this.H - 1, Math.ceil(by1 + r));
+    if (X1 < X0 || Y1 < Y0) return;
+    const bw = X1 - X0 + 1, bh = Y1 - Y0 + 1, nb = bw * bh;
+    const D = new Float32Array(nb).fill(1e9), S = new Int32Array(nb), Tt = new Float32Array(nb), Sd = new Int8Array(nb), A = new Float32Array(nb);
+    let acc = 0;
     for (let s = 0; s < pts.length - 1; s++) {
-      const [ax, ay] = pts[s], [bx, by] = pts[s + 1]; const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1;
-      const xa = Math.max(this.ox, Math.floor(Math.min(ax, bx) - r)), xb = Math.min(this.ox + this.W - 1, Math.ceil(Math.max(ax, bx) + r));
-      const ya = Math.max(this.oy, Math.floor(Math.min(ay, by) - r)), yb = Math.min(this.oy + this.H - 1, Math.ceil(Math.max(ay, by) + r));
+      const [ax, ay] = pts[s], [bx, by] = pts[s + 1]; const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy || 1, len = Math.sqrt(L2);
+      const xa = Math.max(X0, Math.floor(Math.min(ax, bx) - r)), xb = Math.min(X1, Math.ceil(Math.max(ax, bx) + r));
+      const ya = Math.max(Y0, Math.floor(Math.min(ay, by) - r)), yb = Math.min(Y1, Math.ceil(Math.max(ay, by) + r));
       for (let Y = ya; Y <= yb; Y++) for (let X = xa; X <= xb; X++) {
         let t = ((X + 0.5 - ax) * dx + (Y + 0.5 - ay) * dy) / L2; t = t < 0 ? 0 : t > 1 ? 1 : t;
         const ex = X + 0.5 - ax - dx * t, ey = Y + 0.5 - ay - dy * t, d = Math.sqrt(ex * ex + ey * ey);
-        if (d > r) continue; const i = (Y - this.oy) * this.W + (X - this.ox);
-        const prev = best.get(i); if (prev && prev[0] <= d) continue;
-        best.set(i, [d, s, t, Math.sign(dx * ey - dy * ex), acc + t * lens[s], X, Y]);
+        if (d > r) continue; const k = (Y - Y0) * bw + (X - X0);
+        if (D[k] <= d) continue;
+        D[k] = d; S[k] = s; Tt[k] = t; Sd[k] = dx * ey - dy * ex >= 0 ? 1 : -1; A[k] = acc + t * len;
       }
-      acc += lens[s];
+      acc += len;
     }
-    for (const [i, v] of best) fn(i, v[5], v[6], v[0], v[1], v[2], v[3], v[4]);
+    for (let k = 0; k < nb; k++) { if (D[k] > 1e8) continue; const X = X0 + (k % bw), Y = Y0 + ((k / bw) | 0); fn((Y - this.oy) * this.W + (X - this.ox), X, Y, D[k], S[k], Tt[k], Sd[k], A[k]); }
   }
 
   /* ---------------- layout primitives (metres) ---------------- */

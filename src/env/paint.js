@@ -193,7 +193,7 @@ export function mass(s, m, o = {}) {
 export function crown(s, o) {
   const R = RNG((o.seed || 1) * 41 + 3), rr = o.ramp, young = o.young || rr, w = o.w, h = o.h, cx = o.x, cy = o.y, z0 = o.z0 || 0;
   const cell = o.cell ?? (w > 150 ? 4.4 : w > 80 ? 3.6 : 3);
-  const group = { x: cx - w * 0.06, y: cy - h * 0.06, rx: w * 0.56, ry: h * 0.62, k: o.groupK ?? 0.72 };
+  const group = { x: cx - w * 0.06, y: cy - h * 0.06, rx: w * 0.56, ry: h * 0.62, k: o.groupK ?? 0.84 };
   mass(s, { x: cx, y: cy + h * 0.06, rx: w * 0.47, ry: h * 0.44, z: z0, droop: 0.12, seed: 99 }, { ramp: rr, cell: cell * 0.95, seed: o.seed * 3 + 7, tone: (o.tone || 0) - 0.12, under: 0.5, cellK: 0.12, blobK: 0.26, gapW: 0.04, group, base: 0.3, litK: 0.5, zk: 0.3 });
   const cl = [];
   for (let r = 0; r < 3; r++) {
@@ -210,7 +210,7 @@ export function crown(s, o) {
     }
   }
   cl.sort((a, b) => a.z - b.z);
-  for (const m of cl) mass(s, m, { ramp: m.top ? young : rr, cell, seed: o.seed * 3, tone: (o.tone || 0) - 0.02, under: 0.5, rim: 0.05, cellK: 0.14, blobK: 0.3, gapW: 0.05, group, base: o.base ?? 0.37, litK: o.litK ?? 0.6, zk: 0.45 });
+  for (const m of cl) mass(s, m, { ramp: m.top ? young : rr, cell, seed: o.seed * 3, tone: (o.tone || 0) - 0.02, under: 0.32, rim: 0.03, cellK: 0.16, blobK: 0.36, gapW: 0.06, group, base: o.base ?? 0.37, litK: o.litK ?? 0.62, zk: 0.45 });
   if (o.fringe !== false) { // tucked up under the crown's own lowest edge, so it hangs from it
     const nf = Math.round(w / 20);
     for (let k = 0; k < nf; k++) {
