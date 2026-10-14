@@ -36,6 +36,7 @@ class ChainSpec:
     wind: float = 1.0           # how much the walk drag acts on it
     up: tuple = (0, 0, 1)       # anchor-frame axis that fixes the twist of the segments
     collide: object = None      # optional callable(points_in_body_frame, bones) -> points
+    ground: float | None = 0.5  # chain nodes stay above this height (hair spreads on the ground)
 
 
 @dataclass
@@ -108,17 +109,18 @@ class Model:
             for _ in range(24):
                 for k, c in self.chains.items():
                     a, r = anchor_of(base[0], c)
-                    sims[k].step(a, r, wind=np.asarray(frames[0].wind) * c.wind)
+                    col = None
+                    if c.collide is not None:
+                        col = (lambda q, bw=base[0], c=c: c.collide(q[None, :].repeat(2, 0), bw)[1])
+                    sims[k].step(a, r, wind=np.asarray(frames[0].wind) * c.wind, collide=col, ground=c.ground)
         for cyc in range(cycles):
             for i, f in enumerate(frames):
                 for k, c in self.chains.items():
                     a, r = anchor_of(base[i], c)
-                    col = (lambda pts, bw=base[i], c=c: c.collide(pts, bw)) if c.collide else None
-                    pts = sims[k].step(a, r, wind=np.asarray(f.wind) * c.wind,
-                                       collide=None)
+                    col = None
                     if c.collide is not None:
-                        pts = c.collide(pts, base[i])
-                        sims[k].p[:] = pts
+                        col = (lambda q, bw=base[i], c=c: c.collide(q[None, :].repeat(2, 0), bw)[1])
+                    pts = sims[k].step(a, r, wind=np.asarray(f.wind) * c.wind, collide=col, ground=c.ground)
                     if cyc == cycles - 1:
                         out_pts[i][k] = pts
         result = []
@@ -134,7 +136,8 @@ class Model:
                     ydir = -d / ln if ln > 1e-9 else np.array([0, 1.0, 0])
                     zdir = up - ydir * np.dot(up, ydir)
                     if np.linalg.norm(zdir) < 1e-6:
-                        zdir = np.array([0, 0, 1.0]) - ydir * ydir[2]
+                        alt = np.array([0, 0, 1.0]) if abs(ydir[2]) < 0.9 else np.array([1.0, 0, 0])
+                        zdir = alt - ydir * np.dot(alt, ydir)
                     zdir /= np.linalg.norm(zdir)
                     xdir = np.cross(ydir, zdir)
                     M = np.eye(4)
@@ -178,7 +181,7 @@ class Model:
                 m = bw[b].copy(); m[:3, 3] += off; bw[b] = m
         shapes = self.shapes(dict(ctx, bones=bw, yaw=yaw))
         part_ids, group_ids = {}, {}
-        prims = G.assemble(shapes, bw, cam, self.pal.ids, part_ids, group_ids)
+        prims = G.assemble(shapes, bw, cam, self.pal.ids, part_ids, group_ids, ground=ctx.get('ground', -0.3))
         x0 = -PVX - 0.5
         y0 = PVY * c
         zs, rs = prims[:, 32], prims[:, 33]

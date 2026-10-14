@@ -190,7 +190,8 @@ def camera(pitch=PITCH):
     return m
 
 
-def assemble(shapes, bones_world, cam, mat_ids, part_ids, group_ids):
+def assemble(shapes, bones_world, cam, mat_ids, part_ids, group_ids, ground=None):
+    """ground: height (body frame) below which nothing is drawn, or None."""
     rows = []
     for sh in shapes:
         Mw = cam @ bones_world[sh.bone] @ sh.xf          # shape frame -> camera
@@ -225,5 +226,11 @@ def assemble(shapes, bones_world, cam, mat_ids, part_ids, group_ids):
             R, t = sh.xf[:3, :3], sh.xf[:3, 3]
             r[64:67] = R.T @ n
             r[67] = d - float(n @ t)
+        if ground is not None:
+            # body-frame plane -y <= -ground, expressed in the shape frame
+            Ms = bones_world[sh.bone] @ sh.xf
+            n = np.array([0.0, -1.0, 0.0])
+            r[68:71] = Ms[:3, :3].T @ n
+            r[71] = -ground - float(n @ Ms[:3, 3])
         rows.append(r)
     return np.array(rows, np.float32)

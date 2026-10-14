@@ -14,20 +14,20 @@ uniform float ref_x0;         // canvas x of the reference frame's left edge
 uniform float ref_w = 480.0;
 uniform float bands = 24.0;
 
-vec3 sky_at(float e, float u) {
-	e = clamp(e, 0.0, 1.0);
-	vec3 c;
-	if (e < 0.16) c = mix(sky_ho, sky_lo, smoothj(0.0, 0.16, e));
-	else if (e < 0.5) c = mix(sky_lo, sky_up, smoothj(0.16, 0.5, e));
-	else c = mix(sky_up, sky_z, smoothj(0.5, 1.0, e));
-	float gw = glow_amt * pow(clamp(u, 0.0, 1.0), 2.2) * pow(1.0 - clamp(e / 0.55, 0.0, 1.0), 1.6);
-	if (gw > 0.0) c = mix(c, sky_glow, clamp(gw, 0.0, 1.0) * 0.85);
-	return c;
+vec3 sky_at(float sa_e, float sa_u) {
+	sa_e = clamp(sa_e, 0.0, 1.0);
+	vec3 sa_c;
+	if (sa_e < 0.16) sa_c = mix(sky_ho, sky_lo, smoothj(0.0, 0.16, sa_e));
+	else if (sa_e < 0.5) sa_c = mix(sky_lo, sky_up, smoothj(0.16, 0.5, sa_e));
+	else sa_c = mix(sky_up, sky_z, smoothj(0.5, 1.0, sa_e));
+	float sa_g = glow_amt * pow(clamp(sa_u, 0.0, 1.0), 2.2) * pow(1.0 - clamp(sa_e / 0.55, 0.0, 1.0), 1.6);
+	if (sa_g > 0.0) sa_c = mix(sa_c, sky_glow, clamp(sa_g, 0.0, 1.0) * 0.85);
+	return sa_c;
 }
 
 // the sky's colour (sRGB 0..255) at a canvas pixel
-vec3 sky_px(vec2 p) {
-	float e = (horizon - p.y) / sky_s;
-	float k = roundj((p.x - ref_x0) / (ref_w - 1.0) * bands);
-	return clamp(floor(sky_at(e, k / bands) * 0.5 + 0.5) * 2.0, 0.0, 255.0);
+vec3 sky_px(vec2 sp_p) {
+	float sp_e = (horizon - sp_p.y) / sky_s;
+	float sp_k = roundj((sp_p.x - ref_x0) / (ref_w - 1.0) * bands);
+	return clamp(floor(sky_at(sp_e, sp_k / bands) * 0.5 + 0.5) * 2.0, 0.0, 255.0);
 }

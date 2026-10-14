@@ -57,11 +57,20 @@ var js_lamps := false         # lamps go out at once when their light leaves (th
 # light buffers (sRGB units, added onto the scene like the JS 'lighter' canvas: composite.gdshader)
 var add_shore: SubViewport
 var add_main: SubViewport
+var add_rise: SubViewport
 var add_shore_root: Node2D
 var add_main_root: Node2D
+var add_rise_root: Node2D
 var comp_shore: VistaQuad
 var comp_main: VistaQuad
-var excess := 0.35
+var comp_rise: VistaQuad
+# how much of what passes 1.0 becomes HDR (= what the glow blooms): the gate and the rising sparks
+# glow, the lamps on the plain stay almost as the JS clamped them (a dense town must not flare)
+var excess_shore := 0.6
+var excess_main := 0.06
+var excess_rise := 0.45
+var wave_fx: VistaSouthWave
+var pose := "sit"
 
 
 func setup(p_data: VistaData) -> void:
@@ -81,6 +90,8 @@ func setup(p_data: VistaData) -> void:
 	add_shore_root = add_shore.get_child(0)
 	add_main = _add_viewport("AddMain")
 	add_main_root = add_main.get_child(0)
+	add_rise = _add_viewport("AddRise")
+	add_rise_root = add_rise.get_child(0)
 	far.add_child(lights.layer("stars"))
 	lights.stars.set_param("ref_x0", float(m["ox"]))
 	lights.stars.set_param("horizon", float(m["YL"]))
@@ -104,8 +115,13 @@ func setup(p_data: VistaData) -> void:
 	ground.set_param("lut_far", data.tex("lutFar"))
 	add_main_root.add_child(lights.layer("lamps"))
 	add_main_root.add_child(lights.layer("river"))
-	add_main_root.add_child(lights.layer("rise"))
+	wave_fx = VistaSouthWave.new()
+	wave_fx.setup(self, quality)
+	add_main_root.add_child(wave_fx.curtain)
+	add_main_root.add_child(wave_fx.motes)
 	comp_main = _composite("PlainLight", add_main)
+	add_rise_root.add_child(lights.layer("rise"))
+	comp_rise = _composite("RisingLight", add_rise)
 
 	canopy = Node2D.new()
 	canopy.name = "Canopy"
@@ -127,6 +143,7 @@ func setup(p_data: VistaData) -> void:
 	canopy.add_child(figure)
 	front = _foliage("Front", data.tex("canopyFront"), canopy)
 	near = _foliage("Near", data.tex("near"), self)
+	add_child(wave_fx.end_motes)
 	env = VistaEnv.at(20.0)
 
 
@@ -185,9 +202,9 @@ static func yh_of(h: int) -> int:
 func layout(p_view: Vector2i) -> void:
 	view = p_view
 	var vs := view + Vector2i(2, 2)
-	for v in [add_shore, add_main]:
+	for v in [add_shore, add_main, add_rise]:
 		v.size = vs
-	for q in [comp_shore, comp_main]:
+	for q in [comp_shore, comp_main, comp_rise]:
 		q.size = Vector2(vs)
 	var h := view.y
 	yh = yh_of(h)
@@ -248,12 +265,13 @@ func update(st: Dictionary, t: float) -> void:
 	oy_far = yh - int(m["YL"]) - int(floor(dy * 0.1 + 0.5))
 	far.position = Vector2(dx, oy_far)
 	# the light buffers see the far group where the vista's viewport does (1 px border)
-	add_shore_root.position = far.position + Vector2.ONE
-	add_main_root.position = far.position + Vector2.ONE
-	comp_shore.position = -far.position - Vector2.ONE
-	comp_main.position = -far.position - Vector2.ONE
-	comp_shore.set_param("excess", excess)
-	comp_main.set_param("excess", excess)
+	for r in [add_shore_root, add_main_root, add_rise_root]:
+		r.position = far.position + Vector2.ONE
+	for q in [comp_shore, comp_main, comp_rise]:
+		q.position = -far.position - Vector2.ONE
+	comp_shore.set_param("excess", excess_shore)
+	comp_main.set_param("excess", excess_main)
+	comp_rise.set_param("excess", excess_rise)
 	oy_canopy = int(floor(view.y - float(m["CT"]) - dy + 0.5)) - int(m["oyC"])
 	canopy.position = Vector2(dx, oy_canopy)
 	var on := int(floor(view.y + 4.0 - dy * 2.4 + 0.5))
@@ -320,10 +338,15 @@ func update(st: Dictionary, t: float) -> void:
 		var s := sin(t * 0.8 + stir_ph[k]) + 0.35 * sin(t * 2.1 + stir_ph[k] * 2.0)
 		stir[k].position = stir_xy[k] + Vector2(floor(s * 0.8 + 0.5), floor(maxf(0.0, -s) * 0.6 + 0.5))
 		stir[k].set_param("tod_row", row)
-	# anchors (screen px)
+	# the wave's curtain, motes and end
+	wave_fx.update(wave, t, _dt(t), view)
+	# anchors (screen px) and her place: sitting on the limb, or standing on it
 	var a: Dictionary = m["anchors"]
 	anchors["branch"] = Vector2(a["branch"]["x"], a["branch"]["y"]) + canopy.position
 	anchors["stand"] = Vector2(a["stand"]["x"], a["stand"]["y"]) + canopy.position
+	pose = String(st.get("pose", "sit"))
+	var at: Dictionary = a["branch"] if pose == "sit" else a["stand"]
+	figure.position = Vector2(at["x"], at["y"])
 
 
 func _band(row: float) -> Vector3:
@@ -332,3 +355,13 @@ func _band(row: float) -> Vector3:
 	var r1 := mini(r0 + 1, b.size() - 1)
 	var a := Vector3(b[r0][0], b[r0][1], b[r0][2])
 	return a.lerp(Vector3(b[r1][0], b[r1][1], b[r1][2]), row - r0)
+
+
+var _last_t := -1.0
+
+
+## The frame's dt from the vista clock (the update gets the clock, not the step).
+func _dt(t: float) -> float:
+	var d := 1.0 / 60.0 if _last_t < 0.0 else clampf(t - _last_t, 0.0, 0.1)
+	_last_t = t
+	return d

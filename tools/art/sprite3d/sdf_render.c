@@ -11,7 +11,7 @@
  *   35..62  bands, 7 floats each: axis, lo, hi, material, wave amplitude, wave count, wave phase
  *           axis 0/1/2 = local x/y/z, 3 = radius in the local xz plane, 4 = angle about local y
  *           (degrees, atan2(x, z)); the wave moves lo and hi by amp * sin(count * angle + phase).
- *   64..67  optional cut plane in the shape frame (nx, ny, nz, d): keeps n.q <= d
+ *   64..71  two optional cut planes in the shape frame (nx, ny, nz, d): keeps n.q <= d
  */
 #include <math.h>
 #include <stdint.h>
@@ -94,12 +94,15 @@ static float sd_capcone2(float qx, float qy, float h, float r1, float r2) {
 
 static float sd_prim_raw(const float *P, const float *q);
 
-/* every primitive may carry a cut plane (64..67: nx, ny, nz, d in its frame): the shape keeps the
- * half space n.q <= d. A zero normal means no cut. */
+/* every primitive may carry two cut planes (64..67 and 68..71: nx, ny, nz, d in its frame): the
+ * shape keeps the half space n.q <= d. A zero normal means no cut. The second slot is used for the
+ * ground (nothing is drawn below the ground a body lies on). */
 static float sd_prim(const float *P, const float *q) {
     float d = sd_prim_raw(P, q);
-    const float *c = P + 64;
-    if (c[0] != 0.f || c[1] != 0.f || c[2] != 0.f) d = maxf(d, c[0] * q[0] + c[1] * q[1] + c[2] * q[2] - c[3]);
+    for (int k = 0; k < 2; k++) {
+        const float *c = P + 64 + 4 * k;
+        if (c[0] != 0.f || c[1] != 0.f || c[2] != 0.f) d = maxf(d, c[0] * q[0] + c[1] * q[1] + c[2] * q[2] - c[3]);
+    }
     return d;
 }
 

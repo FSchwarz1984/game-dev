@@ -111,6 +111,12 @@ class Saji(Model):
     def shapes(self, ctx):
         bw = ctx['bones']
         S = self.head_shapes(ctx)
+        if ctx.get('beam'):
+            # the fallen eave beam across her hips, as an occluder only: her sprite gets holes where
+            # the world's beam (2 m x 0.4 m x 0.3 m, centred on her 'hip' anchor, lying across her)
+            # is in front of her; the world draws the beam first and her sprite over it
+            S += [box('pelvis', (20.0, 1.6, 3.6), 'skin', round_=0.5, at=(0, 0.0, 1.0), occluder=True,
+                      R=G.Rx(90), part='beam')]
         # neck, kimono top, capelet, bell
         S += [rcone('neck', (0, -0.4, 0), (0, 1.6, 0), 0.95, 0.9, 'skin', part='neck'),
               ell('spine', (2.45, 2.2, 1.85), 'plum', at=(0, 0.7, 0.05), part='torso', group='torso', k=1.0),
@@ -169,7 +175,8 @@ class Saji(Model):
                         blush=True, skin_ids=skin)
 
     def anchors(self, ctx):
-        return {'hand': ('handL', (0, -0.6, 0)), 'head': ('head', (0, 11.0, 0)), 'seat': ('pelvis', (0, -0.6, -0.6))}
+        return {'hand': ('handL', (0, -0.6, 0)), 'handR': ('handR', (0, -0.6, 0)), 'head': ('head', (0, 11.0, 0)),
+                'seat': ('pelvis', (0, -1.6, -0.4)), 'hip': ('pelvis', (0, 0.0, 0.0))}
 
 
 # =============================================================================================
@@ -181,8 +188,30 @@ D8, D4 = ('front', 'front_right', 'right', 'back_right', 'back', 'back_left', 'l
 SHEETS = {'main': None}
 _ALL = tuple(SHEETS)
 _M = Saji()
+import saji_acts as T  # noqa: E402
+
+FLR = ('front', 'right', 'left')
+F4 = ('front', 'right', 'back', 'left')
+
+
+def _a(fn, fps, loop, views, sheets=_ALL):
+    return {'make': fn, 'fps': fps, 'loop': loop, 'views': views, 'sheets': sheets}
+
+
 ANIMS = {
     'idle': A.idle_spec(6, D8, _ALL),
     'walk': A.with_speed(A.loco_spec('walk', 8, 12, D8, _ALL, wind=0.10), _M),
     'run': dict(A.with_speed(A.loco_spec('run', 8, 15, D8, _ALL, wind=0.22), _M), **{'from': 2.9}),
+    # scene 10: pinned under the fallen eave beam (it lies across her hips: anchor 'hip'), crawling out
+    'pinned': _a(T.pinned, 8, True, FLR),
+    'crawl': _a(T.crawl, 6, True, FLR),
+    'dust': _a(T.dust, 8, False, FLR),
+    'hop': _a(T.hop, 10, False, F4),
+    'point': _a(T.point, 6, False, F4),
+    'sniff': _a(T.sniff, 5, False, FLR),
+    'talk': _a(T.talk, 6, True, F4),
+    # riding on Tsuzumi's back-frame (anchor 'seat' on her 'loadTop')
+    'ride': _a(T.ride, 4, True, F4),
+    'ridePoint': _a(T.ride_point, 6, False, F4),
+    'rideTalk': _a(T.ride_talk, 6, True, F4),
 }

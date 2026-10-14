@@ -46,15 +46,24 @@ func _run() -> void:
 			v.state[k] = s["state"][k]
 		layer.add_child(v)
 		v.show_shot(String(s.get("shot", "south")))
+		var stand: VistaStandIn = null
+		if bool(s.get("figure", plan.get("figure", false))) and v.figure_slot() != null:
+			stand = VistaStandIn.new()
+			v.figure_slot().add_child(stand)
+			v.set_meta("stand_in", stand)
 		var dt := float(s.get("dt", 1.0 / 60.0))
 		var frames := int(s.get("frames", 30))
 		for _f in frames:
 			v.advance(dt)
+			if stand != null:
+				stand.set_pose(String(v.state.get("pose", "sit")))
 			await process_frame
 		var seq: Dictionary = s.get("seq", {})
 		if seq.is_empty():
 			await RenderingServer.frame_post_draw
 			_save(String(s["name"]), bool(s.get("native", true)))
+			for probe in s.get("probe", []):
+				_probe(v, probe)
 		else:
 			var n := int(seq.get("n", 10))
 			var steps := maxi(1, roundi(float(seq.get("every", 0.1)) / dt))
@@ -91,3 +100,35 @@ func _save(name: String, native: bool) -> void:
 				n.set_pixel(x, y, img.get_pixel(int(margin.x) + x * s + s / 2, int(margin.y) + y * s + s / 2))
 		n.save_png(out.path_join(name + ".native.png"))
 	print("CAPTURE %s" % name)
+
+
+## Debug: print raw values of the south shot's light buffer and the vista viewport at a native pixel.
+func _probe(v: Vista, p: Array) -> void:
+	var south = v.shots.get("south")
+	if south == null:
+		return
+	var px := Vector2i(int(p[0]) + 1, int(p[1]) + 1)
+	var add: Image = south.add_main.get_texture().get_image()
+	var main: Image = v.vp.get_texture().get_image()
+	print("PROBE %s add=%s main=%s fmt=%d/%d" % [p, add.get_pixelv(px), main.get_pixelv(px), add.get_format(), main.get_format()])
+	var lt: VistaSouthLights = south.lights
+	var T: Vector2 = south.gate()
+	for i in lt.n:
+		var l: Array = lt.L[i]
+		if lt.tdep[i] < -1.0e8:
+			continue
+		var el: float = v.t - lt.tdep[i]
+		var dur := float(l[7])
+		if el < 0.0 or el >= dur:
+			continue
+		var u := el / dur
+		var sx := u * 0.62 + u * u * (3.0 - 2.0 * u) * 0.38
+		var p0 := Vector2(l[0], l[1])
+		var p1 := Vector2(l[9], l[10])
+		var p2 := Vector2(l[11], l[12]) + Vector2(0.38 * T.x, 0.55 * T.y)
+		var p3 := Vector2(l[13], l[14]) + T
+		var w := 1.0 - sx
+		var q := w * w * w * p0 + 3.0 * w * w * sx * p1 + 3.0 * w * sx * sx * p2 + sx * sx * sx * p3
+		var scr: Vector2 = q + south.far.position
+		if absf(scr.x - p[0]) <= 1.5 and absf(scr.y - p[1]) <= 1.5:
+			print("  light %d kind %d r %.3f tdep %.3f t %.3f el %.3f u %.3f at %s" % [i, int(l[2]), float(l[6]), lt.tdep[i], v.t, el, u, scr])

@@ -107,8 +107,9 @@ def stylize(buf, S, pal: Palette, cover=0.5, line_gap=2.0, keep_parts=(), shade=
         k = mid == m
         t = np.searchsorted(np.array(M.cuts, float), light[k], side='right')
         tone[k] = np.maximum(t, M.min_tone)
+    hole_px = (nhole >= nhit) & (nhole > 0) & ~opaque
     return {'mat': mid, 'tone': tone, 'depth': np.where(opaque, d, -1e9), 'part': pt, 'nrm': nn, 'light': light,
-            'opaque': opaque}
+            'opaque': opaque, 'hole': hole_px}
 
 
 def clean_tones(px, pal: Palette, passes=2, protect=None):
@@ -196,11 +197,12 @@ def separation_lines(px, pal: Palette, gap=2.0, parts_only=True):
 def outline(px, pal: Palette):
     """1-px outline outside the silhouette (4-neighbourhood), coloured by the bordering material."""
     mat = px['mat']
+    hole = px.get('hole')
     H, W = mat.shape
     out = np.full((H, W), -1, np.int32)
     for y in range(H):
         for x in range(W):
-            if mat[y, x] >= 0:
+            if mat[y, x] >= 0 or (hole is not None and hole[y, x]):
                 continue
             cnt = {}
             for dy, dx in N4:

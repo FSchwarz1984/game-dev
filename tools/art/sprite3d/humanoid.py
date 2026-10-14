@@ -137,8 +137,11 @@ def bob_run(t):
 
 class Chain:
     """A dangling chain: n segments of length seg, hanging from an anchor that the caller moves.
-    Simulated in the character's frame; `wind` is a constant acceleration (e.g. backwards drag
-    while walking), gravity pulls -Y. stiff pulls each segment toward its rest direction."""
+    Simulated in the character's body frame (verlet); `wind` is a constant acceleration (the drag
+    while walking), gravity pulls -Y, `stiff` pulls each segment toward its rest direction. Inside
+    the constraint loop every node is kept out of the body (`collide`, a point -> point function)
+    and above the ground, and segment lengths are kept: a segment that reaches the ground lies
+    along it instead of shrinking."""
 
     def __init__(self, n, seg, rest_dir=(0, -1, 0), damping=0.12, stiff=0.08, gravity=0.35):
         self.n, self.seg = n, seg
@@ -149,10 +152,35 @@ class Chain:
 
     def reset(self, anchor, rest=None):
         r = self.rest if rest is None else np.asarray(rest, float)
-        self.p = np.array([anchor + r * self.seg * i for i in range(self.n + 1)], float)
+        self.p = np.array([np.asarray(anchor, float) + r * self.seg * i for i in range(self.n + 1)], float)
         self.prev = self.p.copy()
 
-    def step(self, anchor, rest_dir=None, wind=(0, 0, 0), substeps=4, collide=None):
+    def _fix(self, a, b, r, ground, collide):
+        d = b - a
+        ln = np.linalg.norm(d)
+        if ln < 1e-6:
+            d, ln = r.copy(), 1.0
+        b = a + d / ln * self.seg
+        if collide is not None:
+            b = collide(b)
+            d = b - a
+            ln = np.linalg.norm(d)
+            if ln > 1e-6:
+                b = a + d / ln * self.seg
+        if ground is not None and b[1] < ground:
+            dy = ground - a[1]
+            hz = math.sqrt(max(self.seg * self.seg - dy * dy, 0.0))
+            hv = np.array([b[0] - a[0], b[2] - a[2]])
+            lh = np.linalg.norm(hv)
+            if lh < 1e-6:
+                hv = np.array([r[0], r[2]])
+                lh = np.linalg.norm(hv)
+                if lh < 1e-6:
+                    hv, lh = np.array([0.0, -1.0]), 1.0
+            b = np.array([a[0] + hv[0] / lh * hz, ground, a[2] + hv[1] / lh * hz])
+        return b
+
+    def step(self, anchor, rest_dir=None, wind=(0, 0, 0), substeps=4, collide=None, ground=None):
         r = self.rest if rest_dir is None else np.asarray(rest_dir, float) / np.linalg.norm(rest_dir)
         if self.p is None:
             self.reset(anchor, r)
@@ -168,15 +196,12 @@ class Chain:
             for _ in range(3):
                 for i in range(self.n):
                     a, b = self.p[i], self.p[i + 1]
-                    # stiffness toward the rest direction from the previous node
                     want = a + r * self.seg
-                    b += (want - b) * self.stiff
-                    d = b - a
-                    ln = np.linalg.norm(d)
-                    if ln > 1e-9:
-                        b[:] = a + d / ln * self.seg
-                    if collide is not None:
-                        b[:] = collide(b)
+                    b = b + (want - b) * self.stiff
+                    seg_dir = (a - self.p[i - 1]) if i > 0 else r
+                    nl = np.linalg.norm(seg_dir)
+                    seg_dir = seg_dir / nl if nl > 1e-6 else r
+                    self.p[i + 1] = self._fix(a, b, seg_dir, ground, collide)
         self.prev[0] = self.p[0].copy()
         return self.p.copy()
 

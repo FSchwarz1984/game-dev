@@ -184,6 +184,8 @@ func _finish() -> void:
 	mat.set_shader_parameter("vign_a", lerpf(0.35, 0.6, night))
 	var wv := float(state.get("wave", -1.0))
 	mat.set_shader_parameter("wash_a", pow(VistaEnv.smoothj(0.88, 1.0, wv), 1.4) * 0.97 if wv > 0.88 else 0.0)
+	mat.set_shader_parameter("view", Vector2(view))
+	mat.set_shader_parameter("end_k", _current.wave_fx.end_k if "wave_fx" in _current else 0.0)
 
 
 ## "high" on desktops, "low" on phones (unless set): companion sparks and the motes' count.

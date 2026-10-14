@@ -71,6 +71,9 @@ class Tsuzumi(Model):
             St.Mat('wicker', ['#644728', '#8f6a3c', '#bf9558', '#e1c084'], '#2f1e12', [0.30, 0.50, 0.78], line=1),
             St.Mat('rope', ['#8f6a3c', '#bf9558', '#e1c084'], '#2f1e12', [0.45, 0.72], prio=1.5),
             St.Mat('navy', ['#16122a', '#201e3f', '#2f305c'], '#16122a', [0.45, 0.72], prio=1.5),
+            St.Mat('paper', ['#cbc0cd', '#ebe3d6', '#fbf7ef'], '#3b3150', [0.45, 0.72], prio=1.5),
+            St.Mat('dangoP', ['#c97a8f', '#e6a1b4', '#f3d9df'], '#3e1424', [0.45, 0.72], prio=3.0),
+            St.Mat('dangoG', ['#6f9a48', '#9bc46a', '#c3e09a'], '#1e2e14', [0.45, 0.72], prio=3.0),
         ], extra=C)
 
     def chain_specs(self):
@@ -115,14 +118,38 @@ class Tsuzumi(Model):
              ell('hat', (1.3, 0.9, 1.3), 'straw', at=(0, 3.9, 0), **hat)]
         return S
 
-    def hat_frame(self, bw, yaw):
+    def hat_place(self, bw, yaw, where):
+        """Where the hat is: 'head' (worn), 'face' (lying over her face), 'chest' (sliding off as
+        she sits up), 'lap' (held in her lap), 'off' (lifting off her head as she falls)."""
+        head = bw['head']
+        if where == 'face':
+            return head @ G.M4(G.Rx(90), (0, 4.4, 5.0))
+        if where == 'chest':
+            return bw['chest'] @ G.M4(G.Rx(75), (0, 1.2, 4.2))
+        if where == 'lap':
+            return bw['pelvis'] @ G.M4(G.Rx(78), (0, 3.2, 5.6))
+        if where == 'off':      # lagging up off her head as she drops
+            m = self.hat_frame(bw, yaw, 6.0)
+            m[:3, 3] += np.array([0.0, 2.6, 0.0])
+            return m
+        if where == 'brim':     # lifted at the front by her right hand
+            return self.hat_frame(bw, yaw, 16.0)
+        return self.hat_frame(bw, yaw)
+
+    def hat_frame(self, bw, yaw, ctx_lift=0.0):
         """On her head, tipped back toward the camera in every view: a round hat then keeps the same
         outline from any side at this pitch (only the band turns with her), and the face shows
         under the front brim. Bows and falls still carry the head's own rotation."""
         head = bw['head']
         seat = head @ np.array([0, 8.6, -0.4, 1.0])
+        # keep the hat nearly level: it turns with her head and takes a third of its nod, none of
+        # its roll (a big disc of straw would otherwise swamp every bow and lean)
+        f = head[:3, :3] @ np.array([0, 0, 1.0])
+        yaw_h = math.degrees(math.atan2(f[0], f[2]))
+        pitch_h = -math.degrees(math.asin(max(-1.0, min(1.0, f[1]))))
+        R = G.Ry(yaw_h) @ G.Rx(0.2 * pitch_h - ctx_lift)
         tilt = G.Ry(-yaw) @ G.Rx(-HAT_TILT) @ G.Ry(yaw)
-        return G.M4(tilt @ head[:3, :3], seat[:3])
+        return G.M4(tilt @ R, seat[:3])
 
     # ------------------------------------------------------------------ shapes
     def head_shapes(self, ctx):
@@ -156,8 +183,11 @@ class Tsuzumi(Model):
         var = ctx.get('variant', 'plain')
         S = self.head_shapes(ctx) + self.hair_sheet(ctx)
         # the hat, in its own frame
-        bw['hat'] = self.hat_frame(bw, ctx.get('yaw', 0.0))
-        S += self.hat_shapes(ctx, ctx.get('hat', 'intact'))
+        where = ctx.get('hat', 'head')
+        if where != 'none':
+            bw['hat'] = self.hat_place(bw, ctx.get('yaw', 0.0), where)
+            S += self.hat_shapes(ctx, ctx.get('hat_variant', 'intact'))
+        S += self.prop_shapes(ctx)
         # neck, kimono top, collar
         S += [rcone('neck', (0, -0.4, 0), (0, 1.8, 0), 1.05, 1.0, 'skin', part='neck'),
               ell('spine', (2.7, 2.4, 2.0), 'indigo', at=(0, 0.8, 0.05), part='torso', group='torso', k=1.0),
@@ -173,9 +203,12 @@ class Tsuzumi(Model):
             S += [box(f'sash{j}', (0.62, 0.86, 0.14), 'red', round_=0.1, at=(0, -0.75, 0), part='sash')]
         # haori: an open coat on the coat chain; left, right and back pieces leave the front open
         coat = dict(part='coat', group='coat', k=0.0)
-        hz = 5.6
-        for cut in ((-1, -0.107, 0, -1.6), (1, -0.107, 0, -1.6), (0, 0, 1, 0.2)):
-            S += [skirt('coat0', hz, 5.4, 3.3, 'white', sx=1.0, sz=0.78, wave=(1.0, -6, 0.3), flare=(0.25, 7, 0.0),
+        # sitting and lying fold the long coat: it pools around her hips instead of trailing
+        hz = 5.6 * ctx.get('coat_len', 1.0)
+        hem_r = 5.4 + (1.0 - ctx.get('coat_len', 1.0)) * 3.0
+        g = 1.6
+        for cut in ((-1, -0.107 / ctx.get('coat_len', 1.0), 0, -g), (1, -0.107 / ctx.get('coat_len', 1.0), 0, -g), (0, 0, 1, 0.2)):
+            S += [skirt('coat0', hz, hem_r, 3.3, 'white', sx=1.0, sz=0.78, wave=(1.0, -6, 0.3), flare=(0.25, 7, 0.0),
                         round_=0.4, at=(0, -hz, 0), cut=cut, **coat)]
         # trousers and boots
         for s, sx in (('L', 1), ('R', -1)):
@@ -194,6 +227,31 @@ class Tsuzumi(Model):
                   ell('hand' + s, (0.78, 0.9, 0.78), 'skin', at=(0, -0.4, 0.15), part='hand' + s)]
         if var in ('frame', 'load'):
             S += self.frame_shapes(ctx, var == 'load')
+        return S
+
+    def prop_shapes(self, ctx):
+        """Things in her right hand: the bon lantern (hanging from its handle) or the dango skewer."""
+        bw = ctx['bones']
+        prop = ctx.get('prop')
+        S = []
+        if prop in ('lantern', 'lantern_left'):
+            # the lantern hangs from her hand; once hooked ('lantern_left') it stays where the
+            # hand let go (the hook's spot: the anchor 'hook' of the third frame)
+            hand = bw['handR'] @ np.array([0, -0.7, 0, 1.0])
+            at = hand[:3] + np.array([0, -3.0, 0.4])
+            if prop == 'lantern_left':
+                at = self._hooked if getattr(self, '_hooked', None) is not None else at
+            else:
+                self._hooked = at
+            bw['lantern'] = G.M4(np.eye(3), at)
+            S += [rcone('lantern', (0, 3.0, -0.4), (0, 1.9, 0), 0.22, 0.22, 'wood', part='lantern'),
+                  ell('lantern', (1.35, 1.75, 1.35), 'paper', part='lantern',
+                      bands=[(1, -1.8, -1.25, 'boot'), (1, 1.25, 1.8, 'boot'), (1, -0.3, 0.3, 'red')])]
+        elif prop and prop.startswith('dango'):
+            n = int(prop[5:] or 3)
+            S += [rcone('handR', (0, -0.4, 0.2), (0, -4.4, 0.2), 0.16, 0.16, 'wood', part='dango')]
+            for i, mat in enumerate(('dangoG', 'white', 'dangoP')[3 - n:]):
+                S += [ell('handR', (0.72, 0.72, 0.72), mat, at=(0, -1.7 - 0.95 * i, 0.2), part='dango')]
         return S
 
     def frame_shapes(self, ctx, box_on):
@@ -240,7 +298,8 @@ class Tsuzumi(Model):
                         blush=False, skin_ids={self.pal.ids['skin']})
 
     def anchors(self, ctx):
-        a = {'hand': ('handL', (0, -0.6, 0)), 'head': ('head', (0, 12.0, 0))}
+        a = {'hand': ('handL', (0, -0.6, 0)), 'handR': ('handR', (0, -0.6, 0)), 'head': ('head', (0, 12.0, 0)),
+             'seat': ('pelvis', (0, -1.3, -0.4))}
         if ctx.get('variant') in ('frame', 'load'):
             a['loadTop'] = ('chest', (0, 17.4, -3.9))
             a['hook'] = ('chest', (-3.1, 18.6, -3.9))
@@ -256,8 +315,42 @@ D8, D4 = ('front', 'front_right', 'right', 'back_right', 'back', 'back_left', 'l
 SHEETS = {'load': 'load', 'frame': 'frame', 'plain': 'plain'}
 _ALL = tuple(SHEETS)
 _M = Tsuzumi()
+import tsuzumi_acts as T  # noqa: E402
+
+FB = ('front', 'back')
+FLR = ('front', 'right', 'left')
+LR = ('right', 'left')
+
+
+def _a(fn, fps, loop, views, sheets):
+    return {'make': fn, 'fps': fps, 'loop': loop, 'views': views, 'sheets': sheets}
+
+
 ANIMS = {
     'idle': A.idle_spec(6, D8, _ALL),
     'walk': A.with_speed(A.loco_spec('walk', 8, 12, D8, _ALL, wind=0.10), _M),
     'run': dict(A.with_speed(A.loco_spec('run', 8, 15, D8, _ALL, wind=0.22), _M), **{'from': 3.9}),
+    # the verbs (every sheet)
+    'take': _a(T.take, 10, False, D4, _ALL),
+    'give': _a(T.give, 8, False, D4, _ALL),
+    'release': _a(T.release, 9, False, D4, _ALL),
+    'hurt': _a(T.hurt, 8, False, D4, _ALL),
+    'lookUp': _a(T.look_up, 2, True, D4, _ALL),
+    'bow': _a(T.bow, 6, False, D4, _ALL),
+    'touch': _a(T.touch, 6, False, D4, _ALL),
+    # the prologue, with the load
+    'hangLantern': _a(T.hang_lantern, 5, False, ('back', 'right', 'left', 'front'), ('load',)),
+    'eat': _a(T.eat, 4, False, FLR, ('load',)),
+    # the camphor, the fall, the morning (no back-frame)
+    'climb': _a(T.climb, 6, True, ('back',), ('plain',)),
+    'sitEdge': _a(T.sit_edge, 3, True, ('front', 'back', 'right', 'left'), ('plain',)),
+    'standUp': _a(T.stand_up, 5, False, FB, ('plain',)),
+    'fall': _a(T.fall, 8, True, ('front', 'back', 'right', 'left'), ('plain',)),
+    'asleep': _a(T.asleep, 1.5, True, LR, ('plain',)),
+    'sitUp': _a(T.sit_up, 4, False, LR, ('plain',)),
+    'sitGround': _a(T.sit_ground, 3, True, LR, ('plain',)),
+    'reachSit': _a(T.reach_sit, 5, False, LR, ('plain',)),
+    'standUpGround': _a(T.stand_up_ground, 5, False, LR, ('plain',)),
+    'lookOver': _a(T.look_over, 3, True, ('front', 'back', 'right', 'left'), ('plain',)),
+    'strain': _a(T.strain, 8, True, ('front', 'back', 'right', 'left'), ('plain',)),
 }
