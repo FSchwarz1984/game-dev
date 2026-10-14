@@ -125,7 +125,7 @@ function injectStyle() {
   .ttl-speed button { padding: 4px 10px; color: #b6a888; box-shadow: inset 0 0 0 1px rgba(214, 178, 106, .3); }
   .ttl-speed button.on { color: #fbf4e4; box-shadow: inset 0 0 0 1px #c8402f; }
   .ttl-back { align-self: flex-start; padding: 4px 0; color: #cdbf9f; letter-spacing: .3em; }
-  .ttl-keys { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom, 0px)); text-align: center; font: 500 12px/1.4 "Noto Sans SC", system-ui, sans-serif; color: rgba(230, 220, 196, .55); letter-spacing: .08em; pointer-events: none; padding: 0 12px; }
+  .ttl-keys { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom, 0px)); text-align: center; font: 500 12px/1.4 "Noto Sans SC", system-ui, sans-serif; color: rgba(230, 220, 196, .55); letter-spacing: .08em; pointer-events: none; padding: 0 12px; text-wrap: balance; }
   @media (max-height: 460px) { .ttl-name { top: 8vh; } .ttl-menu { bottom: 14vh; } .ttl-menu button { font-size: 16px; padding: 4px 12px 4px 16px; } }
   /* upright phones: the backdrop is an upright frame (canopy, moon upper right, sky, the plain low down);
      the name stands in the open sky on the left, the menu in the calm sky above the plain */

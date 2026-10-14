@@ -222,7 +222,7 @@ function injectStyle() {
   .story { position: fixed; inset: 0; z-index: 30; pointer-events: none; font-family: "Noto Serif SC", "Shippori Mincho", "Songti SC", serif; color: #f3ecdc; }
   .st-box { position: absolute; left: 0; right: 0; height: 0; background: #07080b; transition: height .6s ease; }
   .st-top { top: 0; } .st-bot { bottom: 0; }
-  .story.boxed .st-box { height: 11vh; }
+  .story.boxed .st-box { height: min(11vh, 8vw); }   /* upright phones: thin bars, or the treetop view loses her */
   .st-dlg { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: min(900px, calc(100% - 28px)); transform: translate(-50%, 16px); opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; }
   .st-dlg.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
   .st-panel { position: relative; min-height: 118px; padding: 30px 26px 20px; background: linear-gradient(180deg, rgba(18,15,22,.92), rgba(10,9,13,.95)); border: 1px solid rgba(214,182,120,.45); border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.45), inset 0 0 0 3px rgba(10,9,13,.9), inset 0 0 0 4px rgba(214,182,120,.18); }
@@ -230,7 +230,7 @@ function injectStyle() {
   .st-port { position: absolute; left: clamp(-6px, 1%, 10px); bottom: 0; height: clamp(190px, 38vh, 330px); width: auto; object-fit: contain; object-position: bottom; filter: drop-shadow(0 6px 14px rgba(0,0,0,.55)); z-index: 1; }
   .st-port.in { animation: st-port-in .22s ease-out; }
   @keyframes st-port-in { from { transform: translateY(8px); opacity: .4; } to { transform: none; opacity: 1; } }
-  .st-name { position: absolute; top: -15px; display: flex; align-items: baseline; gap: 8px; padding: 4px 14px 5px 10px; background: #1a1418; border: 1px solid rgba(214,182,120,.5); border-radius: 3px; }
+  .st-name { position: absolute; top: -15px; white-space: nowrap; display: flex; align-items: baseline; gap: 8px; padding: 4px 14px 5px 10px; background: #1a1418; border: 1px solid rgba(214,182,120,.5); border-radius: 3px; }
   .st-dlg.has-port .st-name { left: clamp(150px, 26%, 230px); } .st-dlg:not(.has-port) .st-name { left: 22px; }
   .st-name i { width: 9px; height: 9px; background: #c4462e; transform: rotate(45deg); align-self: center; }
   .st-name b, .st-name small { font-family: "Noto Serif JP", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "IPAMincho", "IPAGothic", "Noto Serif SC", serif; }
@@ -245,11 +245,11 @@ function injectStyle() {
   .st-sub.on { opacity: 1; }
   .st-card { position: absolute; left: 0; right: 0; bottom: 22vh; text-align: center; opacity: 0; transition: opacity 1.2s; }
   .st-card.on { opacity: 1; }
-  .st-card h2 { margin: 0; font-family: "Shippori Mincho", "Noto Serif SC", serif; font-weight: 700; font-size: clamp(22px, 3.2vw, 34px); letter-spacing: .32em; text-shadow: 0 2px 10px rgba(0,0,0,.8); }
+  .st-card h2 { margin: 0; font-family: "Shippori Mincho B1", "Shippori Mincho", "Noto Serif SC", serif; font-weight: 700; font-size: clamp(22px, 3.2vw, 34px); letter-spacing: .32em; text-shadow: 0 2px 10px rgba(0,0,0,.8); }
   .st-card p { margin: 6px 0 0; font-size: 14px; letter-spacing: .2em; color: #d8c9a6; text-shadow: 0 1px 6px rgba(0,0,0,.8); }
   .st-title { position: absolute; inset: 0; display: grid; place-content: center; text-align: center; opacity: 0; transition: opacity 1.6s; }
   .st-title.on { opacity: 1; }
-  .st-title h1 { margin: 0; font-family: "Shippori Mincho", "Noto Serif SC", serif; font-weight: 800; font-size: clamp(56px, 11vw, 120px); letter-spacing: .5em; text-indent: .5em; color: #2a2230; text-shadow: 0 0 30px rgba(255,255,255,.6); }
+  .st-title h1 { margin: 0; font-family: "Shippori Mincho B1", "Shippori Mincho", "Noto Serif SC", serif; font-weight: 700; font-size: clamp(56px, 11vw, 120px); letter-spacing: .5em; text-indent: .5em; color: #2a2230; text-shadow: 0 0 30px rgba(255,255,255,.6); }
   .st-title p { margin: 10px 0 0; font-size: 15px; letter-spacing: .6em; text-indent: .6em; color: #5b4c5e; }
   .st-hint { position: fixed; left: 0; top: 0; padding: 6px 12px; background: rgba(16,14,20,.85); border: 1px solid rgba(214,182,120,.55); border-radius: 4px; font-family: "Noto Sans SC", system-ui, sans-serif; font-size: 14px; color: #f3ecdc; opacity: 0; transition: opacity .25s; white-space: nowrap; }
   .st-hint.on { opacity: 1; }
@@ -262,7 +262,7 @@ function injectStyle() {
   @media (max-width: 600px) and (min-height: 481px) {
     .st-panel { min-height: 104px; padding: 26px 16px 16px; }
     .st-dlg.has-port .st-panel { padding-left: 16px; }
-    .st-dlg.has-port .st-name { left: 156px; }
+    .st-dlg.has-port .st-name { left: auto; right: 12px; }
     .st-port { height: clamp(140px, 21vh, 176px); left: 2px; bottom: calc(100% - 1px); }
     .st-txt { font-size: 17px; }
     .st-sub { font-size: 17px; }

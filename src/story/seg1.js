@@ -389,6 +389,12 @@ export async function day1(G) {
     run: () => {
       tried = true;
       cut(G, async () => {
+        // she takes hold at the beam's west end, facing along it: from there the beam, its weight
+        // going and Saji under the far end are all in view (standing in front of it, her hat hid them)
+        const spot = [[P.beam[0] - 1.75, P.beam[1] + 0.2], [P.beam[0] - 1.75, P.beam[1] + 0.6], [P.beam[0] - 1.6, P.beam[1] + 0.95]]
+          .find(([x, z]) => f.canStand(x, z));
+        if (spot && Math.hypot(her.x - spot[0], her.z - spot[1]) > 0.25) await D.move('tsuzumi', [spot], { speed: 1.6 });
+        D.face('tsuzumi', 'right');
         await D.play('tsuzumi', 'strain', { hold: 1.3 });
         au.sfx('wobble', { x: beam.x, y: beam.z });
         await D.wait(0.5);
