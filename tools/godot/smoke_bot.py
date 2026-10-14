@@ -282,7 +282,7 @@ class Bot:
         s = self.state()
         self.note("window %s logical %s scale %s margin %s" % (s["window"], s["logical"], s["scale"], s["margin"]))
         self.check("window filled at an integer scale, no bars",
-                   s["logical"][0] * s["scale"] == s["window"][0] and s["logical"][1] * s["scale"] == s["window"][1],
+                   0 <= s["window"][0] - s["logical"][0] * s["scale"] < s["scale"] and 0 <= s["window"][1] - s["logical"][1] * s["scale"] < s["scale"],
                    "logical %s x %d vs window %s" % (s["logical"], s["scale"], s["window"]))
         totals0 = s["ledger"]["totals"]
         self.check("things stand on their terrace (the lantern on the 1.5 m plateau)", abs(self.entity(s, "lantern")["h"] - 1.5) < 1e-3,

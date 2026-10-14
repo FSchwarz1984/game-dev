@@ -1,9 +1,13 @@
 class_name PixelStage
 extends Control
-## The pixel-perfect stage. The window is filled at an integer scale s = floor(min(w / 480,
-## h / 270)) and the logical (native-pixel) canvas grows to fill it: content_scale_size =
-## (w / s, h / s), so a bigger window shows more world and there are no black bars (at most one
-## stray window pixel at odd sizes). Stretch mode is canvas_items with integer scaling (project
+## The pixel-perfect stage. The window is filled at an integer scale s = round(h / 270), lowered
+## while the logical width would fall under MIN_W, and the logical (native-pixel) canvas fills the
+## window: content_scale_size = (w / s, h / s). The native height therefore stays near 270 on every
+## screen (1280x720 -> 426x240 at x3, 1920x1080 -> 480x270 at x4, 2560x1440 -> 512x288 at x5,
+## 1200x540 -> 600x270 at x2), so framing and on-screen size are consistent across devices, and
+## there are no black bars (at most s - 1 stray window pixels at odd sizes). Lead decision
+## 2026-10-14: the earlier floor(min(w/480, h/270)) showed 640x360 at 720p, which made everything
+## a third smaller than the framing the user approved in the JS version (427x240 at x3). Stretch mode is canvas_items with integer scaling (project
 ## settings): everything is laid out in native pixels and drawn at s times.
 ##
 ## The world renders into its own SubViewport at native resolution plus a 1-pixel border, with
@@ -19,6 +23,8 @@ extends Control
 signal logical_resized(size: Vector2)
 
 const BASE := Vector2(480, 270)
+## The narrowest logical canvas the UI is laid out for (the dialogue box shrinks to fit).
+const MIN_W := 400.0
 
 var world_vp: SubViewport
 var world_root: Node2D
@@ -91,7 +97,9 @@ func fit() -> void:
 	var size := Vector2(win.size)
 	if size.x < 1 or size.y < 1:
 		return
-	var s := maxi(1, floori(minf(size.x / BASE.x, size.y / BASE.y)))
+	var s := maxi(1, roundi(size.y / BASE.y))
+	while s > 1 and size.x / s < MIN_W:
+		s -= 1
 	var cs := Vector2i(floori(size.x / s), floori(size.y / s))
 	scale_factor = s
 	if win.content_scale_size != cs:

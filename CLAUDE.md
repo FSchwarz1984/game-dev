@@ -46,7 +46,7 @@
 
 ## 4. 技术约定
 
-- **Godot 版（当前）：** 工程在 `godot/`。每次新会话先装工具链（约 2.5 分钟）：`bash tools/godot/setup-runtime.sh && bash tools/godot/setup-godot.sh && bash tools/godot/setup-android-sdk.sh`（官方 4.7.2 编辑器与模板，SHA512 校验；细节和坑见 `docs/knowledge/10-godot-toolchain.md`）。原生 480×270、整数倍、窗口更大就看到更多世界（不留黑边）；拉伸模式是 `canvas_items`，整数倍和画布尺寸按窗口自己算，世界在原生分辨率的视口里画，镜头跟随她时锁整像素、演出运镜可亚像素平移（`viewport` 拉伸做不到，见 knowledge/16 §2、§12）；中日文必须开 `include_text_server_data` 和严格断行（`line_breaking_strictness=3`）；地形不再按 knowledge/15 的"平台加崖"（G5R-4 作废了它的第 1–3 节），新路线以美术样章为准。比例 1 米 = 20 原生像素，角色约 34–40 像素高。
+- **Godot 版（当前）：** 工程在 `godot/`。每次新会话先装工具链（约 2.5 分钟）：`bash tools/godot/setup-runtime.sh && bash tools/godot/setup-godot.sh && bash tools/godot/setup-android-sdk.sh`（官方 4.7.2 编辑器与模板，SHA512 校验；细节和坑见 `docs/knowledge/10-godot-toolchain.md`）。原生约 480×270、整数倍 s = round(窗口高 / 270)（画布宽不小于 400 时），画布填满窗口、不留黑边：1280×720 → 426×240（×3），1920×1080 → 480×270（×4），2560×1440 → 512×288（×5），1200×540 → 600×270（×2），各种屏幕的取景基本一致（主管决定，2026-10-14；原先的 floor 规则在 720p 上显示 640×360，画面小了三分之一）；拉伸模式是 `canvas_items`，整数倍和画布尺寸按窗口自己算，世界在原生分辨率的视口里画，镜头跟随她时锁整像素、演出运镜可亚像素平移（`viewport` 拉伸做不到，见 knowledge/16 §2、§12）；中日文必须开 `include_text_server_data` 和严格断行（`line_breaking_strictness=3`）；地形不再按 knowledge/15 的"平台加崖"（G5R-4 作废了它的第 1–3 节），新路线以美术样章为准。比例 1 米 = 20 原生像素，角色约 34–40 像素高。
 - JS 版（停用，只作参考）：WebGL2 自研 2D 管线（`src/gfx/` 等）。`src/render/`、`src/world/`、`src/play/` 里的 Three.js 3D 代码是更早停用的 HD-2D 灰盒。knowledge/03 记录的是 HD-2D 研究，已不再是方向。
 - 交付（Godot 版）：导出 Windows 与安卓包，放进 Artifact 下载页。（JS 版的规则：单文件构建到 `dist/`，Artifact 版本 body-only、纯 ASCII。）
 - 验证：每个视觉或玩法改动在汇报前必须截图或录序列验证，并检查手机横屏视口。Godot 版在 Xvfb + Mesa 软件渲染下运行游戏截图（见 knowledge/10）；JS 版用无头 Chromium（`playtest-capture` 技能）。

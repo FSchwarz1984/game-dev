@@ -83,15 +83,16 @@ func show_line(who_name: String, portrait: Texture2D, bbcode: String) -> void:
 
 func relayout() -> void:
 	var view := get_viewport_rect().size
-	var bx := floorf((view.x - BOX_W) * 0.5)
+	var bw := minf(BOX_W, view.x - 12.0)
+	var bx := floorf((view.x - bw) * 0.5)
 	var by := view.y - BOTTOM - BOX_H
-	box = Rect2(bx, by, BOX_W, BOX_H)
+	box = Rect2(bx, by, bw, BOX_H)
 	var has_card := portrait_tex != null
 	card = Rect2(bx + 4, by - CARD_RISE, CARD, CARD) if has_card else Rect2()
 	var tx := card.end.x + 8 if has_card else bx + 12
 	var line := int(UiTheme.LINE[_kind])
 	text.position = Vector2(tx, by + 12)
-	text.size = Vector2(bx + BOX_W - 9 - tx, line * 2 + 2)
+	text.size = Vector2(bx + bw - 9 - tx, line * 2 + 2)
 	var nw := ceilf(name_label.get_minimum_size().x)
 	var px := card.end.x + 6 if has_card else bx + 10
 	plate = Rect2(px, by - 8, 15 + nw, 15) if speaker != "" else Rect2()
