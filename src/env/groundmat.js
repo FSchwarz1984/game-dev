@@ -113,7 +113,7 @@ export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0)
   const big = N.big.sample(X * 0.3, Y * 0.3), mid = N.mid.sample(X * 0.7 + 30, Y * 0.7);
   const cl = N.cl.sample(x * 0.8, y * 0.8) * 0.6 + N.cl2.sample(x * 1.9 + 5, y * 1.9) * 0.4, r = hash2(x, y, 3);
   const hue = sst(0.35, 0.75, big);
-  let t = mid * 0.45 + cl * 0.55; t = 0.5 + (t - 0.5) * (1 - calm * 0.45);
+  let t = mid * 0.45 + cl * 0.55; t = 0.5 + (t - 0.5) * (1 - calm * 0.25);
   const dark = mix3(GV.d0, GV.d1, hue), lite = mix3(GV.l0, GV.l1, hue);
   let c = t < 0.4 ? dark : t < 0.62 ? mix3(GV.m0, GV.m1, hue) : lite, flags = 0;
   // blade highlights only on the lit tops of clumps, crevices only in the hollows
@@ -123,14 +123,14 @@ export function grass(X, Y, x, y, calm = 0, moist = 0.6, flowers = 0.4, dry = 0)
   // dry and olive patches where the slow field is high (the sun-bleached saddle)
   const dk = sst(0.6, 0.82, big + (1 - moist) * 0.28 + dry * 0.22) * 0.6;
   if (dk > 0) c = mix3(c, mix3(GV.dry, GV.olive, mid), dk);
-  // clover: trefoils in patches, a few white heads
+  // clover: scattered trefoils in patches (jittered in their cells, never a lattice), now and then a white head
   const cv = N.warp.sample(X * 0.3 + 170, Y * 0.3 + 40);
-  if (cv > 0.66 - flowers * 0.04 && calm < 0.7) {
-    const cx = Math.floor(X / 4), cy = Math.floor(Y / 3), ch = hashi(cx, cy, 91);
-    if ((ch & 255) < (cv - 0.6) * 1100) {
-      const ox = X - cx * 4 - 1 - ((ch >> 8) & 1), oy = Y - cy * 3 - 1;
-      if ((ox === 0 && oy === -1) || (Math.abs(ox) === 1 && oy === 0)) c = mix3(GV.m1, GV.l1, 0.55 + ((ch >> 10) & 1) * 0.2);
-      else if (ox === 0 && oy === 0) c = ((ch >> 12) & 7) === 0 ? [232, 226, 214] : GV.m0;
+  if (cv > 0.68 && calm < 0.7) {
+    const cx = Math.floor(X / 6), cy = Math.floor(Y / 5), ch = hashi(cx, cy, 91);
+    if ((ch & 255) < (cv - 0.66) * 700) {
+      const ox = X - cx * 6 - 1 - ((ch >> 8) & 3), oy = Y - cy * 5 - 1 - ((ch >> 14) & 3);
+      if ((ox === 0 && oy === -1) || (Math.abs(ox) === 1 && oy === 0)) c = mix3(GV.m1, GV.l1, 0.45 + ((ch >> 10) & 3) * 0.1);
+      else if (ox === 0 && oy === 0) c = ((ch >> 12) & 3) === 0 ? [226, 220, 210] : GV.m0;
     }
   }
   // wildflowers: clustered in patches, 2 px with a darker pixel under

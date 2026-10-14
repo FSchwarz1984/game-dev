@@ -20,7 +20,9 @@ export function* titleGen(W, H, seed) {
   const yh = Math.round(clamp(H * 0.6, H - 118, H - 80));
   const cx = Math.round(W / 2), f = 360, S = Math.max(110, yh * 0.95);
   const env = todEnv(21);
-  const envG = { ...env, sun: env.sun.map(v => v * 0.35) };   // moonlight, weak, from the upper right
+  // moonlight from the upper right, falling on the plain; the whole night a touch lifted
+  const lift = { lift: env.lift.map((v, i) => v + [0.014, 0.018, 0.028][i]) };
+  const envG = { ...env, ...lift, sun: env.sun.map(v => v * 0.62), amb: env.amb.map(v => v * 1.08) };
   const sun = { dir: norm([0.6, 0.45, -0.35]), slope: 0.45 };
   const ground = yield* buildGroundGen({ w: W, h: H, cx, yh, f, S, sun, seed });
   yield;
@@ -123,7 +125,7 @@ export function* titleGen(W, H, seed) {
         const k = Math.sin(t * 0.55 + gr.ph) + 0.3 * Math.sin(t * 1.7 + gr.ph * 3);
         g.drawImage(gr.c, -2 + Math.round(k * 0.9), H - gr.c.height);
       }
-      g.globalAlpha = 0.42; g.drawImage(cache.vign, 0, 0); g.globalAlpha = 1;
+      g.globalAlpha = 0.32; g.drawImage(cache.vign, 0, 0); g.globalAlpha = 1;
     },
   };
   return shot;
@@ -132,7 +134,7 @@ export function* titleGen(W, H, seed) {
     const sky = paintSky(W, H, yh, S, env);
     const starC = starCanvas(W, H, stars, y => smooth(yh, yh - 30, y));
     const ground_ = ground.layer.canvas('t', palette(GROUND_MATS, envG, { haze: env.mist }));
-    const fpal = palette(FOLIAGE_MATS, { ...env, sun: [0.42, 0.48, 0.66] });
+    const fpal = palette(FOLIAGE_MATS, { ...env, ...lift, sun: [0.46, 0.53, 0.72] });
     const canopyC = canopy.layer.canvas('t', fpal);
     for (const sp of sprays) sp.c = sp.layer.canvas('t', fpal);
     // the moon: a disc with maria, a stepped halo
@@ -173,6 +175,15 @@ export function* titleGen(W, H, seed) {
     bg.drawImage(sky, 0, 0); bg.drawImage(starC, 0, 0);
     bg.drawImage(mc, moon.x - mc.width / 2, moon.y - mc.height / 2);
     bg.drawImage(ground_, 0, 0);
+    // a pool of moonlight on the plain under the moon, and the mist over it catching the light
+    bg.globalCompositeOperation = 'lighter';
+    for (let k = 0; k < 6; k++) {
+      const r = W * (0.5 - k * 0.07), cy = yh + (H - yh) * 0.3;
+      const gr2 = bg.createRadialGradient(moon.x - W * 0.04, cy, 0, moon.x - W * 0.04, cy, r);
+      gr2.addColorStop(0, 'rgba(120,138,190,0.035)'); gr2.addColorStop(1, 'rgba(120,138,190,0)');
+      bg.fillStyle = gr2; bg.fillRect(0, yh - 6, W, H - yh + 6);
+    }
+    bg.globalCompositeOperation = 'source-over';
     return { back, canopy: canopyC, glitter, vign, grass: grassC };
   }
 }

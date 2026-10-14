@@ -318,19 +318,20 @@ function* populateG(K) {
   yield 0.65;
   // the switchback hillside: groves on the wide part of the benches, shrubs and sasa along every bank, susuki
   // in the open; the legs of the road stay clear (no planting within 1.1 m of a road or a flight)
-  const nearRoad = (x, z) => { for (const [dx, dz] of [[1.1, 0], [-1.1, 0], [0, 1.1], [0, -1.1], [0.8, 0.8], [-0.8, 0.8], [0.8, -0.8], [-0.8, -0.8]]) { const t = T.topAt(x + dx, z + dz); if (t === TM.PATH || t === TM.STEP || t === TM.PAVE) return true; } return false; };
+  const nearRoad = (x, z) => { for (const [dx, dz] of [[0.9, 0], [-0.9, 0], [0, 0.9], [0, -0.9], [0.65, 0.65], [-0.65, 0.65], [0.65, -0.65], [-0.65, -0.65]]) { const t = T.topAt(x + dx, z + dz); if (t === TM.PATH || t === TM.STEP || t === TM.PAVE) return true; } return false; };
   const fill = (x0, x1, z0, z1, h, n, pool) => {
-    for (let k = 0, c = 0; k < n * 40 && c < n; k++) {
+    for (let k = 0, c = 0; k < n * 60 && c < n; k++) {
       const x = R.range(x0, x1), z = R.range(z0, z1);
-      if (Math.abs(T.heightAt(x, z) - h) > 0.1 || !ground(x, z, 0.45) || !free(x, z, 0.7) || nearRoad(x, z)) continue;
+      if (Math.abs(T.heightAt(x, z) - h) > 0.1 || !ground(x, z, 0.35) || !free(x, z, 0.6) || nearRoad(x, z)) continue;
       place(pick(pool), x, z, { flip: R() < 0.5 }); keep.push([x, z, 0.7]); c++;
     }
   };
   const UNDER = [['sasa0', 2], ['sasa1', 2], ['sasa2', 1.5], ['fern0', 1], ['fern1', 1], ['fern2', 1], ['azalea0', 1], ['azalea2', 1], ['camellia2', 0.8], ['susuki0', 1], ['susuki2', 1], ['susuki4', 1]];
-  for (const [x, z, r, n] of [[72, 69, 4, 4], [83, 70.4, 3, 3], [70, 76.2, 3, 3], [80, 77, 2.5, 2], [124, 62.4, 2.5, 2], [104, 59.2, 2, 1]]) { grove(x, z, r, n, MIXED, { sp: 1.4 }); yield; }
-  fill(64, 130, 57.5, 67.5, -1.5, 46, UNDER); yield;
-  fill(64, 130, 64, 75.5, -3, 52, UNDER); yield;
-  fill(62, 130, 69, 79.5, -4.5, 40, UNDER); yield 0.7;
+  for (const [x, z, r, n, sp] of [[72, 69, 4, 4, MIXED], [83, 70.4, 3, 3, MIXED], [70, 76.2, 3, 3, MIXED], [80, 77, 2.5, 2, MIXED], [124, 62.4, 2.5, 2, MIXED], [105, 59.4, 2.6, 2, MIXED],
+    [119.5, 61.0, 2.2, 2, OPEN], [111, 58.9, 1.8, 1, OPEN], [92, 63.4, 2.4, 2, MIXED], [108, 67.4, 1.6, 1, OPEN], [126, 67.4, 2.0, 2, MIXED], [86, 73.2, 2.2, 2, MIXED]]) { grove(x, z, r, n, sp, { sp: 1.3 }); yield; }
+  fill(64, 130, 57.5, 67.5, -1.5, 70, UNDER); yield;
+  fill(64, 130, 64, 75.5, -3, 80, UNDER); yield;
+  fill(62, 130, 69, 79.5, -4.5, 64, UNDER); yield 0.7;
   // undergrowth: ferns and sasa in the shade, susuki and lilies on the open saddle, moss at the roots' feet
   const under = (names, n, test, sp = 1.2) => { let c = 0; for (let k = 0; k < n * 30 && c < n; k++) { const x = R.range(-4, 124), z = R.range(4, 74); if (!test(x, z)) continue; if (!ground(x, z, 0.45) || !free(x, z, sp)) continue; place(R.pick(names), x, z, { flip: R() < 0.5 }); keep.push([x, z, sp * 0.8]); c++; } };
   const shade = (x, z) => Math.hypot(x - tx, (z - tz) * 1.2) < 16 || x < 22 || (x > 74 && z < 26);

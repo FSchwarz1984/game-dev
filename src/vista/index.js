@@ -16,11 +16,17 @@
 //   shot:  'title' | 'south' | 'tower'
 //   tod:   17.5..21   south: 17.5 golden dusk -> ~18.6 sunset -> ~19.3 blue hour -> 20.5+ night
 //   pan:   0..1       south: the crane up out of the crown (0 = among the leaves, 1 = over the plain)
-//   rise:  0..1       south: 0.03 one light leaves, 0.11 another, 0.17..0.96 every place in turn.
-//                     Animate it (~25-40 s for 0..1); a jump places lights as if rise had run at 1/30 s.
+//   rise:  0..1       south: the lights leave the plain in processions. 0.03 one light leaves the
+//                     headman's house alone, 0.11 another a bonfire; from 0.17 each place (the
+//                     headman's house, the bonfires, stretches of paddies, hamlets) sends its lights up
+//                     one after another, a steady queue on a gentle S-curve, into a faint column of
+//                     light over the town that goes up to the gate; its lamps go out from the edge in.
+//                     Animate it (~25-40 s for 0..1; the pacing assumes ~30 s); a jump places the
+//                     lights as if rise had run at 1/30 s. 60-120 lights in the air at once.
 //   sky:   0..1       south: the cloud deck parts, the sky shore materialises (fully at ~0.75)
-//   wave:  -1 | 0..1  south: -1 off; 0.2 ring round the town, 0.6 at the mountain foot, 0.95 at the
-//                     tree (the frame is veiled pale from 0.9: cut to white at 1)
+//   wave:  -1 | 0..1  south: -1 off; 0.2 ring round the town, 0.6 at the mountain foot, 0.85 at the
+//                     tree (the foreground fills with motes), white at 1. Behind the front the land
+//                     stays, a pale blue-grey ghost of itself, its lamps out.
 //   tower: 1 | 0      tower: blinking; switching to 0 gives one last blink, then dark
 //   figure: (g, anchors) => {}   south: called after the limb, before the leaves in front of it
 // }
@@ -97,7 +103,6 @@ export function createVista({ seed = 7 } = {}) {
     },
     ready(name) { return !!shots[name]; },
     info() { const o = {}; for (const k in shots) o[k] = shots[k].info; return o; },
-    _shot(name) { return shots[name]; },   // tests only
     draw(dt, state = {}) {
       const s = get(state.shot || 'title');
       const t0 = performance.now();

@@ -3,17 +3,20 @@
 //     query: URL params for the page (shot=south&tod=21&rise=.5 ...); prefix the name with
 //     "phone/" for an 844x390 viewport (default 1280x720), "big/" for 1920x1080.
 //     Extra params: frames=N (frames drawn before the capture, dt 1/60), seqn=N&seqdt=S to capture
-//     N native frames S seconds apart (name-000.png ...).
-//   Output: $SHOT_DIR or the session scratchpad shots/vista; <name>.png (page) and
-//   <name>.native.png (the native canvas, 1:1).
+//     N native frames S seconds apart (name-000.png ...), with ramp=key,from,to[,u0,u1] (repeatable)
+//     changing a state value every frame over the part u0..u1 of the sequence.
+//   Output: $SHOT_DIR or .shots/vista in the repository (git-ignored); <name>.png (page) and
+//   <name>.native.png (the native canvas, 1:1). The page is served from $VISTA_OUT or .shots/vista-preview.
+//   Playwright: $PLAYWRIGHT or the global install under /opt/node22.
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { chromium } from '/opt/node22/lib/node_modules/playwright/index.mjs';
+import url from 'node:url';
 
-const SCR = '/tmp/claude-0/-home-user-game-dev/a1b4dbc5-91a8-5ca9-9938-d964a8e56360/scratchpad';
-const SITE = process.env.VISTA_OUT || path.join(SCR, 'vista-preview');
-const OUT = process.env.SHOT_DIR || path.join(SCR, 'shots/vista');
+const { chromium } = await import(process.env.PLAYWRIGHT || '/opt/node22/lib/node_modules/playwright/index.mjs');
+const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '../..');
+const SITE = path.resolve(process.env.VISTA_OUT || path.join(ROOT, '.shots/vista-preview'));
+const OUT = path.resolve(process.env.SHOT_DIR || path.join(ROOT, '.shots/vista'));
 fs.mkdirSync(OUT, { recursive: true });
 
 const server = http.createServer((req, res) => {

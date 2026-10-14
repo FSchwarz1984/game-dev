@@ -1,6 +1,6 @@
 // Bundles the vista preview page (src/vista-test.js) into a folder with an index.html.
 //   node tools/vista/build.mjs [outDir]
-// Default outDir: $VISTA_OUT or the session scratchpad. Not part of the game build.
+// Default outDir: $VISTA_OUT or .shots/vista-preview in the repository (git-ignored). Not part of the game build.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import url from 'node:url';
 import { build } from 'esbuild';
 
 const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '../..');
-const OUT = process.argv[2] || process.env.VISTA_OUT || '/tmp/claude-0/-home-user-game-dev/a1b4dbc5-91a8-5ca9-9938-d964a8e56360/scratchpad/vista-preview';
+const OUT = path.resolve(process.argv[2] || process.env.VISTA_OUT || path.join(ROOT, '.shots/vista-preview'));
 
 fs.mkdirSync(OUT, { recursive: true });
 await build({

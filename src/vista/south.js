@@ -322,7 +322,6 @@ export function* southGen(W, H, seed) {
   }
   let vign = null, vignKey = '';
   const shot = {
-    debug: { streams, solos },
     anchors: {},
     info: { yh, padTop, T, ground: ground.ms, lights: lights.length, TM, streams: streams.map(S => [S.kind, Math.round(S.sx), Math.round(S.sy), Math.round(S.jy), +S.r0.toFixed(2), S.e.length, Math.round(S.join), Math.round(S.path.len)]) },
     draw(g, dt, st) {
@@ -485,7 +484,7 @@ export function* southGen(W, H, seed) {
 
   function drawRising(AB, t, dt, skyK) {
     const closed = 1 - smooth(0.12, 0.55, skyK);
-    let feed = 0;
+    let feed = 0, aloft = 0;
     for (const S of streams) {
       const P = S.path, E = S.el;
       for (let k = 0; k < E.length; k++) {
@@ -498,7 +497,7 @@ export function* southGen(W, H, seed) {
         pathAt(P, d);
         const x = PT[0] + Math.sin(el * 0.8 + k * 1.7 + S.ph) * 0.4 * (1 - smooth(-20, 0, past)), y = PT[1];
         a *= cover(x, y, closed);
-        if (a > 0.02) lightAt(AB, P, d, x, y, S.base, a, k * 0.7 + S.ph, false);
+        if (a > 0.02) { lightAt(AB, P, d, x, y, S.base, a, k * 0.7 + S.ph, false); aloft++; }
       }
     }
     for (const L of solos) {
@@ -510,6 +509,7 @@ export function* southGen(W, H, seed) {
       const a = smooth(0, 1.6, L.el) * (1 - smooth(P.len - 12, P.len, d) * 0.8) * cover(x, y, closed);
       if (a > 0.02) lightAt(AB, P, d, x, y, L.base, a, 0, true);
     }
+    shot.info.aloft = aloft;
     // the column carries what the processions bring: it brightens as they feed it, fades when they stop
     colK += (clamp(feed / 5, 0, 1) - colK) * Math.min(1, dt * 0.7);
     if (colK > 0.01) drawColumn(AB, t, closed);
