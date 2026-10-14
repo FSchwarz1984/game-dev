@@ -406,6 +406,7 @@ config_version=5
 config/name="GodotToolchainTest"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
+config/icon="res://icon.png"
 boot_splash/show_image=false
 boot_splash/bg_color=Color(0.07, 0.07, 0.09, 1)
 run/flush_stdout_on_print=true
@@ -632,6 +633,20 @@ def make_spark(path):
     img.save(path)
 
 
+def make_icon(path):
+    # 192x192 app icon (Android launcher, Windows .exe resource): a dark disc with a lit ring.
+    n = 192
+    img = Image.new("RGBA", (n, n), (0, 0, 0, 0))
+    for y in range(n):
+        for x in range(n):
+            d = math.hypot(x - n / 2 + 0.5, y - n / 2 + 0.5) / (n / 2)
+            if d <= 0.96:
+                ring = max(0.0, 1.0 - abs(d - 0.62) / 0.12)
+                c = (int(lerp(34, 236, ring)), int(lerp(44, 196, ring)), int(lerp(52, 120, ring)), 255)
+                img.putpixel((x, y), c)
+    img.save(path)
+
+
 def make_tiles(path, npath):
     rnd = random.Random(11)
     img = Image.new("RGBA", (64, 16))
@@ -737,6 +752,7 @@ def main():
     make_hero(os.path.join(out, "sprites/hero.png"), os.path.join(out, "sprites/hero_n.png"))
     make_pillar(os.path.join(out, "sprites/pillar.png"), os.path.join(out, "sprites/pillar_n.png"))
     make_spark(os.path.join(out, "sprites/spark.png"))
+    make_icon(os.path.join(out, "icon.png"))
     make_tiles(os.path.join(out, "tiles/tiles.png"), os.path.join(out, "tiles/tiles_n.png"))
     # 0.15 s 880 Hz blip with a fast decay, OGG Vorbis.
     subprocess.check_call(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
