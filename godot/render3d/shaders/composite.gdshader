@@ -19,10 +19,10 @@ uniform vec2 margin_px = vec2(1.0, 1.0);       // the low-res image's hidden bor
 
 void fragment() {
 	vec3 c = texture(TEXTURE, UV).rgb;
-	// S-curve on luma (the hue and the chroma ratio stay put): mids keep their place, the light end
-	// opens up, the dark end deepens a little
+	// S-curve on luma (the hue and the chroma ratio stay put), pivoting low: the darks keep their
+	// place (the lift raises them a touch), the mids and lights open up, the top rolls off
 	float l0 = dot(c, vec3(0.299, 0.587, 0.114));
-	float ls = mix(l0, l0 * l0 * (3.0 - 2.0 * l0), contrast);
+	float ls = l0 + contrast * max(l0 - 0.26, 0.0) * (1.0 - l0) * 1.6;
 	c *= ls / max(l0, 1e-4);
 	float l = dot(c, vec3(0.299, 0.587, 0.114));
 	c = mix(vec3(l), c, saturation);

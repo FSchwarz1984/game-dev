@@ -407,8 +407,8 @@ func _scale_cutaway(n: Node, k: float, dense := false) -> void:
 					# the great evergreen crown: a deep shade in its heart (the crown proxy), dappled
 					# toward its rim where the leaf masses part (the cards cast a little larger than
 					# drawn, and let a few texels through); other trees keep their own lacy shade
-					(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.12)
-					(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.02)
+					(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.0)
+					(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.08)
 					# seen from its shaded side at midday: keep the masses, not a black lid
 					(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.42)
 	for c in n.get_children():
