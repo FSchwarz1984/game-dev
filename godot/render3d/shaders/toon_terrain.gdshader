@@ -48,6 +48,12 @@ const float GC = 7.0;      // glyph cell, native px
 void vertex() {
 	v_wp = VERTEX;
 	v_wn = NORMAL;
+	// The ground casts its shadow from 30 cm inside itself: a slope can never shadow itself through
+	// depth error (self-shadow acne drew a lattice of dots on the gully's banks), while a ridge's or
+	// a rock face's shadow over the land moves by less than a pixel.
+	if (IN_SHADOW_PASS) {
+		VERTEX -= NORMAL * 0.3;
+	}
 }
 
 ivec2 splat_texel(vec2 xz) {
@@ -148,8 +154,10 @@ void fragment() {
 	} else if (mat == 3) {
 		row = 4.0;
 		// strata: bands that follow the height of the rock, broken by noise
-		float band = floor(v_wp.y * 3.2 + w3_vnoise(cell / 11.0) * 1.6);
-		tone = 3.4 + mstep * 0.5 + floor((w3_hash(vec2(band, 7.0)) - 0.5) * 2.0 + 0.5) + floor(wn.y * 1.2);
+		// (a band every 0.7 m of height: 8 px on a vertical face; denser bands alias into stripes)
+		float band = floor(v_wp.y * 1.4 + w3_vnoise(cell / 11.0) * 1.6);
+		float bk = smoothstep(0.85, 0.6, wn.y);
+		tone = 3.4 + mstep * 0.5 + floor((w3_hash(vec2(band, 7.0)) - 0.5) * 2.0 * bk + 0.5) + floor(wn.y * 1.2);
 		porous = 0.45;
 	} else if (mat == 4) {
 		row = 5.0;
@@ -162,8 +170,10 @@ void fragment() {
 		porous = 0.9;
 	} else if (mat == 6) {
 		row = 9.0;
-		float layer = floor(v_wp.y * 4.0 + w3_vnoise(cell / 8.0) * 1.2);
-		tone = 3.2 + mstep * 0.5 + floor((w3_hash(vec2(layer, 3.0)) - 0.5) * 1.6 + 0.5);
+		// cut earth in layers only where the bank is steep, a layer every 0.65 m of height
+		float layer = floor(v_wp.y * 1.55 + w3_vnoise(cell / 8.0) * 1.2);
+		float lk = smoothstep(0.85, 0.6, wn.y);
+		tone = 3.2 + mstep * 0.5 + floor((w3_hash(vec2(layer, 3.0)) - 0.5) * 1.6 * lk + 0.5);
 		porous = 1.0;
 	} else {
 		row = 10.0;

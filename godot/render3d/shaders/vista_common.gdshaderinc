@@ -18,6 +18,7 @@ uniform vec3 haze_col : source_color = vec3(0.7, 0.75, 0.8);   // linear; the ho
 uniform vec3 mist_col : source_color = vec3(0.8, 0.8, 0.84);   // linear; the 遠化 mist (lighter)
 uniform float haze_dist = 2200.0;                              // metres for 63 % haze
 uniform float mist_max = 0.62;              // the curtain (vista_mist) carries the rest
+const float V_SEA_Y = -150.0;               // the sea of mist (vista3d.gd SEA_Y)
 
 float v_bayer8(vec2 p) {
 	ivec2 q = ivec2(mod(p, 8.0));
@@ -86,6 +87,11 @@ vec2 v_air_k(vec3 wp, vec3 cam, vec2 frag) {
 	float thin = mix(1.0, 0.35, smoothstep(-100.0, 700.0, wp.y));
 	float h = 1.0 - exp(-d / haze_dist * thin);
 	float m = smoothstep(0.96, 1.32, v_mist_e(wp.xz)) * mist_max * (1.0 - smoothstep(-60.0, 260.0, wp.y));
+	// the plain under the sea of mist is seen through its holes: the sea is the mist there, so the
+	// veil over the land below it is thin (the fields and the river read, faint and far)
+	float under = 1.0 - smoothstep(V_SEA_Y - 40.0, V_SEA_Y - 5.0, wp.y);
+	m *= 1.0 - 0.75 * under;
+	h *= 1.0 - 0.3 * under;
 	float dz = v_bayer8(frag) - 0.5;
 	return vec2(clamp(floor(h * 10.0 + 0.5 + dz * 0.9) / 10.0, 0.0, 1.0),
 		clamp(floor(m * 8.0 + 0.5 + dz * 0.9) / 8.0, 0.0, 1.0));

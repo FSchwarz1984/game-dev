@@ -317,7 +317,7 @@ func _build_mist() -> void:
 		var x := float(me["cx"]) + sin(a) * float(me["rx"]) * e
 		var z := float(me["cz"]) - cos(a) * float(me["rz"]) * e
 		var g := land_h(x, z)
-		pts.append([Vector3(x, g - 30.0, z), g + 50.0])
+		pts.append([Vector3(x, g - 30.0, z), g + 34.0])
 	for i in n:
 		var p0: Vector3 = pts[i][0]
 		var p1: Vector3 = pts[i + 1][0]

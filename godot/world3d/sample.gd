@@ -8,8 +8,13 @@ extends Node
 ##   --shots=dir:x,z,h;x,z,h;...   several views
 ##   --route=walk       she walks the sample route (hut -> shrine -> camphor -> lookout) by pressing
 ##                      the same movement keys a player would (Input events), for recordings
+##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
 ##   --pitch=deg        camera pitch (evidence renders)
-## Keys: WASD / arrows walk, Shift runs. F2 toggles the time of day (debug).
+##   --route_quit, --route_log, --log_pos, --perf, --quit_after=n, and debugging switches
+##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
+##   --camrange): docs/knowledge/21-3d-pixel-render.md §12
+## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
+## does not run here). On the lookout A/D turn her head, W/S come back. F2 toggles the time of day (debug).
 
 const CHARS_JSON := "res://world3d/sprites/characters.json"
 const CATALOG := "res://world3d/assets/catalog.json"
@@ -30,6 +35,8 @@ var props_root: Node3D
 var blockers: Array = []
 var route: Array[Vector2] = []
 var route_i := 0
+var _stall_at := Vector2.INF
+var _stall_t := 0.0
 var keys_down := {}
 var _haze_h := 0.0
 var atmos: W3Atmosphere
@@ -104,6 +111,30 @@ func _ready() -> void:
 		her.place(Vector3(float(p[0]), 0.0, float(p[1])))
 		saji.place(her.pos + Vector3(-0.9, 0, -0.5))
 	pv.follow(_cam_target, {"cut": true})
+	if args.has("nowater"):
+		for wm in terrain.water_meshes:
+			wm.visible = false
+	if args.has("noshadow"):
+		env.sun.shadow_enabled = false     # debugging: tell shadow-map artefacts from shading ones
+	if args.has("sbias"):
+		var sb := String(args["sbias"]).split(",")   # debugging: shadow bias, normal bias
+		env.sun.shadow_bias = float(sb[0])
+		env.sun.shadow_normal_bias = float(sb[1])
+	if args.has("pancake"):
+		env.sun.directional_shadow_pancake_size = float(args["pancake"])
+	if args.has("sblur"):
+		env.sun.shadow_blur = float(args["sblur"])
+	if args.has("hide_props"):
+		# debugging: hide placed props whose node name contains one of these (camphor, hut, sugi, ...)
+		var subs := String(args["hide_props"]).split(",")
+		for c in props_root.get_children():
+			for sub in subs:
+				if String(c.name).to_lower().contains(sub):
+					(c as Node3D).visible = false
+	if args.has("camrange"):
+		var cr := String(args["camrange"]).split(",")  # debugging: the camera's near, far (m)
+		pv.cam.near = float(cr[0])
+		pv.cam.far = float(cr[1])
 	if args.has("hide"):
 		# debugging: hide parts of the world by node name (Grass, Rocks, Dressing, Atmosphere, ...)
 		for n in String(args["hide"]).split(","):
@@ -193,9 +224,16 @@ func _place_props() -> void:
 		if kind != "camphor":
 			inst.scale = Vector3.ONE * sc
 		props_root.add_child(inst)
+		if kind == "bamboo":
+			# a grove is dense all the way down: open a wide hole around her, she reads first
+			_scale_cutaway(inst, 3.2)
+		elif kind != "camphor":
+			_scale_cutaway(inst, 1.8)
 		if kind == "camphor":
 			_scale_cutaway(inst, 5.0)
-			_solid_cutaway(inst, 3.0)
+			# the trunk and limbs only open where they really cover her (a wide hole would eat the
+			# trunk above her head and the front of the shimenawa)
+			_solid_cutaway(inst, 1.3)
 			_crown_proxy(inst, a)
 		for fp in a.get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, inst.rotation.y) * sc
@@ -213,15 +251,17 @@ func _place_marker_props() -> void:
 	var t := terrain
 	var door := t.marker("hut_door")
 	var slots := [
-		["hut", door - Vector3(-0.87, 0, 3.0), 0.0, false],
+		["hut", t.marker("hut"), 0.0, false],
 		["shrine", t.marker("shrine"), 0.0, false],
 		["offering_box", t.marker("offering_box"), 0.0, false],
-		["graves", t.marker("graves"), 0.0, false],
+		["graves", t.marker("graves"), deg_to_rad(-2.0), false],
 		["dosojin", t.marker("dosojin"), 0.0, false],
-		["woodpile", t.marker("woodpile"), 0.0, false],
+		["woodpile", t.marker("woodpile"), deg_to_rad(90.0), false],
 		["fallen_branch", t.marker("fallen_branch"), 0.6, false],
 		["stump_axe", t.marker("choppable_tree") + Vector3(1.4, 0, 0.9), 0.3, false],
-		["kakehi", t.marker("spring") + Vector3(3.3, 0, 0.4), 0.0, false],
+		["kakehi", t.marker("spring") + Vector3(1.6, 0, 2.2), 0.0, false],
+		["fence_bamboo", Vector3(-23.0, 0, 17.3), 0.0, false],
+		["fence_bamboo", Vector3(-21.0, 0, 17.3), 0.0, false],
 		["signpost", Vector3(-16.4, 0, 19.0), 0.25, false],
 		["waymark", Vector3(8.4, 0, 17.4), -0.1, false],
 		["basket_tall", door + Vector3(-1.75, 0, 0.15), 0.4, false],
@@ -461,14 +501,13 @@ func _follow_saji(dt: float) -> void:
 # route driver for recordings: presses the movement keys toward the next waypoint
 
 func _make_route() -> void:
-	for m in ["hut_door", "offering_box", "camphor_south", "lookout"]:
-		pass
-	# out of the hut's door, across the yard to the shrine under the great camphor, along its front,
-	# back past the yard and down the spur to the lookout
-	var pts := [Vector2(-18.0, 15.3), Vector2(-14.2, 15.0), Vector2(-13.1, 13.6), Vector2(-13.0, 10.8),
-		Vector2(-11.2, 10.0), Vector2(-7.0, 10.1), Vector2(-3.4, 10.4), Vector2(-6.2, 13.4),
+	# out of the hut's door, across the yard, past the shrine's steps up to the great camphor's roots
+	# (the trunk and its rope fill the top of the view), back past the yard and down the spur to the
+	# lookout (about 60 m: with the look out the recording stays near 30 s)
+	var pts := [Vector2(-17.6, 15.3), Vector2(-14.2, 15.2), Vector2(-13.1, 13.6), Vector2(-13.0, 10.8),
+		Vector2(-11.2, 10.0), Vector2(-6.5, 10.0), Vector2(-3.2, 7.6), Vector2(-5.5, 11.0), Vector2(-7.6, 13.6),
 		Vector2(-11.0, 16.2), Vector2(-16.2, 17.2), Vector2(-19.0, 19.6), Vector2(-19.6, 23.0),
-		Vector2(-20.4, 28.0), Vector2(-21.8, 33.5), Vector2(-22.8, 38.0), Vector2(-23.5, 41.6)]
+		Vector2(-20.4, 28.0), Vector2(-21.8, 33.5), Vector2(-22.8, 38.0), Vector2(-23.4, 41.3)]
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))
@@ -498,6 +537,18 @@ func _drive_route() -> void:
 		keys_down[KEY_W] = true
 	if d.y > 0.38:
 		keys_down[KEY_S] = true
+	# a player who walks into a corner adds the sideways key: so does the driver when she stalls
+	var p2 := Vector2(her.pos.x, her.pos.z)
+	if p2.distance_to(_stall_at) > 0.12:
+		_stall_at = p2
+		_stall_t = 0.0
+	else:
+		_stall_t += get_process_delta_time()
+	if _stall_t > 0.3:
+		if absf(d.x) < 0.38:
+			keys_down[KEY_D if d.x >= 0.0 else KEY_A] = true
+		if absf(d.y) < 0.38:
+			keys_down[KEY_S if d.y >= 0.0 else KEY_W] = true
 
 
 # ------------------------------------------------------------------------------------------------
@@ -515,6 +566,10 @@ func _set_view(i: int) -> void:
 	if v.size() > 3:
 		env.rain = v[3]
 	_set_hours(v[2])
+	# stills of the top-down view: she does not look out from the lookout here
+	vista.active = false
+	vista.amount = 0.0
+	_still = -1.0
 	pv.follow(_cam_target, {"cut": true})
 
 
@@ -530,6 +585,7 @@ func _update_vista(dt: float, dir: Vector2) -> void:
 				vista.active = true
 				vista.yaw = 180.0
 				vista.yaw_target = 180.0
+				print("VISTA on f=%d" % frame)
 		elif not near:
 			_still = 0.0
 	else:
@@ -540,23 +596,28 @@ func _update_vista(dt: float, dir: Vector2) -> void:
 				vista.yaw_target -= 55.0 * dt
 			if _key(KEY_D) or _key(KEY_RIGHT):
 				vista.yaw_target += 55.0 * dt
+			# she looks out over the open side of the spur (east by the kiln's smoke round to the
+			# west); behind her the hillside fills the view and the view stands behind her back
+			vista.yaw_target = clampf(vista.yaw_target, YAW_OPEN.x, YAW_OPEN.y)
 			if _key(KEY_W) or _key(KEY_S) or _key(KEY_UP) or _key(KEY_DOWN):
 				vista.active = false
 				_still = -1.0         # she has to step off before she looks out again
+				print("VISTA off f=%d yaw=%.1f" % [frame, vista.yaw_target])
 	if _still < 0.0 and not near:
 		_still = 0.0
 	vista.update(dt)
 
 
-## Recordings: once she looks out, the head turns east to the kiln's smoke, back across the lower
-## layer to the waterfall in the west, and settles on the road going down into the mist.
-const AUTOPAN := [[0.0, 180.0], [2.6, 180.0], [5.4, 110.0], [6.6, 110.0], [9.4, 181.0], [11.2, 181.0]]
+## Recordings: once she looks out over the plain in the mist, her head turns east to the kiln's
+## smoke on the shoulder and rests there.
+const AUTOPAN := [[0.0, 180.0], [0.8, 180.0], [2.4, 114.0], [2.8, 114.0]]
+const YAW_OPEN := Vector2(100.0, 260.0)    # the bearings she can turn her head to on the lookout
 var _pan_t := 0.0
 
 
 func _autopan(dt: float) -> void:
 	_pan_t += dt
-	if args.has("route_quit") and _pan_t > float(AUTOPAN[-1][0]) + 1.5:
+	if args.has("route_quit") and _pan_t > float(AUTOPAN[-1][0]) + 0.2:
 		get_tree().quit()
 	for i in AUTOPAN.size() - 1:
 		var a: Array = AUTOPAN[i]
@@ -601,6 +662,12 @@ func _process(dt: float) -> void:
 	if not route.is_empty():
 		_drive_route()
 	var dir := _input_dir()
+	if args.has("perf") and frame % 60 == 0 and frame > 0:
+		print("PERF f=%d fps=%.1f draws=%d prims=%d objects=%d vram_mb=%.0f" % [frame, Performance.get_monitor(Performance.TIME_FPS),
+			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
+			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
+	if args.has("log_pos") and frame % 8 == 0:
+		print("POS f=%d her=(%.2f, %.2f) saji=(%.2f, %.2f) facing=%d vista=%s yaw=%.1f" % [frame, her.pos.x, her.pos.z, saji.pos.x, saji.pos.z, her.facing, str(vista.active), vista.yaw_target])
 	_update_vista(dt, dir)
 	if vista.active or vista.amount > 0.0:
 		dir = Vector2.ZERO

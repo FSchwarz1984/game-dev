@@ -16,7 +16,10 @@ float w3_fog_amount(vec3 wp, vec2 cell) {
 	float below = w3_haze.x - wp.y;
 	float h = smoothstep(w3_haze.y, w3_haze.z, below) * w3_haze.w;
 	float f = clamp(max(m, h), 0.0, 1.0);
-	f = floor(f * 8.0 + 0.5 + (w3_bayer4(cell) - 0.5) * 0.5) / 8.0;
+	// whole steps; a scattered stipple only in the narrow seam between steps (an ordered dither over
+	// the slow gradient of the mist drew stripes and checkers on the stream banks)
+	float sc = w3_hash(cell * 1.73 + 5.1) * 0.7 + w3_vnoise(cell / 2.1 + 3.0) * 0.3;
+	f = floor(f * 8.0 + 0.5 + (sc - 0.5) * 0.3) / 8.0;
 	return f;
 }
 vec3 w3_apply_fog(vec3 col, vec3 wp, vec2 cell) {

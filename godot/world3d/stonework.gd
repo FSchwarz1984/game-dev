@@ -23,7 +23,9 @@ func build(t: Terrain3D, rocks: W3Rocks) -> void:
 	mat.set_shader_parameter("tint", Color(1.04, 1.0, 0.94))
 	var shapes: Array[ArrayMesh] = []
 	for i in SHAPES:
-		shapes.append(rocks.make_shape(5000 + i * 53, 0.62, 0.0, 0.0))
+		# wall stones are 6-10 px across: 80 triangles each is plenty (1,280 made the walls 1.7 M
+		# triangles a frame)
+		shapes.append(rocks.make_shape(5000 + i * 53, 0.62, 0.0, 0.0, 1))
 		per_shape.append([])
 	for w in terrain.info.get("walls", []):
 		_wall(w)

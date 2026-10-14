@@ -205,7 +205,10 @@ vec3 w3_point_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuati
 	// rings in whole steps; the dither lives only in a narrow seam at each step and is scattered,
 	// not ordered (an ordered dither over a slow falloff draws wide checkered bands)
 	float sc = w3_hash(cell * 1.31 + 2.7) * 0.7 + w3_vnoise(cell / 1.9) * 0.3;
-	float q = floor(a * 4.0 + 0.5 + (sc - 0.5) * 0.32 * dither) / 4.0;
+	// the outer rim is where the falloff is slowest: a seam as wide there spreads into a band of
+	// loose dots 5-8 px wide, so the rim gets a narrower seam (2-3 px)
+	float seam = a < 0.375 ? 0.14 : 0.32;
+	float q = floor(a * 4.0 + 0.5 + (sc - 0.5) * seam * dither) / 4.0;
 	return albedo * light_col / W3_PI * q;
 }
 // 遠化 (far, 0..1): a thing that has lost its qualities looks far: pale, nearly grey, a little cool,

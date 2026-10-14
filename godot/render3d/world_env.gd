@@ -24,11 +24,11 @@ const KEYS := [
 	[0.0,  Color(0.42, 0.52, 0.85), 0.34, Color(0.105, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.09, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
 	[4.4,  Color(0.42, 0.52, 0.85), 0.32, Color(0.11, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.10, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
 	[5.4,  Color(0.85, 0.55, 0.55), 0.35, Color(0.20, 0.19, 0.30), Color(0.06, 0.05, 0.06), Color(0.42, 0.36, 0.46), Color(0.02, 0.01, 0.04), Color(1.02, 0.98, 1.02), 0.86, Color(-0.005, 0.0, 0.02), Color(0.02, 0.01, 0.0), 0.6],
-	[6.4, Color(1.0, 0.72, 0.48), 0.782, Color(0.377, 0.392, 0.522), Color(0.130, 0.104, 0.091), Color(0.70, 0.62, 0.58), Color(0.01, 0.005, 0.02), Color(1.04, 1.0, 0.96), 0.95, Color(-0.01, 0.0, 0.02), Color(0.03, 0.015, 0.0), 0.0],
-	[8.0, Color(1.0, 0.88, 0.70), 0.92, Color(0.464, 0.536, 0.681), Color(0.156, 0.143, 0.117), Color(0.70, 0.74, 0.78), Color(0.0, 0.0, 0.01), Color(1.02, 1.01, 0.99), 0.98, Color(-0.01, 0.0, 0.015), Color(0.02, 0.012, 0.0), 0.0],
-	[12.0, Color(1.0, 0.95, 0.86), 0.966, Color(0.493, 0.580, 0.739), Color(0.169, 0.156, 0.130), Color(0.74, 0.78, 0.82), Color(0.0, 0.0, 0.01), Color(1.02, 1.01, 1.0), 0.97, Color(-0.012, 0.0, 0.015), Color(0.015, 0.01, 0.0), 0.0],
-	[15.5, Color(1.0, 0.86, 0.64), 0.92, Color(0.493, 0.536, 0.667), Color(0.169, 0.143, 0.117), Color(0.76, 0.72, 0.68), Color(0.005, 0.0, 0.01), Color(1.03, 1.0, 0.96), 1.0, Color(-0.01, 0.0, 0.015), Color(0.03, 0.015, 0.0), 0.0],
-	[17.4, Color(1.0, 0.70, 0.46), 0.846, Color(0.435, 0.420, 0.566), Color(0.156, 0.117, 0.104), Color(0.70, 0.56, 0.52), Color(0.015, 0.0, 0.02), Color(1.04, 0.99, 0.94), 0.94, Color(-0.012, -0.004, 0.03), Color(0.035, 0.015, -0.005), 0.0],
+	[6.4, Color(1.0, 0.72, 0.48), 0.876, Color(0.377, 0.392, 0.522), Color(0.130, 0.104, 0.091), Color(0.70, 0.62, 0.58), Color(0.01, 0.005, 0.02), Color(1.08, 1.04, 1.00), 0.95, Color(-0.01, 0.0, 0.02), Color(0.03, 0.015, 0.0), 0.0],
+	[8.0, Color(1.0, 0.88, 0.70), 1.03, Color(0.464, 0.536, 0.681), Color(0.156, 0.143, 0.117), Color(0.70, 0.74, 0.78), Color(0.0, 0.0, 0.01), Color(1.06, 1.05, 1.03), 0.98, Color(-0.01, 0.0, 0.015), Color(0.02, 0.012, 0.0), 0.0],
+	[12.0, Color(1.0, 0.95, 0.86), 1.082, Color(0.493, 0.580, 0.739), Color(0.169, 0.156, 0.130), Color(0.74, 0.78, 0.82), Color(0.0, 0.0, 0.01), Color(1.06, 1.05, 1.04), 0.97, Color(-0.012, 0.0, 0.015), Color(0.015, 0.01, 0.0), 0.0],
+	[15.5, Color(1.0, 0.86, 0.64), 1.03, Color(0.493, 0.536, 0.667), Color(0.169, 0.143, 0.117), Color(0.76, 0.72, 0.68), Color(0.005, 0.0, 0.01), Color(1.07, 1.04, 1.00), 1.0, Color(-0.01, 0.0, 0.015), Color(0.03, 0.015, 0.0), 0.0],
+	[17.4, Color(1.0, 0.70, 0.46), 0.948, Color(0.435, 0.420, 0.566), Color(0.156, 0.117, 0.104), Color(0.70, 0.56, 0.52), Color(0.015, 0.0, 0.02), Color(1.08, 1.03, 0.98), 0.94, Color(-0.012, -0.004, 0.03), Color(0.035, 0.015, -0.005), 0.0],
 	[18.4, Color(0.92, 0.52, 0.34), 0.5, Color(0.22, 0.2, 0.28), Color(0.08, 0.055, 0.05), Color(0.44, 0.3, 0.32), Color(0.025, 0.01, 0.035), Color(1.02, 0.96, 0.98), 0.9, Color(-0.008, -0.004, 0.03), Color(0.035, 0.012, -0.004), 0.5],
 	[19.6, Color(0.42, 0.52, 0.85), 0.34, Color(0.105, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.09, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
 	[24.0, Color(0.42, 0.52, 0.85), 0.34, Color(0.105, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.09, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
@@ -63,9 +63,14 @@ func setup(v: PixelView3D) -> void:
 	sun.name = "Sun"
 	sun.shadow_enabled = true
 	sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	# With an orthogonal camera Godot ignores the max distance: the shadow map covers the camera's
+	# near..far box (pixel_view3d.gd keeps it tight). Godot 4.7 scales the depth bias of a
+	# directional light by shadow_blur, so with blur 0 (hard edges) shadow_bias does nothing; the
+	# normal bias (in shadow texels) and the ground casting from inside itself (toon_terrain) keep
+	# the acne away.
 	sun.directional_shadow_max_distance = 48.0
 	sun.directional_shadow_fade_start = 1.0
-	sun.shadow_bias = 0.1
+	sun.shadow_bias = 0.0
 	sun.shadow_normal_bias = 2.0
 	sun.shadow_blur = 0.0
 	sun.light_specular = 0.0

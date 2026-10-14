@@ -49,10 +49,10 @@ func _ico(subdiv := 3) -> Array:
 ## the silhouette, an optional hint of strata), smooth-shaded so the toon bands follow its bumps
 ## instead of showing polygon planes, vertex-coloured (grey variation, darker crevices, moss on what
 ## faces up, dark where it meets the ground).
-func make_shape(seed: int, flat := 0.65, strata := 0.22, sharp := 0.35) -> ArrayMesh:
+func make_shape(seed: int, flat := 0.65, strata := 0.22, sharp := 0.35, subdiv := 3) -> ArrayMesh:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed
-	var ico := _ico(3)
+	var ico := _ico(subdiv)
 	var verts: Array = ico[0]
 	var faces: Array = ico[1]
 	var noise := FastNoiseLite.new()
@@ -175,5 +175,7 @@ func _rock_xform(p: Dictionary) -> Transform3D:
 	var b := Basis(right * size.x, up * size.y, fwd * size.z)
 	var sink := float(p.get("sink", 0.35))
 	var y := terrain.height_at(x, z) - size.y * sink
-	blockers.append([Vector3(x, 0, z), maxf(size.x, size.z) * 0.75])
+	# what blocks her is the rock's girth where it comes out of the ground (deeply sunk rocks, like
+	# the lookout's rim, are mostly below her feet)
+	blockers.append([Vector3(x, 0, z), maxf(size.x, size.z) * 0.5 * (1.0 - sink * 0.6)])
 	return Transform3D(b, Vector3(x, y, z))

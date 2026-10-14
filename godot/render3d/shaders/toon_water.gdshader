@@ -44,7 +44,7 @@ void fragment() {
 	vec2 off = floor((vec2(wob, w3_vnoise(q * 1.3 + 4.0 + t * 0.1)) - 0.5) * 1.6 * clamp(depth * 3.0, 0.0, 1.0) + 0.5);
 	vec3 under = texture(screen_tex, SCREEN_UV + off / VIEWPORT_SIZE).rgb;
 	// depth in three calm bands (rim, middle, deep), dithered only at their seams
-	float dq = floor(clamp(depth / 0.55, 0.0, 1.0) * 2.0 + 0.5 + (w3_bayer4(cell) - 0.5) * 0.35) / 2.0;
+	float dq = floor(clamp(depth / 0.55, 0.0, 1.0) * 2.0 + 0.5 + (w3_hash(cell * 1.21 + 9.0) - 0.5) * 0.3) / 2.0;
 	vec3 body = mix(shallow_col, deep_col, dq) * (w3_sky * 1.3 + w3_sun * 0.55);
 	float a = 0.4 + dq * 0.45 + moving * 0.08;
 	vec3 col = mix(under, body, a);

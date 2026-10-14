@@ -73,8 +73,13 @@ func _init() -> void:
 	cam.name = "Camera"
 	cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	cam.keep_aspect = Camera3D.KEEP_HEIGHT
-	cam.near = 1.0
-	cam.far = 300.0
+	# The camera stands 120 m back from the focus. Keep the depth range tight: for an orthogonal
+	# camera Godot ignores the sun's shadow max distance and fits the shadow map around the bounding
+	# sphere of the whole near..far box, so 1..300 m spread the 4096 map over ~300 m (7.3 cm a
+	# texel, more than a pixel). Everything she can see lies 100..157 m deep (every walkable focus,
+	# checked on the height map), trees reach ~15 m nearer. (docs/knowledge/21 §6.2)
+	cam.near = 60.0
+	cam.far = 190.0
 	cam.current = true
 	vp.add_child(cam)
 

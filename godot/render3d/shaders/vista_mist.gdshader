@@ -21,7 +21,8 @@ void vertex() {
 void fragment() {
 	float a = v_uv.x * 6.2831853;
 	// the top edge: billows along the ring, drifting
-	float b = w3_vnoise(vec2(v_uv.x * 90.0 + time * 0.25, 1.0)) * 0.6 + w3_vnoise(vec2(v_uv.x * 260.0 - time * 0.4, 5.0)) * 0.4;
+	// (broad billows only: a fine term drew thin vertical streaks against the night sky)
+	float b = w3_vnoise(vec2(v_uv.x * 70.0 + time * 0.25, 1.0)) * 0.75 + w3_vnoise(vec2(v_uv.x * 140.0 - time * 0.4, 5.0)) * 0.25;
 	float top = 0.12 + b * 0.22;
 	float cover = smoothstep(top, top + 0.3, v_uv.y);
 	cover = max(cover * 0.86, 0.0);
