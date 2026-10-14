@@ -4,8 +4,9 @@
    Frame: sun shadow map (terrain back faces + sprite cards) → backdrop
    (sky and painted far layers, parallax) → G-buffer at native res
    (baked ground chunks, atlas sprites, character sheets) → lighting
-   (banded sun with soft canopy flecks, sky and bounce, up to 32 point
-   lights, emission, mist and light shafts, the Far, protected character
+   (smooth sun — no banding, no dither — with soft canopy flecks, sky and
+   bounce, up to 32 point lights, emission, mist thickening with the
+   depth of the land below, light shafts, the Far, protected character
    light) → water (refraction, reflection, foam, falls) → occluders that
    hide a character (forward-lit, dithered fade) → particles and glows →
    bloom → composite (integer upscale with a sub-pixel camera offset,
@@ -19,7 +20,7 @@
    Units: the public API takes metres (x east, z south, y up) like the
    gameplay simulation; internally world px (1 m = 20 px).
 
-   Public API (see src/gfx/index.js for the summary):
+   Public API:
      const R = new Renderer(canvas, { quality: 'auto'|'high'|'mid'|'low' })
      R.loadMap(map)                     map from env/home.js createHomeMap()
      R.setTime(hours)                   17.5 dusk … 21 night, 7 morning
@@ -29,7 +30,10 @@
      R.addSprite(name, {x, z, y, ...})  → handle  (atlas sprite; name from map.sprites)
      R.setFar(handleOrName, amount)     0..1
      R.paintFar({x, z, rx, rz, amount, angle, ragged})   ground far mask
-     R.addLight({x, z, y, color, radius, intensity, flicker}) → {set(o), remove()}
+     R.addLight({x, z, y, color, radius, intensity, flicker}) → {set(o), remove()}   ≤ 32 on screen;
+                                        move one every frame with set({x, z, y}) (her lantern)
+     R.setImage(handleOrName, spriteName)   swap a sprite (hut ↔ hutLit, dango states)
+     R.setHidden(handleOrName, bool), R.setTint(handleOrName, [r, g, b])
      R.loadSheet(name, albedoImg, normalImg, o) / R.addActor(sheet, o) → {set(o), remove()}
      R.fx (Particles), R.render(dt), R.stats
    ===================================================================== */
@@ -355,7 +359,7 @@ export class Renderer {
       const fl = L.flicker ? 1 + (Math.sin(this.t * 7.3 + L.ph) * 0.5 + Math.sin(this.t * 12.1 + L.ph * 2) * 0.3 + Math.sin(this.t * 2.3 + L.ph) * 0.2) * 0.12 * L.flicker : 1;
       const I = L.intensity * fl; const x = L.x * PPM, y = L.z * PPM, z = L.y * PPM, r = L.radius * PPM;
       cand.push([x, y, z, r, L.color[0] * I, L.color[1] * I, L.color[2] * I]);
-      if (L.glow && x > V.x0 - 40 && x < V.x1 + 40 && y - z > V.y0 - 40 && y - z < V.y1 + 40) this.glow(x, y, z, 26 * I, 26 * I, L.color[0] * 0.35, L.color[1] * 0.3, L.color[2] * 0.25, 1, 2);
+      if (L.glow && x > V.x0 - 40 && x < V.x1 + 40 && y - z > V.y0 - 40 && y - z < V.y1 + 40) this.glow(x, y, z, 15 * I, 13 * I, L.color[0] * 0.2, L.color[1] * 0.14, L.color[2] * 0.08, 1, 2);
     }
     for (const l of this.frameLights) cand.push(l);
     const cx = c.sx, cy = c.sy;
@@ -441,7 +445,7 @@ export class Renderer {
     X.bind(null);
     P.comp.use().t('uLowT', f.post.tex[0]).t('uBloom', f.b1.tex[0]).f('uLowS', this.W, this.H).f('uOff', c.off[0], -c.off[1]).f('uScale', this.scale).f('uScr', this.scrW, this.scrH).f('uPad', 0, 0)
       .v('uLift', E.lift).v('uGain', E.gain).f('uSat', E.sat).f('uBloomK', E.bloomK).f('uVig', E.vig).f('uFade', ...this.fade).f('uT', this.t)
-      .v('uShT', E.shT).v('uHiT', E.hiT).f('uBox', this.box).f('uExpo', E.expo);
+      .v('uShT', E.shT).v('uHiT', E.hiT).f('uBox', this.box).f('uExpo', E.expo).v('uGreen', E.green || [0, 0, 0]);
     X.tri(); passes++;
     this.stats = { calls: X.calls, passes, ms: (typeof performance !== 'undefined' ? performance.now() : Date.now()) - t0, native: [this.W, this.H], scale: this.scale, quality: this.q, lights: this.nl, particles: this.fx.P.length };
   }

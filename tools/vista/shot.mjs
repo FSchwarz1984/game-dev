@@ -51,13 +51,19 @@ for (const arg of process.argv.slice(2)) {
   if (params.has('stand')) st.standing = params.get('stand') === '1';
   const info = await page.evaluate(([s, n]) => window.VT.render(s, n), [st, frames]);
   if (seqn) {
-    // optional per-frame parameter ramps: ramp=key,from,to over the sequence
-    const ramps = params.getAll('ramp').map(r => r.split(',')).map(([k, a, b]) => [k, +a, +b]);
+    // optional parameter ramps over the whole sequence, applied every frame:
+    // ramp=key,from,to[,u0,u1] (the change happens over the part u0..u1 of the sequence)
+    const ramps = params.getAll('ramp').map(r => r.split(',').map((v, i) => (i ? +v : v)));
+    const steps = Math.max(1, Math.round(seqdt * 60));
     for (let i = 0; i < seqn; i++) {
-      const u = seqn > 1 ? i / (seqn - 1) : 0, over = {};
-      for (const [k, a, b] of ramps) over[k] = a + (b - a) * u;
-      const steps = Math.max(1, Math.round(seqdt * 60));
-      await page.evaluate(([s, n]) => window.VT.render(s, n), [over, steps]);
+      await page.evaluate(([ramps, i, seqn, steps]) => {
+        const total = Math.max(1, (seqn - 1) * steps);
+        for (let j = 0; j < steps; j++) {
+          const u = Math.min(1, ((i - 1) * steps + j + 1) / total), over = {};
+          for (const [k, a, b, u0 = 0, u1 = 1] of ramps) over[k] = a + (b - a) * Math.min(1, Math.max(0, (u - u0) / (u1 - u0)));
+          window.VT.render(i === 0 ? {} : over, 1);
+        }
+      }, [ramps, i, seqn, steps]);
       const data = await page.evaluate(() => window.VT.v.canvas.toDataURL('image/png'));
       fs.writeFileSync(path.join(OUT, `${fileBase}-${String(i).padStart(3, '0')}.png`), Buffer.from(data.split(',')[1], 'base64'));
     }

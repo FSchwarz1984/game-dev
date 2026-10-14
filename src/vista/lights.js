@@ -15,6 +15,7 @@ export const COL = {
   jade: [196, 246, 226],
   jadeCore: [236, 255, 248],
   jadeDeep: [120, 210, 190],
+  warmJade: [222, 240, 178],
   red: [255, 66, 48],
   firefly: [214, 255, 150],
 };
@@ -109,6 +110,19 @@ function glowWeights(r) {
   GLOW_W.set(r, w);
   return w;
 }
+// the same for a glow centred on a 2x2 core (between four pixels)
+const GLOW2_W = new Map();
+function glowWeights2(r) {
+  let w = GLOW2_W.get(r);
+  if (w) return w;
+  const n = 2 * r + 2; w = new Float32Array(n * n);
+  for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
+    const d = Math.hypot(x - r - 0.5, y - r - 0.5) / (r + 1);
+    w[y * n + x] = Math.round(Math.pow(clamp(1 - d, 0, 1), 1.7) * 6) / 6;
+  }
+  GLOW2_W.set(r, w);
+  return w;
+}
 export class AddBuffer {
   constructor(w, h) {
     this.w = w; this.h = h;
@@ -146,6 +160,23 @@ export class AddBuffer {
       }
     }
     this._box(x - r, y - r, x + r, y + r);
+  }
+  // a glow centred on the 2x2 core whose top-left pixel is (x, y)
+  glow2(x, y, r, rgb, a) {
+    if (a <= 0.004) return;
+    x = Math.round(x); y = Math.round(y);
+    const wts = glowWeights2(r), n = 2 * r + 2, W = this.w, H = this.h;
+    const r0 = rgb[0] * a, g0 = rgb[1] * a, b0 = rgb[2] * a;
+    for (let j = 0; j < n; j++) {
+      const Y = y - r + j; if (Y < 0 || Y >= H) continue;
+      for (let i = 0; i < n; i++) {
+        const X = x - r + i; if (X < 0 || X >= W) continue;
+        const wv = wts[j * n + i]; if (!wv) continue;
+        const k = Y * W + X;
+        this.R[k] += r0 * wv; this.G[k] += g0 * wv; this.B[k] += b0 * wv;
+      }
+    }
+    this._box(x - r, y - r, x + r + 1, y + r + 1);
   }
   // a vertical strip fading upward (the wave's curtain): bottom at y, height h
   strip(x, y, h, rgb, a) {

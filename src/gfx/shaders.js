@@ -262,7 +262,7 @@ vec3 shade(vec3 alb, vec3 N, vec3 P, float mat, float emi, float wet, float cls,
     float nl=max(dot(N,dl/max(dist,1e-3)),0.)*.55+.45; float v=a*nl;
     pl+=uLC[i].rgb*v; }
   col+=alb*pl;
-  col+=alb*emi*3.;
+  col+=alb*emi*1.7;
   if(isChar){
     vec3 fill=alb*(uSkyCol*uCharK.y+pl*.25);
     col+=fill;
@@ -447,8 +447,7 @@ void main(){
 }`;
 export const glowFS = `
 in vec2 vQ; in vec4 vC; flat in float vK; layout(location=0) out vec4 oC;
-void main(){ float d=length(vQ); float a=1.-smoothstep(0.,1.,d); a*=a;
-  a=floor(a*vC.a*7.+bayer4(gl_FragCoord.xy+uDith))/7.; oC=vec4(vC.rgb*a,1.); }`;
+void main(){ float d=length(vQ); float a=1.-smoothstep(0.,1.,d); a*=a*a; oC=vec4(vC.rgb*a*vC.a,1.); }`;
 
 /* ---------------- backdrop: sky and the painted far layers ---------------- */
 export const backFS = `
@@ -488,6 +487,7 @@ uniform sampler2D uLowT; uniform sampler2D uBloom;
 uniform vec2 uLowS; uniform vec2 uOff; uniform float uScale; uniform vec2 uScr; uniform vec2 uPad;
 uniform vec3 uLift; uniform vec3 uGain; uniform float uSat; uniform float uBloomK; uniform float uVig;
 uniform vec4 uFade; uniform float uT; uniform vec3 uShT; uniform vec3 uHiT; uniform float uBox; uniform float uExpo;
+uniform vec3 uGreen; // greens only: x toward cool blue (night), y desaturate, z yellow-green toward olive
 layout(location=0) out vec4 oC;
 vec3 tone(vec3 c){ c*=uExpo; vec3 e=max(c-.8,0.); return min(c,.8)+.2*(1.-exp(-e/.2)); }
 void main(){
@@ -498,6 +498,12 @@ void main(){
   vec3 c=texture(uLowT,uv).rgb;
   c+=texture(uBloom,lp/uLowS).rgb*uBloomK;
   c=tone(c);
+  float gk=clamp((c.g-max(c.r,c.b))/max(c.g,.02)*2.5,0.,1.);
+  if(gk>0.){ vec3 cg=c;
+    cg=mix(cg, vec3(cg.r*.9, cg.g*.84+cg.b*.1, cg.b+(cg.g-cg.b)*.5), uGreen.x);
+    cg=mix(cg, vec3(lum(cg)), uGreen.y);
+    cg=mix(cg, cg*vec3(1.05,.94,.8), uGreen.z);
+    c=mix(c,cg,gk); }
   float l=lum(c);
   c=mix(vec3(l),c,uSat);
   c=uLift+c*(uGain-uLift);

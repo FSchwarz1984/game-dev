@@ -60,7 +60,7 @@ export function* southGen(W, H, seed) {
     const i = Math.floor(u), t = u - i, [ax, az] = RIVER[i], [bx, bz] = RIVER[i + 1];
     const X = lerp(ax, bx, t) + 0.16, Z = lerp(az, bz, t);
     const x = Math.round(cx + f * X / Z), y = Math.round(yl + f / Z);
-    if (x > 0 && x < W && ground.Z[y * W + x] > Z * 0.9) lights.push({ x, y, X, Z, kind: 'bonfire' });
+    if (x > 0 && x < W && ground.Z[y * W + x] > Z * 0.9) lights.push({ x, y, X, Z, kind: 'bonfire', river: true });
   }
   // floating lanterns on the river (灯籠流し): drift downstream (toward us)
   const river = [];
@@ -76,7 +76,7 @@ export function* southGen(W, H, seed) {
   lights.push(...paddyStars);
 
   // ---------------- the gate (funnel) and the sky shore
-  const Hs = 9, Zf = 21;
+  const Hs = 9 * Math.min(1, yh / 114), Zf = 21;   // lower on short frames, so a phone sees the same stretch of it
   const tipX = cx - Math.round(W * 0.05), tipY = Math.round(yh * 0.3) + padTop;
   const Fn = { X: (tipX - cx) * Zf / f, Z: Zf, D: Hs - (yl - tipY) * Zf / f, R: 6.5 };
   const towns = [
@@ -86,10 +86,10 @@ export function* southGen(W, H, seed) {
   ];
   const ringC = { X: (0.2 * W) * 31 / f, Z: 31, r: 0.95 };
   towns.push({ X: ringC.X, Z: ringC.Z, r: 2.0 });
-  const hazeEdgeY = yl - Math.round(clamp(yh * 0.36, 34, 58));
+  const hazeEdgeY = yl - Math.round(clamp(yh * 0.36, 26, 58));
   const shoreH = hazeEdgeY + 10;
   yield;
-  const shore = yield* buildSkyShoreGen({ w: W, h: shoreH, cx, yh: yl, f, Hs, funnel: Fn, towns, hazeEdgeY, zNear: 24, zFar: 80, seed });
+  const shore = yield* buildSkyShoreGen({ w: W, h: shoreH, cx, yh: yl, f, Hs, funnel: Fn, towns, hazeEdgeY, pagoda: { X: ringC.X + 1.15, Z: ringC.Z + 0.5 }, seed });
   lap('lights+shore');
   const T = shore.proj(Fn.X, Fn.Z); T[1] += 1;   // the mouth, where the streams go in
   const ring = [];
@@ -103,55 +103,103 @@ export function* southGen(W, H, seed) {
   const deckC = makeCanvas(W, yl), deckG = ctx2d(deckC);
   lap('clouds');
 
-  // ---------------- rising: clusters, order, paths
-  const clusters = [{ X: TOWN.X, Z: TOWN.Z }, { X: HEADMAN.X, Z: HEADMAN.Z }, ...HAMLETS.map(h => ({ X: h.X, Z: h.Z }))];
+  // ---------------- rising: processions
+  // The lights leave the plain in processions, one per place: the headman's house, the bonfires on
+  // the river bank, two stretches of paddies, the town, a hamlet at each side. Each rises one light
+  // after another at a steady pace along its own gentle S-curve into a faint column of light that
+  // stands over the town and goes up into the gate. The lamps of a place go out from its edge
+  // inward while its procession leaves, the place itself last. Two lights go first, alone.
+  const colX = T[0], colTop = T[1] + 2;
+  const projG = (X, Z) => [cx + f * X / Z, yl + f * (1 - ground.height(X, Z)) / Z];
+  const visible = ([x, y]) => x > 6 && x < W - 6 && y > yl + 2 && y < gh - 2 && ground.Z[Math.round(y) * W + Math.round(x)] > 0;
+  const fires = lights.filter(L => L.kind === 'bonfire' && L.river).sort((a, b2) => a.x - b2.x);
+  // where the stars on the water are densest, on one side of the column
+  const stretch = (xa, xb) => {
+    const pts = paddyStars.filter(L => L.x > xa && L.x < xb && L.y > yl + 10 && L.y < yl + 44);
+    let best = null, bn = 0;
+    for (const P of pts) {
+      let n = 0;
+      for (const Q of pts) if (Math.abs(Q.x - P.x) < 12 && Math.abs(Q.y - P.y) < 4) n++;
+      if (n > bn) { bn = n; best = P; }
+    }
+    return best ? [best.x, best.y] : null;
+  };
+  const spread = W * 0.21;                       // places this far either side of the column: the lines rise steeply
+  const near = p => p && Math.abs(p[0] - colX) < spread * 1.08;
+  const hamletAt = (side, k) => {
+    const cands = [];
+    for (const h of HAMLETS) {
+      if (h.Z > 30) continue;
+      const p = projG(h.X, h.Z), dx = (p[0] - colX) * side;
+      if (visible(p) && near(p) && dx > 20) cands.push([dx, p]);
+    }
+    cands.sort((u, v) => v[0] - u[0]);
+    return cands[k] ? cands[k][1] : null;
+  };
+  const streams = [];
+  const addStream = (at, r0, base, kind) => {
+    if (!at || !visible(at) || !near(at)) return null;
+    for (const O of streams) if (Math.abs(O.sx - at[0]) < 20 && Math.abs(O.sy - at[1]) < 14) return null;   // one place, one procession
+    const S = { sx: at[0], sy: at[1] - 1, r0, r1: 0.9 + R() * 0.05, base, kind };
+    streams.push(S);
+    return S;
+  };
+  const sHead = addStream(projG(HEADMAN.X, HEADMAN.Z), 0.17, COL.window, 'window');
+  const sFireA = fires[0] ? addStream([fires[0].x, fires[0].y - 1], 0.2, COL.fire, 'fire') : null;
+  addStream(projG(TOWN.X, TOWN.Z + 0.4), 0.23, COL.window, 'window');
+  addStream(stretch(colX - spread, colX - 28), 0.26, PADDY_LIGHT, 'paddy');
+  for (const F of fires.slice(1)) addStream([F.x, F.y - 1], 0.29, COL.fire, 'fire');
+  addStream(stretch(colX + 28, colX + spread), 0.32, PADDY_LIGHT, 'paddy');
+  addStream(hamletAt(-1, 0), 0.36, COL.window, 'window');
+  addStream(hamletAt(1, 0), 0.4, COL.window, 'window');
+  addStream(hamletAt(-1, 1), 0.44, COL.window, 'window');
+  addStream(hamletAt(1, 1), 0.47, COL.window, 'window');
+  // each procession's path: an S from its place, leaving straight up and joining the column going
+  // up. On each side the farther places join higher, so no two lines cross; the two sides join in
+  // turn. Sampled into a polyline with arc lengths.
+  for (const side of [-1, 1]) {
+    const mine = streams.filter(S => (S.sx - colX) * side >= 0 && !(side > 0 && S.sx - colX === 0)).sort((u, v) => Math.abs(u.sx - colX) - Math.abs(v.sx - colX));
+    mine.forEach((S, i) => { S.rank = i; S.side = side; });
+  }
+  const yJ0 = yl + 4;
+  for (const S of streams) {
+    const dx = S.sx - colX;
+    S.jx = colX + (Math.abs(dx) > 3 ? S.side : 0);
+    S.jy = Math.min(S.sy - 16, yJ0 - S.rank * 13 - (S.side > 0 ? 6 : 0));
+    S.jy = Math.max(colTop + 14, Math.min(S.jy, S.sy - Math.abs(dx) * 1.1));
+    const h = S.sy - S.jy;
+    const bulge = (S.side || 1) * (6 + Math.abs(dx) * 0.25);   // out a little first, then in: an S
+    S.path = samplePath([[S.sx, S.sy], [S.sx + bulge, S.sy - h * 0.52], [S.jx, S.jy + h * 0.5], [S.jx, S.jy]], 40);
+    S.join = S.path.len;
+    // then up the column to the gate
+    extendPath(S.path, [[S.jx, S.jy], [colX, S.jy - 8], [colX, colTop]], 24);
+    // one light every PACE seconds (at rise animated over ~30 s) between r0 and r1
+    S.e = [];
+    for (let r = S.r0; r <= S.r1; r += PACE / 30) S.e.push(r);
+    S.el = new Float32Array(S.e.length).fill(-1);
+    S.ph = R() * TAU;
+  }
+  // the two that go first, alone: a window of the headman's house, then a light out of a bonfire
+  const firstL = lights.find(L => L.kind === 'window' && Math.abs(L.X - HEADMAN.X) < 0.3 && Math.abs(L.Z - HEADMAN.Z) < 0.3);
+  const solos = [];
+  if (sHead) solos.push({ S: sHead, r: 0.03, el: -1, base: COL.window, from: firstL });
+  if (sFireA) solos.push({ S: sFireA, r: 0.11, el: -1, base: COL.fire });
+  // every lamp belongs to the nearest place; they go out from its edge inward, the place itself last
   for (const L of lights) {
-    let best = 0, bd = 1e9;
-    for (let k = 0; k < clusters.length; k++) { const d = Math.hypot(L.X - clusters[k].X, L.Z - clusters[k].Z); if (d < bd) { bd = d; best = k; } }
-    L.cl = L.kind === 'star' ? 100 + Math.floor(L.x / 40) : best;
+    let best = null, bd = 1e9;
+    for (const S of streams) { const d = Math.hypot(L.x - S.sx, (L.y - S.sy) * 2.2); if (d < bd) { bd = d; best = S; } }
+    L.st = best; L.sd = bd;
     L.on = L.kind === 'star' ? 19.4 + R() * 0.6 : L.kind === 'window' ? 18.25 + R() * 1.1 : L.kind === 'lantern' ? 18.6 + R() * 0.7 : 19.0 + R() * 0.7;
     L.ph = L.ph ?? R() * TAU;
   }
-  // departure order: two lone lights first, then every cluster emits its lights at its own steady
-  // pace across the whole rise (a queue per place, all places at once)
-  const byCl = new Map();
-  for (const L of lights) { if (!byCl.has(L.cl)) byCl.set(L.cl, []); byCl.get(L.cl).push(L); }
-  const first = lights.find(L => L.kind === 'window' && Math.abs(L.X - HEADMAN.X) < 0.3 && Math.abs(L.Z - HEADMAN.Z) < 0.3);
-  const second = lights.find(L => L.kind === 'bonfire' && L !== first) || lights[1];
-  for (const [k, arr] of byCl) {
-    arr.sort(() => R() - 0.5);
-    const rest = arr.filter(L => L !== first && L !== second), n = rest.length;
-    const c = clusters[k], d = c ? Math.hypot(c.X - TOWN.X, c.Z - TOWN.Z) : 12;
-    const start = 0.17 + clamp(d / 40, 0, 1) * 0.1 + R() * 0.03;         // nearer the town starts sooner
-    rest.forEach((L, i) => { L.r = start + (0.96 - start) * (i + R() * 0.5) / Math.max(1, n); });
+  for (const S of streams) {
+    const mine = lights.filter(L => L.st === S).sort((a, b2) => b2.sd - a.sd);
+    mine.forEach((L, i) => { L.r = S.r0 + 0.02 + (S.r1 - S.r0) * (i + R() * 0.7) / Math.max(1, mine.length); });
   }
-  if (first) first.r = 0.03;
-  if (second) second.r = 0.11;
-  const clCentre = new Map();
-  for (const k of byCl.keys()) {
-    const all = lights.filter(L => L.cl === k);
-    const mx = all.reduce((s, L) => s + L.x, 0) / all.length, my = all.reduce((s, L) => s + L.y, 0) / all.length;
-    clCentre.set(k, [mx, my]);
-  }
-  const clJit = new Map();
-  for (const k of byCl.keys()) clJit.set(k, [(R() - 0.5) * 14, (R() - 0.5) * 10, 16 + R() * 18]);
-  for (const L of lights) {
-    const [mx, my] = clCentre.get(L.cl), [jx, jy, cl] = clJit.get(L.cl);
-    // every light of a place gathers to the same point above it, then follows the same path: a queue
-    L.p1 = [mx + jx * 0.3 + (R() - 0.5) * 2, my - cl - 4 + (R() - 0.5) * 2];
-    const sx = lerp(T[0], mx, 0.62) + jx + (R() - 0.5) * 3, sy = lerp(T[1], my - 40, 0.45) + jy + (R() - 0.5) * 3;
-    L.p2 = [sx, sy];
-    L.p3 = [T[0] + (R() - 0.5) * 3, T[1] + (R() - 0.5) * 2];
-    L.dur = 7.2 + hash2(L.cl, 7, 41) * 2.4 + R() * 0.3;   // one pace per stream: they keep their spacing, like a queue
-    L.el = -1;
-    if (L === first || L === second) {
-      // the first two go alone: straight up out of the lit plain into the dark, slowly, then lean toward the gate
-      L.solo = true;
-      L.p1 = [L.x, L.y - (L.y - T[1]) * 0.75];
-      L.p2 = [lerp(L.x, T[0], 0.35), T[1] + (L.y - T[1]) * 0.12];
-      L.dur = 11;
-    }
-  }
+  for (const L of lights) if (L.r == null) L.r = 0.9;
+  if (firstL) firstL.r = 0.03;
+  let colK = 0;                                  // how much light the column carries (smoothed)
+  const colBase = Math.round(Math.max(yl - 4, ...streams.map(S => S.jy + 4)));
 
   // ---------------- the wave
   const Xc = TOWN.X + 0.2, Zc = TOWN.Z - 0.6;
@@ -198,7 +246,6 @@ export function* southGen(W, H, seed) {
   let t = 0, endMotes = [];
   const AB = new AddBuffer(W, gh);              // lights of this shore, the wave's motes (far-group coordinates)
   const ABs = new AddBuffer(W, shoreH);         // lights of the sky shore (behind the clouds)
-  const arrivals = [];
   const skyCache = new Map(), shoreCache = new Map();
   let curKey = null, warm = null, warmKey = null;
   const envMemo = new Map();
@@ -237,6 +284,7 @@ export function* southGen(W, H, seed) {
     for (const L of shore.lights) {
       const a = L.b * smooth(hazeEdgeY + 2, hazeEdgeY - 10, L.y) * smooth(y1 - 30, y1, L.y) * (1 - smooth(30, 75, L.Z) * 0.5);
       if (a < 0.03) continue;
+      if (L.win) { px(sg, L.x, L.y, COL.warmJade, a); glow(sg, L.x, L.y, 2, scale3(COL.warmJade, 0.3), a); continue; }
       px(sg, L.x, L.y, COL.jadeCore, a);
       if (L.b > 0.8 && L.Z < 50) glow(sg, L.x, L.y, 2, scale3(COL.jade, 0.35), a);
     }
@@ -266,8 +314,9 @@ export function* southGen(W, H, seed) {
   }
   let vign = null, vignKey = '';
   const shot = {
+    debug: { streams, solos },
     anchors: {},
-    info: { yh, padTop, T, ground: ground.ms, lights: lights.length, TM },
+    info: { yh, padTop, T, ground: ground.ms, lights: lights.length, TM, streams: streams.map(S => [S.kind, Math.round(S.sx), Math.round(S.sy), Math.round(S.jy), +S.r0.toFixed(2), S.e.length, Math.round(S.join), Math.round(S.path.len)]) },
     draw(g, dt, st) {
       t += dt;
       const tod = clamp(st.tod ?? 21, 16.5, 24);
@@ -302,7 +351,7 @@ export function* southGen(W, H, seed) {
       if (reveal > 0) {
         const sc = shoreOf(key);
         g.globalAlpha = reveal; g.drawImage(sc, 0, oFar); g.globalAlpha = 1;
-        drawShoreLights(ABs, shore, ring, ringC, t, reveal, T, arrivals);
+        drawShoreLights(ABs, shore, ring, ringC, t, reveal, T, colK);
         ABs.flush(g, 0, oFar);
       }
 
@@ -320,8 +369,7 @@ export function* southGen(W, H, seed) {
       const dk = deck.canvas;
       deckG.clearRect(0, 0, W, yl);
       deckG.drawImage(dk, 0, 0);
-      const inFlight = lights.reduce((n, L) => n + (L.el >= 0 && L.el < L.dur ? 1 : 0), 0);
-      const flux = clamp(inFlight / 40, 0, 1);
+      const flux = colK;
       if (flux > 0.01 || reveal > 0) {
         deckG.globalCompositeOperation = 'source-atop';
         glow(deckG, T[0], T[1] + 30, 70, [255, 176, 120], 0.5 * flux);
@@ -346,8 +394,8 @@ export function* southGen(W, H, seed) {
       // the wave's curtain of motes
       if (wv >= 0) wave.drawFront(AB, wv, t, dt, 1);
       // rising lights
-      updateRise(lights, rise, dt, arrivals, t);
-      drawRising(AB, lights, t, skyK);
+      updateRise(rise, dt);
+      drawRising(AB, t, dt, skyK);
       AB.flush(g, 0, oFar);
 
       // canopy, figure, leaves in front of her
@@ -403,11 +451,97 @@ export function* southGen(W, H, seed) {
 
   // ---------------------------------------------------------------- helpers using the closure
 
+  function updateRise(rise, dt) {
+    for (const S of streams) {
+      const e = S.e, el = S.el;
+      for (let k = 0; k < e.length; k++) {
+        if (rise >= e[k]) el[k] = el[k] < 0 ? (rise - e[k]) * 30 : el[k] + dt;   // a jump: as if rise had run at 1/30 s
+        else el[k] = -1;
+      }
+    }
+    for (const L of solos) L.el = rise >= L.r ? (L.el < 0 ? (rise - L.r) * 30 : L.el + dt) : -1;
+  }
+
+  // light passing over the cloud deck is hidden where the deck is (until it parts)
+  function cover(x, y, closed) {
+    if (closed <= 0 || y >= yl - 27) return 1;
+    const xi = x | 0, yi = y | 0, dv = deck.val;
+    if (!dv || xi < 0 || xi >= W || yi < 0 || yi >= deck.yb) return 1;
+    return 1 - closed * clamp(dv[yi * W + xi] * 3, 0, 1) * 0.94;
+  }
+
+  function drawRising(AB, t, dt, skyK) {
+    const closed = 1 - smooth(0.12, 0.55, skyK);
+    let feed = 0;
+    for (const S of streams) {
+      const P = S.path, E = S.el;
+      for (let k = 0; k < E.length; k++) {
+        const el = E[k];
+        if (el < 0) continue;
+        const d = el * SPEED, past = d - S.join;
+        if (past > MERGE) continue;                               // gone into the column
+        if (past > 0) feed++;
+        let a = smooth(0, 1.4, el) * (past > 0 ? 1 - smooth(0, MERGE, past) : 1);
+        pathAt(P, d);
+        const x = PT[0] + Math.sin(el * 0.8 + k * 1.7 + S.ph) * 0.4 * (1 - smooth(-20, 0, past)), y = PT[1];
+        a *= cover(x, y, closed);
+        if (a > 0.02) lightAt(AB, P, d, x, y, S.base, a, k * 0.7 + S.ph, false);
+      }
+    }
+    for (const L of solos) {
+      if (L.el < 0) continue;
+      const P = L.S.path, d = L.el * SPEED;
+      if (d > P.len) continue;
+      pathAt(P, d);
+      const x = PT[0], y = PT[1];
+      const a = smooth(0, 1.6, L.el) * (1 - smooth(P.len - 12, P.len, d) * 0.8) * cover(x, y, closed);
+      if (a > 0.02) lightAt(AB, P, d, x, y, L.base, a, 0, true);
+    }
+    // the column carries what the processions bring: it brightens as they feed it, fades when they stop
+    colK += (clamp(feed / 5, 0, 1) - colK) * Math.min(1, dt * 0.7);
+    if (colK > 0.01) drawColumn(AB, t, closed);
+  }
+
+  // one light: a 2x2 core with a soft halo and a short trail along its path; amber near the
+  // ground, pale jade as it nears the sky shore
+  function lightAt(AB, P, d, x, y, base, a, ph, solo) {
+    const kk = clamp((yl + 8 - y) / (yl + 8 - T[1]), 0, 1), k = kk * kk * (3 - 2 * kk) * 0.92;
+    RC[0] = base[0] + (COL.jade[0] - base[0]) * k; RC[1] = base[1] + (COL.jade[1] - base[1]) * k; RC[2] = base[2] + (COL.jade[2] - base[2]) * k;
+    const br = a * (0.88 + 0.12 * Math.sin(ph * 2.3 + t * 1.7));
+    RC2[0] = RC[0] * 0.74; RC2[1] = RC[1] * 0.74; RC2[2] = RC[2] * 0.74;
+    const xi = Math.round(x - 0.5), yi = Math.round(y - 0.5);
+    RC3[0] = RC[0] * 0.3; RC3[1] = RC[1] * 0.3; RC3[2] = RC[2] * 0.3;
+    AB.glow2(xi, yi, solo ? 6 : 5, RC3, br);
+    for (let q = 1; q <= 2; q++) {
+      pathAt(P, d - q * 2.2);
+      AB.px(Math.round(PT[0] - 0.5), Math.round(PT[1] - 0.5) + 1, RC, br * (q === 1 ? 0.32 : 0.14), 2, 1);
+    }
+    AB.px(xi, yi, RC2, br, 2, 2);
+  }
+
+  // the column: a soft, faint haze of light standing over the town, ripples running up it
+  function drawColumn(AB, t, closed) {
+    const y0 = colBase, y1 = colTop;
+    for (let y = y0; y >= y1; y--) {
+      const u = (y0 - y) / (y0 - y1);
+      const flow = 0.72 + 0.28 * Math.sin(y * 0.27 + t * 2.0);
+      const a = colK * 0.085 * smooth(0, 0.18, u) * flow * cover(colX, y, closed);
+      if (a < 0.003) continue;
+      const kk = u * u * (3 - 2 * u);
+      RC[0] = 255 + (COL.jade[0] - 255) * kk; RC[1] = 190 + (COL.jade[1] - 190) * kk; RC[2] = 134 + (COL.jade[2] - 134) * kk;
+      const sg = 2.4 + u * 1.6;
+      for (let dx = -8; dx <= 8; dx++) {
+        const w = Math.exp(-dx * dx / (2 * sg * sg));
+        if (w > 0.06) AB.px(colX + dx, y, RC, a * w);
+      }
+    }
+  }
+
   function drawGroundLights(g, lights, river, ground, cam, tod, rise, wv, t, oy, dt) {
     g.globalCompositeOperation = 'source-over';
     const level = L => {
-      if (L.el >= 0) return 0;
-      let a = smooth(L.on, L.on + 0.25, tod);
+      let a = smooth(L.on, L.on + 0.25, tod) * (1 - smooth(L.r, L.r + 0.015, rise));
+      if (a <= 0) return 0;
       if (wv >= 0) a *= 1 - smooth(L.arr - 0.004, L.arr + 0.012, wv);
       return Math.round(a * 6);
     };
@@ -424,7 +558,7 @@ export function* southGen(W, H, seed) {
       if (L.kind !== 'fire' && L.kind !== 'bonfire') continue;
       let a = smooth(L.on, L.on + 0.25, tod);
       if (a <= 0) continue;
-      if (L.el >= 0) { AB.px(L.x, L.y, COL.ember, 0.5 * a * (1 - smooth(L.arr, L.arr + 0.02, wv))); continue; }
+      if (rise >= L.r) { AB.px(L.x, L.y, COL.ember, 0.5 * a * (1 - smooth(L.r, L.r + 0.08, rise)) * (1 - smooth(L.arr, L.arr + 0.02, wv))); continue; }
       if (wv >= 0) a *= 1 - smooth(L.arr - 0.004, L.arr + 0.012, wv);
       if (a <= 0.02) continue;
       const x = L.x, y = L.y, ph = L.ph;
@@ -461,65 +595,49 @@ export function* southGen(W, H, seed) {
 
 // ---------------------------------------------------------------- rising
 
-function updateRise(lights, rise, dt, arrivals, t) {
-  for (const L of lights) {
-    if (L.r == null) continue;
-    if (rise >= L.r) {
-      if (L.el < 0) L.el = (rise - L.r) * 30;  // as if it left when rise passed its turn
-      else {
-        const before = L.el;
-        L.el += dt;
-        if (before < L.dur && L.el >= L.dur) arrivals.push(t);
-      }
-    } else L.el = -1;
-  }
-  while (arrivals.length && arrivals[0] < t - 1.5) arrivals.shift();
-}
-
-// Bezier position of a rising light at s, written into out (no allocation: this runs ~1000x a frame)
-const BZ = [0, 0];
-function bez(L, s, out = BZ) {
-  const u = 1 - s, a = u * u * u, b = 3 * u * u * s, c = 3 * u * s * s, d = s * s * s;
-  out[0] = a * L.x + b * L.p1[0] + c * L.p2[0] + d * L.p3[0];
-  out[1] = a * L.y + b * L.p1[1] + c * L.p2[1] + d * L.p3[1];
-  return out;
-}
-
+const PACE = 1.45;            // seconds between two lights of one procession (rise animated over ~30 s)
+const SPEED = 6.5;            // px per second along the path: a walking pace, seen from the pass
+const MERGE = 14;             // px after the join over which a light fades into the column
+const PADDY_LIGHT = [255, 226, 178];
 const RC = [0, 0, 0], RC2 = [0, 0, 0], RC3 = [0, 0, 0];
-function drawRising(AB, lights, t, skyK) {
-  const closed = 1 - smooth(0.15, 0.6, skyK);
-  for (const L of lights) {
-    if (L.el < 0 || L.el >= L.dur) continue;
-    const u = L.el / L.dur;
-    const s = L.solo ? u * 0.85 + u * u * 0.15 : u * 0.62 + u * u * (3 - 2 * u) * 0.38;
-    bez(L, s);
-    const x = BZ[0], y = BZ[1];
-    const base = L.kind === 'star' ? COL.star : L.kind === 'window' ? COL.window : L.kind === 'lantern' ? COL.lantern : COL.fire;
-    // our amber turning to their pale jade as it arrives
-    const kk = clamp((s - 0.55) / 0.4, 0, 1), k = kk * kk * (3 - 2 * kk);
-    RC[0] = base[0] + (COL.jade[0] - base[0]) * k; RC[1] = base[1] + (COL.jade[1] - base[1]) * k; RC[2] = base[2] + (COL.jade[2] - base[2]) * k;
-    let a = smooth(0, 0.06, u) * (L.kind === 'star' ? 0.75 : 1);
-    a *= 1 - closed * smooth(0.8, 0.97, s); // into the clouds while they are closed
-    a *= 1 - smooth(0.96, 1, s) * 0.6;
-    if (a <= 0.02) continue;
-    const big = L.kind === 'bonfire' || L.kind === 'fire' || L.solo;
-    // a short tail (longer for the two that go first)
-    const nt = L.solo ? 8 : L.kind === 'star' ? 1 : 3;
-    for (let q = 1; q <= nt; q++) {
-      bez(L, Math.max(0, s - q * (L.solo ? 0.008 : 0.012)));
-      AB.px(BZ[0], BZ[1], RC, a * (0.55 - q * (0.5 / (nt + 1))));
-    }
-    RC2[0] = RC[0] + (255 - RC[0]) * 0.3; RC2[1] = RC[1] + (255 - RC[1]) * 0.3; RC2[2] = RC[2] + (255 - RC[2]) * 0.3;
-    AB.px(x, y, RC2, a, big ? 2 : 1, big ? 2 : 1);
-    const gk = L.solo ? 0.7 : big ? 0.55 : 0.75;
-    RC3[0] = RC[0] * gk; RC3[1] = RC[1] * gk; RC3[2] = RC[2] * gk;
-    AB.glow(x + (big ? 0.5 : 0), y, L.solo ? 6 : big ? 4 : 2, RC3, a);
+
+// a cubic Bezier sampled into a polyline with cumulative lengths (lights move at constant speed
+// along it, so a procession keeps its spacing)
+function samplePath(c, n) {
+  const P = { xs: [], ys: [], ls: [], len: 0 };
+  for (let i = 0; i <= n; i++) {
+    const s = i / n, u = 1 - s, a = u * u * u, b = 3 * u * u * s, cc = 3 * u * s * s, d = s * s * s;
+    pushPt(P, a * c[0][0] + b * c[1][0] + cc * c[2][0] + d * c[3][0], a * c[0][1] + b * c[1][1] + cc * c[2][1] + d * c[3][1]);
   }
+  return P;
+}
+// continue a path along a quadratic Bezier
+function extendPath(P, c, n) {
+  for (let i = 1; i <= n; i++) {
+    const s = i / n, u = 1 - s;
+    pushPt(P, u * u * c[0][0] + 2 * u * s * c[1][0] + s * s * c[2][0], u * u * c[0][1] + 2 * u * s * c[1][1] + s * s * c[2][1]);
+  }
+}
+function pushPt(P, x, y) {
+  const n = P.xs.length;
+  if (n) P.len += Math.hypot(x - P.xs[n - 1], y - P.ys[n - 1]);
+  P.xs.push(x); P.ys.push(y); P.ls.push(P.len);
+}
+const PT = [0, 0];
+function pathAt(P, d) {
+  const ls = P.ls, last = ls.length - 1;
+  if (d <= 0) { PT[0] = P.xs[0]; PT[1] = P.ys[0]; return PT; }
+  if (d >= P.len) { PT[0] = P.xs[last]; PT[1] = P.ys[last]; return PT; }
+  let lo = 0, hi = last;
+  while (hi - lo > 1) { const m = (lo + hi) >> 1; if (ls[m] < d) lo = m; else hi = m; }
+  const k = (d - ls[lo]) / (ls[hi] - ls[lo] || 1);
+  PT[0] = P.xs[lo] + (P.xs[hi] - P.xs[lo]) * k; PT[1] = P.ys[lo] + (P.ys[hi] - P.ys[lo]) * k;
+  return PT;
 }
 
 // ---------------------------------------------------------------- the sky shore's lights
 
-function drawShoreLights(AB, shore, ring, ringC, t, reveal, T, arrivals) {
+function drawShoreLights(AB, shore, ring, ringC, t, reveal, T, inflow) {
   // glints running up the rivers, away from the gate: their water flows the other way from ours
   for (const p of shore.flow) {
     const k = Math.sin(p.u * 0.9 - t * 1.6 + p.ri * 2.1);
@@ -545,12 +663,10 @@ function drawShoreLights(AB, shore, ring, ringC, t, reveal, T, arrivals) {
       AB.px(x, y, COL.jade, reveal * 0.55);
     }
   }
-  // the gate's mouth: glowing with what goes in
-  const inflow = clamp(arrivals.length / 12, 0, 1);
-  const pulse = 0.85 + 0.15 * Math.sin(t * 2.2);
-  AB.glow(T[0], T[1], 9, scale3(COL.jade, 0.5), reveal * (0.35 + 0.65 * inflow) * pulse);
-  AB.glow(T[0], T[1], 3, scale3(COL.jadeCore, 0.8), reveal * (0.5 + 0.5 * inflow));
-  AB.px(T[0], T[1], COL.jadeCore, reveal);
+  // the gate's mouth: a soft glow, brighter with what goes in
+  const pulse = 0.9 + 0.1 * Math.sin(t * 1.6);
+  AB.glow(T[0], T[1], 8, scale3(COL.jade, 0.28), reveal * (0.45 + 0.55 * inflow) * pulse);
+  AB.glow(T[0], T[1], 3, scale3(COL.jadeCore, 0.35), reveal * (0.4 + 0.6 * inflow));
 }
 
 // ---------------------------------------------------------------- canopy

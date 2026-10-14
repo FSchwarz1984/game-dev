@@ -11,5 +11,6 @@
 | [05-v0.1-postmortem.md](05-v0.1-postmortem.md) | v0.1 为什么得 0 分，以及值得保留的东西 | 任何时候；尤其在想"直接做"的时候 |
 | [06-reference-board.md](06-reference-board.md) | 用户点名的参考作品和各自要学的东西 | 判断方向是否符合用户期待 |
 | [07-audio-sources.md](07-audio-sources.md) | 环境声真实录音：来源、授权、处理方法、找不到 CC0 的声音与 CC BY 候选 | 加或换环境声之前；授权问题 |
+| [08-2d-pixel-renderer.md](08-2d-pixel-renderer.md) | 2D 像素渲染管线的技术说明与教训（光照、遠化、角色保护、烘焙） | 改渲染器或环境美术之前 |
 
 新增知识：一篇一个主题，写清来源和日期，未证实的标出来，然后在这张表里登记。

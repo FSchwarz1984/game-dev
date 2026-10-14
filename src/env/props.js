@@ -152,10 +152,10 @@ export function shrine(o = {}) {
   const re = gy - 40, rt = re - 22;
   for (let y = rt; y <= re + 3; y++) {
     const t = (y - rt) / (re + 3 - rt);
-    const hw = lerp(8, 25, Math.pow(t, 0.75));
+    const hw = lerp(15, 25, t * 0.55 + t * t * 0.45); // a gable seen from above: straight-ish slopes, a little 反り toward the eave
     for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
       const u = (x - cx) / 25; let yy = y;
-      if (u > 0.45) { // the broken corner: boards drooping, gaps
+      if (u > 0.45 && !o.intact) { // the broken corner: boards drooping, gaps
         const k = (u - 0.45) / 0.55; yy = Math.round(y + k * k * 9 + (t > 0.8 ? k * 3 : 0)); if (hash2(x, y >> 1, 4) < k * 0.35) continue;
       }
       const row = Math.floor((y - rt) / 3), shingle = (x + (row % 2) * 2) % 4 === 0;
@@ -164,10 +164,11 @@ export function shrine(o = {}) {
       s.pz(x, yy, rc(PAL.barkCedar, tt, x, yy), 20 + (1 - Math.abs(u)) * 3 - t * 2, { m: MAT.WOOD, b: lerp(-20, 4, t) });
     }
   }
-  // the surviving front beam (left half) and exposed rafter ends on the right
-  for (let x = cx - 26; x <= cx + 10; x++) { const e = Math.abs(x - cx) / 26, y = re + 3 - Math.round(Math.pow(e, 3) * 3); s.pz(x, y, PAL.woodGrey[4], 24, { m: MAT.WOOD, b: 5 }); s.pz(x, y + 1, PAL.woodGrey[1], 23, { m: MAT.WOOD, b: 5 }); }
-  for (const rx of [cx + 14, cx + 18, cx + 22]) for (let k = 0; k < 4; k++) s.pz(rx, re + 2 + k + Math.round((rx - cx - 12) * 0.4), PAL.woodGrey[2 - (k >> 1)], 23, { m: MAT.WOOD, b: 4 });
-  for (let x = cx - 5; x <= cx + 5; x++) s.pz(x, rt - 1, PAL.barkCedar[5], 25, { m: MAT.WOOD, b: -20 }); // ridge
+  // the front eave beam: whole (o.intact, before day 1), or only its left half with the rafter ends
+  // exposed on the right (after it fell — the beam then lies on the ground as 'eaveBeam')
+  for (let x = cx - 26; x <= cx + (o.intact ? 26 : 10); x++) { const e = Math.abs(x - cx) / 26, y = re + 3 - Math.round(Math.pow(e, 3) * 3); s.pz(x, y, PAL.woodGrey[4], 24, { m: MAT.WOOD, b: 5 }); s.pz(x, y + 1, PAL.woodGrey[1], 23, { m: MAT.WOOD, b: 5 }); }
+  if (!o.intact) for (const rx of [cx + 14, cx + 18, cx + 22]) for (let k = 0; k < 4; k++) s.pz(rx, re + 2 + k + Math.round((rx - cx - 12) * 0.4), PAL.woodGrey[2 - (k >> 1)], 23, { m: MAT.WOOD, b: 4 });
+  for (let x = cx - 15; x <= cx + 15; x++) { s.pz(x, rt - 1, PAL.barkCedar[5], 25, { m: MAT.WOOD, b: -20 }); s.pz(x, rt - 2, PAL.barkCedar[3], 25, { m: MAT.WOOD, b: -20 }); } // ridge cap
   POST.ao(s, 2, 0.15); POST.outline(s, { k: 0.62 }); POST.normals(s, 1);
   return { s, meta: { ax: cx, ay: gy + 1, sway: 0, occluder: false, kind: 'shrine' } };
 }
@@ -294,13 +295,15 @@ export function bonLantern(lit = false) {
   PX.ell(cx + 0.5, 8.5, 4, 5, (x, y, u, v, d) => {
     if (y < 4 || y > 12) return;
     const rib = (y - 4) % 2 === 0;
-    const c = lit ? [255 - d * 30 - (rib ? 18 : 0), 226 - d * 60 - (rib ? 24 : 0), 150 - d * 70 - (rib ? 20 : 0)] : rc(PAL.paper, 0.74 - u * 0.3 - v * 0.1 - (rib ? 0.12 : 0), x, y);
-    s.pz(x, y, c, 4 + (1 - d), { m: lit ? MAT.LAMP : MAT.PAPER, e: lit ? (d < 0.6 ? 7 : 5) : 0, n: [u * 0.8, -v * 0.3, Math.sqrt(Math.max(0.1, 1 - u * u))] });
+    // lit: warm paper glowing from inside — amber at the heart, deeper orange at the edges and on the
+    // ribs (never white: a white core blooms into a blob and the lantern stops reading as a lantern)
+    const c = lit ? [246 - d * 26 - (rib ? 30 : 0), 172 - d * 52 - (rib ? 34 : 0), 92 - d * 44 - (rib ? 24 : 0)] : rc(PAL.paper, 0.74 - u * 0.3 - v * 0.1 - (rib ? 0.12 : 0), x, y);
+    s.pz(x, y, c, 4 + (1 - d), { m: lit ? MAT.LAMP : MAT.PAPER, e: lit ? (rib ? 2 : d < 0.55 ? 4 : 3) : 0, n: [u * 0.8, -v * 0.3, Math.sqrt(Math.max(0.1, 1 - u * u))] });
   });
   // a faint family crest (a small ring)
-  for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) { const x = cx + dx, y = 8 + dy; if (s.a(x, y)) s.px(x, y, lit ? [222, 168, 100] : [150, 150, 152], { m: lit ? MAT.LAMP : MAT.PAPER, e: lit ? 4 : 0 }); }
+  for (const [dx, dy] of [[0, -1], [1, 0], [0, 1], [-1, 0]]) { const x = cx + dx, y = 8 + dy; if (s.a(x, y)) s.px(x, y, lit ? [168, 92, 50] : [150, 150, 152], { m: lit ? MAT.LAMP : MAT.PAPER, e: lit ? 1 : 0 }); }
   s.pz(cx, 14, PAL.rope[1], 3, { m: MAT.ROPE }); // tassel
-  if (!lit) POST.outline(s, { k: 0.72 }); POST.normals(s, 1);
+  POST.outline(s, { k: lit ? 0.8 : 0.72, only: (x, y, i) => !lit || s.m[i] !== MAT.LAMP || y === 4 || y === 12 }); POST.normals(s, 1);
   return { s, meta: { ax: cx, ay: 0, kind: 'lantern', shadow: lit ? 0 : 1 } };
 }
 /** 精霊馬: a cucumber horse and an eggplant cow on a flat stone */

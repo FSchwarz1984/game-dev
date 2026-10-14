@@ -4,12 +4,13 @@
    URL switches:
      ?t=dusk|night|morning|noon|<hours>   time of day (default 17.6)
      ?shot=<name>    camera framing from map.shots (path, dosojin, graves, saddle, camphorFull, hut, shrine, eastRoad, lookout, tower, waterfall)
-     ?x=&z=          start position (metres)        ?q=high|mid|low   quality
+     ?x=&z=          start position (metres)  ?y= her height (a climb hold)  ?q=high|mid|low
      ?day1=1         the morning after the Far (hut far, scars, half-faded camphor)
      ?lanterns=1     bon lanterns hung and lit at the graves (evening/night also light the hut and
                      give her a carried lantern; ?carry=1 forces the carried lantern)
      ?frames=N       set window.DONE after N frames  ?pause=1  freeze time
      ?ph=1           the placeholder character instead of her sprite sheet (src/art)
+     ?cam=x,z,y      a fixed camera target (metres)
    Keys: WASD/arrows walk, T cycles the time, F toggles day-1, L lanterns.
    window.ENV exposes {R, map, actor, setTime, shot, walkTo} for scripted shots.
    ===================================================================== */
@@ -54,7 +55,7 @@ async function boot() {
     setTime: h => { hour = h; R.setTime(h); },
     shot: name => { const s = map.shots[name]; if (!s) return false; st.follow = false; R.setCamera(s.to || s, 0); R.camera.snap(); return true; },
     follow: () => { st.follow = true; },
-    place: (x, z) => { actor.x = x; actor.z = z; actor.y = map.heightAt(x, z); R.setFocus(x, z, actor.y); R.setCamera({ x, z, y: actor.y, lift: 0.9 }, 0); },
+    place: (x, z, y) => { actor.x = x; actor.z = z; actor.y = y ?? map.heightAt(x, z); R.setFocus(x, z, actor.y); R.setCamera({ x, z, y: actor.y, lift: 0.9 }, 0); },
   };
   R.debug = +(qs.get('debug') || 0); R.noTerrainShadow = qs.get('nots') === '1';
   if (qs.get('day1') === '1' && map.applyDay1) map.applyDay1(R);
@@ -63,8 +64,10 @@ async function boot() {
   const dark = hour >= 18.6 || hour < 5.5;
   if (dark && map.lightHome) map.lightHome(R, true);
   ENV.carry = dark || qs.get('carry') === '1' ? R.addLight({ x: pos.x, z: pos.z, y: map.heightAt(pos.x, pos.z) + 1.7, color: [1, 0.72, 0.42], radius: 3.4, intensity: 0.9, flicker: 0.35 }) : null;
-  ENV.place(pos.x, pos.z);
+  ENV.place(pos.x, pos.z, qs.get('y') != null ? +qs.get('y') : undefined);
+  if (qs.get('y') != null) st.lockY = +qs.get('y');
   if (qs.get('shot')) ENV.shot(qs.get('shot'));
+  if (qs.get('cam')) { const [cx, cz, cy] = qs.get('cam').split(',').map(Number); st.follow = false; R.setCamera({ x: cx, z: cz, y: cy || 0 }, 0); R.camera.snap(); }
   const keys = new Set();
   addEventListener('keydown', e => { keys.add(e.code); if (e.code === 'KeyT') ENV.setTime((hour + 1.5) % 24); if (e.code === 'KeyF' && map.applyDay1) map.applyDay1(R); if (e.code === 'KeyL' && map.hangLanterns) map.hangLanterns(R, true); });
   addEventListener('keyup', e => keys.delete(e.code));
@@ -83,7 +86,7 @@ async function boot() {
     if (moving) {
       st.follow = true; const l = Math.hypot(mx, mz), sp = 4.2 * dt; const nx = actor.x + mx / l * sp, nz = actor.z + mz / l * sp;
       if (map.walkable(nx, actor.z)) actor.x = nx; if (map.walkable(actor.x, nz)) actor.z = nz;
-      actor.y = map.heightAt(actor.x, actor.z);
+      actor.y = st.lockY ?? map.heightAt(actor.x, actor.z);
       st.dir = Math.abs(mx) > Math.abs(mz) ? (mx > 0 ? 'e' : 'w') : (mz > 0 ? 's' : 'n');
     }
     st.anim += dt * (moving ? 8 : 0); st.t = (st.t || 0) + (pause ? 0 : dt);

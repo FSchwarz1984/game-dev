@@ -1,6 +1,6 @@
 // Contact sheets of the env painters, rendered in Node (no browser): albedo on a mid ground colour,
 // optionally scaled. Fast feedback while painting assets.
-//   node tools/env/sheet.mjs flora|props|camphor [scale] [outfile]
+//   node tools/env/sheet.mjs flora|flora1|props|camphor [scale] [outfile]
 import path from 'node:path';
 import { writePNG } from './png.mjs';
 
@@ -23,6 +23,7 @@ async function items() {
   }
   if (which === 'props') { const P = await import('../../src/env/props.js'); return P.PREVIEW(); }
   if (which === 'camphor') { const C = await import('../../src/env/camphor.js'); return C.PREVIEW(); }
+  if (which === 'flora1') { const F = await import('../../src/env/flora1.js'); return F.PREVIEW(); }
   throw new Error('unknown sheet ' + which);
 }
 

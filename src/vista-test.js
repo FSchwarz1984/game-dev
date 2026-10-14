@@ -12,6 +12,7 @@ const q = new URLSearchParams(location.search);
 const num = (k, d) => (q.has(k) ? parseFloat(q.get(k)) : d);
 
 document.body.style.cssText = 'margin:0;background:#000;overflow:hidden;height:100vh';
+if (q.has('tune')) globalThis.VISTA_TUNE = JSON.parse(q.get('tune'));   // temporary tuning hook
 const v = createVista({ seed: num('seed', 7) });
 const cv = v.canvas;
 cv.style.cssText = 'position:absolute;image-rendering:pixelated;image-rendering:crisp-edges';

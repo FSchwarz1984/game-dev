@@ -106,7 +106,7 @@ export function layoutTerrain(T) {
   const [tx, tz] = HOME.trunk;
   // water: the pool under the falls, the channel on the cliff top, the stream to the west valley
   T.stream([[25.5, -8], [25.5, -2], [25.6, 4.6]], 2.4, [8.06, 8.06, 8.06], { step: true, speed: 1.1, depth: 0.3 });
-  T.pool(HOME.pool[0], HOME.pool[1], 5.2, 4.1, -0.6, 1.0, { seed: 9, amp: 0.3 });
+  T.pool(HOME.pool[0], HOME.pool[1], 5.2, 4.1, -0.6, 1.0, { seed: 9, amp: 0.85, rot: 0.25 });
   T.stream([[23.6, 11.4], [21.2, 15.2], [19.6, 18.4], [17.8, 22], [15.6, 27.5], [13.4, 33.6], [11.9, 38.6], [10.4, 42.2], [8.2, 48.4], [5.4, 55.2], [2.6, 61], [-1, 66], [-9, 71]], 1.9,
     [-0.68, -0.68, -1.62, -1.62, -1.62, -1.62, -1.62, -3.12, -3.12, -3.12, -3.12, -5.62, -8.62], { step: true, speed: 0.9, depth: 0.35 });
 }
@@ -148,7 +148,7 @@ function registerSprites(K) {
   for (let i = 0; i < 3; i++) S('bamboo' + i, () => F.bamboo(i + 1, 140 + i * 16));
   for (let i = 0; i < 8; i++) S('tuft' + i, () => F.tuft(i + 1, i < 4 ? 0 : i < 5 ? 1 : i < 6 ? 2 : 3));
   S('hut', () => P.hut({})); S('hutLit', () => P.hut({ lit: true }));
-  S('shrine', () => P.shrine()); S('eaveBeam', () => P.eaveBeam());
+  S('shrine', () => P.shrine()); S('shrineIntact', () => P.shrine({ intact: true })); S('eaveBeam', () => P.eaveBeam());
   S('dosojin', () => P.dosojin()); S('offeringLedge', () => P.offeringLedge());
   for (let v = 0; v < 9; v++) S('grave' + v, () => P.grave(v));
   for (let v = 0; v < 3; v++) S('lanternPole' + v, () => P.lanternPole(v));
@@ -301,7 +301,7 @@ function populate(K) {
     K.place(n, x, z, { flip: R() < 0.5 }); c++;
   }
   // the sprites the lead's scripts swap or add (keep them in the atlas)
-  for (const n of ['hutLit', 'bonLantern', 'bonLanternLit', 'dango1', 'dangoPale', 'tuft7']) K.rect(n);
+  for (const n of ['hutLit', 'bonLantern', 'bonLanternLit', 'dango1', 'dangoPale', 'tuft7', 'shrineIntact']) K.rect(n);
   // ---- emitters (world px)
   const px = v => v * PPM;
   K.emitters.push({ type: 'leaves', area: { x0: px(tx - 20), y0: px(tz - 10), x1: px(tx + 21), y1: px(tz + 10) }, z0: px(5), z1: px(17), rate: 2.4, windK: 1, colors: [[0.36, 0.5, 0.24], [0.5, 0.6, 0.28], [0.62, 0.5, 0.26], [0.7, 0.42, 0.22]] });
@@ -319,13 +319,16 @@ function populate(K) {
   K.backdrop = { w: bd.w, h: bd.h, data: bd.data, par, x0: wsT[0] - camT[0] * (1 - par[0]) - lpT[0], y0: wsT[1] - camT[1] * (1 - par[1]) - lpT[1], red: bd.red };
   // ---- named objects (metres) for the gameplay and the story scripts
   K.object('camphor', { x: tx, z: tz, y: 0, r: 3.4, parts: ['camphorTrunk', ...lobes, ...ROOTS.map((_, i) => 'camphorRoot' + i)], trunk: 'camphorTrunk', lobes, height: 27,
-    climb: [{ x: 47.3, z: 30.7, y: 0.9 }, { x: 48.4, z: 29.9, y: 1.7 }, { x: 49.3, z: 29.5, y: 2.7 }, { x: 50.1, z: 29.4, y: 3.8 }, { x: 50.6, z: 29.3, y: 5.8 }, { x: 50.3, z: 29.0, y: 8.2 }],
+    // holds just in front of the bark (the trunk's front plane is z 29.45, curving back toward its sides),
+    // so she draws on the trunk, never behind it
+    climb: [{ x: 47.3, z: 30.2, y: 0.9 }, { x: 48.4, z: 29.85, y: 1.7 }, { x: 49.3, z: 29.85, y: 2.7 }, { x: 50.1, z: 29.85, y: 3.8 }, { x: 50.6, z: 29.85, y: 5.8 }, { x: 50.3, z: 29.85, y: 8.2 }],
     top: { x: 50.6, z: 18.2, y: 24.5 } });
   K.object('hut', { x: hx, z: hz, y: 0, parts: ['hut'], door: { x: hx + 1.25, z: hz + 0.35 }, lit: 'hutLit', unlit: 'hut', smoke: 'hutSmoke' });
   K.object('oldBackFrame', { x: hx + 3.4, z: hz + 0.35, parts: ['oldBackFrame'] });
   K.object('load', { x: tx - 2.6, z: tz + 3.9, parts: ['load'] });
   K.object('dango', { x: sx - 0.55, z: sz + 0.25, y: 0.36, parts: ['dango'], states: { two: 'dango2', one: 'dango1', pale: 'dangoPale' } });
-  K.object('shrine', { x: sx, z: sz, y: 0, parts: ['shrine'], front: { x: sx, z: sz + 0.9 }, beam: { x: sx + 2.5, z: sz + 2.0, part: 'eaveBeam', length: 2.4 } });
+  K.object('shrine', { x: sx, z: sz, y: 0, parts: ['shrine'], front: { x: sx, z: sz + 0.9 }, intact: 'shrineIntact', broken: 'shrine',
+    beam: { x: sx + 2.5, z: sz + 2.0, part: 'eaveBeam', length: 2.4 } });
   K.object('statues', { x: dx_, z: dz_, y: T.heightAt(dx_, dz_), parts: ['dosojin'], ledge: { x: dx_, z: dz_ + 0.75, y: T.heightAt(dx_, dz_ + 0.75) + 0.2, part: 'offeringLedge' } });
   K.object('graves', { x: HOME.graves[0] + 4.9, z: HOME.graves[1], y: -1.5, list: graves, spiritAnimals: { x: HOME.graves[0] + 4.9, z: HOME.graves[1] + 1.25, part: 'spiritAnimals' }, parts: graves.map(g => g.part) });
   K.object('lookout', { x: 44.5, z: 61.2, y: 0, faces: 'south', parts: ['lookoutFence', 'lookoutSeat', 'lookoutPine'] });
@@ -389,3 +392,41 @@ export function createHomeMap(o = {}) {
   map.lightHome = (R, on) => lightHome(R, map, on);
   return map;
 }
+
+/* =====================================================================
+   API summary (what the gameplay, the story scripts and the renderer use)
+
+   const map = createHomeMap()                       ~4.3 s in Node (terrain 2.5 s), ~4–5 s in a browser tab
+   ---- gameplay (metres; x east, z south, y up; 1 m = 20 px = map.pxPerMetre)
+   map.size {w, h}, map.playable {x0, z0, x1, z1}, map.painted {…}
+   map.heightAt(x, z)      walkable surface height (m): saddle 0, terraces −1.5/−3/−4.5, NE terrace +3,
+                           the slope steps below the rims down to −14 (not walkable: they are cliffs)
+   map.waterAt(x, z)       {surface, depth} or null — water is reported here, never as a low height
+   map.water(x, z)         depth (m) or 0
+   map.material(x, z)      'grass' | 'clearing' | 'moss' | 'forest' | 'path' | 'paving' | 'steps' | …
+   map.walkable(x, z)      nav grid (0.25 m): blocks deep water, steps > 0.3 m, colliders, the void
+   map.nav {x0, z0, cell, w, h, data}, map.colliders [{type:'circle'|'box', …}]
+   map.spawn {x, z, facing}
+   map.objects             named things (metres), each with `parts` = sprite instance names:
+     camphor   {x, z, r, height, trunk, lobes[], climb[6 holds {x, z, y}], top {x, z, y}}
+     hut       {door, lit: 'hutLit', unlit: 'hut', smoke}
+     oldBackFrame, load    (leaning against the hut wall / the camphor's roots)
+     dango     {states: {two: 'dango2', one: 'dango1', pale: 'dangoPale'}}
+     shrine    {front, intact: 'shrineIntact', broken: 'shrine', beam {x, z, part: 'eaveBeam', length 2.4}}
+               (prologue: R.setImage('shrine', 'shrineIntact') and R.setHidden('eaveBeam', true); when the
+               beam falls, swap back to 'shrine' and show 'eaveBeam')
+     statues   (the paired 道祖神) {ledge {x, z, y, part: 'offeringLedge'}}
+     graves    {list[9] {x, z, y, part, pole, hook {x, z, y}}, spiritAnimals {…}}
+     lookout   {faces: 'south'}, waterfall {pool}, road {entryEast, bends[3], saddleTop, path[]},
+     northLoop {start, exit}, signposts {list}
+   map.shots               named framings {x, z, y, speed}: saddle, hut, shrine, path, graves, dosojin,
+                           eastRoad, lookout, tower, waterfall, camphorTop; camphorFull {from, to,
+                           duration, ease} pans the trunk from its roots to the crown (no zoom ever)
+   ---- presentation helpers (take the renderer)
+   map.applyDay1(R)        the morning after the Far: hut and old back-frame far, half the crown at 0.5,
+                           pale scars on the ground, the dango pale, a little more mist
+   map.hangLanterns(R, lit)  a bon lantern on each grave's hook (+ a light when lit) → handles
+   map.lightHome(R, on)    the hut lit at night (sprite swap + two warm lights) → light handles
+   ---- renderer side: see src/gfx/renderer.js (setTime, setCamera, setFocus, setFar, paintFar,
+   addSprite, addLight, loadSheet/addActor, setImage, setHidden)
+   ===================================================================== */
