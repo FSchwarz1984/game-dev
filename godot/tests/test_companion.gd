@@ -82,3 +82,33 @@ func test_she_follows_the_smoke_route_onto_the_plateau() -> void:
 		step.call(Vector2.ZERO)
 	near(f.player.h, 1.5, 1e-6, "she is on the plateau")
 	near(r.height_at(c.x, c.z), 1.5, 1e-6, "Saji followed her up (at %.2f, %.2f, mode %s)" % [c.x, c.z, c.mode])
+
+
+func test_she_does_not_cut_across_a_cliff_to_the_nearest_crumb() -> void:
+	# the smoke bot's intermittent failure: the lead goes up the stairs and walks back along the
+	# plateau edge, right above Saji at the cliff foot. The nearest crumbs are then on the plateau,
+	# a metre away in plan but a cliff above her; she must take the stairs, not push into the cliff.
+	var r := RegionData.load_dir("res://world/regions/test")
+	var f := Field.new({"ground": r.ground_kind, "height": r.height_at, "profile": TestCase.profile("draft")})
+	f.player.x = 10.0
+	f.player.z = 9.0
+	var c := Companion.new(8.0, 8.4)
+	var blk := func(x: float, z: float, fx: float, fz: float) -> Dictionary:
+		return {"wall": true} if r.ground_kind(x, z, fx, fz) != Field.Ground.GROUND else {}
+	var step := func(dir: Vector2) -> void:
+		f.update(DT, {"mx": dir.x, "mz": dir.y})
+		c.lead(f.player.x, f.player.z)
+		c.update(DT, f.player.x, f.player.z, Proj.face_of(f.player.fx, f.player.fz), blk)
+	var goto := func(x: float, z: float) -> void:
+		for i in 400:
+			var d := Vector2(x - f.player.x, z - f.player.z)
+			if d.length() < 0.15:
+				break
+			step.call(d.normalized())
+	goto.call(10.0, 6.0)
+	goto.call(7.0, 7.1)
+	near(f.player.h, 1.5, 1e-6, "she is on the plateau edge")
+	for i in 240:  # 8 s standing still
+		step.call(Vector2.ZERO)
+	near(r.height_at(c.x, c.z), 1.5, 1e-6, "Saji came up the stairs (at %.2f, %.2f, mode %s)" % [c.x, c.z, c.mode])
+	check(Vector2(c.x - f.player.x, c.z - f.player.z).length() < 2.5, "and is close to her")

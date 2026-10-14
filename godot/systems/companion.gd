@@ -5,6 +5,9 @@ extends RefCounted
 ## never stands between the camera and the lead. When the side spot is not reachable (a cliff, the
 ## lead on stairs, water) or she has fallen behind, she walks the lead's own recent path, which is
 ## always walkable. Very far behind (a scene teleported the lead), she catches up along the path.
+## On the path she keeps her place in order and only skips ahead to crumbs she can reach in a straight
+## line: the nearest crumb in plan can be a cliff above her (the lead walked back along the edge), and
+## walking straight at it is how she used to get stuck at the foot of the stairs (knowledge/16 §14).
 
 const DEFAULTS := {
 	"side": 1.0,          # metres to the side of the lead
@@ -28,6 +31,8 @@ var trail: Array[Vector2] = []
 var mode := "side"          # "side" or "trail"
 var _stuck_t := 0.0
 var _trail_end := false     # the trail goal is the last crumb before the lead
+var _seq := 0               # crumbs recorded so far: the crumb at index i has id _seq - 1 - i
+var _cursor := -1           # id of the crumb she is walking to on the trail (-1: pick one)
 
 
 func _init(px: float = 0.0, pz: float = 0.0, options: Dictionary = {}) -> void:
@@ -41,6 +46,7 @@ func lead(lx: float, lz: float) -> void:
 	var p := Vector2(lx, lz)
 	if trail.is_empty() or trail[0].distance_to(p) >= float(opt["crumb"]):
 		trail.push_front(p)
+		_seq += 1
 	if trail.size() > 160:
 		trail.resize(160)
 
@@ -56,6 +62,7 @@ func update(dt: float, lead_x: float, lead_z: float, lead_face: String, blocker:
 		x = p.x
 		z = p.y
 		mode = "trail"
+		_cursor = -1
 		moving = false
 		return true
 
@@ -67,15 +74,17 @@ func update(dt: float, lead_x: float, lead_z: float, lead_face: String, blocker:
 	else:
 		side = 1.0 if x >= lead_x else -1.0
 	var goal := Vector2(lead_x + side * float(opt["side"]), lead_z - float(opt["back"]))
-	var free := func(px: float, pz: float) -> bool:
-		return (blocker.call(px, pz, x, z) as Dictionary).is_empty()
-	if mode == "side" and (not free.call(goal.x, goal.y) or _stuck_t > 0.6):
+	if mode == "side" and (_stuck_t > 0.6 or not _reachable(me, goal, blocker)):
 		mode = "trail"
+		_cursor = -1
 	if mode == "trail":
-		if dist_lead < 1.6 and free.call(goal.x, goal.y) and _stuck_t <= 0.0:
+		if dist_lead < 1.6 and _stuck_t <= 0.0 and _reachable(me, goal, blocker):
 			mode = "side"
 		else:
-			goal = _next_on_trail(me)
+			if _stuck_t > 1.0:  # something stands on the path: start again from the nearest crumb she can reach
+				_cursor = -1
+				_stuck_t = 0.0
+			goal = _next_on_trail(me, blocker)
 
 	var d := me.distance_to(goal)
 	# on the trail the next crumb is a short step ahead: only stop at the end of the trail
@@ -100,19 +109,13 @@ func update(dt: float, lead_x: float, lead_z: float, lead_face: String, blocker:
 	return moving
 
 
-## The breadcrumb to walk to next: the point a little further toward the lead from the crumb
-## nearest to her, but never closer to the lead than trail_spacing.
-func _next_on_trail(me: Vector2) -> Vector2:
+## The breadcrumb to walk to next. She keeps her place on the lead's path (the cursor), moves it on
+## when she reaches a crumb, and looks up to a metre further along for a crumb she can walk to in a
+## straight line; never closer to the lead than trail_spacing.
+func _next_on_trail(me: Vector2, blocker: Callable) -> Vector2:
 	if trail.is_empty():
 		return me
-	var best := 0
-	var bd := INF
-	for i in trail.size():
-		var d := trail[i].distance_to(me)
-		if d < bd:
-			bd = d
-			best = i
-	# index 0 is the newest (the lead); walk toward lower indices
+	# index 0 is the newest (the lead); she walks toward lower indices
 	var min_index := 0
 	var acc := 0.0
 	for i in range(1, trail.size()):
@@ -120,6 +123,43 @@ func _next_on_trail(me: Vector2) -> Vector2:
 		if acc >= float(opt["trail_spacing"]):
 			min_index = i
 			break
-	var target_i := maxi(min_index, best - 4)  # a metre ahead along her path
-	_trail_end = target_i == min_index
-	return trail[target_i]
+	var ci := _seq - 1 - _cursor
+	if _cursor < 0 or ci < 0 or ci >= trail.size():
+		ci = _nearest_reachable(me, blocker)
+	# move on once she is at this crumb, but only to a next one she can walk to from here (within
+	# 0.35 m of the top step she can still be on the stairs while the next crumb is on the plateau
+	# beside them: then she first steps onto this crumb)
+	while ci > min_index and trail[ci].distance_to(me) < 0.35 and _reachable(me, trail[ci - 1], blocker):
+		ci -= 1
+	var ahead := ci
+	for j in range(ci - 1, maxi(min_index, ci - 4) - 1, -1):
+		if _reachable(me, trail[j], blocker):
+			ahead = j
+	ci = maxi(ahead, min_index)
+	_cursor = _seq - 1 - ci
+	_trail_end = ci == min_index
+	return trail[ci]
+
+
+## The crumb nearest to her that she can reach in a straight line (the nearest one when none is).
+func _nearest_reachable(me: Vector2, blocker: Callable) -> int:
+	var order: Array[int] = []
+	for i in trail.size():
+		order.append(i)
+	order.sort_custom(func(a: int, b: int) -> bool: return trail[a].distance_squared_to(me) < trail[b].distance_squared_to(me))
+	for k in mini(order.size(), 16):
+		if _reachable(me, trail[order[k]], blocker):
+			return order[k]
+	return order[0]
+
+
+## Whether she can walk from a to b in a straight line (checked every 0.2 m with her own blocker).
+func _reachable(a: Vector2, b: Vector2, blocker: Callable) -> bool:
+	var n := maxi(1, ceili(a.distance_to(b) / 0.2))
+	var prev := a
+	for k in range(1, n + 1):
+		var p := a.lerp(b, float(k) / n)
+		if not (blocker.call(p.x, p.y, prev.x, prev.y) as Dictionary).is_empty():
+			return false
+		prev = p
+	return true
