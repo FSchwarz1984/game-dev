@@ -17,6 +17,7 @@ const arg = k => (process.argv.find(a => a.startsWith(`--${k}=`)) || '').split('
 const mode = arg('mode') || 'desk';
 const out = arg('out') || path.join(ROOT, '.shots', 'seg1-' + mode);
 const file = arg('file') || path.join(ROOT, 'dist/game.html');
+const from = arg('scene') || '';   // 'day1' starts at the first morning (skips the title and prologue)
 fs.mkdirSync(out, { recursive: true });
 
 const VIEW = { desk: { width: 1280, height: 720, dpr: 1, touch: false }, phone: { width: 844, height: 390, dpr: 3, touch: true }, portrait: { width: 390, height: 844, dpr: 3, touch: true } }[mode];
@@ -27,14 +28,15 @@ page.on('pageerror', e => errors.push(String(e)));
 page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
 const cdp = VIEW.touch ? await page.context().newCDPSession(page) : null;
 
-await page.goto('file://' + file + '?manual=1' + (VIEW.touch ? '&touch=1' : ''));
+await page.goto('file://' + file + '?manual=1' + (VIEW.touch ? '&touch=1' : '') + (from ? '&scene=' + from : ''));
 await page.waitForFunction(() => window.APP && window.APP.G);
 
 const log = (...a) => console.log(`[${mode}]`, ...a);
 let shotN = 0;
 async function shot(name) {
   await page.waitForTimeout(900);            // let CSS fades and cards settle (they run on the wall clock)
-  await page.evaluate(() => window.APP.render());
+  // the camera eases only when frames are drawn; ticks here draw nothing, so settle it first
+  await page.evaluate(() => { window.APP.G.stage.R.camera.snap(); window.APP.render(); });
   await page.waitForTimeout(60);
   const f = path.join(out, `${String(++shotN).padStart(2, '0')}-${name}.png`);
   await page.screenshot({ path: f });
@@ -154,6 +156,18 @@ const places = () => page.evaluate(() => window.APP.G.P);
 
 // ---------------------------------------------------------------- the run
 try {
+  if (from !== 'day1') await prologueRun();
+  await dayOneRun();
+  log('reached the end card; errors:', errors.length);
+} catch (e) {
+  log('FAILED:', e.message);
+  await shot('failure').catch(() => {});
+  process.exitCode = 1;
+}
+if (errors.length) { log('page errors:\n' + errors.slice(0, 10).join('\n')); process.exitCode = 1; }
+await browser.close();
+
+async function prologueRun() {
   await ticks(40);
   await shot('title');
   if (VIEW.touch) await tap('.ttl-menu button[data-a="start"]'); else await page.keyboard.press('Enter');
@@ -178,6 +192,10 @@ try {
   await until(s => !s.control && s.dlg, 'treetop line'); await shot('vista-treetop');
   for (const [n, f] of [['rise', 700], ['sky', 500], ['wave', 400]]) { await ticks(f); await shot('vista-' + n); }
   await until(s => s.saved && s.saved.includes('day1'), 'prologue saved');
+}
+
+async function dayOneRun() {
+  const P = await places();
   await ticks(90); await shot('waking');
   await until(s => s.control, 'control on day 1');
   await shot('morning');
@@ -201,11 +219,4 @@ try {
   await walk([P.eastExit.x0 + 1, P.dosojinStand[1]], 0.6);
   await until(s => s.saved && s.saved.includes('end'), 'end card', 3000);
   await shot('end');
-  log('reached the end card; errors:', errors.length);
-} catch (e) {
-  log('FAILED:', e.message);
-  await shot('failure').catch(() => {});
-  process.exitCode = 1;
 }
-if (errors.length) { log('page errors:\n' + errors.slice(0, 10).join('\n')); process.exitCode = 1; }
-await browser.close();

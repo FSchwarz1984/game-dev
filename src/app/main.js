@@ -33,7 +33,7 @@ import birds from '../../assets/audio/birds.mp3';
 const PX = 20; // native pixels per metre: the audio engine's distances are in pixels
 
 export async function boot(app) {
-  const touch = params.touch === '1' || matchMedia('(pointer: coarse)').matches;
+  const touch = params.touch || matchMedia('(pointer: coarse)').matches;
   const ui = el('div', 'ui', app);
 
   // ---- audio: silent until the first gesture; distances in metres become pixels
@@ -58,7 +58,7 @@ export async function boot(app) {
   const f = new Field();
   // the title is on screen at once, over its own backdrop; the map bakes behind it
   const vv = createVistaView(app);
-  const skipTitle = params.scene === 'prologue' || params.scene === 'day1';
+  const skipTitle = !!params.scene;
   let titleRun = null;
   if (!skipTitle) {
     vv.show({ shot: 'title', tod: 21 });
@@ -96,7 +96,7 @@ export async function boot(app) {
 
   // ---- the frame loop
   let last = performance.now();
-  if (params.fast) D.rate = Math.max(1, +params.fast);
+  if (params.fast > 1) D.rate = params.fast;
   const frame = now => {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
     tick(dt);
@@ -121,7 +121,7 @@ export async function boot(app) {
   window.APP.tick = tick;
   window.APP.render = () => stage.render();
   // ?manual=1: the checking tools drive the clock themselves (tick without drawing, draw on demand)
-  if (params.manual !== '1') requestAnimationFrame(frame);
+  if (!params.manual) requestAnimationFrame(frame);
 
   stage.prepareVista?.();   // the treetop shots are built in slices while she climbs the pass
   // ---- title → prologue → day 1 → end card → title
