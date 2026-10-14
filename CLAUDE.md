@@ -53,3 +53,7 @@
 - `docs/design/`：当前设计文档，每个文件顶部标注状态（草案 / 已批准）。
 - `.claude/skills/`：可复用流程：`design-proposal`、`playtest-capture`、`art-direction`、`dialogue-writing`。
 - `legacy/v0.1/`：已废弃的 v0.1。
+- `src/game/`：纯逻辑（五性账本、目标选取、小伙伴、施工、种田、寻路、灰盒模拟），Node 可测，不碰渲染。
+- `src/render/`、`src/world/`、`src/core/`：HD-2D 渲染地基与测试地形；`src/play/`：可玩灰盒的接线（布局、站点视图、角色、主循环），说明见 `docs/design/g3-graybox.md`。
+- `src/ui/`（操作、名牌、身体槽）、`src/fx/`（转移粒子）、`src/audio/`（沿用 v0.1 的合成音频，五性音色在 `SFX.qual`）。
+- `tests/`：`node --test tests/*.test.js`。改玩法逻辑必须先让测试通过。

@@ -10,6 +10,7 @@ import { Site } from './build.js';
 import { Plot } from './farm.js';
 
 const hyp = Math.hypot;
+const inRect = (r, x, z) => x >= r.x0 && x <= r.x1 && z >= r.z0 && z <= r.z1;
 
 // What each kind of thing is made of, how the target system ranks it, and what E does to it.
 const KINDS = {
@@ -32,6 +33,16 @@ const KINDS = {
   yokai: { name: '鬼火', material: 'yokai', priority: 2, r: 0.5 },
 };
 
+/** The flat default arena (tests). Positions are [x, z] in metres. */
+export const ARENA = {
+  spawn: [0, 0], shrine: [0, -3],
+  rock: [-7, 2], plate: [-10, 6], gate: [-10, 10], bridge: [-4, 9], ditch: { x0: -9, x1: 1, z0: 8.4, z1: 9.6 },
+  pond: [8, 6], pondR: 3.2, brazier: [4, 2], lantern: [12, -2], bell: [-12, -4], falls: [14, 10], weeds: [-3, -8],
+  plot: [3, -9], yard: [-8, -10], site: [-13, -12],
+  logs: [[6, -6], [7.4, -6], [8.8, -6]], stones: [[9, -8], [9, -9.2]],
+  yokai: [-1, -12], crew: [[-1, 1], [-2, 1], [-3, 1]],
+};
+
 export class Sim {
   constructor() {
     this.L = new Ledger();
@@ -46,8 +57,9 @@ export class Sim {
     this.kills = 0;
     this.pacified = 0;
     this.nextId = 1;
+    this.ground = null; // optional terrain hook (x, z, fromX, fromZ) => 'ground' | 'water' | 'wall'
     this.player = {
-      x: 0, z: 0, fx: 0, fz: 1, speed: 4.2, cap: 3, iframes: 0, carrying: null,
+      x: 0, z: 0, fx: 0, fz: 1, speed: 4.2, cap: 3, iframes: 0, carrying: null, lastLand: [0, 0],
       holder: this.L.add(makeHolder({ material: 'body', amounts: { w: 2, h: 1, l: 0, s: 1, v: 3 }, max: { w: 9, h: 9, l: 9, s: 9, v: 9 } })),
     };
     this.L.on(e => this.events.push(e));
@@ -68,41 +80,51 @@ export class Sim {
 
   remove(e) { e.dead = true; this.L.remove(e.holder); this.entities = this.entities.filter(x => x !== e); }
 
-  /** Build the gray-box arena: one station per quality, plus crew, building, farm and a yokai. */
-  static arena() {
+  /**
+   * Build the gray-box arena: one station per quality, plus crew, building, farm and a yokai.
+   * layout: positions in metres; the render layer passes one fitted to its terrain, the tests use
+   * the flat default.
+   */
+  static arena(layout = ARENA) {
+    const A = { ...ARENA, ...layout };
     const s = new Sim();
     const isDay = () => s.isDay;
-    s.add('shrine', 0, -3);
-    // 重: a boulder, a pressure plate that opens a gate, a rotten plank bridge
-    s.add('rock', -7, 2, { q: { w: 3 } });
-    s.add('plate', -10, 6, { q: { w: 0 } });
-    s.gateEntity = s.add('gate', -10, 10);
-    s.bridgeEntity = s.add('bridge', -4, 9, { q: { w: 1 } });
-    s.blocks.push({ x0: -9, x1: 1, z0: 8.4, z1: 9.6, bridge: s.bridgeEntity });
+    const at = (kind, [x, z], opt = {}) => s.add(kind, x, z, { r: A.radius?.[kind], name: A.names?.[kind], ...opt });
+    [s.player.x, s.player.z] = A.spawn;
+    s.player.lastLand = [...A.spawn];
+    at('shrine', A.shrine);
+    // 重: a boulder, a pressure plate that opens a gate, a rotten plank bridge over a ditch
+    at('rock', A.rock, { q: { w: 3 } });
+    at('plate', A.plate, { q: { w: 0 } });
+    s.gateEntity = at('gate', A.gate, { r: A.gateR });
+    if (A.gateRect) s.gateEntity.rect = A.gateRect;
+    s.bridgeEntity = at('bridge', A.bridge, { q: { w: 1 } });
+    if (A.bridgeRect) s.bridgeEntity.rect = A.bridgeRect;
+    if (A.ditch) s.blocks.push({ ...A.ditch, bridge: s.bridgeEntity });
     // 熱: a pond to freeze, a brazier that refills its heat
-    s.add('pond', 8, 6, { q: { h: 1 } });
-    s.add('brazier', 4, 2, { q: { h: 3 }, source: { k: 'h', rate: 0.5, cap: 3 } });
+    at('pond', A.pond, { q: { h: 1 }, r: A.pondR });
+    at('brazier', A.brazier, { q: { h: 3 }, source: { k: 'h', rate: 0.5, cap: 3 } });
     // 光: a lantern fed by daylight
-    s.add('lantern', 12, -2, { q: { l: 1 }, source: { k: 'l', rate: 0.4, cap: 3, active: isDay } });
+    at('lantern', A.lantern, { q: { l: 1 }, source: { k: 'l', rate: 0.4, cap: 3, active: isDay } });
     // 音: a bell and a waterfall
-    s.add('bell', -12, -4, { q: { s: 0 } });
-    s.add('falls', 14, 10, { q: { s: 3 }, source: { k: 's', rate: 0.3, cap: 3 } });
+    at('bell', A.bell, { q: { s: 0 } });
+    at('falls', A.falls, { q: { s: 3 }, source: { k: 's', rate: 0.3, cap: 3 } });
     // 生: weeds that keep growing
-    s.add('weeds', -3, -8, { q: { v: 2 }, source: { k: 'v', rate: 0.1, cap: 3 } });
+    at('weeds', A.weeds, { q: { v: 2 }, source: { k: 'v', rate: 0.1, cap: 3 } });
     // farm, building, logistics
-    s.plotEntity = s.add('plot', 3, -9);
+    s.plotEntity = at('plot', A.plot);
     s.plotEntity.plot = new Plot({ amounts: { l: 1, h: 1 } });
     s.L.holders.delete(s.plotEntity.holder);
     s.plotEntity.holder = s.L.add(s.plotEntity.plot.holder);
-    s.yardEntity = s.add('yard', -8, -10);
+    s.yardEntity = at('yard', A.yard);
     s.yardEntity.store = { log: 0, stone: 0 };
-    s.siteEntity = s.add('site', -13, -12);
+    s.siteEntity = at('site', A.site);
     s.siteEntity.site = new Site({ clear: { work: 2 }, stones: { needs: { stone: 2 }, work: 3 }, pillars: { needs: { log: 2 }, work: 3 }, beam: { needs: { log: 1 }, work: 3 } });
-    for (let i = 0; i < 3; i++) s.add('log', 6 + i * 1.4, -6, { q: { w: 2 } });
-    for (let i = 0; i < 2; i++) s.add('stone', 9, -8 - i * 1.2, { q: { w: 1 } });
+    for (const p of A.logs) at('log', p, { q: { w: 2 } });
+    for (const p of A.stones) at('stone', p, { q: { w: 1 } });
     // a hungry onibi: too much heat, wanders near the weeds
-    s.add('yokai', -1, -12, { q: { h: 4, v: 2 }, base: { h: 1 }, extra: { home: { x: -1, z: -12 } } });
-    for (let i = 0; i < 3; i++) s.crew.add(-1 - i, 1);
+    at('yokai', A.yokai, { q: { h: 4, v: 2 }, base: { h: 1 }, extra: { home: { x: A.yokai[0], z: A.yokai[1] } } });
+    for (const [x, z] of A.crew) s.crew.add(x, z);
     return s;
   }
 
@@ -123,6 +145,13 @@ export class Sim {
       this.tryMove(P.x + ux * speed * dt, P.z + uz * speed * dt);
     }
     P.iframes = Math.max(0, P.iframes - dt);
+    P.dodgeCd = Math.max(0, (P.dodgeCd || 0) - dt);
+    if (P.dash) {
+      const k = Math.min(dt, P.dash.t);
+      this.tryMove(P.x + P.dash.vx * k, P.z + P.dash.vz * k);
+      P.dash.t -= dt;
+      if (P.dash.t <= 0) P.dash = null;
+    }
     this.crew.lead(P.x, P.z);
 
     this.updateWorld(dt);
@@ -135,27 +164,52 @@ export class Sim {
     this.target = t ? t.ref : null;
   }
 
+  /** Move toward (nx, nz), sliding along whatever blocks one axis (no snagging on corners). */
   tryMove(nx, nz) {
-    const P = this.player, body = bodyState(P.holder);
-    for (const e of this.entities) {
-      const d = hyp(nx - e.x, nz - e.z);
-      if (e.solid && d < e.r + 0.35) return;
-      if (e.kind === 'pond' && d < e.r && !stateOf(e.holder).frozen && !body.light) return;   // water: walk on it only when frozen (or light enough)
-      if (e.kind === 'gate' && !e.state.open && d < e.r) return;
-    }
-    for (const b of this.blocks) {
-      if (nx < b.x0 || nx > b.x1 || nz < b.z0 || nz > b.z1) continue;
-      const onBridge = b.bridge && !b.bridge.state.broken && hyp(nx - b.bridge.x, nz - b.bridge.z) < b.bridge.r;
-      if (!onBridge) return;
-    }
-    // the rotten bridge gives way under a heavy body
+    const P = this.player;
+    if (this.canStand(nx, nz)) { P.x = nx; P.z = nz; }
+    else if (this.canStand(nx, P.z)) P.x = nx;
+    else if (this.canStand(P.x, nz)) P.z = nz;
+    // the rotten bridge gives way under a heavy body, and she drops back to the bank she came from
     const br = this.bridgeEntity;
-    if (br && !br.state.broken && hyp(nx - br.x, nz - br.z) < br.r && P.holder.q.w > 2) {
+    if (br && !br.state.broken && this.onBridge(P.x, P.z) && P.holder.q.w > 2) {
       br.state.broken = true;
       this.events.push({ type: 'broke', e: br });
-      return;
+      if (this.ground) { this.events.push({ type: 'fell', x: P.x, z: P.z }); [P.x, P.z] = P.lastLand; }
     }
-    P.x = nx; P.z = nz;
+    if (!this.ground || this.ground(P.x, P.z, P.x, P.z) === 'ground') P.lastLand = [P.x, P.z];
+  }
+
+  /** Can her body stand at (x, z)? Terrain (via the optional ground hook) and the stations. */
+  canStand(x, z) {
+    const P = this.player, body = bodyState(P.holder);
+    let water = false;
+    if (this.ground) {
+      const g = this.ground(x, z, P.x, P.z);
+      if (g === 'wall') return false;
+      water = g === 'water';
+    }
+    for (const e of this.entities) {
+      const d = hyp(x - e.x, z - e.z);
+      if (e.solid && d < e.r + 0.35 && d < hyp(P.x - e.x, P.z - e.z)) return false;  // never trap her inside
+      // a pond: ice where it is frozen; without terrain the circle itself is the water
+      if (e.kind === 'pond' && d < e.r) { if (stateOf(e.holder).frozen) water = false; else if (!this.ground) water = true; }
+      if (e.kind === 'gate' && !e.state.open && (e.rect ? inRect(e.rect, x, z) : d < e.r)) return false;
+    }
+    if (water && this.onBridge(x, z)) water = false;
+    if (water && !body.light) return false;   // light enough, she skims over water
+    for (const b of this.blocks) {
+      if (x < b.x0 || x > b.x1 || z < b.z0 || z > b.z1) continue;
+      if (!this.onBridge(x, z)) return false;
+    }
+    return true;
+  }
+
+  /** On the unbroken rotten bridge (a rectangle when the layout gives one, else its circle)? */
+  onBridge(x, z) {
+    const b = this.bridgeEntity;
+    if (!b || b.state.broken) return false;
+    return b.rect ? inRect(b.rect, x, z) : hyp(x - b.x, z - b.z) < b.r;
   }
 
   updateWorld(dt) {
@@ -295,13 +349,46 @@ export class Sim {
     }
     if (t.kind === 'yokai' && t.state.calm && !t.state.joined) {
       t.state.joined = true; this.pacified += 1;
-      this.crew.add(t.x, t.z);
+      this.crew.add(t.x, t.z).kind = 'onibi';
       this.remove(t);
       this.events.push({ type: 'joined' });
       return '邀请加入';
     }
     if (t.kind === 'bell') return t.holder.q.s > 0 ? '钟在响' : '没有声音';
     return null;
+  }
+
+  /** What E would do right now, without doing it (shown on the context button and the prompt). */
+  contextLabel() {
+    const P = this.player, t = this.target;
+    if (P.carrying) return t && t.kind === 'yard' && P.carrying.haul ? '放进资材堆' : '放下';
+    if (!t) return '';
+    if (t.haul) return t.holder.q.w <= 1 ? '背起' : '太重了';
+    if (t.kind === 'plot') return t.plot.ripe ? '收获' : !t.plot.crop ? '种下胡瓜' : '';
+    if (t.kind === 'shrine') return '归还';
+    if (t.kind === 'yokai' && t.state.calm && !t.state.joined) return '邀请加入';
+    return '';
+  }
+
+  /** A short dash along her facing, with a moment of invulnerability. */
+  dodge() {
+    const P = this.player;
+    if (P.dodgeCd > 0 || P.dash) return false;
+    const speed = bodyState(P.holder).heavy ? 7 : 11;
+    P.dash = { t: 0.2, vx: P.fx * speed, vz: P.fz * speed };
+    P.iframes = Math.max(P.iframes, 0.35);
+    P.dodgeCd = 0.6;
+    this.events.push({ type: 'dodge' });
+    return true;
+  }
+
+  /** Dynamic obstacles for crew routes: a shut gate and solid stations. */
+  navBlocked(x, z) {
+    for (const e of this.entities) {
+      if (e.kind === 'gate' && !e.state.open && (e.rect ? inRect(e.rect, x, z) : hyp(x - e.x, z - e.z) < e.r)) return true;
+      if (e.solid && hyp(x - e.x, z - e.z) < e.r + 0.2) return true;
+    }
+    return false;
   }
 
   /** F: send the crew to haul the current target to the stockpile. */

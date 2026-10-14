@@ -578,6 +578,48 @@ SFX.give = (o, sp, t) => play("sfx", (v) => {
   airSweep(v, out, t, 380, 3600, 0.75, 0.5, 0.65);
   bufTo(v, "glass", t + 0.45, 0.75, 0.26, out);
 });
+// The five qualities (重熱光音生): one timbre each, played when a transfer lands (AU.sfx("qual",
+// {k, verb, n})). The cast itself uses take/give/release; this is the arrival. n = how much she
+// holds afterwards (0..9): the tonal part sits on the yo scale at that step, so a full body is
+// audible without looking. take runs each figure inward (falling), give/release outward (rising).
+const QBASE = { w: 45, h: 57, l: 74, s: 69, v: 62 };
+SFX.qual = (o, sp, t) => {
+  const k = QBASE[o.k] !== undefined ? o.k : "w", inn = o.verb !== "give" && o.verb !== "release";
+  const n = clamp(Math.round(num(o.n, 3)), 0, 9), m = dshift(QBASE[k], n - 3), r = mtof(m) / mtof(QBASE[k]);
+  const lvl = o.verb === "release" ? 1.25 : 1;
+  play("sfx", (v) => {
+    const out = v.out("sfx", sp, lvl, k === "s" || k === "l" ? 0.3 : 0.16, 0.03);
+    if (k === "w") { // a stone settling: low thump, a gong far under it, grit
+      thump(v, out, t, 95 * r, 38, 0.5, 0.24);
+      bufTo(v, "gong", t, 0.48 * r, 0.22, out);
+      noiseHit(v, out, "brown", t, "lowpass", 600, 0, 0.35, 0.12);
+    } else if (k === "h") { // embers: crackle grains over a breath of air (catching, or being smothered)
+      const nz = v.n("white", t, t + 0.45), bp = v.f("bandpass", rnd(2600, 3400), 0.8), g = v.g(0);
+      grains(g.gain, t, 7, 0.32, 0.28); chain(nz, bp, g, out);
+      const b = v.n("brown", t, t + 0.4), lp = v.f("lowpass", inn ? 1500 : 260, 0), bg = v.g(0);
+      lp.frequency.exponentialRampToValueAtTime(inn ? 240 : 1600, t + 0.3); perc(bg.gain, t, 0.03, 0.55, 0.3); chain(b, lp, bg, out);
+      bufTo(v, "tick", t + 0.02, 0.55 * r, 0.1, out);
+    } else if (k === "l") { // glass: three partials, a harmonic on top
+      [1, 1.5, 2].forEach((x, i) => bufTo(v, "glass", t + 0.05 * (inn ? 2 - i : i), x * r, 0.13, out));
+      bufTo(v, harmE(m + 12), t + 0.08, 1, 0.1, out);
+    } else if (k === "s") { // the rin: struck when given, drawn in (swelling, then cut) when taken
+      const s = v.b(snd("rin"), t, 0.9 * r), g = v.g(0);
+      if (inn) { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.32, t + 0.32); g.gain.linearRampToValueAtTime(0, t + 0.36); }
+      else perc(g.gain, t, 0.003, 0.34, 0.9);
+      chain(s, g, out);
+      bufTo(v, "suzu", t + (inn ? 0.34 : 0.05), rnd(0.96, 1.04), 0.06, out);
+    } else { // life: koto harmonics a third apart, and leaves
+      bufTo(v, harmE(m), t, 1, 0.16, out);
+      bufTo(v, harmE(dshift(m, inn ? -2 : 2)), t + 0.09, 1, 0.13, out);
+      airSweep(v, out, t, inn ? 4800 : 700, inn ? 700 : 4800, 0.45, 0.22, 0.3);
+    }
+  });
+};
+SFX.release = (o, sp, t) => play("sfx", (v) => { // letting go: a burst of air outward with a low bloom
+  const out = v.out("sfx", sp, 1, 0.3, 0.05);
+  airSweep(v, out, t, 300, 4200, 0.5, 0.55, 0.25);
+  thump(v, out, t, 80, 40, 0.4, 0.3);
+});
 SFX.stone = (o, sp, t) => play("sfx", (v) => {
   const out = v.out("sfx", sp, 1, 0.22, 0.08);
   bufTo(v, "gong", t, 0.92, 0.6, out);

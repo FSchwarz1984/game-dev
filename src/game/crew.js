@@ -14,6 +14,7 @@ export const CREW_DEFAULTS = {
   carrySpeed: 1.6,   // speed while carrying
   strength: 1,       // weight units one carrier can lift
   arrive: 0.35,      // how close counts as "arrived"
+  route: null,       // optional pathfinder (x0, z0, x1, z1) => [{x, z}, ...] | null; straight lines without it
 };
 
 /** Carriers needed for an item of weight w (an item with no weight still needs one pair of hands). */
@@ -103,14 +104,25 @@ export class Crew {
       m.x += (tx - m.x) / d * s; m.z += (tz - m.z) / d * s;
       return d - s;
     };
+    // walk toward (tx, tz) along a route when a pathfinder is set; returns the distance still to go
+    const go = (m, tx, tz, speed) => {
+      if (!o.route || dist(m.x, m.z, tx, tz) < 1.2) { m.path = null; return step(m, tx, tz, speed); }
+      if (!m.path || dist(m.goalX, m.goalZ, tx, tz) > 0.6) {
+        m.path = o.route(m.x, m.z, tx, tz) || [{ x: tx, z: tz }];
+        m.goalX = tx; m.goalZ = tz;
+      }
+      while (m.path.length > 1 && dist(m.x, m.z, m.path[0].x, m.path[0].z) < 0.25) m.path.shift();
+      step(m, m.path[0].x, m.path[0].z, speed);
+      return dist(m.x, m.z, tx, tz);
+    };
 
-    // followers in line, in the order they joined
+    // followers in line, in the order they joined; one that has fallen far behind finds its way back
     let rank = 0;
     for (const m of this.members) {
       if (m.state !== 'follow') continue;
       rank += 1;
       const p = this.pointBehind(rank * o.spacing);
-      if (p) step(m, p.x, p.z, o.speed);
+      if (p) (dist(m.x, m.z, p.x, p.z) > 2.5 ? go(m, p.x, p.z, o.speed * 1.3) : step(m, p.x, p.z, o.speed));
     }
 
     for (const job of [...this.jobs]) {
@@ -121,14 +133,14 @@ export class Crew {
         let arrived = 0;
         job.carriers.forEach((m, i) => {
           const p = ring(i, job.carriers.length);
-          if (step(m, p.x, p.z, o.speed) <= o.arrive) arrived += 1;
+          if (go(m, p.x, p.z, o.speed) <= o.arrive) arrived += 1;
         });
         if (arrived === job.carriers.length && this.shortfall(job) === 0) {
           job.state = 'carry';
-          for (const m of job.carriers) m.state = 'carry';
+          for (const m of job.carriers) { m.state = 'carry'; m.path = null; }
         }
       } else if (job.state === 'carry') {
-        const left = step(it, job.dest.x, job.dest.z, o.carrySpeed);
+        const left = go(it, job.dest.x, job.dest.z, o.carrySpeed);
         job.carriers.forEach((m, i) => { const p = ring(i, job.carriers.length); m.x = p.x; m.z = p.z; });
         if (left <= o.arrive) {
           job.state = 'done'; job.delivered = true;

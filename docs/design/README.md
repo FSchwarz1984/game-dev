@@ -20,3 +20,4 @@
 | [systems.md](systems.md) | 「移」与五性、百鬼队、城镇建设、作物、杀或平息、一天、操作 | 已批准 |
 | [map.md](map.md)（[map-v2.svg](map-v2.svg)） | 新手区地图 v2 | 已批准 |
 | [scope-g5.md](scope-g5.md) | G5 垂直切片的范围 | 已批准 |
+| [g3-graybox.md](g3-graybox.md) | G3 可玩灰盒：站点、操作、要验证什么 | 技术预览（不是设计决定） |

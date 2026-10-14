@@ -17,17 +17,19 @@ export class TargetPrompt {
     injectStyle();
     this.el = document.createElement('div');
     this.el.className = 'tgt';
-    this.el.innerHTML = '<div class="tgt-name"></div><div class="tgt-q"></div><div class="tgt-say"></div>';
+    this.el.innerHTML = '<div class="tgt-name"></div><div class="tgt-q"></div><div class="tgt-st"></div><div class="tgt-say"></div>';
     root.appendChild(this.el);
     this.nameEl = this.el.querySelector('.tgt-name');
     this.qEl = this.el.querySelector('.tgt-q');
     this.sayEl = this.el.querySelector('.tgt-say');
+    this.stEl = this.el.querySelector('.tgt-st');
     this.key = '';
     this.sayT = 0;
   }
 
   /**
-   * target: { name, holder? } or null. (sx, sy): projected screen position of the point
+   * target: { name, holder?, status? } or null; status is a short line such as a building
+   * stage or what a crop is missing. (sx, sy): projected screen position of the point
    * above the target, in CSS pixels.
    */
   update(dt, target, sx, sy) {
@@ -39,10 +41,11 @@ export class TargetPrompt {
     this.el.style.transform = `translate(${x.toFixed(0)}px, ${y.toFixed(0)}px)`;
 
     const hd = target.holder;
-    const key = target.name + '|' + (hd ? QUALITIES.map(k => hd.q[k] + '/' + hd.max[k]).join(',') + (hd.sacred ? '!' : '') : '');
+    const key = target.name + '|' + (target.status || '') + '|' + (hd ? QUALITIES.map(k => hd.q[k] + '/' + hd.max[k]).join(',') + (hd.sacred ? '!' : '') : '');
     if (key !== this.key) {
       this.key = key;
       this.nameEl.textContent = target.name;
+      this.stEl.textContent = target.status || '';
       this.qEl.innerHTML = hd ? QUALITIES.filter(k => hd.q[k] > 0 || hd.base[k] > 0).map(k => {
         const n = hd.q[k], cap = Math.max(n, hd.base[k], 1);
         return `<span style="--qc:${QUALITY_INFO[k].color}"><b>${QUALITY_INFO[k].kanji}</b>${'●'.repeat(n)}${'○'.repeat(Math.max(0, cap - n))}</span>`;
@@ -73,6 +76,8 @@ function injectStyle() {
   .tgt-q { display: flex; gap: 6px; justify-content: center; margin-top: 2px; white-space: nowrap; }
   .tgt-q span { color: var(--qc); letter-spacing: 1px; }
   .tgt-q b { color: #f4f1ea; margin-right: 2px; font-weight: 700; }
+  .tgt-st { text-align: center; font-size: 12px; color: #e9dfc4; margin-top: 1px; }
+  .tgt-st:empty { display: none; }
   .tgt-sacred { color: #f0b7a8 !important; }
   .tgt-say { margin-top: 3px; text-align: center; color: #ffd9a8; opacity: 0; transform: translateY(4px); transition: opacity .12s, transform .12s; }
   .tgt-say.on { opacity: 1; transform: none; }
