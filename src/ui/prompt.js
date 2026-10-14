@@ -10,6 +10,8 @@ const REFUSAL_TEXT = {
   [REFUSAL.full]: '装不下了',
   [REFUSAL.overload]: '身体承受不住了',
   far: '太远了',
+  none: '附近没有可以对它用的东西',
+  heavy: '太重了，背不动',
 };
 
 export class TargetPrompt {

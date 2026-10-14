@@ -135,7 +135,8 @@ function injectStyle() {
   if (styled) return; styled = true;
   const s = document.createElement('style');
   s.textContent = `
-  .act-pad { position: fixed; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 236px; height: 236px; z-index: 20; touch-action: none; user-select: none; -webkit-user-select: none; }
+  .act-pad { position: fixed; right: calc(14px + env(safe-area-inset-right, 0px)); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); width: 236px; height: 236px; z-index: 20; touch-action: none; user-select: none; -webkit-user-select: none; pointer-events: none; }
+  .act-pad button, .act-rot { pointer-events: auto; } /* the overlay root is pointer-events: none so the stick can see the canvas; the keys must opt back in */
   .act-pad button { position: absolute; border: 0; padding: 0; font: 700 18px/1 "Noto Serif SC", "Shippori Mincho", serif; color: #f4f1ea; background: rgba(16, 18, 28, .62); box-shadow: inset 0 0 0 1.5px rgba(244, 241, 234, .35); border-radius: 50%; touch-action: none; }
   .act-pad button::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid rgba(255, 236, 190, 0); transition: border-color .12s, inset .12s; pointer-events: none; }
   .act-pad button.down::after { border-color: rgba(255, 236, 190, .9); inset: -16px; }
