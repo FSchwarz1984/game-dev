@@ -41,6 +41,8 @@ export const V1 = {
   lily: ramp('#efe9dc', 4, { lo: 0.3, hi: 0.2 }),
   paper: ramp('#ece4d2', 4, { lo: 0.3, hi: 0.2 }),
   higan: ramp('#c8322a', 5, { lo: 0.5, hi: 0.35, hueShift: 0.02 }),
+  broad: ramp('#3f6634', 7, { lo: 0.55, hi: 0.5, hueShift: 0.07 }),
+  azalea: ramp('#4f7a38', 7, { lo: 0.55, hi: 0.5, hueShift: 0.07 }),
   clover: ramp('#4f7a3a', 5, { lo: 0.5, hi: 0.45 }),
 };
 
@@ -183,6 +185,18 @@ export function* camphorLobeG(seed, w = 220, h = 130, o = {}) {
   for (let k = 0; k < w / 8; k++) { const x = Math.round(cx + R.range(-w * 0.44, w * 0.44)); let y = Hh - 1; while (y > 0 && !s.a(x, y)) y--; if (y <= 0) continue; const Ln = R.int(1, 3); for (let j = 1; j <= Ln; j++) s.pz(x + (j === Ln && R() < 0.5 ? (R() < 0.5 ? -1 : 1) : 0), y + j, V1.camphor[clamp(2 - (j >> 1), 0, 6)], 60, { m: MAT.LEAF, b: 20 }); }
   yield; POST.ao(s, 2, 0.26); yield; POST.outline(s, { k: 0.7 }); POST.normals(s, 0.75);
   return { s, meta: { ax: cx, ay: Hh - 4, sway: 0.18, foliage: true, occluder: true, kind: 'camphorLobe' } };
+}
+
+/* ---------------- a shrub in the same leaf-cluster language: camellia (dark, glossy), azalea, or a sasa-green bush ---------------- */
+export function shrub(seed, kind = 'camellia', w = 34, h = 24) {
+  const R = RNG(seed * 13 + 7), W = w + 12, H = h + 10, s = new SB(W, H), cx = W / 2, by = H - 2;
+  const rr = kind === 'camellia' ? V1.broad : kind === 'azalea' ? V1.azalea : V1.sasa;
+  const n = R.int(4, 6);
+  for (let k = 0; k < n; k++) { const f = n === 1 ? 0 : k / (n - 1) * 2 - 1; const x = cx + f * w * 0.32 + R.range(-2, 2), y = by - h * 0.38 + Math.abs(f) * h * 0.16 + R.range(-2, 2);
+    clump(s, x, y, w * 0.24 + R.range(-1, 2), h * 0.3, 4 + (1 - Math.abs(f)) * 4, rr, { seed: seed * 7 + k, base: 3, cell: 2.8, zk: 0.6, bulge: 3 }); }
+  clump(s, cx + R.range(-2, 2), by - h * 0.6, w * 0.28, h * 0.3, 9, rr, { seed: seed * 7 + 9, base: 3.3, cell: 2.8, zk: 0.6, bulge: 4, rim: 0.1 });
+  finish(s, 1, 0.2, 0.7, 1);
+  return { s, meta: { ax: Math.round(cx), ay: by + 1, sway: 0.3, foliage: true, kind: 'bush' } };
 }
 
 /* ---------------- bamboo 孟宗竹 (v0.1) ---------------- */
@@ -363,6 +377,6 @@ export function PREVIEW() {
     ['pine', () => pine(1, 110)], ['pineLean', () => pine(9, 118, 0.9)], ['maple', () => layered(3)], ['mapleR', () => layered(9, { red: true })], ['mapleS', () => layered(5, { W: 70, H: 76, layers: 4 })],
     ['lobe', () => camphorLobe(11, 196, 112)],
     ['bamboo', () => bamboo(1, 180)], ['fern', () => fern(1)], ['sasa', () => sasa(1)], ['kudzu', () => kudzu(1)], ['susuki', () => susuki(1)], ['lily', () => lily(1)],
-    ['hydr', () => hydrangea(1)], ['dayfl', () => dayflower(1)], ['mush', () => mushroom(1)], ['higan', () => higanbana(1)],
+    ['shrubC', () => shrub(1, 'camellia', 34, 24)], ['shrubA', () => shrub(2, 'azalea', 28, 18)], ['hydr', () => hydrangea(1)], ['dayfl', () => dayflower(1)], ['mush', () => mushroom(1)], ['higan', () => higanbana(1)],
   ];
 }

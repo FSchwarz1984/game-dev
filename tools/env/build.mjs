@@ -1,5 +1,6 @@
 // Builds the env test page (src/env-test.js) into a folder with index.html + env.js.
 //   node tools/env/build.mjs [outDir]     default: $ENV_OUT or the session scratchpad env/page
+// After bundling it bakes the map in Node and runs the reachability check (NO_REACH=1 skips it).
 // The page is for internal review only (never delivered): it shows the 2D renderer and the home area.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -23,3 +24,12 @@ fs.writeFileSync(path.join(OUT, 'index.html'), `<!doctype html>
 </head><body><div id="app"></div><script src="env.js"></script></body></html>
 `);
 console.log(`built ${OUT}/index.html + env.js (${(fs.statSync(path.join(OUT, 'env.js')).size / 1024).toFixed(0)} KB) in ${Date.now() - t0} ms`);
+// every bake is checked: the story's places must be reachable from the road (src/env/reach.js)
+if (!process.env.NO_REACH) {
+  const { createHomeMap } = await import('../../src/env/home.js');
+  const { checkReach } = await import('../../src/env/reach.js');
+  const r = checkReach(createHomeMap({}));
+  const bad = r.results.filter(t => !t.ok);
+  if (bad.length) { for (const t of bad) console.error(`REACH FAIL ${t.name} (${t.x}, ${t.z}): ${t.why}`); process.exit(1); }
+  console.log(`reach: all ${r.results.length} places reachable from the road entry`);
+}

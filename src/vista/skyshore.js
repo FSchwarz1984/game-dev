@@ -121,7 +121,7 @@ export function* buildSkyShoreGen(o) {
         // stubble, fallow), the flooded ones catching the glow
         const th = (vnoise(X * 0.06 + 5, Z * 0.06, 61) - 0.5) * 1.2, c = Math.cos(th), sn = Math.sin(th);
         const u = X * c - Z * sn * 0.5, v = X * sn * 0.5 + Z * c;
-        const su = 0.9 + 0.7 * vnoise(X * 0.1, Z * 0.1, 62), sv = 0.8 + 0.5 * vnoise(X * 0.09 + 4, Z * 0.09, 64);
+        const su = 1.2 + 0.8 * vnoise(X * 0.1, Z * 0.1, 62), sv = 1.0 + 0.6 * vnoise(X * 0.09 + 4, Z * 0.09, 64);
         const iu = Math.floor(u / su), iv = Math.floor(v / sv);
         const hp = hash2(iu, iv, 63);
         if (hp < 0.22) { mat = S.paddy; sun = hp < 0.08 ? 6 : hp < 0.15 ? 4 : 2; }
@@ -132,6 +132,17 @@ export function* buildSkyShoreGen(o) {
    }
   }
   yield;
+  // its far edge: the land ends in the haze beyond a distance (frayed a little); its ranges nearer
+  // than that hang below the edge, dark against the light between the shores
+  const hazeEdgeY = o.hazeEdgeY;
+  if (hazeEdgeY) {
+    const zCut = f * Hs / Math.max(8, yh - hazeEdgeY);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const i = y * w + x;
+      if (!L.idx[i]) continue;
+      if (m.Z[i] > zCut * (1 + (vnoise(x * 0.06, 3, 95) - 0.5) * 0.12) || y > hazeEdgeY + 22) L.idx[i] = 0;
+    }
+  }
   // lower edges of nearer land against farther land catch the light from below
   const src = L.idx.slice();
   const rimAt = new Uint8Array(w * h);
@@ -144,40 +155,30 @@ export function* buildSkyShoreGen(o) {
       else { L.idx[i] = I(S.rim, 6, 3, src[i] & 7); rimAt[i] = 1; }
     }
   }
-  // conifers hanging tips down along the lit edges: the edge of a wood, upside down
+  // conifers hanging tips down along the lit edges: the edge of a wood, upside down. Each hangs from
+  // the edge itself (the lit line shows only between them), its tip catching the light from below.
   {
-    const SHAPES = [[], [0], [1, 0], [1, 1, 0], [2, 1, 1, 0], [2, 1, 1, 0, 0], [2, 2, 1, 1, 0, 0]];
+    const SHAPES = [[], [0], [1, 0], [1, 1, 0], [2, 1, 1, 0], [2, 2, 1, 1, 0], [3, 2, 2, 1, 1, 0], [3, 3, 2, 2, 1, 1, 0], [3, 3, 2, 2, 2, 1, 1, 0]];
     const ref = L.idx.slice(), last = new Int32Array(h).fill(-9);
     for (let x = 0; x < w; x++) for (let y = 1; y < h - 2; y++) {
       const i = y * w + x;
       if (!rimAt[i]) continue;
       const Z = m.Z[i];
-      if (Z > 72 || x - last[y] < 2 || Math.abs(x - last[y - 1]) < 2 || Math.abs(x - last[y + 1]) < 2) continue;
-      if (hash2(x, y, 97) > 0.8) continue;
-      const ht = clamp(Math.round((120 / Z) * (0.6 + 0.8 * hash2(x, y, 98))), 2, 6), shape = SHAPES[ht];
+      if (Z > 74 || x - last[y] < 2 || x - last[y - 1] < 2 || x - last[y + 1] < 2) continue;
+      if (Math.hypot(m.X[i] - Fn.X, Z - Fn.Z) < Fn.R * 1.15) continue;   // the gate's flanks stay bare
+      if (hash2(x, y, 97) > 0.85) continue;
+      const ht = clamp(Math.round((230 / Z) * (0.6 + 0.8 * hash2(x, y, 98))), 2, 8), shape = SHAPES[ht];
       const hz = ref[i] & 7;
       for (let k = 0; k < ht; k++) {
-        const yy = y + 1 + k; if (yy >= h) break;
+        const yy = y + k; if (yy >= h) break;
         for (let q = -shape[k]; q <= shape[k]; q++) {
           const xx = x + q; if (xx < 0 || xx >= w) continue;
           const j = yy * w + xx;
-          if (ref[j] && m.Z[j] < Z * 1.06) continue;      // only over what lies beyond
-          L.idx[j] = k === ht - 1 ? I(S.rim, 5, 3, hz) : I(S.tree, q > 0 ? 4 : 2, 3, hz);
+          if (k > 0 && ref[j] && m.Z[j] < Z * 1.06) continue;      // only over what lies beyond
+          L.idx[j] = I(S.tree, k === ht - 1 ? 6 : q > 0 ? 4 : 2, 3, hz);
         }
       }
       last[y] = x + (hash2(x, 7, 99) < 0.5 ? 1 : 0);
-    }
-  }
-  yield;
-  // its far edge: the land ends in the haze beyond a distance (frayed a little); its ranges nearer
-  // than that hang below the edge, dark against the light between the shores
-  const hazeEdgeY = o.hazeEdgeY;
-  if (hazeEdgeY) {
-    const zCut = f * Hs / Math.max(8, yh - hazeEdgeY);
-    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-      const i = y * w + x;
-      if (!L.idx[i]) continue;
-      if (m.Z[i] > zCut * (1 + (vnoise(x * 0.06, 3, 95) - 0.5) * 0.12) || y > hazeEdgeY + 20) L.idx[i] = 0;
     }
   }
   const keep = new Set([S.river, S.rim, S.levee, S.tree, S.funnelRim, S.wall, S.roof]);
@@ -204,8 +205,16 @@ export function* buildSkyShoreGen(o) {
     }
   }
   if (o.pagoda) {
-    const p = seen(o.pagoda.X, o.pagoda.Z);
-    if (p) pagoda(L, p[0], p[1] + 1, hazeOf(o.pagoda.Z), lights, o.pagoda.Z);
+    // a temple on the hills: its pagoda hangs from their lit edge, dark against the light beyond
+    let best = null, bd = 1e9;
+    const px0 = o.pagoda.x * w;
+    for (let y = 2; y < h - 22; y++) for (let x = Math.round(px0 - w * 0.12); x < px0 + w * 0.12; x++) {
+      const i = y * w + x;
+      if (!rimAt[i] || m.Z[i] < 38 || m.Z[i] > 64) continue;
+      const d = Math.abs(x - px0) * 0.6 - y;
+      if (d < bd) { bd = d; best = [x, y, m.Z[i]]; }
+    }
+    if (best) pagoda(L, best[0], best[1] + 1, hazeOf(best[2]) > 1 ? 1 : 0, lights, best[2]);
   }
   // lamps: a few streets in each town, scattered farms
   const put = (X, Z, b) => { const p = seen(X, Z); if (p) lights.push({ x: p[0], y: p[1], Z, ph: R(), b }); };
@@ -326,9 +335,9 @@ function distRiver(pts, X, Z) {
 const BASE = {
   [S.land]: [[26, 33, 56], [31, 39, 62], [36, 45, 68]],
   [S.forest]: [[15, 21, 39], [20, 28, 48], [27, 37, 58]],
-  [S.tree]: [[12, 17, 33], [17, 24, 42], [24, 33, 52]],
+  [S.tree]: [[11, 16, 31], [16, 23, 41], [44, 62, 80]],
   [S.rock]: [[30, 37, 60], [40, 48, 72], [50, 60, 84]],
-  [S.field]: [[32, 41, 64], [42, 53, 76], [54, 66, 88]],
+  [S.field]: [[33, 42, 65], [40, 50, 73], [48, 59, 82]],
   [S.paddy]: [[46, 62, 86], [60, 80, 102], [78, 100, 120]],
   [S.levee]: [[62, 82, 104], [76, 98, 118], [92, 116, 134]],
   [S.town]: [[36, 42, 64], [42, 49, 70], [48, 56, 76]],
@@ -337,7 +346,7 @@ const BASE = {
   [S.bank]: [[34, 44, 66], [40, 52, 74], [46, 60, 82]],
   [S.river]: [[128, 152, 176], [152, 178, 200], [180, 206, 224]],
   [S.rim]: [[74, 102, 120], [92, 124, 140], [110, 144, 156]],
-  [S.funnel]: [[22, 31, 54], [30, 42, 66], [40, 54, 78]],
+  [S.funnel]: [[20, 28, 50], [30, 42, 66], [44, 58, 82]],
   [S.funnelRim]: [[56, 80, 100], [68, 96, 114], [82, 112, 128]],
   [S.mouth]: [[104, 146, 152], [124, 168, 170], [146, 190, 188]],
 };

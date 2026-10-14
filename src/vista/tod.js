@@ -3,7 +3,7 @@
 // sky columns are the painted gradient (v0.1 title: indigo zenith, violet band, a dusky rose
 // glow on the horizon).
 
-import { clamp, lerp, smooth, mix3, mul3, scale3, add3, lum, keyed, pack } from './util.js';
+import { clamp, smooth, mix3, mul3, scale3, add3, lum, keyed, pack } from './util.js';
 
 const TOD = [
   // h,   sun col,           sky (amb),         ground bounce,    mist rgb,         lift,               gain,              sat
@@ -112,33 +112,38 @@ export function shade(mat, i, env, hazeCol) {
 // palette function for an IndexLayer: index -> packed graded colour
 export function palette(mats, env, opts = {}) {
   const haze = opts.haze || scale3(skyAt(env, .04, .5), 1 / 255);
-  const far = opts.far ? farTransform(env) : null;
   const cache = new Map();
   return i => {
     let v = cache.get(i);
     if (v !== undefined) return v;
     const mat = mats[i >> 8];
     if (!mat) { cache.set(i, 0); return 0; }
-    let c = mat.fixed ? scale3(mat.fixed, 1 / 255) : shade(mat, i, env, mat.hazeCol || haze);
-    c = mat.fixed ? scale3(c, 255) : grade(c, env);
-    if (far && !mat.noFar) c = far(c);
+    let c;
+    if (opts.far && !mat.noFar && !mat.fixed) c = ghost(mat, i);
+    else {
+      c = mat.fixed ? scale3(mat.fixed, 1 / 255) : shade(mat, i, env, mat.hazeCol || haze);
+      c = mat.fixed ? scale3(c, 255) : grade(c, env);
+    }
     v = pack(c, 255);
     cache.set(i, v);
     return v;
   };
 }
 
-// The look of a thing gone "far": still there, pale, flat, blue-grey, as if seen across a great
-// distance. Input and output 0..255 (graded colour).
-export function farTransform(env) {
-  const n = env.night;
-  const tint = mix3([196, 204, 220], [66, 76, 106], n);     // the colour of distance (night: moonlit haze)
-  const keep = lerp(0.52, 0.64, n);                         // how much of the original structure survives
-  return c => {
-    const l = lum(c);
-    const d = mix3([l * 0.9, l * 0.96, l * 1.12], c, 0.12);  // nearly grey
-    return mix3(tint, add3(scale3(d, 1.15), scale3(tint, 0.3)), keep);
-  };
+// The look of a thing gone "far" (the wave of distance): everything is still there, fields, roads
+// and roofs keep their own lightness, but drained of colour, lifted and blue-grey, lit by nothing in
+// particular, as if seen across a great distance. 0..255.
+const GHOST_HAZE = [0.6, 0.66, 0.78];
+export function ghost(mat, i) {
+  const s = (i >> 5) & 7, k = (i >> 3) & 3, h = i & 7;
+  let c;
+  if (mat.water) c = scale3([0.6, 0.66, 0.76], 0.62 + (mat.refl ?? 0.6) * 0.4);   // the light of a sky that is not there
+  else if (mat.rim) c = scale3(mat.albedo, 1.2);
+  else c = scale3(mat.albedo, 0.66 + 0.42 * SUNLV[s] + 0.12 * SKYLV[k]);
+  const l = clamp(lum(c), 0, 1), L2 = 0.24 + 0.58 * Math.pow(l, 0.85);
+  let out = mix3([L2 * 0.86, L2 * 0.92, L2 * 1.07], c, 0.1);
+  if (h) out = mix3(out, GHOST_HAZE, HAZELV[h] * 0.6);
+  return scale3(out, 255);
 }
 
 // water reflection band for a screen row dy pixels under the horizon, sky height S pixels

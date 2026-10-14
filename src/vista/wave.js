@@ -20,7 +20,7 @@ function waveAt(r) {
 
 export class Wave {
   /**
-   * @param o { w, h, X, Z, mask (Uint8, 1 = ground), Xc, Zc, R, f }
+   * @param o { w, h, X, Z, mask (Uint8, 1 = ground), Xc, Zc, R, f, cx, yl (camera: view axis, horizon row) }
    */
   constructor(o) {
     this.o = o;
@@ -59,7 +59,7 @@ export class Wave {
       if (!v) continue;
       if (nf && nf[i]) { this.front[i] = v; continue; }     // houses do not light up as the front passes
       const r = v & 255, g = (v >> 8) & 255, b = (v >> 16) & 255;
-      this.front[i] = pack(mix3([r, g, b], [214, 224, 246], 0.42));
+      this.front[i] = pack(mix3([r, g, b], [222, 230, 250], 0.34));
     }
     this.U.set(normal);
     this.B = -1;
@@ -98,10 +98,13 @@ export class Wave {
     }
     return this.canvas;
   }
-  // the curtain of pale motes rising from the front, summed into an AddBuffer (same coordinates as
-  // this layer); occluded by anything nearer than the front
+  // The front is a curtain of pale motes: born thick along the ground where the ring is passing,
+  // they rise and drift toward the camera, thinning as they go. Each lives in the world (X, Z,
+  // height) and is projected every frame, so near ones are bigger and faster; nearer ground hides
+  // them. A faint glow lies along the foot of the curtain. Summed into an AddBuffer (same
+  // coordinates as this layer).
   drawFront(AB, w, t, dt, alpha = 1) {
-    const B = this.B, nb = this.band, { arr, start, cnt, list } = this, { w: W, Z, f } = this.o;
+    const B = this.B, nb = this.band, { arr, start, cnt, list } = this, { w: W, h: H, Z, X, f, cx, yl } = this.o;
     if (B < 0) { this.motes.length = 0; return; }
     const R = this.R;
     let ns = 0;
@@ -115,36 +118,41 @@ export class Wave {
         this.strips[ns++] = i;
       }
     }
-    const strips = this.strips, col = CURTAIN;
+    const strips = this.strips;
+    // the foot of the curtain: a low glow, short
     for (let si = 0; si < ns; si++) {
-      const i = strips[si];
-      const x = i % W, y = (i / W) | 0, z = Z[i];
-      const hx = vnoise(x * 0.11, t * 0.4, 17);                 // a curtain, not a comb: heights vary smoothly
-      const hc = clamp((f * 0.2 / z) * (0.55 + 0.7 * hx), 2, 60);
-      let top = y, lim = y - hc;
-      while (top > lim && top > 0) { const zi = Z[(top - 1) * W + x]; if (zi && zi < z * 0.78) break; top--; }
-      const hh = y - top;
-      if (hh < 1) continue;
-      const shimmer = 0.7 + 0.3 * Math.sin(t * 2.3 + x * 0.17);
-      AB.strip(x, y, hh, col, clamp(alpha * shimmer * (0.08 + 0.4 * smooth(22, 4, z)), 0, 1));
+      const i = strips[si], x = i % W, y = (i / W) | 0, z = Z[i];
+      const hh = clamp(Math.round(f * 0.03 / z), 1, 8);
+      AB.strip(x, y, hh, CURTAIN, clamp(alpha * (0.06 + 0.22 * smooth(22, 3, z)), 0, 1));
     }
-    const want = Math.min(24, Math.round(ns * 0.025) + 1);
+    // new motes, many: the curtain is thick at its foot
+    const want = Math.min(48, Math.round(ns * 0.05 * Math.min(2, dt * 60)) + 1);
     for (let n = 0; n < want && ns; n++) {
-      const i = strips[Math.floor(R() * ns)], x = i % W, y = (i / W) | 0, z = Z[i];
-      const sc = clamp(f * 0.012 / z, 0.25, 4);
-      this.motes.push({ x, y, vy: -(6 + 14 * R()) * sc, vx: (R() - 0.5) * 2 * sc, life: 0.8 + R() * 1.4, age: 0, big: sc > 1.6 && R() < 0.5, far: z > 14 });
+      const i = strips[Math.floor(R() * ns)], y = (i / W) | 0, z = Z[i];
+      const hg = 1 - (y - yl) * z / f;                         // the ground's height there
+      const life = 1.2 + R() * 2.6;
+      this.motes.push({ X: X[i] + (R() - 0.5) * z * 0.004, Z: z * (1 - R() * 0.01), hg, H: R() * 0.004 * z,
+        vH: (0.006 + R() * 0.02) * Math.sqrt(z), vZ: -(0.03 + R() * 0.06) * z, vX: (R() - 0.5) * 0.02 * z, life, age: 0 });
     }
     const keep = [], mc = MOTE;
     for (const m of this.motes) {
       m.age += dt; if (m.age >= m.life) continue;
-      m.x += m.vx * dt; m.y += m.vy * dt;
-      const a = alpha * (1 - m.age / m.life) * smooth(0, 0.15, m.age) * (m.far ? 0.4 : 0.75);
-      AB.px(m.x, m.y, mc, a, m.big ? 2 : 1, m.big ? 2 : 1);
+      m.Z += m.vZ * dt; m.H += m.vH * dt; m.X += m.vX * dt;
+      if (m.Z < 0.25) continue;
       keep.push(m);
+      const x = cx + f * m.X / m.Z, y = yl + f * (1 - m.hg - m.H) / m.Z;
+      const xi = Math.round(x), yi = Math.round(y);
+      if (xi < 0 || yi < 0 || xi >= W || yi >= H) continue;
+      const zg = Z[yi * W + xi];
+      if (zg && zg < m.Z * 0.85) continue;                    // behind nearer ground
+      const u = m.age / m.life, sz = f * 0.006 / m.Z;
+      const a = alpha * smooth(0, 0.12, m.age) * Math.pow(1 - u, 1.3) * (0.35 + 0.65 * (1 - smooth(0, 0.6, u)));
+      const big = sz > 1.2 ? (sz > 2.4 ? 3 : 2) : 1;
+      AB.px(x - (big >> 1), y - (big >> 1), mc, a * (big > 1 ? 0.8 : 1), big, big);
     }
-    this.motes = keep.length > 700 ? keep.slice(-700) : keep;
+    this.motes = keep.length > 1600 ? keep.slice(-1600) : keep;
   }
 }
 
-const CURTAIN = [176, 190, 226], MOTE = [230, 236, 255];
+const CURTAIN = [168, 184, 222], MOTE = [226, 234, 255];
 

@@ -87,9 +87,9 @@ export function* southGen(W, H, seed) {
   const ringC = { X: (0.2 * W) * 31 / f, Z: 31, r: 0.95 };
   towns.push({ X: ringC.X, Z: ringC.Z, r: 2.0 });
   const hazeEdgeY = yl - Math.round(clamp(yh * 0.36, 26, 58));
-  const shoreH = hazeEdgeY + 24;
+  const shoreH = hazeEdgeY + 25;
   yield;
-  const shore = yield* buildSkyShoreGen({ w: W, h: shoreH, cx, yh: yl, f, Hs, funnel: Fn, towns, hazeEdgeY, pagoda: { X: ringC.X + 1.15, Z: ringC.Z + 0.5 }, seed });
+  const shore = yield* buildSkyShoreGen({ w: W, h: shoreH, cx, yh: yl, f, Hs, funnel: Fn, towns, hazeEdgeY, pagoda: { x: 0.64 }, seed });
   lap('lights+shore');
   const T = shore.proj(Fn.X, Fn.Z); T[1] += 1;   // the mouth, where the streams go in
   const ring = [];
@@ -206,7 +206,7 @@ export function* southGen(W, H, seed) {
   yield;
   const noFront = new Uint8Array(W * gh);
   for (let i = 0; i < noFront.length; i++) { const m = ground.layer.idx[i] >> 8; noFront[i] = m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood ? 1 : 0; }
-  const wave = new Wave({ w: W, h: gh, X: ground.X, Z: ground.Z, mask: ground.mask, Xc, Zc, R: Math.hypot(Xc, Zc) - 0.05, f, noFront });
+  const wave = new Wave({ w: W, h: gh, X: ground.X, Z: ground.Z, mask: ground.mask, Xc, Zc, R: Math.hypot(Xc, Zc) - 0.05, f, cx, yl, noFront });
   for (const L of lights) L.arr = wave.arrivalOf(L.X, L.Z);
   // static lights (windows, lanterns, the stars on the water in three twinkling groups) live in tiles
   const drawStatic = (tg, L, q, x, y) => {
@@ -290,15 +290,15 @@ export function* southGen(W, H, seed) {
     }
     // the far edge dissolves into the cloud sea instead of ending on a line
     sg.globalCompositeOperation = 'destination-out';
-    for (let y = hazeEdgeY - 6; y < sc.height; y++) {
-      const a = smooth(hazeEdgeY - 6, hazeEdgeY + 21, y);
+    for (let y = hazeEdgeY + 10; y < sc.height; y++) {
+      const a = smooth(hazeEdgeY + 10, hazeEdgeY + 23, y);
       sg.fillStyle = `rgba(0,0,0,${a.toFixed(3)})`; sg.fillRect(0, y, W, 1);
     }
     // behind its far edge, the light between the shores: its ranges hang dark against it
     sg.globalCompositeOperation = 'destination-over';
     const gc = mix3(hazeCol, [118, 150, 164], 0.6).map(Math.round);
     for (let y = Math.max(0, hazeEdgeY - 34); y < sc.height; y++) {
-      const a = smooth(hazeEdgeY - 34, hazeEdgeY - 2, y) * (1 - smooth(hazeEdgeY + 6, hazeEdgeY + 22, y)) * 0.6;
+      const a = smooth(hazeEdgeY - 34, hazeEdgeY, y) * (1 - smooth(hazeEdgeY + 8, hazeEdgeY + 23, y)) * 0.7;
       if (a < 0.01) continue;
       sg.fillStyle = `rgba(${gc[0]},${gc[1]},${gc[2]},${a.toFixed(3)})`; sg.fillRect(0, y, W, 1);
     }
@@ -424,35 +424,40 @@ export function* southGen(W, H, seed) {
       const oN = Math.round(H + 4 - dy * P.front);
       if (oN < H) clipDraw(nearL.canvas('n' + key, fpal), oN);
 
-      // the end of the wave: the pale front comes up the trunk and over the crown, motes rushing past
-      if (wv > 0.84) {
-        const k = smooth(0.84, 1.0, wv);
+      // the end of the wave: the pale front comes up the trunk and over the crown; the curtain reaches
+      // us, its motes rising and rushing past the camera
+      if (wv > 0.82) {
+        const k = smooth(0.82, 1.0, wv);
         if (!shot.endG) {
           const c = makeCanvas(W, H), cg = ctx2d(c), gr = cg.createLinearGradient(0, H * 0.35, 0, H);
           gr.addColorStop(0, 'rgba(214,224,246,0)'); gr.addColorStop(0.6, 'rgba(214,224,246,0.45)'); gr.addColorStop(1, 'rgba(226,232,250,0.85)');
           cg.fillStyle = gr; cg.fillRect(0, 0, W, H); shot.endG = c;
         }
-        g.globalAlpha = k * 0.8; g.drawImage(shot.endG, 0, Math.round((1 - k) * H * 0.55)); g.globalAlpha = 1;
-        const n = Math.round(k * 14 * Math.min(1, dt * 60 + 0.01));
-        for (let q = 0; q < n; q++) endMotes.push({ x: R() * W, y: H + 2 - R() * 20, vy: -(80 + 120 * R()) * (0.6 + k), vx: (R() - 0.5) * 20, life: 0.6 + R() * 0.8, age: 0, big: R() < 0.35 });
+        g.globalAlpha = k * 0.85; g.drawImage(shot.endG, 0, Math.round((1 - k) * H * 0.55)); g.globalAlpha = 1;
+        const n = Math.round((3 + 30 * k) * Math.min(2, dt * 60 + 0.01));
+        for (let q = 0; q < n; q++) endMotes.push({ X: (R() - 0.5) * 7, Y: -2.2 + R() * 3.4, Z: 1.6 + R() * 7, vZ: -(1.1 + R() * 2), vY: 0.25 + R() * 0.7, age: 0 });
       }
       if (endMotes.length) {
+        const fp = H * 0.9, keep = [];
         g.fillStyle = '#eef2ff';
         for (const m of endMotes) {
-          m.age += dt; m.x += m.vx * dt; m.y += m.vy * dt;
-          if (m.age >= m.life) continue;
-          g.globalAlpha = (1 - m.age / m.life) * 0.85;
-          g.fillRect(Math.round(m.x), Math.round(m.y), m.big ? 2 : 1, m.big ? 2 : 1);
+          m.age += dt; m.Z += m.vZ * dt; m.Y += m.vY * dt;
+          if (m.Z < 0.35) continue;
+          const x = W / 2 + fp * m.X / m.Z, y = H * 0.55 - fp * m.Y / m.Z;
+          if (x < -4 || x > W + 4 || y < -4 || y > H + 4) continue;
+          keep.push(m);
+          const sz = clamp(Math.round(2.4 / m.Z), 1, 4);
+          g.globalAlpha = smooth(0, 0.3, m.age) * (0.55 + 0.4 * smooth(4, 1, m.Z));
+          g.fillRect(Math.round(x - sz / 2), Math.round(y - sz / 2), sz, sz);
         }
         g.globalAlpha = 1;
-        endMotes = endMotes.filter(m => m.age < m.life && m.y > -4);
-        if (wv < 0.8) endMotes.length = 0;
+        endMotes = wv < 0.8 ? [] : keep.length > 900 ? keep.slice(-900) : keep;
       }
       // vignette, and the end of the wave washing everything pale
       const vk = W + 'x' + H;
       if (vignKey !== vk) { vign = vignette(W, H); vignKey = vk; }
       g.globalAlpha = lerp(0.35, 0.6, night); g.drawImage(vign, 0, 0); g.globalAlpha = 1;
-      if (wv > 0.9) { g.fillStyle = '#dfe6f6'; g.globalAlpha = smooth(0.9, 1.0, wv) * 0.55; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
+      if (wv > 0.88) { g.fillStyle = '#e2e8f6'; g.globalAlpha = Math.pow(smooth(0.88, 1.0, wv), 1.4) * 0.97; g.fillRect(0, 0, W, H); g.globalAlpha = 1; }
     },
   };
   return shot;

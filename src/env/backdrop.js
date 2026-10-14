@@ -8,9 +8,11 @@
    so one painting serves morning, noon, dusk and night.
    Parallax: the layer scrolls at `par` of the camera speed.
    ===================================================================== */
-import { RNG, clamp, lerp, fbm, hash2, hyp } from './core.js';
+import { RNG, clamp, lerp, fbm, hash2, hyp, drain } from './core.js';
 
-export function paintBackdrop(o = {}) {
+export function paintBackdrop(o = {}) { return drain(paintBackdropG(o)); }
+/** the backdrop painter as a generator (yields between layers, for the async bake) */
+export function* paintBackdropG(o = {}) {
   const W = 1600, H = 480, d = new Uint8Array(W * H * 4);
   const put = (x, y, g, a) => { x |= 0; y |= 0; if (x < 0 || y < 0 || x >= W || y >= H) return; const k = (y * W + x) * 4; d[k] = g[0]; d[k + 1] = g[1]; d[k + 2] = g[2]; d[k + 3] = Math.round(clamp(a, 0, 1) * 255); };
   const R = RNG(17);
@@ -24,7 +26,8 @@ export function paintBackdrop(o = {}) {
     [420, 18, [44, 54, 52], 0.9, 9, 53],
   ];
   const tops = [];
-  layers.forEach(([by, amp, g, dep, rough, seed], li) => {
+  for (const [li, [by, amp, g, dep, rough, seed]] of layers.entries()) {
+    yield;
     const top = new Float32Array(W);
     for (let x = 0; x < W; x++) {
       let y = by - (fbm(x / W * rough, seed * 0.1, 4, seed) - 0.45) * amp * 2;
@@ -37,7 +40,8 @@ export function paintBackdrop(o = {}) {
       const k = (y - top[x]) / 60; const shade = clamp(1 - k * 0.25, 0.7, 1) * (li >= 3 && hash2(x >> 1, y >> 1, li) < 0.1 ? 0.9 : 1);
       put(x, y, g.map(v => v * shade), dep + (1 - dep) * clamp(k * 0.1, 0, 0.2));
     }
-  });
+  }
+  yield;
   // the summit's iron tower: a lattice pylon, rusted, with a beacon at the top
   const towerH = 54, ty0 = Math.floor(tops[2][tx]) + 2;
   for (let y = ty0 - towerH; y <= ty0; y++) {
@@ -58,6 +62,7 @@ export function paintBackdrop(o = {}) {
       put(x, y, [214, 212, 208].map(v => v * (0.85 + 0.15 * (u < 0 ? 1 : 0.6))), 0.22 + den * 0.1);
     }
   }
+  yield;
   // a few high clouds
   for (let c = 0; c < 6; c++) { const cx = R.range(0, W), cy = R.range(40, 160), w = R.range(60, 160);
     for (let y = Math.floor(cy - 6); y <= cy + 6; y++) for (let x = Math.floor(cx - w); x <= cx + w; x++) { const u = (x - cx) / w, v = (y - cy) / 6; if (u * u + v * v * (1 + fbm(x * 0.02, y * 0.1, 2, c) * 2) > 1) continue; const kk = (y * W + x) * 4; if (d[kk + 3]) continue; put(x, y, [236, 238, 242].map(q => q * (v < 0 ? 1 : 0.86)), 0.05); } }
