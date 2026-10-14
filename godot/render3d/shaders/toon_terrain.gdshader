@@ -86,7 +86,7 @@ vec3 glyph_set(int mat, vec4 e2, vec4 e3, float h) {
 	// returns (start, count, density)
 	if (mat == 0) {
 		float fl = e2.a;
-		if (fl > 0.05 && h < fl * 0.5) return vec3(g_flowers, 1.0);
+		if (fl > 0.05 && h < fl * 0.22) return vec3(g_flowers, 0.9);
 		return vec3(g_grass, 0.18 + 0.5 * e3.b);
 	}
 	if (mat == 1) return vec3(g_dirt, 0.22 + 0.15 * (1.0 - e2.b));
@@ -113,7 +113,8 @@ void fragment() {
 	// ---- base tone: one system of large soft patches, stepped in whole tones with dithered seams
 	// (the 2D lesson: several overlapping patch systems read as camouflage)
 	float macro = w3_fbm(v_wp.xz / 7.5) * 2.6 - 1.3;
-	float mstep = floor(macro + w3_bayer4(cell));
+	// whole steps; the dither only lives in a narrow seam at each step (no screen-door fields)
+	float mstep = floor(macro + 0.5 + (w3_bayer4(cell) - 0.5) * 0.22);
 	float row;
 	float tone;
 	float porous = 0.8;
@@ -124,7 +125,7 @@ void fragment() {
 		porous = 0.6;
 	} else if (mat == 1) {
 		row = 2.0;
-		tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + w3_bayer4(cell) * 0.99);
+		tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + 0.3 + (w3_bayer4(cell) - 0.5) * 0.2);
 		porous = 1.0;
 	} else if (mat == 2) {
 		row = 3.0;
@@ -202,7 +203,7 @@ void fragment() {
 	// ---- wetness and puddles
 	alb = w3_wetten(alb, porous);
 	float ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));
-	ao = floor(ao * 4.0 + w3_bayer4(cell)) / 4.0;
+	ao = floor(ao * 4.0 + 0.5 + (w3_bayer4(cell) - 0.5) * 0.3) / 4.0;
 	if (w3_wet > 0.25 && e2.g > 0.45 && (mat == 1 || mat == 2)) {
 		float ring = step(0.82, w3_vnoise(cell / 3.0 + w3_time * 0.4));
 		alb = mix(alb * 0.55, w3_sky * 0.8 + vec3(0.02), 0.55 * w3_wet) + ring * 0.04 * w3_wet;

@@ -36,7 +36,7 @@ BURLS = [  # angle, height (m), amplitude (m), angular width, vertical width
     (4.9, 3.2, 0.28, 0.22, 0.5), (3.2, 4.3, 0.22, 0.20, 0.45),
 ]
 HOLLOW_AT = (2.42, 0.62, 0.70, 0.30, 0.78)   # angle, centre height, depth, angular half-width, half-height
-TWIST = 0.11                                  # rad per metre
+TWIST = 0.08                                  # rad per metre
 ROPE_Y = 2.35                                 # shimenawa height
 
 
@@ -53,7 +53,7 @@ def _theta(x, z):
 def trunk_radius(theta, y, r0):
     theta = np.asarray(theta, np.float64)
     th = theta + TWIST * y
-    r = r0 * (1 + 0.055 * np.sin(5 * th + 0.7) + 0.035 * np.sin(3 * th + 2.1) + 0.02 * np.sin(11 * th + 0.3))
+    r = r0 * (1 + 0.06 * np.sin(5 * th + 0.7) + 0.04 * np.sin(3 * th + 2.1))
     g = math.exp(-max(y, 0) / 1.25) * (1 if y > -0.4 else math.exp((y + 0.4) * 0.8))
     for a, reach, w in BUTTRESS:
         d = _angdiff(theta, a)
@@ -65,7 +65,6 @@ def trunk_radius(theta, y, r0):
     a, h, depth, wa, wh = HOLLOW_AT
     d = _angdiff(theta, a)
     r = r - depth * np.exp(-(d / wa) ** 4 - ((y - h) / wh) ** 4)
-    r = r * (1 - 0.02 * np.abs(np.sin(17 * th + 0.4 * math.sin(y * 1.3))))
     return r
 
 
@@ -77,70 +76,106 @@ TRUNK_PTS = [[0, -0.9, 0], [0.05, 0.6, 0.05], [0.25, 2.4, -0.05], [0.4, 4.2, -0.
 TRUNK_R = [3.15, 3.05, 2.85, 2.6, 2.3]
 
 
+def _trunk_step(f):
+    y = TRUNK_PTS[0][1] + f * (TRUNK_PTS[-1][1] - TRUNK_PTS[0][1])
+    return 0.13 if y < 1.7 else 0.3
+
+
+def _limb_step(r0):
+    return lambda f: float(np.clip(r0 * (1 - 0.6 * f) * 0.5, 0.3, 0.6))
+
+
+# Limbs, designed for the leaned camera (docs/knowledge/21 section 1: a point shows at screen
+# y = height - 0.819 * z): the south limbs rise steeply so their foliage stays above the trunk
+# and the shimenawa on screen, while the long low arms spread east and west.
+LIMBS = [  # name, control points, radii, moss
+    ('E', [[0.9, 4.3, 0.35], [4.6, 5.5, 1.1], [8.6, 6.3, 2.0], [12.4, 7.6, 2.4], [15.2, 8.8, 2.0], [16.6, 9.6, 1.0]], [1.35, 1.05, 0.8, 0.55, 0.36, 0.2], 0.7),
+    ('W', [[-1.0, 4.1, 0.45], [-4.9, 5.2, 1.4], [-9.1, 5.9, 2.2], [-12.8, 7.2, 2.6], [-15.4, 8.6, 2.0], [-16.8, 9.4, 0.8]], [1.4, 1.1, 0.82, 0.56, 0.36, 0.2], 0.7),
+    ('S', [[0.2, 4.7, 1.0], [0.5, 8.0, 3.0], [0.9, 11.4, 5.6], [1.0, 14.2, 7.8], [0.8, 15.6, 9.4]], [1.12, 0.86, 0.6, 0.4, 0.24], 0.4),
+    ('NW', [[-0.6, 4.9, -0.7], [-3.4, 7.6, -3.6], [-6.6, 9.4, -5.4], [-9.4, 10.4, -6.4]], [1.2, 0.9, 0.6, 0.34], 0.5),
+    ('NE', [[0.7, 4.9, -0.6], [3.6, 7.8, -3.2], [6.8, 9.6, -4.8], [9.4, 10.6, -5.8]], [1.15, 0.86, 0.56, 0.3], 0.5),
+    ('N', [[0.0, 5.0, -0.6], [-0.3, 8.0, -4.6], [-0.7, 10.4, -8.4], [-1.0, 11.4, -10.8]], [1.05, 0.8, 0.52, 0.3], 0.4),
+    ('L', [[0.1, 5.0, -0.1], [-0.4, 9.0, -0.8], [0.4, 13.2, -1.2], [0.0, 17.0, -1.4], [-0.4, 19.4, -1.6]], [1.32, 0.96, 0.6, 0.32, 0.18], 0.3),
+    ('SEu', [[-0.1, 8.6, -0.6], [3.6, 11.6, 0.8], [6.6, 13.4, 1.2], [8.0, 14.0, 1.0]], [0.62, 0.46, 0.3, 0.18], 0.25),
+    ('SWu', [[0.0, 10.0, -0.9], [-3.8, 12.8, 0.6], [-6.8, 14.0, 1.2], [-8.2, 14.4, 1.0]], [0.56, 0.42, 0.28, 0.16], 0.25),
+    ('SEs', [[0.5, 8.0, 3.0], [3.6, 10.0, 5.0], [6.4, 11.6, 6.6], [7.8, 12.2, 7.2]], [0.5, 0.4, 0.28, 0.16], 0.3),
+    ('SWs', [[0.5, 8.0, 3.0], [-3.0, 9.8, 5.2], [-6.0, 11.4, 6.8], [-7.4, 12.0, 7.4]], [0.5, 0.4, 0.28, 0.16], 0.3),
+]
+
+
 def skeleton(R):
     limbs = []
-    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=64, step=0.32,
-                    cap_end=False, moss=0.35)
+    trunk = WD.Limb('trunk', TRUNK_PTS, TRUNK_R, kind='trunk', rfun=trunk_rfun, n_around=80, cap_end=False,
+                    moss=0.35, step_fn=_trunk_step)
     limbs.append(trunk)
-    main = [  # name, control points, radii, moss
-        ('E', [[0.9, 4.3, 0.35], [4.6, 5.5, 1.1], [8.6, 6.1, 2.3], [12.1, 7.1, 3.1], [14.9, 8.4, 3.3], [16.3, 9.7, 2.9]], [1.35, 1.05, 0.8, 0.55, 0.36, 0.2], 0.7),
-        ('W', [[-1.0, 4.1, 0.45], [-4.9, 5.2, 1.6], [-9.1, 5.8, 3.0], [-12.7, 6.9, 3.6], [-15.3, 8.4, 3.2], [-16.5, 9.7, 2.6]], [1.4, 1.1, 0.82, 0.56, 0.36, 0.2], 0.7),
-        ('S', [[0.2, 4.7, 1.0], [0.9, 6.9, 4.5], [1.8, 8.4, 8.5], [1.2, 9.8, 12.0], [0.4, 10.8, 14.2]], [1.12, 0.86, 0.6, 0.38, 0.22], 0.6),
-        ('NW', [[-0.6, 4.9, -0.7], [-3.5, 7.7, -4.5], [-6.5, 9.9, -8.6], [-8.6, 11.9, -11.6]], [1.2, 0.9, 0.6, 0.34], 0.5),
-        ('NE', [[0.7, 4.9, -0.6], [4.0, 7.9, -4.0], [7.5, 10.4, -8.1], [9.6, 12.4, -10.6]], [1.15, 0.86, 0.56, 0.3], 0.5),
-        ('L', [[0.1, 5.0, -0.1], [-0.4, 8.8, -0.8], [0.6, 12.8, -1.5], [0.2, 16.4, -2.0], [-0.3, 18.6, -2.2]], [1.32, 0.96, 0.6, 0.32, 0.18], 0.3),
-        ('SEu', [[-0.1, 8.4, -0.6], [3.5, 11.4, 2.0], [7.0, 13.4, 3.0], [9.1, 14.4, 2.6]], [0.62, 0.46, 0.3, 0.18], 0.25),
-        ('SWu', [[0.0, 9.8, -0.9], [-4.0, 12.7, 1.5], [-7.5, 14.4, 2.6], [-9.1, 15.1, 2.2]], [0.56, 0.42, 0.28, 0.16], 0.25),
-    ]
     named = {}
-    for name, pts, rr, moss in main:
-        L = WD.Limb(name, pts, rr, kind='limb', moss=moss, n_around=12 if rr[0] > 1.0 else 9, step=0.7)
+    for name, pts, rr, moss in LIMBS:
+        L = WD.Limb(name, pts, rr, kind='limb', moss=moss, n_around=14 if rr[0] > 0.9 else 10,
+                    step_fn=_limb_step(rr[0]))
         limbs.append(L)
         named[name] = L
-    # surface roots: out of the buttresses, along the ground, diving in
+    # roots: out of the biggest buttresses, curving along the ground and diving in
     for i, (a, reach, w) in enumerate(BUTTRESS):
+        if reach < 1.3:
+            continue
         d = np.array([-math.sin(a), 0, -math.cos(a)])          # theta 0 = north (-z), pi/2 = west (-x)
-        L1 = R.uniform(3.2, 5.6) + reach
-        side = np.array([d[2], 0, -d[0]]) * R.normal(0, 0.6)
-        pts = [d * 2.2 + [0, 0.65, 0], d * 3.6 + [0, 0.35, 0] + side * 0.2, d * (3.6 + L1 * 0.45) + [0, 0.12, 0] + side * 0.6,
-               d * (3.6 + L1 * 0.8) + [0, -0.05, 0] + side, d * (3.6 + L1) + [0, -0.35, 0] + side * 1.2]
-        rr = [0.62, 0.5, 0.34, 0.22, 0.12]
-        limbs.append(WD.Limb(f'root{i}', pts, rr, kind='root', step=0.45, n_around=9, moss=0.45,
-                             yscale=lambda k, f: 0.85 - 0.3 * f))
+        side = np.array([d[2], 0, -d[0]])
+        bend = R.normal(0, 0.5)
+        L1 = R.uniform(1.8, 3.2)
+        r_in = 3.0 + reach * 0.8
+        pts = [d * (r_in - 0.8) + [0, 0.55, 0],
+               d * (r_in + 0.3) + side * bend * 0.2 + [0, 0.22, 0],
+               d * (r_in + L1 * 0.6) + side * bend * 0.7 + [0, 0.02, 0],
+               d * (r_in + L1) + side * bend * 1.2 + [0, -0.3, 0]]
+        rr = [0.55, 0.4, 0.26, 0.14]
+        limbs.append(WD.Limb(f'root{i}', pts, rr, kind='root', n_around=10, moss=0.45,
+                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.7 - 0.2 * f))
+    # a few thin surface roots wandering between the big ones
+    for j, a in enumerate((0.85, 2.45, 3.15, 4.75, 5.55)):
+        d = np.array([-math.sin(a), 0, -math.cos(a)])
+        side = np.array([d[2], 0, -d[0]])
+        bend = R.normal(0, 0.6)
+        pts = [d * 3.4 + [0, 0.2, 0], d * 4.6 + side * bend * 0.4 + [0, 0.06, 0], d * 5.8 + side * bend + [0, -0.12, 0]]
+        limbs.append(WD.Limb(f'sroot{j}', pts, [0.22, 0.15, 0.08], kind='root', n_around=7, moss=0.3,
+                             step_fn=lambda f: 0.3, yscale=lambda k, f: 0.75))
     return limbs, named
 
 
 # ------------------------------------------------------------------------------- the crown
 def masses():
-    """Three tiers, the way old camphors hold their foliage: broad shelves on the long low limbs,
-    a mid layer, a high dome; small fringe masses break the outline."""
+    """Low shelves on the long arms east, west and north; a high arch on the south side (so the
+    trunk and the shimenawa stay in view under it); a mid layer; a dome; fringe masses to break
+    the outline."""
     M = []
 
     def add(c, r, **kw):
         kw.setdefault('seed', len(M) * 31 + 5)
         M.append(CD.Mass(c, r, **kw))
-    # tier A: shelves on the low limbs (8-11 m), flat, drooping at the rim
-    add((13.4, 9.4, 3.2), (5.0, 2.2, 4.8), flat=0.65, sag=0.5)          # E
-    add((-13.8, 9.2, 3.0), (5.2, 2.2, 4.8), flat=0.65, sag=0.5)         # W
-    add((1.2, 10.6, 12.2), (5.4, 2.2, 3.8), flat=0.65, sag=0.45)        # S, over the home
-    add((8.0, 9.7, 8.0), (3.4, 1.8, 3.0), flat=0.6, sag=0.3)            # SE
-    add((-7.6, 9.4, 8.2), (3.6, 1.8, 3.2), flat=0.6, sag=0.3)           # SW
-    add((-8.8, 11.0, -9.0), (4.8, 2.4, 4.6), flat=0.6, sag=0.35)        # NW
-    add((9.2, 11.4, -8.6), (4.8, 2.4, 4.6), flat=0.6, sag=0.35)         # NE
-    # tier B: the middle (11-15 m)
-    add((-6.5, 13.2, 3.0), (5.0, 2.6, 4.6), flat=0.5)
-    add((6.8, 13.4, 2.4), (5.2, 2.6, 4.6), flat=0.5)
-    add((0.5, 13.6, -6.8), (6.2, 2.8, 4.8), flat=0.5)
-    add((-1.0, 12.6, 6.4), (4.4, 2.4, 3.6), flat=0.5)
-    # tier C: the dome (15-21 m)
-    add((-1.0, 17.4, -1.4), (6.4, 3.4, 5.6), flat=0.4, clumps=0.55)
-    add((4.6, 16.0, 1.6), (4.2, 2.8, 4.0), flat=0.4)
-    add((-5.8, 15.6, -3.6), (4.0, 2.6, 3.8), flat=0.4)
-    # fringe: outline breakers
-    add((16.6, 9.0, 0.0), (2.4, 1.6, 2.4), flat=0.5, clumps=0.3)
-    add((-17.0, 8.8, 0.4), (2.3, 1.5, 2.3), flat=0.5, clumps=0.3)
-    add((2.0, 20.8, -2.4), (2.6, 1.6, 2.4), flat=0.4, clumps=0.3)
-    add((-3.6, 10.0, 14.2), (2.2, 1.4, 2.0), flat=0.5, clumps=0.2, sag=0.4)
+    # tier A: shelves on the low arms
+    add((13.6, 9.6, 2.6), (5.0, 2.2, 4.6), flat=0.65, sag=0.5)          # E
+    add((9.4, 10.6, -5.6), (4.4, 2.3, 4.2), flat=0.6, sag=0.35)         # NE
+    add((-14.0, 9.4, 2.4), (5.2, 2.2, 4.6), flat=0.65, sag=0.5)         # W
+    add((-9.6, 10.4, -6.0), (4.4, 2.3, 4.2), flat=0.6, sag=0.35)        # NW
+    add((-1.0, 11.6, -11.0), (5.6, 2.4, 4.0), flat=0.6, sag=0.3)        # N
+    # the south arch, high
+    add((0.8, 16.0, 8.5), (5.0, 2.4, 3.6), flat=0.6, sag=0.3)           # S
+    add((7.6, 12.6, 7.2), (3.6, 2.0, 3.0), flat=0.6, sag=0.3)           # SE
+    add((-7.4, 12.3, 7.4), (3.8, 2.0, 3.0), flat=0.6, sag=0.3)          # SW
+    # tier B
+    add((-7.0, 14.0, 1.6), (5.0, 2.6, 4.4), flat=0.5)
+    add((7.2, 14.2, 1.0), (5.2, 2.6, 4.4), flat=0.5)
+    add((0.0, 14.6, -6.4), (6.0, 2.8, 4.6), flat=0.5)
+    add((-1.0, 15.4, 4.6), (4.4, 2.4, 3.4), flat=0.5)
+    # tier C: the dome
+    add((-0.8, 18.6, -1.2), (6.4, 3.2, 5.4), flat=0.4, clumps=0.5)
+    add((4.8, 17.4, 2.2), (4.2, 2.6, 3.8), flat=0.4)
+    add((-5.6, 17.0, -3.0), (4.0, 2.6, 3.8), flat=0.4)
+    add((2.0, 21.0, -2.6), (2.8, 1.6, 2.6), flat=0.4, clumps=0.3)
+    # fringe
+    add((16.8, 9.2, -0.6), (2.4, 1.6, 2.4), flat=0.5, clumps=0.3)
+    add((-17.2, 9.0, -0.2), (2.3, 1.5, 2.3), flat=0.5, clumps=0.3)
+    add((11.6, 12.6, 6.0), (2.4, 1.6, 2.2), flat=0.5, clumps=0.3)
+    add((-11.0, 12.2, 6.2), (2.4, 1.6, 2.2), flat=0.5, clumps=0.3)
     return M
 
 
@@ -185,13 +220,13 @@ def crown(M, sets):
     return CD.crown_cards(M, (0.0, 12.5, 0.5), (17.0, 7.0, 15.5), sets, seed=SEED + 9,
                           base_tint=_tint('#5b7340'), young_tint=_tint('#687a40'), old_tint=_tint('#4d6740'),
                           base_y=7.0, top_y=21.0, overlap=1.7, clump_overlap=1.9, fill_density=0.45,
-                          max_cards=4300)
+                          max_cards=3300)
 
 
 def epiphytes(R, named, sets):
     """Ferns and moss cushions on the tops of the big low limbs (cards, normal up)."""
     out = []
-    for key, n_f, n_m in (('E', 9, 10), ('W', 9, 10), ('S', 6, 7), ('NW', 4, 5), ('NE', 4, 5)):
+    for key, n_f, n_m in (('E', 9, 10), ('W', 9, 10), ('NW', 4, 5), ('NE', 4, 5), ('N', 3, 4)):
         sp = named[key].spine
         for i in range(n_f + n_m):
             f = R.uniform(0.08, 0.75)
@@ -359,16 +394,17 @@ def rope_texture(seed=SEED):
 def build(out):
     R = rng(SEED)
     limbs, named = skeleton(R)
-    for key, n, fr, ln in (('E', 4, (0.55, 0.95), (2.4, 4.0)), ('W', 4, (0.55, 0.95), (2.4, 4.0)),
-                           ('S', 3, (0.5, 0.9), (2.0, 3.4)), ('NW', 3, (0.5, 0.9), (2.4, 3.8)),
-                           ('NE', 3, (0.5, 0.9), (2.4, 3.8)), ('L', 4, (0.45, 0.9), (2.4, 4.4)),
-                           ('SEu', 2, (0.5, 0.9), (2.0, 3.2)), ('SWu', 2, (0.5, 0.9), (2.0, 3.2))):
+    for key, n, fr, ln in (('E', 3, (0.55, 0.95), (2.4, 4.0)), ('W', 3, (0.55, 0.95), (2.4, 4.0)),
+                           ('S', 2, (0.5, 0.9), (2.0, 3.2)), ('NW', 2, (0.5, 0.9), (2.4, 3.6)),
+                           ('NE', 2, (0.5, 0.9), (2.4, 3.6)), ('N', 2, (0.5, 0.9), (2.4, 3.6)),
+                           ('L', 3, (0.45, 0.9), (2.4, 4.0)), ('SEu', 2, (0.5, 0.9), (2.0, 3.0)),
+                           ('SWu', 2, (0.5, 0.9), (2.0, 3.0))):
         L = named[key]
         WD.build_limb(L)
         for b in WD.offshoots(L, R, n, frac_range=fr, length=ln, radius_k=(0.4, 0.6), up_bias=0.45, name=key + 'b',
                               min_r=0.06, moss=0.15, segs=3):
-            b.n_around = 6
-            b.step = 0.8
+            b.n_around = 7
+            b.step = 0.7
             limbs.append(b)
     for L in limbs:
         if L.spine is None:

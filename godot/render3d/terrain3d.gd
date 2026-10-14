@@ -56,6 +56,8 @@ func load_region(dir: String) -> bool:
 		water_h[i] = hmin + float(q) / 65535.0 * hrange if q > 0 else -1000.0
 		water_flow[i] = float(wd[i * 4 + 3]) / 255.0 * TAU
 	_setup_material(dir)
+	water_mat = ShaderMaterial.new()
+	water_mat.shader = load("res://render3d/shaders/toon_water.gdshader")
 	_build_chunks()
 	return true
 

@@ -35,7 +35,7 @@ from w3a.export import Out  # noqa: E402
 import make_bench  # noqa: E402
 
 GODOT = os.environ.get('GODOT_BIN', '/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64')
-ASSETS = os.path.join(REPO, 'godot', 'world3d', 'assets')
+ASSETS = os.environ.get('W3A_ASSETS', os.path.join(REPO, 'godot', 'world3d', 'assets'))   # override for experiments
 
 # generator modules; each build(out) adds its assets
 GENERATORS = [

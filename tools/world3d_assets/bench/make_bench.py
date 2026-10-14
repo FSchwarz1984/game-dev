@@ -59,7 +59,8 @@ def main(bench, reimport=True):
 
 
 def sync_assets(bench):
-    copytree(os.path.join(REPO, 'godot', 'world3d', 'assets'), os.path.join(bench, 'world3d', 'assets'))
+    src = os.environ.get('W3A_ASSETS', os.path.join(REPO, 'godot', 'world3d', 'assets'))
+    copytree(src, os.path.join(bench, 'world3d', 'assets'))
 
 
 if __name__ == '__main__':

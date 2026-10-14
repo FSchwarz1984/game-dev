@@ -26,6 +26,8 @@ func _ready() -> void:
 	pv = PixelView3D.new()
 	if args.has("pitch"):
 		pv.pitch_deg = float(args["pitch"])
+	if args.has("scale"):
+		pv.force_scale = int(args["scale"])
 	add_child(pv)
 	env = W3Env.new()
 	add_child(env)

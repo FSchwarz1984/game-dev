@@ -28,7 +28,7 @@ def view_back_upright():
 
 class Limb:
     def __init__(self, name, pts, radii, kind='limb', n_around=None, rfun=None, step=None, cap_end=True,
-                 parent=None, tags=None, yscale=None, moss=0.0, tint=(1.0, 1.0, 1.0)):
+                 parent=None, tags=None, yscale=None, moss=0.0, tint=(1.0, 1.0, 1.0), step_fn=None):
         self.name = name
         self.pts = np.asarray(pts, np.float64)
         self.radii = np.asarray(radii, np.float64)
@@ -42,6 +42,7 @@ class Limb:
         self.yscale = yscale
         self.moss = moss            # moss amount on upward faces (UV2.y)
         self.tint = np.asarray(tint, np.float64)
+        self.step_fn = step_fn
         self.spine = None
         self.info = None
         self.md = None
@@ -51,7 +52,7 @@ def build_limb(L: Limb, seg_px=6.0, step_k=0.6, min_step=0.25, max_step=0.9):
     """Rings every step metres (scaled with the radius), n_around so a segment spans ~seg_px."""
     rmax = float(np.max(L.radii))
     step = L.step or float(np.clip(rmax * step_k, min_step, max_step))
-    L.spine = Spine(L.pts, L.radii, step=step)
+    L.spine = Spine(L.pts, L.radii, step=step, step_fn=L.step_fn)
     n = L.n_around or int(np.clip(round(2 * math.pi * rmax * TEXEL_PER_M / seg_px), 5, 40))
     md, info = tube(L.spine, n_around=n, rfun=L.rfun, cap_end=L.cap_end, yscale=L.yscale, ref=-view_back_upright())
     L.md = md

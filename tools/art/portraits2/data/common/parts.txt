@@ -165,3 +165,307 @@ tqq.....
 ...qsss....
 ....qsss...
 ......qqs..
+
+# ======== eyes (house style, every character; iris colours come from each palette) ========
+# near eye = viewer's left (outer corner on the left), 11 px wide at x22; far eye = 9 px at x46. Rows 36-46.
+# Iris 7 (near) / 6 (far) px wide, dark top under the lash (E), mid (e), light bottom (i) and a bright rim (a),
+# glint (l) 2x2 at the upper left, a 1-px second glint lower right. Lash (k) thick at the outer corner.
+
+== eN_open @ 22,37
+..kkkkkkk..
+.kkEEEEEkkj
+kkEEEEEEEvj
+..EllEEEew.
+..ellEEeew.
+..eeEEEeew.
+..eeeEeeiw.
+..iieeeli..
+...iaaai...
+...jjjjj...
+
+== eF_open @ 46,37
+..kkkkk..
+jkkEEEEkk
+jvEEEEEEk
+.wEllEEe.
+.wellEee.
+.weeEEee.
+.weeeEei.
+..ieeli..
+..iaaai..
+..jjjjj..
+
+# smile: open eyes, the lower lid pushed up into an arch over the iris bottom
+== eN_smile @ 22,37
+..kkkkkkk..
+.kkEEEEEkkj
+kkEEEEEEEvj
+..EllEEEew.
+..ellEEeew.
+..jeEEEeej.
+...jjeeejj.
+.....jjj...
+
+== eF_smile @ 46,37
+..kkkkk..
+jkkEEEEkk
+jvEEEEEEk
+.wEllEEe.
+.wellEee.
+.jeeEEej.
+..jjeejj.
+....jj...
+
+# happy closed (^^)
+== eN_happy @ 22,39
+....kkk....
+..kk...kk..
+.k.......k.
+k.........k
+
+== eF_happy @ 46,39
+...kkk...
+.kk...kk.
+k.......k
+k.......k
+
+# calm closed: gentle downward arcs, lashes at the outer corner
+== eN_calm @ 22,41
+k.........j
+kkk.....kk.
+..kkkkkkk..
+
+== eF_calm @ 46,41
+j.......k
+.kk...kkk
+..kkkkk..
+
+# wide (surprise): lids open wide, white all round a small iris with a pin pupil
+== eN_wide @ 22,36
+....kkkkk..
+..kkkkkkkkj
+.kvwwwwwwvj
+kkwwweeewwj
+..wwelEeww.
+..wweEEeww.
+..wwweeeww.
+..wwwwwwww.
+...wwwwww..
+....jjjj...
+
+== eF_wide @ 46,36
+..kkkkk..
+jkkkkkkk.
+jvwwwwwvk
+jwweeewkk
+.wwelEew.
+.wweEEew.
+.wwweeew.
+.wwwwwww.
+..wwwww..
+...jjjj..
+
+# sad: the outer corners droop, the iris stays big and wet-looking
+== eN_sad @ 22,37
+......kkkk.
+...kkkkEEkj
+.kkkEEEEEvj
+kk.EllEEew.
+..ellEEeew.
+..eeEEEeew.
+..eeeEeeiw.
+..iieeeli..
+...iaaai...
+...jjjjj...
+
+== eF_sad @ 46,37
+.kkkk....
+jkEEkkk..
+jvEEEEkkk
+.wEllE.kk
+.wellEee.
+.weeEEee.
+.weeeEei.
+..ieeli..
+..iaaai..
+..jjjjj..
+
+# tear: sad lids, extra glints, tears welling over the lower lid
+== eN_tear @ 22,37
+......kkkk.
+...kkkkEEkj
+.kkkEEEEEvj
+kk.EllEElw.
+..ellEEeew.
+..cllEEelc.
+.ccCceeCcc.
+.cCCCCCCCc.
+..zCCCCCCz.
+...zzzzzz..
+
+== eF_tear @ 46,37
+.kkkk....
+jkEEkkk..
+jvEEEEkkk
+.wEllElkk
+.wellEee.
+.cllEelc.
+ccCceCcc.
+cCCCCCCc.
+.zCCCCCz.
+..zzzzz..
+
+# angry: the upper lid slants down toward the nose, lower lid raised
+== eN_angry @ 22,37
+...........
+.kkkk......
+kkEEEkkk...
+..EllEEkkkj
+..ellEEeew.
+..eeEEEeew.
+..jeeEeeij.
+...jjjjjj..
+
+== eF_angry @ 46,37
+.........
+.....kkk.
+...kkEEkk
+jkkkEEEe.
+.wellEee.
+.weeEEee.
+.jeeeEej.
+..jjjjjj.
+
+# half-lidded (tired, doubt): heavy straight lid, crease line above
+== eN_half @ 22,38
+...jjjjjj..
+...........
+.kkkkkkkkkj
+kkEEEEEEEjj
+..eeEEEeew.
+..eeeEeeiw.
+..iieeeli..
+...iaaai...
+...jjjjj...
+
+== eF_half @ 46,38
+..jjjjj..
+.........
+jkkkkkkkk
+jjEEEEEEk
+.weeEEee.
+.weeeEei.
+..ieeli..
+..iaaai..
+..jjjjj..
+
+# looking down and away (embarrassed): iris pushed to the inner lower corner
+== eN_away @ 22,37
+..kkkkkkk..
+.kkvvvEEkkj
+kkvvvEEEEEj
+..wwwEllEEj
+..wwweleEe.
+..wwweeEee.
+..wwwieeei.
+...wwiaai..
+....wwww...
+...jjjjj...
+
+== eF_away @ 46,37
+..kkkkk..
+jkkvvEEkk
+jvvvEEEEk
+.wwEllEE.
+.wweleEe.
+.wweeEee.
+.wwieeei.
+..wwiaai.
+...www...
+..jjjjj..
+
+# looking up and aside (think): iris high and to the inner side, white below
+== eN_up @ 22,37
+..kkkkkkk..
+.kkvEEEEEkj
+kkvvEllEEEj
+..wwellEEej
+..wwweEEee.
+..wwwieeei.
+..wwwwaaa..
+...wwwwww..
+....wwww...
+...jjjjj...
+
+== eF_up @ 46,37
+..kkkkk..
+jkkEEEEkk
+jvEllEEEk
+.wellEEek
+.wweEEee.
+.wwieeei.
+.wwwaaa..
+..wwwww..
+...www...
+..jjjjj..
+
+# blank: open, no glint, the iris flat and dull
+== eN_blank @ 22,37
+..kkkkkkk..
+.kkEEEEEkkj
+kkEEEEEEEvj
+..eeeeeeew.
+..eeeEEeew.
+..eeeEEeew.
+..eeeeeeew.
+..eeeeeee..
+...eeeee...
+...jjjjj...
+
+== eF_blank @ 46,37
+..kkkkk..
+jkkEEEEkk
+jvEEEEEEk
+.weeeeee.
+.weeEEee.
+.weeEEee.
+.weeeeee.
+..eeeee..
+..eeeee..
+..jjjjj..
+
+# serious: the lid lower and straighter, the lower lid raised: a steady look
+== eN_serious @ 22,37
+...........
+.kkkkkkkkk.
+kkkEEEEEEkj
+..EllEEEew.
+..ellEEeew.
+..eeEEEeew.
+..jeeEeeij.
+...jjjjjj..
+
+== eF_serious @ 46,37
+.........
+jkkkkkkkk
+jkEEEEEEk
+.wEllEEe.
+.wellEee.
+.weeEEee.
+.jeeeEej.
+..jjjjjj.
+
+# squeezed shut (> <)
+== eN_shut @ 22,38
+kk.........
+..kkk......
+.....kkkk..
+..kkk......
+kk.........
+
+== eF_shut @ 46,38
+........k
+.....kkk.
+.kkkk....
+.....kkk.
+........k

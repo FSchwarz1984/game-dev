@@ -20,6 +20,8 @@ const MIN_W := 400.0
 const PPM := 20.0
 
 @export var pitch_deg := 55.0
+## Dev previews only (asset checks of tall trees): a fixed integer scale instead of the rule.
+var force_scale := 0
 
 var vp: SubViewport
 var cam: Camera3D
@@ -139,6 +141,8 @@ func fit() -> void:
 	var s := maxi(1, roundi(size.y / BASE.y))
 	while s > 1 and size.x / s < MIN_W:
 		s -= 1
+	if force_scale > 0:
+		s = force_scale
 	var cs := Vector2i(floori(size.x / s), floori(size.y / s))
 	scale_factor = s
 	if win.content_scale_size != cs:

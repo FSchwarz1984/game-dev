@@ -68,8 +68,8 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
 
     # --- leaf litter under the canopies (camphor leaves, cedar needles, bamboo leaves)
     canopy = F["canopy"]
-    litter = geom.smoothstep(0.25, 0.75, canopy + (n1 - 0.5) * 0.45)
-    W["litter"] = litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.4)
+    litter = geom.smoothstep(0.45, 0.95, canopy + (n1 - 0.5) * 0.6 + (n2 - 0.5) * 0.35)
+    W["litter"] = 0.85 * litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.4)
 
     W["paddy"] = F["paddy"]
 

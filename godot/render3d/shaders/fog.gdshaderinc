@@ -16,7 +16,7 @@ float w3_fog_amount(vec3 wp, vec2 cell) {
 	float below = w3_haze.x - wp.y;
 	float h = smoothstep(w3_haze.y, w3_haze.z, below) * w3_haze.w;
 	float f = clamp(max(m, h), 0.0, 1.0);
-	f = floor(f * 8.0 + w3_bayer4(cell)) / 8.0;
+	f = floor(f * 8.0 + 0.5 + (w3_bayer4(cell) - 0.5) * 0.5) / 8.0;
 	return f;
 }
 vec3 w3_apply_fog(vec3 col, vec3 wp, vec2 cell) {

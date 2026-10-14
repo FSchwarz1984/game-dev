@@ -84,31 +84,35 @@ def palette():
 G = {}
 # grass tufts (blades catch the light at the tips; a dark root pixel below)
 G["tuft_a"] = """
-...b....
-..ab.b..
-..a.aa..
-.1m.ma..
-..11m1..
+...c....
+..bc.c..
+..b.bb..
+.ama.a..
+.1m1ma..
+..2211..
 """
 G["tuft_b"] = """
-.b...b..
-.ab.ba..
-..aab...
-.1mama..
-..111...
+.c...c..
+.bc.cb..
+..bbc...
+.ambma..
+.1mamm1.
+..2222..
 """
 G["tuft_c"] = """
-..b.....
-.ba..b..
-.a.m.a..
-.1m1m...
+..c.....
+.cb..c..
+.b.a.b..
+.amam1..
+..2121..
 """
 G["tuft_d"] = """
-....b...
-.b..a.b.
-.a.ba.a.
-.mama.m.
-.1m1m1..
+....c...
+.c..b.c.
+.b.cb.b.
+.ambambm
+.1mam1m1
+..22222.
 """
 G["blade"] = """
 .b..
@@ -274,8 +278,8 @@ G["bank_line"] = """
 # which glyphs each ground material uses, with their weights; the shader reads this layout:
 # material m uses glyph indices [GSTART[m], GSTART[m] + GCOUNT[m])
 SETS = {
-    "grass": [("tuft_a", 4), ("tuft_b", 3), ("tuft_c", 4), ("tuft_d", 2), ("blade", 4), ("hollow", 2), ("clover", 1)],
-    "flowers": [("daisy", 3), ("yellow", 2), ("tsuyukusa", 2), ("nadeshiko", 1)],
+    "grass": [("tuft_a", 4), ("tuft_b", 3), ("tuft_c", 4), ("tuft_d", 2), ("blade", 3), ("hollow", 3), ("clover", 1)],
+    "flowers": [("daisy", 2), ("yellow", 3), ("tsuyukusa", 2), ("nadeshiko", 1)],
     "dirt": [("pebble", 5), ("stone", 2), ("crack", 1), ("rut", 1), ("root", 1)],
     "gravel": [("pebble", 4), ("stone", 3), ("stone_big", 1)],
     "rock": [("rock_crack", 2), ("strata", 3), ("lichen", 2), ("lichen_o", 1), ("rock_chip", 2)],

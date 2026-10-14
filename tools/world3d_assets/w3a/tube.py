@@ -45,7 +45,9 @@ def catmull(pts, n_per_seg=8):
 class Spine:
     """A smooth curve with a radius profile, resampled at a fixed arc-length step."""
 
-    def __init__(self, pts, radii, step=0.25, dense=16):
+    def __init__(self, pts, radii, step=0.25, dense=16, step_fn=None):
+        """step_fn(fraction) -> local ring step (m), for adaptive spacing (dense where the shape
+        changes fast); otherwise a fixed step."""
         pts = np.asarray(pts, np.float64)
         radii = np.asarray(radii, np.float64)
         q, t = catmull(pts, dense)
@@ -53,8 +55,15 @@ class Spine:
         d = np.linalg.norm(np.diff(q, axis=0), axis=1)
         s = np.concatenate([[0], np.cumsum(d)])
         L = s[-1]
-        m = max(2, int(math.ceil(L / step)) + 1)
-        si = np.linspace(0, L, m)
+        if step_fn is None:
+            m = max(2, int(math.ceil(L / step)) + 1)
+            si = np.linspace(0, L, m)
+        else:
+            si = [0.0]
+            while si[-1] < L:
+                si.append(si[-1] + max(0.02, step_fn(si[-1] / L)))
+            si = np.array(si)
+            si = si * (L / si[-1])
         self.pos = np.stack([np.interp(si, s, q[:, c]) for c in range(3)], axis=1)
         ti = np.interp(si, s, t)
         # radius: smooth (cubic) interpolation of the control radii over the curve parameter

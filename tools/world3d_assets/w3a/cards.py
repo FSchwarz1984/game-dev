@@ -118,7 +118,7 @@ def occluded(points, masses, d, start=0.5, steps=(0.5, 1.0, 1.8, 2.8, 4.0, 5.5, 
 
 def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.33, 0.45, 0.22),
                 young_tint=(0.40, 0.50, 0.22), old_tint=(0.27, 0.40, 0.24), overlap=1.9, base_y=None, top_y=None,
-                env_k=0.35, clump_k=0.30, interior_frac=0.10, spray_rate=1.0, clump_overlap=2.1, fill_density=0.5,
+                env_k=0.35, clump_k=0.18, interior_frac=0.22, spray_rate=1.0, clump_overlap=2.1, fill_density=0.5,
                 max_cards=None, trunk_axis=(0.0, 0.0), flex_r=None, tint_jitter=0.035, cull=True):
     """Scatter clumps and cards over the masses. tiles: dict name -> list of (tile index, w, h);
     'mass' and 'small' for the surface, 'interior', and 'spray0'..'spray7' (screen directions,
@@ -221,13 +221,16 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
             cards.append(Card(pos, nm[k], t[1], t[2], t[0], float(ao[k]), tint_of(m, 'base'), float(fx[k]) * 0.7, 'fill', 0.8))
         # ---- interior: dark cards inside the mass, so gaps look into shade
         if m.interior:
+            # a dark shell just inside the surface: what shows through the gaps is shade, not sky
             ni = max(2, int(nf * interior_frac))
-            inner = fib_sphere(ni, m.seed + 29) * m.r[None, :] * R.uniform(0.3, 0.7, size=(ni, 1))
-            inner = m.to_world(inner) + m.c
-            for k in range(ni):
+            dirs = fib_sphere(ni, m.seed + 29)
+            sp2, sn2 = m.surface(dirs)
+            inner = m.c + (sp2 - m.c) * R.uniform(0.55, 0.8, size=(ni, 1))
+            vis = (sn2 @ back) > -0.2
+            for k in np.nonzero(vis)[0]:
                 t = pick('interior')
-                nn = env_normal(inner[k])
-                cards.append(Card(inner[k], nn, t[1], t[2], t[0], 0.35, tint_of(m, 'old'), 0.2, 'interior', 0.5))
+                nn = normalize(sn2[k] * 0.5 + env_normal(inner[k]) * 0.5)
+                cards.append(Card(inner[k], nn, t[1], t[2], t[0], 0.42, tint_of(m, 'old'), 0.2, 'interior', 0.9))
         # ---- sprays out of the outline: lit rim and the lower edge
         if spray_rate > 0 and 'spray0' in tiles:
             ns = int(spray_rate * area / 7.0)
@@ -249,7 +252,7 @@ def crown_cards(masses, crown_centre, crown_radii, tiles, seed=0, base_tint=(0.3
                     ang = math.atan2(sy, sx)
                     di = int(round(ang / (math.pi / 4))) % 8
                     t = pick(f'spray{di}')
-                    pos = sp[k] + ne[k] * (t[1] / PPM) * 0.25
+                    pos = sp[k] + ne[k] * (t[1] / PPM) * 0.08 - sn[k] * 0.1
                     nmk = normalize(sn[k] * 0.6 + ne[k] * 0.4)
                     cards.append(Card(pos, nmk, t[1], t[2], t[0], 0.95 if lit[k] else 0.8,
                                       tint_of(m, 'young' if lit[k] else 'base'), 1.0, 'spray', 1.2))
