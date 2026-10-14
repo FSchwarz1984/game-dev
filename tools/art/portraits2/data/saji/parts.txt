@@ -362,21 +362,20 @@ OOOOOO..
 t
 u
 
-== m_neutral @ 46,56
-u.....
-.qqqu.
+== m_neutral @ 46,57
+uqqqu
 
 == m_smile @ 43,55
 u........
 .q......u
 ..qqqqqq.
 
-== m_grin @ 44,55
-qqqqqqqq
-qyyyyyyq
-.qmmmmq.
-..qnnq..
-...qq...
+== m_grin @ 43,55
+qqqqqqqqqq
+qyyyyyyyyq
+qmmmmmmmmq
+.qmmnnnmq.
+..qqqqqq..
 
 == m_laugh @ 43,55
 qqqqqqqqqq
@@ -445,6 +444,18 @@ qyqyyqyq
 .qqqqqq.
 
 # ---------------------------------------------------------------- cheeks, tears
+# neutral only: her cheek pink one step lighter (the base's '9' pixels as '0'), so the resting face does not
+# read as happy; every other face keeps her rosy cheeks
+== cheek_soft @ 33,46
+...000........................
+000000000.....................
+000000000.....................
+.00000000.....................
+...0000.................000000
+........................000000
+.........................00000
+..........................00..
+
 == blush @ 34,47
 .bbbbb...................bbbb.
 bbbbbbb.................bbbbbb

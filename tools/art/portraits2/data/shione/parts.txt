@@ -383,12 +383,12 @@ u......
 .q....u
 ..qqqq.
 
-== m_grin @ 59,53
-qqqqqqqq
-qyyyyyyq
-.qmmmmq.
-..qnnq..
-...qq...
+== m_grin @ 58,53
+qqqqqqqqqq
+qyyyyyyyyq
+qmmmmmmmmq
+.qmmnnnmq.
+..qqqqqq..
 
 == m_laugh @ 58,53
 qqqqqqqqqq

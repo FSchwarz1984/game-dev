@@ -77,6 +77,8 @@ PALETTES = {
         'G': '#ffe08a', 'F': '#e0a840', 'A': '#a06a28', 'B': '#5a3a18',
         # her rosy cheeks, always there (the owner draws them in every illustration); the blush part goes on top
         '9': '#f8c6b6',
+        # the same cheeks one step lighter, on her neutral face only (so it does not read as a smile)
+        '0': '#fbd5c3',
     },
 }
 

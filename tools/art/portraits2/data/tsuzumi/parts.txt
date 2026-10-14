@@ -332,9 +332,22 @@ uuuu.....
 uuuuu....
 uu.......
 
-== bF_flat @ 56,43
-uuuuuuu..
-.uuuuuuuu
+# determined: a steep V, longer than angry's, drawn on the bangs with dark hair left below it so it reads as a
+# brow and not as a gap in the bangs; the inner ends come down as low as the bangs allow
+== bN_press @ 31,35
+uuu...........
+uuuuuu........
+...uuuuuu.....
+......uuuuuu..
+.........uuuuu
+............uu
+
+== bF_press @ 55,37
+.........uuu
+......uuuuuu
+...uuuuuu...
+uuuuuu......
+uuu.........
 
 # ---------------------------------------------------------------- nose, mouths
 == nose @ 54,57
@@ -350,12 +363,12 @@ u......u
 .q....q.
 ..qqqq..
 
-== m_grin @ 44,62
-qqqqqqqq
-qyyyyyyq
-.qmmmmq.
-..qnnq..
-...qq...
+== m_grin @ 43,62
+qqqqqqqqqq
+qyyyyyyyyq
+qmmmmmmmmq
+.qmmnnnmq.
+..qqqqqq..
 
 == m_laugh @ 43,62
 qqqqqqqqqq
@@ -422,9 +435,9 @@ qyyyyyyq
 qyqyyqyq
 .qqqqqq.
 
-== m_set @ 45,63
-......q
-qqqqqq.
+== m_press @ 45,64
+qqqqqqq
+..uuu..
 
 # ---------------------------------------------------------------- cheeks, tears
 == blush @ 33,54

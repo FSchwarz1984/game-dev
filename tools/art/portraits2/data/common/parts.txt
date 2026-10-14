@@ -28,12 +28,6 @@ kwwkkkwwk
 ....kk...
 
 # thought dots (12 x 4)
-== dots @ 0,0
-.kk..kk..kk.
-kwwkkwwkkwwk
-kwwkkwwkkwwk
-.kk..kk..kk.
-
 # huff: a puff of breath (6 x 5)
 == huff @ 0,0
 .zz...
@@ -52,3 +46,32 @@ zcCCCCz
 zCCCCCz
 .zCCCz.
 ..zzz..
+
+# shout: two exclamation marks, white with the dark rim (8 x 10)
+== excl @ 0,0
+.kk..kk.
+kwwkkwwk
+kwwkkwwk
+kwwkkwwk
+kwwkkwwk
+.kk..kk.
+........
+.kk..kk.
+kwwkkwwk
+.kk..kk.
+
+# think: a thought bubble, two small circles rising to a cloud (14 x 13); the small circle sits nearest the head
+== thought @ 0,0
+.......kk.kk..
+......kwwkwwk.
+.....kwwwwwwwk
+....kwwwwwwwwk
+.....kwwwwwwk.
+......kkkkkk..
+...kk.........
+..kwwk........
+..kwwk........
+...kk.........
+.k............
+kwk...........
+.k............

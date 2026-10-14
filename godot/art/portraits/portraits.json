@@ -112,7 +112,8 @@
      "eN_shut",
      "eF_shut",
      "nose",
-     "m_shout"
+     "m_shout",
+     "excl@82,57"
     ],
     "sad": [
      "eN_sad",
@@ -162,7 +163,7 @@
      "eF_up",
      "nose",
      "m_hmm",
-     "dots@70,40"
+     "thought@82,0"
     ],
     "embarrassed": [
      "eN_away",
@@ -174,18 +175,16 @@
     "serious": [
      "eN_serious",
      "eF_serious",
-     "bN_flat",
-     "bF_flat",
      "nose",
      "m_flat"
     ],
     "determined": [
      "eN_angry",
      "eF_angry",
-     "bN_angry",
-     "bF_angry",
+     "bN_press",
+     "bF_press",
      "nose",
-     "m_set"
+     "m_press"
     ],
     "tired": [
      "eN_half",
@@ -326,7 +325,8 @@
      "bN_angry",
      "bF_angry",
      "nose",
-     "m_shout"
+     "m_shout",
+     "excl@87,0"
     ],
     "sad": [
      "marks",
@@ -388,7 +388,7 @@
      "bF_neutral",
      "nose",
      "m_hmm",
-     "dots@82,24"
+     "thought@81,0"
     ],
     "embarrassed": [
      "eN_away",
@@ -460,6 +460,7 @@
     43.0
    ],
    "palette": {
+    "0": "#fbd5c3",
     "1": "#4a7f80",
     "2": "#2f5c63",
     "3": "#1f3d44",
@@ -510,6 +511,7 @@
    },
    "recipes": {
     "neutral": [
+     "cheek_soft",
      "eN_open",
      "eF_open",
      "bN_neutral",
@@ -558,7 +560,8 @@
      "bN_angry",
      "bF_angry",
      "nose",
-     "m_shout"
+     "m_shout",
+     "excl@86,2"
     ],
     "sad": [
      "eN_sad",
@@ -614,7 +617,7 @@
      "bF_neutral",
      "nose",
      "m_hmm",
-     "dots@72,24"
+     "thought@80,0"
     ],
     "embarrassed": [
      "eN_away",

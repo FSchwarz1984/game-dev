@@ -1,19 +1,20 @@
 # Tsuzumi: her thick black bangs hide the brows (as in the owner's art); the see-through brows are drawn only where
-# the brow angle carries the expression (sad, angry, doubt, serious, determined).
+# the brow angle carries the expression (sad, angry, doubt, and determined, where they are a long steep V:
+# bN_press). Her serious face has no brows (narrowed flat lids, flat mouth).
 neutral: eN_open eF_open nose m_neutral
 smile: eN_smile eF_smile nose m_smile blush
 grin: eN_smile eF_smile nose m_grin blush
 laugh: eN_happy eF_happy nose m_laugh blush
 surprise: eN_wide eF_wide nose m_o
-shout: eN_shut eF_shut nose m_shout
+shout: eN_shut eF_shut nose m_shout excl@82,57
 sad: eN_sad eF_sad bN_sad bF_sad nose m_frown
 cry: eN_tear eF_tear nose m_wobble tearN tearF
 pout: eN_angry eF_angry nose m_pout blush puffF huff@66,63
 angry: eN_angry eF_angry bN_angry bF_angry nose m_teeth anger@70,22
 doubt: eN_half eF_open bN_flat bF_up nose m_side qmark@84,22
-think: eN_up eF_up nose m_hmm dots@70,40
+think: eN_up eF_up nose m_hmm thought@82,0
 embarrassed: eN_away eF_away nose m_wavy blush_hatch
-serious: eN_serious eF_serious bN_flat bF_flat nose m_flat
-determined: eN_angry eF_angry bN_angry bF_angry nose m_set
+serious: eN_serious eF_serious nose m_flat
+determined: eN_angry eF_angry bN_press bF_press nose m_press
 tired: eN_half eF_half nose m_small sweat@68,40
 calm: eN_calm eF_calm nose m_smile

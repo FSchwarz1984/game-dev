@@ -3,13 +3,13 @@ smile: eN_smile eF_smile nose m_smile blush marks
 grin: eN_smile eF_smile bN_up bF_up nose m_grin blush marks
 laugh: eN_happy eF_happy bN_up bF_up nose m_laugh blush marks
 surprise: marks eN_wide eF_wide bN_up bF_up nose m_o
-shout: marks eN_shut eF_shut bN_angry bF_angry nose m_shout
+shout: marks eN_shut eF_shut bN_angry bF_angry nose m_shout excl@87,0
 sad: marks eN_sad eF_sad bN_sad bF_sad nose m_frown
 cry: eN_tear eF_tear bN_sad bF_sad nose m_wobble tearN tearF marks
 pout: eN_angry eF_angry bN_angry bF_angry nose m_pout blush marks puffF huff@81,53
 angry: marks eN_angry eF_angry bN_angry bF_angry nose m_teeth anger@78,10
 doubt: marks eN_half eF_open bN_flat bF_up nose m_side qmark@84,8
-think: marks eN_up eF_up bN_up bF_neutral nose m_hmm dots@82,24
+think: marks eN_up eF_up bN_up bF_neutral nose m_hmm thought@81,0
 embarrassed: eN_away eF_away bN_sad bF_sad nose m_wavy blush_hatch marks
 serious: marks eN_serious eF_serious bN_flat@46,29 bF_flat@71,34 nose m_flat
 tired: marks eN_half eF_half bN_sad bF_sad nose m_small sweat@84,22
