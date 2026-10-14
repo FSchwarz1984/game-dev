@@ -19,6 +19,7 @@ import { prologue, day1 } from '../story/seg1.js';
 import { HUD } from '../ui/hud.js';
 import { createStage } from './stage.js';
 import { createVistaView } from './vistaview.js';
+import { createRotatePrompt } from './rotate.js';
 import { loadSave, writeSave } from './save.js';
 import { portraits } from './portraits.js';
 import { createFieldAmbience } from '../audio/field.js';
@@ -35,6 +36,16 @@ const PX = 20; // native pixels per metre: the audio engine's distances are in p
 export async function boot(app) {
   const touch = params.touch || matchMedia('(pointer: coarse)').matches;
   const ui = el('div', 'ui', app);
+  // phones are played sideways (P-3): held upright, the game and its sound wait under a prompt
+  let audioHeld = false;
+  const rotate = createRotatePrompt(app, {
+    touch,
+    onChange: on => {
+      const ctx = AU.context?.();
+      if (on && ctx && ctx.state === 'running') { audioHeld = true; ctx.suspend?.().catch?.(() => {}); }
+      else if (!on && audioHeld) { audioHeld = false; AU.resume?.(); }
+    },
+  });
 
   // ---- audio: silent until the first gesture; distances in metres become pixels
   let audioOn = false;
@@ -100,8 +111,7 @@ export async function boot(app) {
   if (params.fast > 1) D.rate = params.fast;
   const frame = now => {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    tick(dt);
-    stage.render();
+    if (!rotate.shown) { tick(dt); stage.render(); }   // held upright: everything waits
     requestAnimationFrame(frame);
   };
   function tick(dt) {

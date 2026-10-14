@@ -127,14 +127,6 @@ function injectStyle() {
   .ttl-back { align-self: flex-start; padding: 4px 0; color: #cdbf9f; letter-spacing: .3em; }
   .ttl-keys { position: absolute; left: 0; right: 0; bottom: max(14px, env(safe-area-inset-bottom, 0px)); text-align: center; font: 500 12px/1.4 "Noto Sans SC", system-ui, sans-serif; color: rgba(230, 220, 196, .55); letter-spacing: .08em; pointer-events: none; padding: 0 12px; text-wrap: balance; }
   @media (max-height: 460px) { .ttl-name { top: 8vh; } .ttl-menu { bottom: 14vh; } .ttl-menu button { font-size: 16px; padding: 4px 12px 4px 16px; } }
-  /* upright phones: the backdrop is an upright frame (canopy, moon upper right, sky, the plain low down);
-     the name stands in the open sky on the left, the menu in the calm sky above the plain */
-  @media (max-width: 520px) and (orientation: portrait) {
-    .ttl-name { left: max(9vw, calc(16px + env(safe-area-inset-left, 0px))); right: auto; top: 19vh; }
-    .ttl-name h1 { font-size: clamp(56px, 11vh, 104px); }
-    .ttl-menu { left: 50%; transform: translateX(-50%); bottom: 27vh; align-items: center; }
-    .ttl-set { left: 50%; transform: translateX(-50%); bottom: 24vh; }
-  }
   `;
   document.head.appendChild(s);
 }

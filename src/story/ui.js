@@ -222,7 +222,7 @@ function injectStyle() {
   .story { position: fixed; inset: 0; z-index: 30; pointer-events: none; font-family: "Noto Serif SC", "Shippori Mincho", "Songti SC", serif; color: #f3ecdc; }
   .st-box { position: absolute; left: 0; right: 0; height: 0; background: #07080b; transition: height .6s ease; }
   .st-top { top: 0; } .st-bot { bottom: 0; }
-  .story.boxed .st-box { height: min(11vh, 8vw); }   /* upright phones: thin bars, or the treetop view loses her */
+  .story.boxed .st-box { height: 11vh; }
   .st-dlg { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); width: min(900px, calc(100% - 28px)); transform: translate(-50%, 16px); opacity: 0; transition: opacity .18s, transform .18s; pointer-events: none; }
   .st-dlg.on { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
   .st-panel { position: relative; min-height: 118px; padding: 30px 26px 20px; background: linear-gradient(180deg, rgba(18,15,22,.92), rgba(10,9,13,.95)); border: 1px solid rgba(214,182,120,.45); border-radius: 6px; box-shadow: 0 10px 40px rgba(0,0,0,.45), inset 0 0 0 3px rgba(10,9,13,.9), inset 0 0 0 4px rgba(214,182,120,.18); }
@@ -257,13 +257,11 @@ function injectStyle() {
   .st-bark { position: absolute; left: 50%; top: calc(14px + env(safe-area-inset-top, 0px)); transform: translate(-50%, -6px); max-width: calc(100% - 200px); padding: 6px 14px 7px; background: rgba(12, 10, 16, .78); border: 1px solid rgba(214,182,120,.4); border-radius: 4px; font-size: 16px; letter-spacing: .04em; white-space: nowrap; opacity: 0; transition: opacity .2s, transform .2s; }
   .st-bark.on { opacity: 1; transform: translate(-50%, 0); }
   .st-bark b { margin-right: 10px; font-family: "Noto Serif JP", "Shippori Mincho", "Hiragino Mincho ProN", "Yu Mincho", "IPAMincho", "IPAGothic", "Noto Serif SC", serif; font-size: 13px; color: #d6b678; }
-  /* upright phones: the bust stands on the box instead of inside it, so the line gets the full width
-     and the name plate sits clear of the bust (a wide hat brim reached over it) */
-  @media (max-width: 600px) and (min-height: 481px) {
+  @media (max-width: 600px) {
     .st-panel { min-height: 104px; padding: 26px 16px 16px; }
-    .st-dlg.has-port .st-panel { padding-left: 16px; }
-    .st-dlg.has-port .st-name { left: auto; right: 12px; }
-    .st-port { height: clamp(140px, 21vh, 176px); left: 2px; bottom: calc(100% - 1px); }
+    .st-dlg.has-port .st-panel { padding-left: 108px; }
+    .st-dlg.has-port .st-name { left: 108px; }
+    .st-port { height: clamp(150px, 26vh, 210px); left: -4px; }
     .st-txt { font-size: 17px; }
     .st-sub { font-size: 17px; }
   }

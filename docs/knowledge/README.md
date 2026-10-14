@@ -12,6 +12,6 @@
 | [06-reference-board.md](06-reference-board.md) | 用户点名的参考作品和各自要学的东西 | 判断方向是否符合用户期待 |
 | [07-audio-sources.md](07-audio-sources.md) | 环境声真实录音：来源、授权、处理方法、找不到 CC0 的声音与 CC BY 候选 | 加或换环境声之前；授权问题 |
 | [08-2d-pixel-renderer.md](08-2d-pixel-renderer.md) | 2D 像素渲染管线的技术说明与教训（光照、遠化、角色保护、烘焙） | 改渲染器或环境美术之前 |
-| [09-segment1-verification.md](09-segment1-verification.md) | 第一段交付前三设备验证抓到的问题：浮层点击、淡入层盖字、测试时钟、3/4 遮挡、竖屏构图、字体名 | 做 UI、演出、竖屏，或写自动试玩之前 |
+| [09-segment1-verification.md](09-segment1-verification.md) | 第一段交付前验证抓到的问题：浮层点击、淡入层盖字、测试时钟、3/4 遮挡、竖屏取消（P-3）、字体名 | 做 UI、演出，或写自动试玩之前 |
 
 新增知识：一篇一个主题，写清来源和日期，未证实的标出来，然后在这张表里登记。

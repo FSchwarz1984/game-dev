@@ -4,7 +4,9 @@
 // the game clock itself (fast, no drawing) and draws only the frames it photographs. It reads
 // state from window.APP to decide where to go, but every action goes through input events.
 //
-//   node tools/playtest1.mjs [--mode=desk|phone|portrait] [--out=dir] [--file=dist/game.html]
+//   node tools/playtest1.mjs [--mode=desk|phone] [--out=dir] [--file=dist/game.html]
+// Phones are played sideways only (decision P-3); the phone run first turns the emulated phone
+// upright and back, and checks that the rotate prompt covers the game upright and leaves sideways.
 // Exit code 1 if the run does not reach the end card.
 
 import path from 'node:path';
@@ -20,7 +22,8 @@ const file = arg('file') || path.join(ROOT, 'dist/game.html');
 const from = arg('scene') || '';   // 'day1' starts at the first morning (skips the title and prologue)
 fs.mkdirSync(out, { recursive: true });
 
-const VIEW = { desk: { width: 1280, height: 720, dpr: 1, touch: false }, phone: { width: 844, height: 390, dpr: 3, touch: true }, portrait: { width: 390, height: 844, dpr: 3, touch: true } }[mode];
+const VIEW = { desk: { width: 1280, height: 720, dpr: 1, touch: false }, phone: { width: 844, height: 390, dpr: 3, touch: true } }[mode];
+if (!VIEW) throw new Error('unknown mode ' + mode + ' (desk | phone)');
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: VIEW.width, height: VIEW.height }, deviceScaleFactor: VIEW.dpr, hasTouch: VIEW.touch, isMobile: VIEW.touch });
 const errors = [];
@@ -187,8 +190,23 @@ async function face(id) {
 }
 const places = () => page.evaluate(() => window.APP.G.P);
 
+/** Held upright, the phone shows the rotate prompt over everything; turned back, the game. */
+async function rotateCheck() {
+  const covered = () => page.evaluate(() => { const r = document.querySelector('.rot'); if (!r || r.hidden) return false; const b = r.getBoundingClientRect(); const top = document.elementFromPoint(b.width / 2, b.height * 0.8); return r.contains(top); });
+  await page.setViewportSize({ width: VIEW.height, height: VIEW.width });
+  await page.waitForTimeout(400);
+  const upright = await covered();
+  await page.screenshot({ path: path.join(out, '00-upright.png') });
+  await page.setViewportSize({ width: VIEW.width, height: VIEW.height });
+  await page.waitForTimeout(400);
+  const sideways = await covered();
+  if (!upright || sideways) throw new Error(`rotate prompt: upright ${upright ? 'covers' : 'missing'}, sideways ${sideways ? 'still covers' : 'gone'}`);
+  log('rotate prompt: covers the game upright, gone sideways');
+}
+
 // ---------------------------------------------------------------- the run
 try {
+  if (VIEW.touch) await rotateCheck();
   if (from !== 'day1') await prologueRun();
   await dayOneRun();
   log('reached the end card; errors:', errors.length);
