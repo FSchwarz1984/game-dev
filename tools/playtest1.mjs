@@ -212,7 +212,9 @@ async function dayOneRun() {
   for (let i = 0; i < 3; i++) { await face('frame'); await give(); await ticks(30); }
   await shot('frame-given');
   await until(s => s.control && !s.busy && !s.blocking, 'banter');
-  await face('frame'); await contextKey();
+  await face('frame');
+  await until(s => s.label === '背上', 'the frame offers to be shouldered');
+  await contextKey();
   await until(s => s.dlg, 'Saji moves in'); await shot('saji-rides');
   await until(s => s.control && !s.busy, 'setting out');
   await walk([119.2, P.dosojinStand[1]], 0.6);

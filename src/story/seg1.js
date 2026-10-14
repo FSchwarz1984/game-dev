@@ -452,10 +452,12 @@ export async function day1(G) {
     await D.say(S('你把重的给它了？'), T('它本来就这么重。'));
   });
 
+  G.hud.tip('shoulder', G.touch ? '点右下角的大键：背上' : 'E：背上', frame);
   frame.ctx = {
     label: () => (frame.far === 0 && !frameOn ? '背上' : ''),
     run: () => {
       frameOn = true;
+      G.hud.untip('shoulder');
       cut(G, async () => {
         await D.move('tsuzumi', [[frame.x, frame.z + 0.6]], { speed: 1.4 });
         D.face('tsuzumi', 'back');
