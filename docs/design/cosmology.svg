@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 540" role="img" aria-labelledby="cst csd" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+<title id="cst">天岸与地岸的剖面示意</title>
+<desc id="csd">上方倒挂着天岸，下方是地岸，中间是云的天海アワイ。两岸最近的山口就是关；一座关上立着「隔」塔把它锁住；地岸的灯与性质正升向天岸；一个戴笠的人影走在两道关之间，标着第一百道关。</desc>
+<rect width="900" height="540" style="fill:var(--sky,#dfe5f3)"/>
+<path d="M0,0 L0,80.1 L20,88.5 L40,88.2 L60,110.9 L80,131.8 L100,152.7 L120,173.6 L140,194.5 L160,194.5 L180,173.6 L200,152.7 L220,131.8 L240,110.9 L260,53.3 L280,57.9 L300,59.2 L320,53.8 L340,44.4 L360,112.7 L380,135.5 L400,158.2 L420,180.9 L440,203.6 L460,203.6 L480,180.9 L500,158.2 L520,135.5 L540,112.7 L560,97.3 L580,103.3 L600,100.0 L620,87.2 L640,105.0 L660,125.0 L680,145.0 L700,165.0 L720,185.0 L740,195.0 L760,175.0 L780,155.0 L800,135.0 L820,115.0 L840,95.0 L860,70.7 L880,82.1 L900,85.0 L900,0 Z" style="fill:var(--skyshore,#9fa9c9)"/>
+<circle cx="80" cy="123.8" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="120" cy="165.6" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="260" cy="45.3" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="300" cy="51.2" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="330" cy="41.2" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="560" cy="89.3" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="600" cy="92.0" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="640" cy="97.0" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="820" cy="107.0" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<circle cx="850" cy="54.8" r="2.6" style="fill:var(--light,#e0a23a)"/>
+<text x="24" y="34" style="font-size:16px;font-weight:700;fill:var(--ink,#1b2030)">天岸</text><text x="70" y="34" style="font-size:12px;fill:var(--ink,#1b2030)">倒挂在天上的另一片大地</text>
+<path d="M0,540 L0,473.2 L20,478.1 L40,425.8 L60,397.5 L80,369.2 L100,340.8 L120,312.5 L140,284.2 L160,284.2 L180,312.5 L200,340.8 L220,369.2 L240,397.5 L260,425.8 L280,470.7 L300,467.3 L320,463.3 L340,425.2 L360,395.5 L380,365.8 L400,336.2 L420,306.5 L440,276.8 L460,276.8 L480,306.5 L500,336.2 L520,365.8 L540,395.5 L560,425.2 L580,431.6 L600,445.9 L620,433.1 L640,405.6 L660,378.1 L680,350.6 L700,323.1 L720,295.6 L740,281.9 L760,309.4 L780,336.9 L800,364.4 L820,391.9 L840,419.4 L860,452.9 L880,445.9 L900,433.4 L900,540 Z" style="fill:var(--ground,#b9c6b8)"/>
+<text x="24" y="522" style="font-size:16px;font-weight:700;fill:var(--ink,#1b2030)">地岸</text><text x="70" y="522" style="font-size:12px;fill:var(--ink,#1b2030)">我们这一岸</text>
+<rect x="40" y="300" width="220" height="10" rx="5" style="fill:var(--cloud,#ffffff);opacity:.75"/>
+<rect x="300" y="330" width="260" height="10" rx="5" style="fill:var(--cloud,#ffffff);opacity:.75"/>
+<rect x="600" y="296" width="230" height="10" rx="5" style="fill:var(--cloud,#ffffff);opacity:.75"/>
+<rect x="120" y="360" width="180" height="10" rx="5" style="fill:var(--cloud,#ffffff);opacity:.75"/>
+<rect x="560" y="372" width="200" height="10" rx="5" style="fill:var(--cloud,#ffffff);opacity:.75"/>
+<text x="330" y="398" style="font-size:14px;font-weight:700;fill:var(--muted,#586074)">アワイ（天海）</text><text x="330" y="414" style="font-size:12px;fill:var(--muted,#586074)">性质在两岸之间流动：大潮千年一换</text>
+<path d="M150,209 L150,266" style="stroke:var(--indigo,#2c4689);stroke-width:2.5;stroke-dasharray:4 4"/>
+<path d="M450,219 L450,258" style="stroke:var(--indigo,#2c4689);stroke-width:2.5;stroke-dasharray:4 4"/>
+<path d="M735,204 L735,271" style="stroke:var(--indigo,#2c4689);stroke-width:2.5;stroke-dasharray:4 4"/>
+<text x="470" y="244" style="font-size:12px;font-weight:700;fill:var(--indigo,#2c4689)">关：两岸最近的山口 × 99</text>
+<path d="M140,272 L150,232 L160,272 M143,262 h14 M146,250 h8" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.8"/><circle cx="150" cy="230" r="3" style="fill:var(--vermil,#b8432c)"/>
+<path d="M138,214 l24,24 M162,214 l-24,24" style="stroke:var(--vermil,#b8432c);stroke-width:3"/>
+<text x="168" y="326" style="font-size:12px;font-weight:700;fill:var(--vermil,#b8432c)">「隔」塔：三十年前锁死了关</text>
+<rect x="523" y="471" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.35"/>
+<rect x="547" y="462" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.37"/>
+<rect x="593" y="447" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.40"/>
+<rect x="482" y="447" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.42"/>
+<rect x="527" y="431" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.44"/>
+<rect x="659" y="425" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.47"/>
+<rect x="631" y="416" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.49"/>
+<rect x="595" y="403" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.51"/>
+<rect x="594" y="402" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.53"/>
+<rect x="574" y="392" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.56"/>
+<rect x="601" y="375" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.58"/>
+<rect x="616" y="372" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.60"/>
+<rect x="534" y="356" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.63"/>
+<rect x="636" y="353" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.65"/>
+<rect x="609" y="349" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.67"/>
+<rect x="609" y="340" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.70"/>
+<rect x="551" y="330" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.72"/>
+<rect x="560" y="322" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.74"/>
+<rect x="638" y="303" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.77"/>
+<rect x="504" y="296" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.79"/>
+<rect x="654" y="289" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.81"/>
+<rect x="593" y="279" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.83"/>
+<rect x="571" y="271" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.86"/>
+<rect x="543" y="264" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.88"/>
+<rect x="585" y="259" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.90"/>
+<rect x="603" y="250" width="3" height="4" style="fill:var(--light,#e0a23a);opacity:0.93"/>
+<path d="M640,430 C650,380 640,330 652,288" style="fill:none;stroke:var(--light,#e0a23a);stroke-width:2"/><path d="M646,296 l6,-10 l5,11" style="fill:none;stroke:var(--light,#e0a23a);stroke-width:2"/>
+<text x="664" y="350" style="font-size:12px;font-weight:700;fill:var(--ink,#1b2030)">遠化：地岸的光与性质</text><text x="664" y="366" style="font-size:12px;fill:var(--ink,#1b2030)">升向天岸</text>
+<path d="M600,150 v-12 l8,-3 v12" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.4"/><circle cx="598" cy="150" r="2.4" style="fill:var(--ink,#1b2030)"/>
+<path d="M620,168 v-12 l8,-3 v12" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.4"/><circle cx="618" cy="168" r="2.4" style="fill:var(--ink,#1b2030)"/>
+<path d="M585,172 v-12 l8,-3 v12" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.4"/><circle cx="583" cy="172" r="2.4" style="fill:var(--ink,#1b2030)"/>
+<text x="640" y="160" style="font-size:12px;fill:var(--ink,#1b2030)">遠囃子：天岸的祭典</text>
+<circle cx="232" cy="402" r="34" style="fill:none;stroke:var(--vermil,#b8432c);stroke-width:1.6;stroke-dasharray:3 4"/>
+<path d="M219,396 L232,386 L245,396 Z" style="fill:var(--ink,#1b2030)"/><rect x="228" y="396" width="8" height="18" style="fill:var(--ink,#1b2030)"/><rect x="236" y="398" width="6" height="12" style="fill:var(--muted,#586074)"/>
+<text x="162" y="450" style="font-size:12px;font-weight:700;fill:var(--vermil,#b8432c)">第一百道关：会走路的那一道</text>
+</svg>
