@@ -29,6 +29,7 @@ uniform vec2 pivot_px = vec2(32.0, 65.0);
 uniform float face_floor = 0.66;                        // brightness floor on her face under the brim
 
 varying vec3 v_wp;
+varying vec3 v_wu;      // the card's upright place (lamps light her where she stands)
 varying vec3 v_alb;
 varying vec2 v_tex;
 
@@ -48,6 +49,7 @@ void vertex() {
 	}
 	VERTEX = wp;
 	v_wp = wp;
+	v_wu = anchor + vec3(off.x / w3_view.x, off.y / w3_view.x, 0.0);
 }
 
 void fragment() {
@@ -83,6 +85,8 @@ void fragment() {
 	vec3 em = alb * lum;
 	em += rimk * alb * (w3_sky * 1.6 + vec3(0.04)) ;
 	em += (edge_u < 0.5 ? 1.0 : 0.0) * alb * w3_sky * 0.35 * rim;
+	// lanterns (render3d/lamps.gd): the same stepped light as the world, no seam stipple on her
+	em += w3_lamp_light(alb, v_wu, nw, w3_ptex(v_wp), 0.0);
 	v_alb = alb;
 	ALBEDO = vec3(1.0);
 	EMISSION = em;

@@ -7,7 +7,8 @@ extends Node3D
 ## that is lit at night (and dim at dusk).
 
 var terrain: Terrain3D
-var lights: Array[OmniLight3D] = []
+var lamps: W3Lamps                # the renderer's lamps (set by the assembly before build())
+var _lit := -1                     # lamps on (1), off (0), not yet set (-1)
 var flames: Array = []      # [ShaderMaterial, base energy]
 var stone := ShaderMaterial.new()
 var wood := ShaderMaterial.new()
@@ -73,31 +74,26 @@ func _catalog_has(catalog: Dictionary, keys: Array) -> bool:
 	return false
 
 
-func set_time(hours: float) -> void:
+func set_time(hours: float, instant := true) -> void:
 	var dusk := clampf((hours - 17.6) / 1.4, 0.0, 1.0) if hours > 12.0 else 0.0
 	var dawn := clampf((5.8 - hours) / 1.0, 0.0, 1.0) if hours < 12.0 else 0.0
 	var on := maxf(dusk, dawn)
 	if hours >= 19.0 or hours <= 4.8:
 		on = 1.0
-	for l in lights:
-		l.light_energy = l.get_meta("energy", 1.6) * on
-		l.visible = on > 0.01
+	# the lamps are lit at 18.4 h (and put out at dawn): one after another, each fading in
+	var want := 1 if (hours >= 18.4 or hours <= 5.4) else 0
+	if lamps and want != _lit:
+		lamps.set_on(want == 1, instant or _lit < 0)
+		_lit = want
 	for f in flames:
 		(f[0] as ShaderMaterial).set_shader_parameter("emission_energy", float(f[1]) * (0.15 + 0.85 * on))
 
 
+## A lamp's light (the renderer lights it, render3d/lamps.gd). energy and reach are the old
+## OmniLight numbers of this file; the renderer's lamps reach a little less and step their light.
 func _light(pos: Vector3, col: Color, energy: float, rng: float) -> void:
-	var l := OmniLight3D.new()
-	l.position = pos
-	l.light_color = col
-	l.set_meta("energy", energy)
-	l.light_energy = energy
-	l.omni_range = rng
-	l.omni_attenuation = 1.2
-	l.shadow_enabled = false
-	l.light_specular = 0.0
-	add_child(l)
-	lights.append(l)
+	if lamps:
+		lamps.add(pos, rng * 0.85, col, energy * 0.75)
 
 
 # ------------------------------------------------------------------------------------------------
