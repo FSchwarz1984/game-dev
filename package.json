@@ -1,0 +1,19 @@
+{
+  "name": "game-dev",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "HD-2D render foundation (gray-box) for the browser adventure game.",
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "build": "node tools/build.mjs",
+    "shot": "node tools/build.mjs && node tools/shot.mjs"
+  },
+  "dependencies": {
+    "postprocessing": "6.39.5",
+    "three": "0.186.1"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  }
+}

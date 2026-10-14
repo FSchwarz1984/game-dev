@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 840" role="img" aria-labelledby="m2t m2d" font-family="Noto Sans SC, PingFang SC, Microsoft YaHei, sans-serif">
+<title id="m2t">九十九折峠新手区示意图 v2</title>
+<desc id="m2d">分三层高度的山间区域：山顶的奥之院与铁塔，上层的风穴、废寺、铁道隧道北口与苔林，中层的大楠与九十九折宿、竹林与炭窑、吊桥，下层的峡谷、铁桥、梯田、温泉与九十九折山路；四周是远化之雾，隧道在地下贯通南北。</desc>
+<rect width="1000" height="840" style="fill:var(--far,#dfe5f3)"/>
+<path d="M80,150 C150,40 360,30 540,34 C720,38 880,70 950,170 C990,280 985,470 950,600 C910,720 800,800 620,812 C470,822 300,816 190,780 C90,740 40,620 36,480 C32,340 40,230 80,150 Z" style="fill:var(--land,#e2e8dc);stroke:var(--muted,#586074);stroke-width:1.5"/>
+<path d="M120,190 C200,90 380,70 540,74 C700,78 850,110 910,200 C930,250 920,300 880,330 C760,370 640,330 540,340 C430,350 330,360 220,340 C150,320 100,260 120,190 Z" style="fill:var(--high,#cfd8cc)"/>
+<ellipse cx="540" cy="78" rx="96" ry="40" style="fill:var(--summit,#b9c6b8)"/>
+<ellipse cx="245" cy="255" rx="105" ry="80" style="fill:var(--beech,#b7cfae)"/>
+<ellipse cx="660" cy="230" rx="90" ry="44" style="fill:var(--forest,#c3d2bc)"/>
+<ellipse cx="470" cy="560" rx="70" ry="110" style="fill:var(--forest,#c3d2bc)"/>
+<path d="M720,380 C780,350 870,360 890,420 C905,470 860,510 800,512 C740,514 700,480 704,430 Z" style="fill:var(--bamboo,#cfe0b3)"/>
+<g style="stroke:var(--forest,#c3d2bc);stroke-width:1.5;opacity:.8"><path d="M740,400 v24 M760,388 v28 M790,384 v26 M830,392 v28 M860,410 v24 M748,450 v26 M842,458 v24 M790,470 v22"/></g>
+<path d="M640,600 C680,588 760,594 800,616" style="fill:none;stroke:var(--field,#e9e0b4);stroke-width:13;stroke-linecap:round"/>
+<path d="M640,620 C680,608 760,614 800,636" style="fill:none;stroke:var(--field,#e9e0b4);stroke-width:13;stroke-linecap:round"/>
+<path d="M640,640 C680,628 760,634 800,656" style="fill:none;stroke:var(--field,#e9e0b4);stroke-width:13;stroke-linecap:round"/>
+<path d="M640,660 C680,648 760,654 800,676" style="fill:none;stroke:var(--field,#e9e0b4);stroke-width:13;stroke-linecap:round"/>
+<path d="M640,680 C680,668 760,674 800,696" style="fill:none;stroke:var(--field,#e9e0b4);stroke-width:13;stroke-linecap:round"/>
+<path d="M640,700 C680,688 760,694 800,716" style="fill:none;stroke:var(--field,#e9e0b4);stroke-width:13;stroke-linecap:round"/>
+<ellipse cx="885" cy="610" rx="52" ry="38" style="fill:var(--hot,#e8b4a0);opacity:.75"/>
+<g style="fill:none;stroke:var(--muted,#586074);stroke-width:1.6;stroke-linecap:round"><path d="M872,598 c-6,-10 6,-16 0,-28"/><path d="M890,600 c-6,-10 6,-16 0,-28"/><path d="M906,604 c-6,-10 6,-16 0,-28"/></g>
+<ellipse cx="705" cy="535" rx="38" ry="20" style="fill:var(--water,#7fa9d9)"/>
+<path d="M402,212 C390,250 372,282 360,300 C336,340 300,380 276,420 C252,470 226,520 206,570 C192,610 168,660 150,720 C140,760 128,800 118,840" style="fill:none;stroke:var(--water,#7fa9d9);stroke-width:9;stroke-linecap:round"/>
+<path d="M352,286 l18,0 l-4,22 l-10,0 z" style="fill:var(--water,#7fa9d9);stroke:var(--ink,#1b2030);stroke-width:1"/>
+<path d="M712,554 C716,580 712,596 706,606" style="fill:none;stroke:var(--water,#7fa9d9);stroke-width:3;stroke-dasharray:6 4"/>
+<path d="M770,160 C700,260 560,330 470,420 C390,500 320,560 262,606" style="fill:none;stroke:var(--muted,#586074);stroke-width:2.5;stroke-dasharray:2 7;stroke-linecap:round"/>
+<path d="M262,606 C230,612 205,614 180,616 C130,620 90,630 40,650" style="fill:none;stroke:var(--rail,#555b68);stroke-width:5"/>
+<path d="M262,606 C230,612 205,614 180,616 C130,620 90,630 40,650" style="fill:none;stroke:var(--land,#e2e8dc);stroke-width:2;stroke-dasharray:2 5"/>
+<path d="M770,160 C800,140 840,120 900,96" style="fill:none;stroke:var(--rail,#555b68);stroke-width:5"/>
+<path d="M770,160 C800,140 840,120 900,96" style="fill:none;stroke:var(--land,#e2e8dc);stroke-width:2;stroke-dasharray:2 5"/>
+<path d="M755,162 a15,15 0 0 1 30,0 z" style="fill:var(--rail,#555b68)"/>
+<path d="M247,608 a15,15 0 0 1 30,0 z" style="fill:var(--rail,#555b68)"/>
+<rect x="166" y="606" width="40" height="18" style="fill:none;stroke:var(--rail,#555b68);stroke-width:2.2"/><path d="M166,624 l10,-18 l10,18 l10,-18 l10,18" style="fill:none;stroke:var(--rail,#555b68);stroke-width:1.6"/>
+<path d="M560,316 L560,470 L520,500 L600,530 L520,560 L600,592 L522,626 L596,660 L530,694 L590,728 L556,770 L560,840" style="fill:none;stroke:var(--road,#a8916b);stroke-width:5;stroke-linejoin:round"/>
+<path d="M560,300 C640,290 740,290 820,280" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M820,280 C810,230 790,190 770,160" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M770,160 C700,130 620,100 560,90" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M524,420 C460,430 390,446 334,452" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M334,452 C300,420 270,360 250,300" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M334,452 C350,400 356,350 360,304" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M250,300 C260,240 280,190 300,140" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M300,140 C380,110 460,96 520,86" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M598,430 C660,430 720,430 760,430" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M820,470 C850,520 868,560 880,590" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M860,630 C820,650 790,660 760,662" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M700,600 C700,580 702,566 704,556" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M680,530 C640,500 616,484 600,470" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M522,626 C470,650 430,672 404,690" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M404,690 C350,670 300,640 266,612" style="fill:none;stroke:var(--trail,#a8916b);stroke-width:2.6;stroke-dasharray:7 5;stroke-linecap:round"/>
+<path d="M318,446 L352,458" style="stroke:var(--road,#a8916b);stroke-width:5;stroke-linecap:round"/>
+<circle cx="560" cy="300" r="46" style="fill:var(--forest,#c3d2bc);stroke:var(--ok,#2f6b4f);stroke-width:2"/>
+<rect x="548" y="292" width="16" height="13" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.2"/>
+<circle cx="590" cy="320" r="5" style="fill:var(--muted,#586074)"/>
+<rect x="519" y="364" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="519" y="390" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="519" y="416" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="519" y="442" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="567" y="360" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="567" y="386" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="567" y="412" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="567" y="438" width="18" height="15" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.1"/>
+<rect x="772" y="690" width="22" height="16" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.2"/><circle cx="802" cy="702" r="7" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.4"/>
+<rect x="806" y="262" width="26" height="18" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.2"/>
+<g style="fill:var(--muted,#586074)"><rect x="842" y="268" width="4" height="9"/><rect x="852" y="272" width="4" height="9"/><rect x="862" y="266" width="4" height="9"/><rect x="848" y="284" width="4" height="9"/><rect x="860" y="286" width="4" height="9"/></g>
+<rect x="800" y="440" width="16" height="13" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.2"/><path d="M808,438 C802,420 814,404 806,384" style="fill:none;stroke:var(--muted,#586074);stroke-width:2"/>
+<rect x="512" y="70" width="18" height="13" style="fill:var(--card,#ffffff);stroke:var(--ink,#1b2030);stroke-width:1.2"/>
+<path d="M566,90 L576,40 L586,90 M570,72 h12 M573,56 h6" style="fill:none;stroke:var(--ink,#1b2030);stroke-width:1.8"/><circle cx="576" cy="38" r="3.5" style="fill:var(--night,#b8432c)"/>
+<ellipse cx="300" cy="140" rx="11" ry="8" style="fill:var(--ink,#1b2030)"/>
+<path d="M392,700 l12,-18 l12,18 z" style="fill:var(--muted,#586074)"/>
+<g style="fill:var(--card,#ffffff);stroke:var(--muted,#586074);stroke-width:1;opacity:.85"><path d="M950,360 l14,-8 l10,10 l-12,8 z"/><path d="M968,400 l10,-6 l8,8 l-10,6 z"/><rect x="900" y="752" width="20" height="14" transform="rotate(-14 910 759)"/></g>
+<path d="M500,250 C600,236 760,226 880,248 C900,300 880,340 860,360 C900,420 900,480 840,520 C820,600 800,690 720,710 C640,720 600,640 570,560 C540,520 470,520 420,500 C360,480 300,470 290,430 C300,380 420,350 480,330 C490,300 490,270 500,250 Z" style="fill:none;stroke:var(--g5,#2c4689);stroke-width:2;stroke-dasharray:10 6;opacity:.85"/>
+<circle cx="820" cy="456" r="6" style="fill:var(--night,#b8432c)"/><text x="830" y="460" style="font-size:11px;font-weight:700;fill:var(--night,#b8432c)">鬼火</text>
+<circle cx="760" cy="470" r="6" style="fill:var(--night,#b8432c)"/><text x="706" y="488" style="font-size:11px;font-weight:700;fill:var(--night,#b8432c)">黒坊主</text>
+<circle cx="744" cy="176" r="6" style="fill:var(--night,#b8432c)"/><text x="700" y="192" style="font-size:11px;font-weight:700;fill:var(--night,#b8432c)">山彦</text>
+<circle cx="520" cy="560" r="6" style="fill:var(--night,#b8432c)"/><text x="478" y="564" style="font-size:11px;font-weight:700;fill:var(--night,#b8432c)">塗壁</text>
+<circle cx="230" cy="286" r="6" style="fill:var(--night,#b8432c)"/><text x="190" y="304" style="font-size:11px;font-weight:700;fill:var(--night,#b8432c)">木霊</text>
+<text x="600" y="70" style="font-size:13px;fill:var(--ink,#1b2030);">奥之院与「隔」铁塔</text>
+<text x="600" y="85" style="font-size:11px;fill:var(--muted,#586074)">远化最深处，夜里铁塔亮红灯</text>
+<text x="196" y="112" style="font-size:13px;fill:var(--ink,#1b2030);">风穴（冰室）</text>
+<text x="196" y="127" style="font-size:11px;fill:var(--muted,#586074)">冷的来源，夏天也有冰</text>
+<text x="660" y="140" style="font-size:13px;fill:var(--ink,#1b2030);">铁道隧道北口</text>
+<text x="660" y="155" style="font-size:11px;fill:var(--muted,#586074)">信号所；内部是回声迷宫</text>
+<text x="846" y="236" style="font-size:13px;fill:var(--ink,#1b2030);">废寺与无缘墓</text>
+<text x="846" y="251" style="font-size:11px;fill:var(--muted,#586074)">シオン在这里</text>
+<text x="140" y="220" style="font-size:13px;fill:var(--ink,#1b2030);">苔之山毛榉林</text>
+<text x="140" y="235" style="font-size:11px;fill:var(--muted,#586074)">雾、木霊、生</text>
+<text x="380" y="312" style="font-size:13px;fill:var(--ink,#1b2030);">裏見之瀑</text>
+<text x="380" y="327" style="font-size:11px;fill:var(--muted,#586074)">可以走到瀑布背后的洞里</text>
+<text x="392" y="352" style="font-size:13px;fill:var(--ink,#1b2030);font-weight:700;">大楠与道祖神</text>
+<text x="392" y="367" style="font-size:11px;fill:var(--muted,#586074)">家：她的歩荷小屋</text>
+<text x="604" y="392" style="font-size:13px;fill:var(--ink,#1b2030);font-weight:700;">九十九折宿（废宿场）</text>
+<text x="604" y="407" style="font-size:11px;fill:var(--muted,#586074)">城镇建设的据点</text>
+<text x="746" y="372" style="font-size:13px;fill:var(--ink,#1b2030);">竹林与炭窑</text>
+<text x="746" y="387" style="font-size:11px;fill:var(--muted,#586074)">热；夜里很暗</text>
+<text x="254" y="486" style="font-size:13px;fill:var(--ink,#1b2030);">吊桥</text>
+<text x="254" y="501" style="font-size:11px;fill:var(--muted,#586074)">跨过峡谷</text>
+<text x="56" y="590" style="font-size:13px;fill:var(--ink,#1b2030);">铁桥</text>
+<text x="56" y="605" style="font-size:11px;fill:var(--muted,#586074)">隧道南口出来就是峡谷</text>
+<text x="860" y="655" style="font-size:13px;fill:var(--ink,#1b2030);">温泉谷</text>
+<text x="860" y="670" style="font-size:11px;fill:var(--muted,#586074)">热的来源，以后引成澡堂</text>
+<text x="640" y="560" style="font-size:13px;fill:var(--ink,#1b2030);">溜池与水闸</text>
+<text x="640" y="575" style="font-size:11px;fill:var(--muted,#586074)">梯田的水源</text>
+<text x="610" y="744" style="font-size:13px;fill:var(--ink,#1b2030);">梯田与水车农家</text>
+<text x="610" y="759" style="font-size:11px;fill:var(--muted,#586074)">开荒、种田</text>
+<text x="306" y="728" style="font-size:13px;fill:var(--ink,#1b2030);">眺望岩</text>
+<text x="306" y="743" style="font-size:11px;fill:var(--muted,#586074)">看见山下的平原</text>
+<text x="586" y="812" style="font-size:13px;fill:var(--ink,#1b2030);">山路溶进远化之雾</text>
+<text x="404" y="492" style="font-size:13px;fill:var(--ink,#1b2030);">隧道（地下贯通）</text>
+<text x="866" y="336" style="font-size:13px;fill:var(--ink,#1b2030);">远化的碎片</text>
+<text x="866" y="351" style="font-size:11px;fill:var(--muted,#586074)">浮在空中的岩石</text>
+<text x="44" y="800" style="font-size:11px;fill:var(--g5,#2c4689);font-weight:700">虚线框：G5 垂直切片的范围</text>
+<g transform="translate(960 40)"><path d="M0,-18 l7,18 h-14 z" style="fill:var(--ink,#1b2030)"/><text x="-5" y="16" style="font-size:11px;fill:var(--muted,#586074)">北</text></g>
+<g transform="translate(44 826)"><path d="M0,0 h120 M0,-5 v10 M120,-5 v10" style="stroke:var(--ink,#1b2030);stroke-width:2"/><text x="30" y="-8" style="font-size:11px;fill:var(--muted,#586074)">约 100 米</text></g>
+</svg>
