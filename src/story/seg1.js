@@ -66,32 +66,18 @@ export async function prologue(G) {
   au.music('prologue', { fade: 2 });
   au.festival(0);
 
-  // ---- 1 the path: a wide shot of the switchbacks, a small figure climbing under a tall load
+  // ---- 1 the east entrance at dusk: she comes up the road under a tall load, and stops at the
+  // paired statues (one of them wears a hat as wide as hers)
   await D.fade(1, 0);
   D.letterbox(true);
-  D.shot('path', { cut: true });
+  D.shot('dosojin', { cut: true });
   D.fade(0, 2.4);
   const walkIn = D.move('tsuzumi', P.roadUp, { speed: 1.5 });
   await D.wait(1.6);
   await D.card('盆の十六日　暮れ六つ', '盂兰盆，十六日，傍晚');
   await walkIn;
-  D.letterbox(false);
-  D.follow();
-  f.control = true; G.hud.show(true);
-  G.hud.tip('move', G.touch ? '左半边屏幕按住拖动：走' : 'WASD / 方向键：走', null);
-  once(G, e => e.type === 'moved').then(() => G.hud.untip('move'));
-  todTo(G, 18.5, 150); // the dusk deepens while she climbs
-
-  const blockDown = f.zone({ ...P.eastExit, id: 'eastExit', block: '灯笼还在背上呢。' });
-  f.zone({ ...P.dosojinZone, id: 'dosojin' });
-  f.zone({ ...P.gravesZone, id: 'graves' });
-
-  // ---- the paired statues: one wears a hat as wide as hers
-  await once(G, e => e.type === 'enter' && e.zone === 'dosojin');
-  await cut(G, async () => {
-    await D.move('tsuzumi', [P.dosojinStand], { speed: 1.6 });
+  await D.scene(async () => {
     D.face('tsuzumi', faceTo(her, P.dosojin));
-    D.shot('dosojin', { speed: 1.5 });
     await D.wait(0.6);
     await D.say(T('借过。'));
     await D.play('tsuzumi', 'bow', { hold: 0.9 });
@@ -101,7 +87,17 @@ export async function prologue(G) {
     await D.play('tsuzumi', 'eat', { hold: 1.1 });
     await D.wait(0.5);
     await D.say(T('戴斗笠的这位，这一颗我替您吃了。'));
+    await D.wait(0.4);
   });
+  D.letterbox(false);
+  D.follow();
+  f.control = true; G.hud.show(true);
+  G.hud.tip('move', G.touch ? '左半边屏幕按住拖动：走' : 'WASD / 方向键：走', null);
+  once(G, e => e.type === 'moved').then(() => G.hud.untip('move'));
+  todTo(G, 18.5, 150); // the dusk deepens while she climbs the switchbacks
+
+  const blockDown = f.zone({ ...P.eastExit, id: 'eastExit', block: '灯笼还在背上呢。' });
+  f.zone({ ...P.gravesZone, id: 'graves' });
 
   // ---- the nine nameless graves, ten lanterns
   await once(G, e => e.type === 'enter' && e.zone === 'graves');

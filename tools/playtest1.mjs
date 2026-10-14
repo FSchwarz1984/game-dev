@@ -33,6 +33,7 @@ await page.waitForFunction(() => window.APP && window.APP.G);
 const log = (...a) => console.log(`[${mode}]`, ...a);
 let shotN = 0;
 async function shot(name) {
+  await page.waitForTimeout(900);            // let CSS fades and cards settle (they run on the wall clock)
   await page.evaluate(() => window.APP.render());
   await page.waitForTimeout(60);
   const f = path.join(out, `${String(++shotN).padStart(2, '0')}-${name}.png`);
@@ -129,12 +130,14 @@ try {
   await ticks(40);
   await shot('title');
   if (VIEW.touch) await tap('.ttl-menu button[data-a="start"]'); else await page.keyboard.press('Enter');
-  await until(s => !!document, 'start', 30);
-  await ticks(120); await shot('path-dusk');
+  await ticks(120); await shot('entrance-dusk');
   const P = await places();
-  await until(s => s.control, 'control on the road');
-  await walk(P.dosojinStand, 1.2);
   await until(s => s.dlg, 'statues line'); await shot('statues');
+  await until(s => s.control && !s.busy, 'control on the road');
+  // up the switchbacks: the road's own bends (map.objects.road.path), then the graves terrace
+  const road = await page.evaluate(() => window.APP.G.stage.map.objects.road.path);
+  for (const [x, z] of road) { if (x > 119) continue; if (x < 84 && z < 59) break; await walk([x, z], 0.8); }
+  await shot('switchbacks');
   await walk(P.gravesStand, 1.4);
   for (let i = 0; i < 9; i++) {
     const g = await page.evaluate(i => { const e = window.APP.G.f.get('grave' + i); return [e.x, e.z + 1.1]; }, i);

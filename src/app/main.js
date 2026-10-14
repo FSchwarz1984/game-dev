@@ -18,6 +18,7 @@ import { Insets } from '../story/inset.js';
 import { prologue, day1 } from '../story/seg1.js';
 import { HUD } from '../ui/hud.js';
 import { createStage } from './stage.js';
+import { createVistaView } from './vistaview.js';
 import { loadSave, writeSave } from './save.js';
 import { portraits } from './portraits.js';
 import { createFieldAmbience } from '../audio/field.js';
@@ -55,7 +56,20 @@ export async function boot(app) {
   const story = new StoryUI(ui, { audio: au, portraits, wait: s => D.wait(s) });
   D.ui = story;
   const f = new Field();
-  const stage = await createStage({ root: app, field: f });
+  // the title is on screen at once, over its own backdrop; the map bakes behind it
+  const vv = createVistaView(app);
+  const skipTitle = params.scene === 'prologue' || params.scene === 'day1';
+  let titleRun = null;
+  if (!skipTitle) {
+    vv.show({ shot: 'title', tod: 21 });
+    let t0 = performance.now();
+    const pre = now => { if (!titleRun?.stagedUp) { vv.draw(Math.min(0.1, (now - t0) / 1000)); t0 = now; requestAnimationFrame(pre); } };
+    requestAnimationFrame(pre);
+    titleRun = showTitle();
+    await new Promise(r => setTimeout(r, 60));   // let the title paint before the bake blocks
+  }
+  const stage = await createStage({ root: app, field: f, vistaView: vv });
+  if (titleRun) titleRun.stagedUp = true;
   f.ground = stage.ground;
   D.stage = stage;
   const insets = new Insets(ui);
@@ -109,6 +123,7 @@ export async function boot(app) {
   // ?manual=1: the checking tools drive the clock themselves (tick without drawing, draw on demand)
   if (params.manual !== '1') requestAnimationFrame(frame);
 
+  stage.prepareVista?.();   // the treetop shots are built in slices while she climbs the pass
   // ---- title → prologue → day 1 → end card → title
   const run = async from => {
     if (from === 'prologue') { await prologue(G); from = 'day1'; }
@@ -116,35 +131,36 @@ export async function boot(app) {
     await D.wait(1.5);
     location.reload(); // back to the title, with 继续 offered from the save
   };
-  async function title() {
-    f.control = false; hud.show(false);
+  if (skipTitle) { stage.reset?.(params.scene); run(params.scene); }
+  else {
     stage.vista({ shot: 'title', tod: 21 });
-    AU.music?.('title', { fade: 1 });
-    await story.fade(0, 1.2);
-    const saved = loadSave();
-    let chosen = false;
-    return new Promise(res => {
-      const scr = new TitleScreen(ui, {
-        canContinue: !!saved && saved.stage !== 'prologue', touch,
-        onFirstInput: () => { startAudio(); setTimeout(() => { if (!chosen) AU.music('title', { fade: 1, restart: true }); }, 250); },
-        onPrefs: applyPrefs,
-        onChoose: async a => {
-          if (chosen) return;
-          chosen = true;
-          startAudio();
-          AU.music('none', { fade: 0.04 });        // the flute stops mid-phrase
-          scr.hide();
-          await story.fade(1, 1.0);
-          stage.vista(null);
-          const from = a === 'continue' ? 'day1' : 'prologue';
-          stage.reset?.(from);
-          res(run(from));
-        },
-      });
-    });
+    const choice = await titleRun.choice;
+    AU.music('none', { fade: 0.04 });          // the flute stops mid-phrase
+    titleRun.screen.hide();
+    await story.fade(1, 1.0);
+    stage.vista(null);
+    stage.reset?.(choice);
+    run(choice);
   }
-  if (params.scene === 'prologue' || params.scene === 'day1') { stage.reset?.(params.scene); run(params.scene); }
-  else title();
+
+  /** The title menu; resolves with where to begin once the player chooses (the bake may still run). */
+  function showTitle() {
+    const saved = loadSave();
+    let chosen = false, done;
+    const choice = new Promise(r => { done = r; });
+    const screen = new TitleScreen(ui, {
+      canContinue: !!saved && saved.stage !== 'prologue', touch,
+      onFirstInput: () => { startAudio(); setTimeout(() => { if (!chosen) AU.music('title', { fade: 1, restart: true }); }, 250); },
+      onPrefs: applyPrefs,
+      onChoose: a => {
+        if (chosen) return;
+        chosen = true;
+        startAudio();
+        done(a === 'continue' ? 'day1' : 'prologue');
+      },
+    });
+    return { screen, choice };
+  }
 }
 
 function el(tag, cls, parent) { const e = document.createElement(tag); e.className = cls; parent.appendChild(e); return e; }

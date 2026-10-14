@@ -112,14 +112,12 @@ test('segment 1 plays through from the road to the end card', async () => {
   const pro = prologue(G);
   await B.control();
   assert.ok(G.log.includes('card:盆の十六日　暮れ六つ'));
+  // the statues greet her at the entrance, before she has control
+  assert.ok(G.log.includes('tsuzumi:戴斗笠的这位，这一颗我替您吃了。'));
+  assert.equal(G.stage.prop('dango').state, 'one');
   // going back down the road is refused, with a reason
   await B.walk([43.6, 20]);
   await B.idle(0.3);
-  assert.ok(G.tips.has('move') === false || true);
-  // the statues
-  await B.walk(PLACES.dosojinStand, 1);
-  await B.until(() => G.log.includes('tsuzumi:戴斗笠的这位，这一颗我替您吃了。'));
-  assert.equal(G.stage.prop('dango').state, 'one');
   // the graves: hang nine lanterns
   await B.walk(PLACES.gravesStand, 1.2);
   await B.control();
