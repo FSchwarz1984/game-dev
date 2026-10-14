@@ -7,15 +7,15 @@
 | 日期 | 关口 | 链接 | 状态 |
 |---|---|---|---|
 | 2026-10-14 | G0 方向评审 | <https://claude.ai/artifact/QRVQFsHfKNPYrzGwnwVRkt> | 已批准（答复见 decision-log.md） |
-| 2026-10-14 | G1 角色与故事 + G2 新手区地图 | <https://claude.ai/artifact/1u2fAfNyZTDjVUj3RfRKr3> | 待审批（清单见 pending.md） |
+| 2026-10-14 | G1 角色与故事 + G2 新手区地图 | <https://claude.ai/artifact/1u2fAfNyZTDjVUj3RfRKr3> | 已答复：G2 通过；G1 部分通过（见 decision-log.md） |
 
 ## 文档
 
 | 文件 | 内容 | 状态 |
 |---|---|---|
-| [title.md](title.md) | 作品名 | 草案 |
-| [characters.md](characters.md) | 三位角色：姓名、表面与隐藏身份、派蒙位、说话指纹、登场节拍 | 草案 |
-| [story.md](story.md) | 宇宙观、序章、新手区剧情、谜线、季节与章节 | 草案 |
-| [systems.md](systems.md) | 「移」与五性、百鬼队、城镇建设、作物、杀或平息、一天、操作 | 草案 |
-| [map.md](map.md)（[map-v2.svg](map-v2.svg)） | 新手区地图 v2 | 草案 |
-| [scope-g5.md](scope-g5.md) | G5 垂直切片的范围 | 草案 |
+| [title.md](title.md) | 作品名 | 两轮被否决，重提中 |
+| [characters.md](characters.md) | 三位角色：姓名、表面与隐藏身份、派蒙位、说话指纹、登场节拍 | 部分批准 |
+| [story.md](story.md) | 宇宙观、序章、新手区剧情、谜线、季节与章节 | 宇宙观重提中 |
+| [systems.md](systems.md) | 「移」与五性、百鬼队、城镇建设、作物、杀或平息、一天、操作 | 已批准 |
+| [map.md](map.md)（[map-v2.svg](map-v2.svg)） | 新手区地图 v2 | 已批准 |
+| [scope-g5.md](scope-g5.md) | G5 垂直切片的范围 | 已批准 |
