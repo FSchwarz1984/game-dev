@@ -15,6 +15,12 @@
   neko            a calico cat asleep, curled up (on the engawa)
   kago_tall, zaru, wara_sheaves, wara_heap   baskets and straw (the round-3 ones under new names:
                   the assembly's fixed positions for the old names no longer apply)
+  mushiro         a straw mat (筵) on the ground with red peppers and beans drying on it
+  wara_kuzu       loose straw bits scattered on the ground (before the engawa, by the straw heap)
+  makiwari        the chopping block (薪割り台): a stump, a split log on it, wood chips all round
+  houki           a bamboo broom (竹箒) leaning on a wall
+  teoke           a small wooden bucket with a bamboo hoop
+  niwatori_a/b    hens (地鶏): one standing and looking, one pecking at the ground
 Origins on the ground; fronts toward +z (south, the camera)."""
 from __future__ import annotations
 
@@ -446,6 +452,231 @@ def neko(out):
                        porosity=0.5, far=False, budget=800, ground=False)
 
 
+# ------------------------------------------------------------------------------------------- ground things
+def _bit(c, length, width, height, ang, colour, tilt=0.0, **kw):
+    """A small flat piece lying on the ground: centre c (x, z), long axis at angle ang (radians)."""
+    R = K.rot_y(ang) @ K.rot_z(tilt)
+    # tiny ground debris: no outline (a 1-2 px piece would be all outline), no baked dirt or AO
+    kw.setdefault('mat', 'noline')
+    kw.setdefault('ao', False)
+    kw.setdefault('dirt', False)
+    return K.cbox((length, height, width), colour, centre=(c[0], height * 0.5, c[1]), bevel=0.0, R=R, **kw)
+
+
+def mushiro(out):
+    """A straw mat (筵) spread on the ground, 1.8 x 0.9 m, its far end rolled a little; red peppers
+    drying in rows on one half, a heap of beans on the other, a few strays."""
+    R = rng(9731)
+    P = []
+    W_, D = 1.8, 0.9
+    mat = K.col('#b7a06a')
+    P.append(K.cbox((W_, 0.012, D), mat, centre=(0, 0.006, 0), bevel=0.0, pattern='thatch', amount=0.15, var=0.04, seed=9732))
+    # the weave: darker cords across every 12 cm, the edges bound
+    for k in range(int(W_ / 0.12) + 1):
+        x = -W_ / 2 + 0.04 + k * 0.12
+        if x > W_ / 2 - 0.02:
+            break
+        P.append(K.cbox((0.012, 0.004, D - 0.02), mat * 0.78, centre=(x, 0.0135, 0), bevel=0.0, var=0.0))
+    for z in (-D / 2 + 0.015, D / 2 - 0.015):
+        P.append(K.cbox((W_, 0.016, 0.03), mat * 0.86, centre=(0, 0.008, z), bevel=0.0, var=0.02))
+    # the far end rolled: a straw cylinder lying along z
+    P.append(_w(cyl((W_ / 2 + 0.05, 0.05, -D / 2), (W_ / 2 + 0.05, 0.05, D / 2), 0.05, mat * 0.95, n=7), 'thatch', 0.2, 9733))
+    # red peppers in loose rows (唐辛子), each 6-8 cm
+    red = K.col('#b8321f')
+    for row in range(4):
+        z = -D / 2 + 0.16 + row * 0.19
+        x = -W_ / 2 + 0.12
+        while x < -0.05:
+            ang = R.normal(0.3, 0.5)
+            P.append(_bit((x + R.normal(0, 0.012), z + R.normal(0, 0.02)), R.uniform(0.06, 0.085), 0.024, 0.02, ang,
+                          red * R.uniform(0.85, 1.08), var=0.03, seed=int(R.integers(0, 1 << 20))))
+            x += R.uniform(0.045, 0.075)
+    # beans (小豆) in a low heap, and some spread thin
+    bean = K.col('#5c2a24')
+
+    def heap(Q):
+        return K.sd_ellipsoid(Q - np.array([0.42, 0.0, 0.02]), (0.3, 0.05, 0.24)) + K.weathered(Q, 0.006, 0.04, 9734)
+    P.append(K.sdf_piece(heap, (0.08, -0.02, -0.26), (0.76, 0.06, 0.3), bean, h=0.02, tris=90, pattern='plain', amount=0.0,
+                         var=0.12, seed=9735, mat='noline', dirt=False))
+    for _ in range(26):
+        P.append(_bit((R.uniform(0.0, 0.85), R.uniform(-0.38, 0.38)), 0.022, 0.018, 0.016, R.uniform(0, 3), bean * R.uniform(0.9, 1.15),
+                      var=0.02, seed=int(R.integers(0, 1 << 20))))
+    prop = K.Prop('mushiro', 9731).add(P)
+    cat = {'footprint': [], 'tags': ['life', 'interact'],
+           'notes': 'A straw mat (筵) 1.8 x 0.9 m lying flat, its +x end rolled; red peppers drying on the -x half, a heap of '
+                    'beans on the +x half. Walkable over (no footprint).',
+           'anchors': {'perch': [[0.9, 0.1, 0.0]]}}
+    return export_prop(out, 'mushiro', 'props', prop, cat, porosity=0.9, far=False, budget=2600)
+
+
+def wara_kuzu(out):
+    """Loose straw bits (藁屑) blown about on the ground: thin pale stalks lying every way, thicker at
+    the middle of the patch (about 1.6 x 1.0 m), a few short ones apart."""
+    R = rng(9741)
+    P = []
+    straw = K.col('#c9b27a')
+    for k in range(78):
+        r = abs(R.normal(0, 0.38))
+        a = R.uniform(0, 2 * math.pi)
+        c = (math.cos(a) * r * 1.5, math.sin(a) * r * 0.9)
+        L_ = R.uniform(0.07, 0.24)
+        P.append(_bit(c, L_, PX * 0.9, 0.012, R.uniform(0, math.pi), straw * R.uniform(0.78, 1.1), tilt=R.normal(0, 0.05),
+                      var=0.03, seed=int(R.integers(0, 1 << 20))))
+    prop = K.Prop('wara_kuzu', 9741).add(P)
+    cat = {'footprint': [], 'tags': ['life'], 'notes': 'Loose straw bits on the ground, a patch about 1.6 x 1.0 m (no footprint).'}
+    return export_prop(out, 'wara_kuzu', 'props', prop, cat, porosity=0.9, far=False, budget=1100)
+
+
+def makiwari(out):
+    """The chopping block: an old stump of a log (45 cm across) cut flat, deep axe marks, a split
+    log standing on it; chips and split pieces all round on the ground, thickest in front."""
+    R = rng(9751)
+    P = []
+    wood_end = K.col('#b89a6e')
+    bark = K.col('#7c6550')
+
+    def block(Q):
+        d = K.sd_cyl(Q - np.array([0.0, 0.2, 0.0]), 0.23, 0.2)
+        return d + K.weathered(Q, 0.012, 0.06, 9752)
+    pc = K.sdf_piece(block, (-0.28, -0.02, -0.28), (0.28, 0.42, 0.28), bark, h=0.025, tris=220, pattern='bark', amount=0.3,
+                     var=0.05, seed=9753)
+
+    def ends(Pp, N):
+        m = np.ones((len(Pp), 3))
+        top = N[:, 1] > 0.7
+        m[top] = wood_end / bark
+        return m
+    pc.shade = ends
+    P.append(pc)
+    for k in range(3):                      # axe cuts on the top: dark slits
+        a = R.uniform(0, math.pi)
+        P.append(K.cbox((0.2, 0.004, 0.012), K.col('#3c3024'), centre=(R.normal(0, 0.05), 0.405, R.normal(0, 0.05)), bevel=0.0,
+                        R=K.rot_y(a)))
+    # a split log standing on the block (half round, the split face toward the camera)
+    def half(Q):
+        q = Q - np.array([0.02, 0.62, 0.0])
+        d = K.sd_cyl(q, 0.11, 0.21)
+        return np.maximum(d, q[..., 2] - 0.02)
+    hp = K.sdf_piece(half, (-0.12, 0.38, -0.13), (0.15, 0.86, 0.05), bark, h=0.02, tris=120, pattern='bark', amount=0.2, seed=9754)
+
+    def split_face(Pp, N):
+        m = np.ones((len(Pp), 3))
+        m[(N[:, 2] > 0.6) | (N[:, 1] > 0.7)] = wood_end / bark
+        return m
+    hp.shade = split_face
+    P.append(hp)
+    # split pieces lying about, and chips
+    for k in range(4):
+        a = R.uniform(0, 2 * math.pi)
+        r = R.uniform(0.38, 0.7)
+        c = (math.cos(a) * r, math.sin(a) * r * 0.8 + 0.12)
+        P.append(_bit(c, R.uniform(0.3, 0.42), 0.09, 0.07, R.uniform(0, math.pi), wood_end * R.uniform(0.85, 1.0), var=0.04,
+                      seed=int(R.integers(0, 1 << 20))))
+    chip = K.col('#c7ad84')
+    for k in range(70):
+        r = abs(R.normal(0, 0.45)) + 0.22
+        a = R.uniform(0, 2 * math.pi)
+        c = (math.cos(a) * r, math.sin(a) * r * 0.75 + (0.15 if math.sin(a) > 0 else 0.0))
+        P.append(_bit(c, R.uniform(0.035, 0.09), R.uniform(0.02, 0.04), 0.012, R.uniform(0, math.pi), chip * R.uniform(0.75, 1.08),
+                      tilt=R.normal(0, 0.15), var=0.03, seed=int(R.integers(0, 1 << 20))))
+    prop = K.Prop('makiwari', 9751).add(P)
+    cat = {'footprint': [[0.0, 0.0, 0.3]], 'tags': ['life', 'interact'],
+           'notes': 'The chopping block (薪割り台): a stump 45 cm across with axe cuts, a split log on it, split pieces and '
+                    'wood chips around (thickest toward +z).',
+           'anchors': {'perch': [[0.0, 0.86, 0.0]]}}
+    return export_prop(out, 'makiwari', 'props', prop, cat, porosity=0.8, far=False, budget=2400)
+
+
+def houki(out):
+    """A bamboo broom (竹箒) leaning on a wall (the wall at z = -0.12 behind it): a 1.3 m handle and
+    a fan of twigs, worn short on one side."""
+    R = rng(9761)
+    P = []
+    lean = 0.32
+    base = np.array([0.0, 0.0, 0.18])
+    top = base + np.array([0.06, 1.45 * math.cos(lean), -1.45 * math.sin(lean) * 0.55])
+    handle_lo = base + (top - base) * 0.32
+    P.append(_w(cyl(handle_lo, top, 0.016, BAMBOO_OLD, n=5), 'plain', 0.0, 9762))
+    twig = K.col('#5a4a32')
+    d = normalize(top - base)
+    side = normalize(np.cross(d, [0, 0, 1.0]))
+    for k in range(13):
+        f = (k - 6) / 6.0
+        a = handle_lo + d * 0.02
+        b = base + side * f * 0.2 + np.array([0, 0.01, 0.02 * abs(f)]) + R.normal(0, 0.012, 3)
+        b[1] = max(b[1], 0.005)
+        P.append(cyl(a, b, 0.006, twig * R.uniform(0.85, 1.15), n=3))
+    P.append(_w(cyl(handle_lo - d * 0.02, handle_lo + d * 0.06, 0.024, K.col('#6a5034'), n=6), 'plain', 0.0, 9763))
+    prop = K.Prop('houki', 9761).add(P)
+    cat = {'footprint': [], 'tags': ['life', 'interact'], 'notes': 'A bamboo broom leaning back against a wall behind it (-z).'}
+    return export_prop(out, 'houki', 'props', prop, cat, porosity=0.8, far=False, budget=500)
+
+
+def teoke(out):
+    """A small wooden bucket (手桶): staves, two bamboo hoops, a handle bar on two raised staves."""
+    P = []
+    wood = K.col('#b39a72')
+    P.append(K.lathe([(0.0, 0.0), (0.13, 0.0), (0.145, 0.24), (0.13, 0.24), (0.12, 0.02), (0.0, 0.02)], wood, n=12, pattern='planks',
+                     amount=0.3, smooth=False))
+    for y in (0.05, 0.19):
+        P.append(K.lathe([(0.134 + y * 0.06, y - 0.012), (0.142 + y * 0.06, y), (0.134 + y * 0.06, y + 0.012)], BAMBOO_OLD * 0.9, n=12,
+                         cap_top=False, cap_bottom=False))
+    for s in (-1, 1):
+        P.append(K.cbox((0.035, 0.18, 0.02), wood * 0.95, centre=(s * 0.13, 0.31, 0.0), bevel=0.0))
+    P.append(K.cbox((0.3, 0.025, 0.025), wood * 0.9, centre=(0.0, 0.38, 0.0), bevel=0.0))
+    P.append(K.cprism(10, 0.118, 0.118, 0.01, WATER, base=(0, 0.2, 0), bevel=0.0))
+    prop = K.Prop('teoke', 9771).add(P)
+    cat = {'footprint': [[0.0, 0.0, 0.16]], 'tags': ['life', 'interact', 'water'], 'notes': 'A small wooden bucket with water in it.'}
+    return export_prop(out, 'teoke', 'props', prop, cat, porosity=0.7, far=False, budget=900)
+
+
+def niwatori(out, name, seed, peck=False):
+    """A hen (地鶏): plump red-brown body, darker wings, a cocked tail of dark feathers, a small red comb
+    and wattle, yellow beak and legs. peck: the head down at the ground."""
+    R = rng(seed)
+    body_c = K.col('#8c5530')
+    hx, hy = (0.17, 0.05) if peck else (0.13, 0.27)
+
+    def body(Q):
+        b = K.sd_ellipsoid(Q - np.array([0.0, 0.17, 0.0]), (0.15, 0.1, 0.085))
+        n = K.sd_capsule(Q, (0.08, 0.2, 0.0), (hx - 0.02, hy, 0.0), 0.045)
+        h = K.sd_ellipsoid(Q - np.array([hx, hy, 0.0]), (0.05, 0.045, 0.04))
+        tail = K.sd_ellipsoid(Q - np.array([-0.15, 0.25, 0.0]), (0.05, 0.08, 0.03))
+        d = K.smin(b, n, 0.04)
+        d = K.smin(d, h, 0.02)
+        d = K.smin(d, tail, 0.04)
+        return d
+    pc = K.sdf_piece(body, (-0.22, 0.04, -0.11), (0.24, 0.36, 0.11), body_c, h=0.012, tris=420, pattern='plain', amount=0.0,
+                     var=0.03, seed=seed + 1)
+
+    def plumage(Pp, N):
+        m = np.ones((len(Pp), 3))
+        wing = (np.abs(Pp[:, 2]) > 0.05) & (Pp[:, 1] > 0.12) & (Pp[:, 1] < 0.24) & (Pp[:, 0] < 0.08)
+        m[wing] = 0.72
+        tail = Pp[:, 0] < -0.12
+        m[tail] = np.array([0.22, 0.2, 0.18]) / (body_c + 1e-6)
+        neck = Pp[:, 0] > 0.07
+        m[neck] = np.array([0.72, 0.5, 0.28]) / (body_c + 1e-6)
+        return m
+    pc.shade = plumage
+    P = [pc]
+    red = K.col('#c42a22')
+    up = 1.0 if not peck else 0.0
+    P.append(K.cbox((0.05, 0.035, 0.012), red, centre=(hx + 0.005, hy + 0.045 * up + 0.01 * (1 - up), 0.0), bevel=0.0))
+    P.append(K.cbox((0.02, 0.03, 0.012), red, centre=(hx + 0.03, hy - 0.04 * up + 0.02 * (1 - up), 0.0), bevel=0.0))
+    beak = K.col('#d8a838')
+    P.append(K.cbox((0.035, 0.014, 0.014), beak, centre=(hx + 0.055, hy - 0.005 - 0.02 * (1 - up), 0.0), bevel=0.0,
+                    R=K.rot_z(-0.9 * (1 - up))))
+    leg = K.col('#c89a3a')
+    for s in (-1, 1):
+        P.append(cyl((0.0, 0.0, s * 0.035), (0.01, 0.1, s * 0.03), 0.008, leg, n=3))
+        P.append(K.cbox((0.06, 0.006, 0.012), leg, centre=(0.03, 0.004, s * 0.035), bevel=0.0))
+    prop = K.Prop(name, seed).add(P)
+    cat = {'footprint': [], 'tags': ['life', 'animal'],
+           'notes': 'A hen, about 0.36 m tall, facing +x' + (' and pecking at the ground.' if peck else ', head up.')}
+    return export_prop(out, name, 'props', prop, cat, porosity=0.5, far=False, budget=900)
+
+
 def build(out):
     st = {}
     st['monohoshi'] = monohoshi(out)
@@ -465,4 +696,11 @@ def build(out):
     st['zaru'] = DR.basket(out, 'zaru', 'flat', 8355)
     st['wara_sheaves'] = DR.straw(out, 'wara_sheaves', 'sheaf', 8361)
     st['wara_heap'] = DR.straw(out, 'wara_heap', 'heap', 8365)
+    st['mushiro'] = mushiro(out)
+    st['wara_kuzu'] = wara_kuzu(out)
+    st['makiwari'] = makiwari(out)
+    st['houki'] = houki(out)
+    st['teoke'] = teoke(out)
+    st['niwatori_a'] = niwatori(out, 'niwatori_a', 9811, peck=False)
+    st['niwatori_b'] = niwatori(out, 'niwatori_b', 9821, peck=True)
     return st

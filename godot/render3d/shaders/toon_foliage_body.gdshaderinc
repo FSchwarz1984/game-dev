@@ -17,7 +17,7 @@
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
 uniform int foliage_mode : hint_range(0, 1) = 1;
-uniform sampler2D leaf_tex : source_color, filter_nearest, hint_default_white;
+uniform sampler2D leaf_tex : filter_nearest, hint_default_white;    // sRGB values (converted once below)
 uniform vec4 tint : source_color = vec4(1.0);
 uniform float lean : hint_range(0.0, 1.0) = 1.0;
 uniform float wind_px = 1.0;                     // sway at flex 1, native px (keep 1-2)
@@ -25,12 +25,16 @@ uniform float push_px = 0.0;                     // ground cover: how far a card
 uniform float porosity : hint_range(0.0, 1.0) = 0.5;
 uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // (unused since round 4: the light is continuous)
 uniform float transmit : hint_range(0.0, 2.0) = 0.6; // light through the leaves when they are seen against it
-uniform float lush : hint_range(0.0, 1.0) = 0.45;    // fresh greens (round 4)
+uniform float lush : hint_range(0.0, 1.0) = 0.25;    // fresh greens (round 4)
 uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
 uniform float cutaway_keep_px = 0.0;              // > 0: what lies this far above her stays (the top of the view)
-uniform float shadow_shrink = 1.08;               // cards cast slightly smaller shadows (sun flecks)
-uniform float shadow_sieve = 0.03;                // and let this share of their texels through
+instance uniform float obj_fade = 0.0;            // the cut-away mode "fade": this share of the object's pixels let through
+// the shadow pass draws each card this much larger, so a crown casts big solid masses of shade (on
+// itself and on the ground; G5R2 review: "大块明暗") rather than a sieve of leaf-sized holes. The sun
+// flecks on the ground are the terrain's own (small, clustered, crisp).
+uniform float shadow_shrink = 1.35;
+uniform float shadow_sieve = 0.0;                 // share of the shadow texels let through
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;
 uniform float far : hint_range(0.0, 1.0) = 0.0;   // 遠化: 0 near .. 1 lost its qualities (pale, flat)
 // big crowns: light that reaches the shaded side anyway (sky through the gaps, bounce from the ground),
@@ -43,6 +47,7 @@ varying vec3 v_wu;      // where the leaf really is (before lean and card layout
 varying vec3 v_wn;
 varying vec2 v_cell;
 varying float v_fill;
+varying vec3 v_detail;      // albedo / the shade's albedo (the shade's tint; light() undoes it)
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -103,6 +108,9 @@ void fragment() {
 	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_k(v_wp, cell, cutaway_scale, cutaway_keep_px)) {
 		discard;
 	}
+	if (obj_fade > 0.0 && !IN_SHADOW_PASS && w3_stipple(cell) < obj_fade) {
+		discard;
+	}
 	// cards are rebuilt facing the camera whatever their winding: undo the engine's back-face flip
 	if (foliage_mode == 1 && !FRONT_FACING) {
 		NORMAL = -NORMAL;
@@ -127,8 +135,11 @@ void fragment() {
 	alb = w3_far(alb, far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
 	v_cell = cell;
-	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times this albedo and AO
-	ALBEDO = alb;
+	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times ALBEDO and AO; the shade
+	// takes the painter's shade colour (w3_shade_tint), which light() undoes in the direct light
+	vec3 a_shade = alb * w3_shade_tint;
+	v_detail = alb / max(a_shade, vec3(1e-4));
+	ALBEDO = a_shade;
 	AO = ao;
 	AO_LIGHT_AFFECT = 0.0;
 	EMISSION = alb * w3_sky * 0.35 * far;
@@ -147,6 +158,7 @@ void light() {
 		// yellow-green (it passes through them: the engine multiplies by the albedo again)
 		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5);
 		c += w3_transmit(NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, vec3(0.9, 1.0, 0.6) * transmit);
+		c *= v_detail;
 		// big crowns: what reaches the shaded side anyway (sky through the gaps, bounce), so a crown
 		// seen from its shaded side keeps its masses instead of turning into a dark lid
 		if (shade_fill > 0.0) {
@@ -155,6 +167,6 @@ void light() {
 		}
 		DIFFUSE_LIGHT += c * k;
 	} else {
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5) * k;
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5) * v_detail * k;
 	}
 }

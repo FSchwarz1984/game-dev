@@ -221,6 +221,44 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
         pw = np.maximum(pw, geom.smoothstep(hw * 0.9, 0.0, d))
     F["path_wear"] = pw
     F["yard_sdf"] = up(pad_sdf["hut_yard"])
+    for p_ in L["pads"]:
+        if p_.get("wall"):
+            F["pad_sdf_" + p_["id"]] = up(pad_sdf[p_["id"]])
+    # the yard's use (lead, 12:45): trodden paths between the door, the trough, the woodpile and the
+    # gate (packed darker earth), the drip channels under the eaves (gravel), leaves blown against the
+    # walls, the fence and the house, scratched earth where the hens are (layout "yard")
+    Y = L.get("yard", {})
+    yw = np.zeros_like(Hs)
+    for wl in Y.get("wear", []):
+        d_, _, _ = geom.polyline_field(Xs, Zs, geom.catmull(np.asarray(wl["pts"], np.float64), 6))
+        hw = float(wl.get("width", 0.8)) * 0.5
+        wob = (noise.fbm(Xs / 0.9, Zs / 0.9, 2, seed_i + 81) - 0.5) * 0.3 * hw
+        yw = np.maximum(yw, geom.smoothstep(hw + 0.08, hw - 0.12, d_ + wob) * float(wl.get("k", 1.0)))
+    F["yard_wear"] = yw
+    dk = np.zeros_like(Hs)
+    for dl in Y.get("drip", []):
+        d_, _, _ = geom.polyline_field(Xs, Zs, np.asarray(dl["pts"], np.float64))
+        hw = float(dl.get("width", 0.32)) * 0.5
+        dk = np.maximum(dk, geom.smoothstep(hw + 0.05, hw - 0.05, d_))
+    F["drip_k"] = dk
+    # leaf drifts: a band inside the yard along its edge, thicker in its concave corners, along the
+    # layout's drift lines (fence, house walls), broken into patches
+    yin = up(pad_sdf["hut_yard"])
+    band = geom.smoothstep(-1.4, -0.25, yin) * geom.smoothstep(0.15, -0.1, yin)
+    corner = geom.smoothstep(-2.2, -0.6, ndimage.gaussian_filter(yin, 2.0 / cs) - yin * 0.0) * band
+    dr = np.maximum(band * 0.8, corner)
+    for dl in Y.get("drifts", []):
+        d_, _, _ = geom.polyline_field(Xs, Zs, np.asarray(dl["pts"], np.float64))
+        side = float(dl.get("w", 0.7))
+        dr = np.maximum(dr, geom.smoothstep(side, side * 0.25, d_) * float(dl.get("k", 1.0)))
+    patches = geom.smoothstep(0.42, 0.62, noise.fbm(Xs / 1.3, Zs / 1.3, 3, seed_i + 83) + (noise.fbm(Xs / 0.45, Zs / 0.45, 1, seed_i + 84) - 0.5) * 0.3)
+    # crisp drifts (a weak weight never wins over the bare earth)
+    F["drift_k"] = np.clip((dr * patches - 0.12) * 2.4, 0, 1) * (1.0 - yw) * (1.0 - dk)
+    sk = np.zeros_like(Hs)
+    for sc in Y.get("scratch", []):
+        d_ = np.hypot(Xs - sc["c"][0], Zs - sc["c"][1]) + (noise.fbm(Xs / 0.3, Zs / 0.3, 2, seed_i + 85) - 0.5) * 0.25
+        sk = np.maximum(sk, geom.smoothstep(float(sc.get("r", 0.35)), float(sc.get("r", 0.35)) * 0.4, d_))
+    F["scratch_k"] = sk
     F["shrine_sdf_k"] = geom.smoothstep(0.4, -0.2, up(pad_sdf["shrine_terrace"]))
     F["graves_k"] = geom.smoothstep(1.2, -0.5, up(pad_sdf["graves_bench"]))
     F["lookout_top"] = geom.smoothstep(0.8, -0.5, up(pad_sdf["lookout_top"]))

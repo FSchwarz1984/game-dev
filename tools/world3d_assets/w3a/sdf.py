@@ -197,8 +197,9 @@ class TrunkSDF(Prim):
     """A trunk as a radial field about a curved axis: d = (rho - R(theta, y)) / |grad|, closed by a
     dome at the top. theta = 0 north (-z), pi/2 west (-x), pi south (toward the camera)."""
 
-    def __init__(self, name, axis_pts, radius_fn, ref_fn, y_lo, y_top, family=None):
+    def __init__(self, name, axis_pts, radius_fn, ref_fn, y_lo, y_top, family=None, twist=0.0):
         from .tube import catmull
+        self.twist = twist                  # bark mapping turns with the trunk's twist (rad per metre)
         self.name = name
         self.family = family or name
         q, _ = catmull(np.asarray(axis_pts, np.float64), 24)
@@ -239,9 +240,12 @@ class TrunkSDF(Prim):
     def uv(self, P):
         y, rho, th = self.polar(P)
         Rr = self.Rref(y)
-        u = (th - math.pi) * Rr
+        # the grain follows the trunk's twist (its lobes turn by `twist` per metre), so the fissures
+        # run up the trunk along the lobes instead of straight up across them
+        tw = th + self.twist * y
+        u = (tw - math.pi) * Rr
         v = y - np.maximum(rho - Rr, 0) * 0.85          # down the flare the bark keeps running
-        return u, v, th, Rr
+        return u, v, tw, Rr
 
 
 class EllipsoidSDF(Prim):

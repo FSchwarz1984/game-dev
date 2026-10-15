@@ -69,6 +69,12 @@ func _ready() -> void:
 	env = W3Env.new()
 	add_child(env)
 	env.setup(pv)
+	if args.has("amb"):
+		env.ambient_day_gain = float(args["amb"])     # tuning: the day sky light next to the sun
+	if args.get("ssao", "1") == "0":
+		env.environment.ssao_enabled = false          # comparisons
+	if args.has("noglow"):
+		env.environment.glow_enabled = false
 	env.rain = float(args.get("rain", "0"))
 	env.set_time(float(args.get("hours", "9.5")))
 	terrain = Terrain3D.new()
@@ -515,13 +521,14 @@ func _scale_cutaway(n: Node, k: float, dense := false) -> void:
 					# under the great crown the view keeps its lowest boughs along the top edge (she
 					# stands under a roof of leaves; everything nearer to her than that opens)
 					(m as ShaderMaterial).set_shader_parameter("cutaway_keep_px", 96.0)
-					# the great evergreen crown: a deep shade in its heart (the crown proxy), dappled
-					# toward its rim where the leaf masses part (the cards cast a little larger than
-					# drawn, and let a few texels through); other trees keep their own lacy shade
-					(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.0)
-					(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.08)
-					# seen from its shaded side at midday: keep the masses, not a black lid
-					(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.42)
+					# the great evergreen crown: a deep shade in its heart (the crown proxy), in big
+					# masses toward its rim (the cards cast a little larger than drawn; the sun flecks
+					# on the ground are the terrain's own)
+					(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.2)
+					(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.0)
+					# seen from its shaded side at midday: keep the masses, not a black lid (the sky
+					# light and the VoxelGI bounce do most of it since round 4)
+					(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.2)
 	for c in n.get_children():
 		_scale_cutaway(c, k, dense)
 

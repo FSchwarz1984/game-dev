@@ -37,7 +37,7 @@ uniform vec2 g_litter = vec2(65.0, 11.0);
 uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
-uniform float lush : hint_range(0.0, 1.0) = 0.2;             // fresh greens over the palette (w3_lush)
+uniform float lush : hint_range(0.0, 1.0) = 0.25;            // fresh greens over the palette (w3_lush)
 uniform float dry_bias = 0.12;                              // raises the dry-grass threshold (fewer withered patches)
 uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;    // how much of the painted detail the shade drops
 
@@ -245,10 +245,12 @@ void fragment() {
 		float wh = h_encode.x + (wt.r * 255.0 * 256.0 + wt.g * 255.0) / 65535.0 * h_encode.y;
 		if (v_wp.y < wh) {
 			alb *= vec3(0.42, 0.5, 0.46);
+			flat_alb *= vec3(0.42, 0.5, 0.46);
 		}
 	}
 	// ---- wetness and puddles
 	alb = w3_wetten(alb, porous);
+	flat_alb = w3_wetten(flat_alb, porous);
 	float ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));
 	// puddles in the ruts and the low spots of paths: a darker mirror of the overcast sky with
 	// rings where the drops fall (only the deepest spots, so they stay small)
@@ -259,6 +261,7 @@ void fragment() {
 		float rr = length((cell - c0) * vec2(1.0, 1.6));
 		float ring = step(abs(rr - ph * 3.0), 0.5) * (1.0 - ph);
 		alb = mix(alb * 0.5, w3_sky * 0.42, 0.7 * w3_wet) + ring * 0.035 * w3_wet;
+		flat_alb = alb;
 	}
 	// sun flecks in the shade of the canopies. The canopy map is read where the sun's ray through
 	// this point meets the crowns (about 11 m up), so the flecks fall inside the cast shade rather
@@ -281,8 +284,9 @@ void fragment() {
 	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times ALBEDO and AO: the shade
 	// gets the flattened colour (shade_flatten of the detail removed); light() puts the detail back
 	// into the direct light (v_detail = detailed / flattened), so detail shows where the sun falls
-	flat_alb = w3_wetten(flat_alb, porous);
-	vec3 a_shade = mix(alb, flat_alb, shade_flatten);
+	// and the painter's shade colour (w3_shade_tint, blue-green by day): only the ambient sees it,
+	// v_detail undoes it in the direct light
+	vec3 a_shade = mix(alb, flat_alb, shade_flatten) * w3_shade_tint;
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;
 	AO = ao;

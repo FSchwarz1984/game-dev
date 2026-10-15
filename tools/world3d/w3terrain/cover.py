@@ -11,6 +11,16 @@ their edges instead of meeting in lines. Tile variants (two or three sizes per s
 random) and a per-clump hue/value jitter keep neighbours from repeating; the same tile never stands
 twice within 0.45 m.
 
+Round 4b (lead, 12:45: "the shrubs on the right read as noise by day"): the cover is laid out in
+clumps with bare ground between them (成団、留白), not as single sprites strewn evenly. A clump is
+one species (a few companions at its rim), 3-18 cards on a disc 0.2-0.9 m across, the tall tiles in
+its middle and the short ones at the rim; its light normals bulge out of the clump (the top catches
+the light, the rim turns away), its front and low cards are a little darker and bluer, and its tint
+jitter is per clump, not per card. The tiles' own contrast is compressed (vegetation reads below
+characters and interactables: knowledge/25). Weeds grow where people do not tread: along the feet of
+walls and fences, around posts, troughs and stones (the layout's yard.weeds lines and rings, and every
+walled pad's edge).
+
 Output: cover.png (the atlas, RGBA: albedo + coverage; terrain/common) and cover.bin (per 16 m chunk,
 two layers: 'low' casts no shadow, 'tall' does), in the renderer's foliage card layout (toon_foliage
 card mode: CUSTOM0 = anchor + flex, UV2 = corner offset in native px, UV = atlas uv, COLOR = tint +
@@ -71,7 +81,37 @@ COMMUNITIES = {
                 "tsuyukusa": 0.22, "ominaeshi": 0.08, "hagi": 0.08},
     "oku": {"moss": 1.2, "fern": 0.9, "sasa": 0.25, "tsuyukusa": 0.25, "blue": 0.3, "sedge": 0.15},
     "dry": {"dry": 1.0, "susuki": 0.4, "yellow": 0.4, "ominaeshi": 0.12, "hagi": 0.08, "short": 0.3},
+    # the feet of walls, fences and posts in the yard: what survives where nobody treads
+    "wallfoot": {"short": 1.0, "plantain": 0.75, "clover": 0.55, "horsetail": 0.5, "tsuyukusa": 0.5, "mid": 0.4, "fern": 0.25,
+                 "moss": 0.3, "tanpopo": 0.2, "nadeshiko": 0.08},
 }
+
+# clump size (radius range, m) per species: big plants make big clumps
+CLUMP_R = {"fern": (0.35, 0.8), "sasa": (0.45, 0.95), "susuki": (0.3, 0.6), "long": (0.3, 0.7), "moss": (0.18, 0.45),
+           "clover": (0.2, 0.5), "plantain": (0.15, 0.35), "horsetail": (0.15, 0.35)}
+CLUMP_R_DEFAULT = (0.22, 0.6)
+CARDS_PER_M2 = {"fern": 7.0, "sasa": 8.0, "susuki": 5.0, "long": 9.0, "moss": 12.0}
+CARDS_PER_M2_DEFAULT = 13.0
+
+
+def calm(tile, k_l=0.74, k_c=0.9):
+    """Compress a tile's value range about its mean (CIELAB L*) and a little of its chroma: vegetation
+    stays under the characters and interactables in contrast (reading order, CLAUDE.md §3)."""
+    from skimage import color
+    t = tile.copy()
+    a = t[..., 3] > 0
+    if a.sum() < 2:
+        return t
+    lab = color.rgb2lab(t[..., :3].astype(np.float64) / 255.0)
+    Lm = float(lab[..., 0][a].mean())
+    lab[..., 0] = np.where(a, Lm + (lab[..., 0] - Lm) * k_l, lab[..., 0])
+    lab[..., 1:] = np.where(a[..., None], lab[..., 1:] * k_c, lab[..., 1:])
+    rgb = np.clip(color.lab2rgb(lab), 0, 1)
+    t[..., :3] = np.where(a[..., None], np.round(rgb * 255), t[..., :3]).astype(np.uint8)
+    return t
+
+
+FLOWER_SPECIES = ("kikyo", "ominaeshi", "hagi", "nadeshiko", "tsuyukusa", "tanpopo")
 
 
 def make_atlas(seed=5100):
@@ -81,10 +121,48 @@ def make_atlas(seed=5100):
         table[name] = []
         for i, kw in enumerate(variants):
             t = LV.trim(fn(seed=seed + len(tiles) * 7 + i, **kw))
+            # the flowers keep their colour (small spots of it are the point), the greens calm down
+            t = calm(t, 0.82, 0.97) if name in FLOWER_SPECIES else calm(t)
             table[name].append(len(tiles))
             tiles.append(t)
     atlas, rects = LV.pack_tiles(tiles, width=256, max_h=256)
     return atlas, rects, table, tiles
+
+
+def _sunflower(n, R):
+    """n points on the unit disc, evenly spread (golden angle), jittered a little; centre first."""
+    k = np.arange(n) + 0.5
+    r = np.sqrt(k / n)
+    a = k * 2.399963 + R.uniform(0, 2 * math.pi)
+    pts = np.stack([np.cos(a) * r, np.sin(a) * r], 1)
+    return pts + R.normal(0, 0.07, pts.shape)
+
+
+def edge_lines(L, F, Xs, Zs, cs):
+    """Where weeds grow along things people built: every walled pad's inner edge (the foot of its
+    walls), and the layout's yard.weeds lines and rings (fences, house walls, posts, troughs)."""
+    from skimage import measure
+    out = []          # (points (n, 2), band width (m), density 0..1)
+    for p in L.get("pads", []):
+        if not p.get("wall"):
+            continue
+        key = "pad_sdf_" + p["id"]
+        if key not in F:
+            continue
+        for c in measure.find_contours(F[key], -0.22):
+            if len(c) < 4:
+                continue
+            pts = np.stack([Xs[0, 0] + c[:, 1] * cs, Zs[0, 0] + c[:, 0] * cs], -1)
+            out.append((pts, 0.22, 0.85))
+    Y = L.get("yard", {})
+    for ln in Y.get("weeds", []):
+        out.append((np.asarray(ln["pts"], np.float64), float(ln.get("w", 0.25)), float(ln.get("density", 0.8))))
+    for rg in Y.get("rings", []):
+        c = np.asarray(rg["c"], np.float64)
+        r = float(rg.get("r", 0.4))
+        a = np.linspace(0, 2 * math.pi, max(8, int(2 * math.pi * r / 0.15)))
+        out.append((np.stack([c[0] + np.cos(a) * r, c[1] + np.sin(a) * r], 1), float(rg.get("w", 0.16)), float(rg.get("density", 0.9))))
+    return out
 
 
 def build(L, W, F, Xs, Zs, Hs, cs, h, x0, z0, cell, seed, out_common: Path):
@@ -97,134 +175,202 @@ def build(L, W, F, Xs, Zs, Hs, cs, h, x0, z0, cell, seed, out_common: Path):
     if not imp.exists():
         imp.write_text('[remap]\n\nimporter="image"\ntype="Image"\n')
     AH, AW = atlas.shape[:2]
-
-    # ---- candidates on a jittered grid
-    xs = np.arange(Xs[0, 0] + STEP / 2, Xs[0, -1], STEP)
-    zs = np.arange(Zs[0, 0] + STEP / 2, Zs[-1, 0], STEP)
-    CX, CZ = np.meshgrid(xs, zs)
-    CX = (CX + R.uniform(-0.45, 0.45, CX.shape) * STEP).ravel()
-    CZ = (CZ + R.uniform(-0.45, 0.45, CZ.shape) * STEP).ravel()
-    si = np.clip(((CX - Xs[0, 0]) / cs).astype(int), 0, Xs.shape[1] - 1)
-    sj = np.clip(((CZ - Zs[0, 0]) / cs).astype(int), 0, Xs.shape[0] - 1)
-
-    def S(a):
-        return np.asarray(a)[sj, si] if np.ndim(a) == 2 else np.full(len(CX), float(a))
-    grass = S(W["grass"])
-    moss = S(W["moss"])
-    litter = S(W["litter"])
-    rock = S(W["rock"])
-    dirt = S(W["dirt"])
-    gravel = S(W["gravel"])
-    bank = S(W["bank"])
-    paddy = S(W["paddy"])
-    canopy = S(F["canopy"])
-    water_d = S(F["water_d"])
-    sanct = S(F.get("sanctum", 0.0))
-    oku = S(F.get("oku", 0.0))
-    trail = S(F.get("trail_k", 0.0))
-    pave = S(F.get("pave_k", 0.0))
-    stone = S(F.get("stone_k", 0.0))
-    yard = S(geom.smoothstep(0.4, -0.2, F["yard_sdf"]))
-    gz, gx = np.gradient(Hs, cs)
-    slope = S(np.degrees(np.arctan(np.hypot(gx, gz))))
-    south = S(np.clip(-gz / np.sqrt(1 + gx * gx + gz * gz) * 2.5, 0, 1))      # ground falling to the south (sun-facing)
-
-    # ---- where plants can grow at all (not on paths, rock, water, yards, paved strips)
-    ground_ok = (dirt < 0.5) & (rock < 0.5) & (gravel < 0.6) & (paddy < 0.5) & (pave < 0.2) & (yard < 0.4) & (water_d > 0.35)
-    near_trail = geom.smoothstep(0.0, 0.5, trail) * (1 - geom.smoothstep(0.75, 1.0, trail))       # the trodden fringe
-
-    # ---- community weights per candidate
-    n_lo = noise.fbm(CX / 9.0, CZ / 9.0, 3, seed + 5110)
-    shade_k = geom.smoothstep(0.25, 0.65, canopy + litter * 0.4)
-    wet_k = geom.smoothstep(3.5, 1.0, water_d)
-    dry_k = geom.smoothstep(22.0, 32.0, slope) * south * (1 - shade_k) * (1 - sanct)
-    edge_k = geom.smoothstep(0.08, 0.3, canopy) * (1 - geom.smoothstep(0.45, 0.75, canopy))
-    comm = {
-        "meadow": (1 - shade_k) * (1 - wet_k) * (1 - dry_k) * (1 - sanct * 0.6) * (0.6 + 0.4 * n_lo),
-        "edge": edge_k * (1 - wet_k) * 0.9,
-        "shade": shade_k * (1 - oku) * (1 - wet_k * 0.5),
-        "wet": wet_k,
-        "trodden": near_trail * 1.4 + stone * 0.6,
-        "sanctum": sanct * (1 - oku) * (1 - shade_k * 0.5) * (1 - wet_k) * 0.95,
-        "oku": oku * 1.2,
-        "dry": dry_k * 1.2,
-    }
-    # each species: weight from the communities, then its own clumping noise
     names = list(SPECIES)
-    score = np.zeros((len(names), len(CX)))
-    for si_, name in enumerate(names):
-        w = np.zeros(len(CX))
-        for cname, ck in comm.items():
-            w = w + ck * COMMUNITIES[cname].get(name, 0.0)
-        sc = 4.5 if name in ("short", "mid", "blue", "clover", "moss") else (3.0 if name in ("fern", "sasa", "long", "sedge") else 2.2)
-        clump = noise.fbm(CX / sc + si_ * 13.1, CZ / sc - si_ * 7.7, 2, seed + 5200 + si_)
-        score[si_] = w * (0.35 + 1.3 * geom.smoothstep(0.38, 0.72, clump)) * R.uniform(0.75, 1.25, len(CX))
-    best = np.argmax(score, axis=0)
-    best_s = score[best, np.arange(len(CX))]
-    # density: the material's room for plants, clumps with bare ground between (negative space)
-    mass = geom.smoothstep(0.42, 0.62, noise.fbm(CX / 2.6, CZ / 2.6, 2, seed + 5120) + (noise.fbm(CX / 0.8, CZ / 0.8, 1, seed + 5121) - 0.5) * 0.25)
-    room = np.clip(grass + moss * 0.9 + litter * 0.45 + bank * 0.35, 0, 1)
-    dens = room * (0.04 + 0.96 * mass) * np.clip(best_s * 1.4, 0, 1.0)
-    dens *= (1 - geom.smoothstep(0.55, 0.9, trail))
-    dens = dens * (0.8 + 0.3 * sanct)
-    keep = ground_ok & (R.uniform(size=len(CX)) < dens * 0.3)
-    # flowers: their own patches, one species to a patch (spots of colour), in the meadows, at the
-    # edges and thickest inside the barrier
-    FLOWERS = ["kikyo", "ominaeshi", "nadeshiko", "tsuyukusa", "hagi", "tanpopo"]
-    fpatch = geom.smoothstep(0.6, 0.78, noise.fbm(CX / 3.2, CZ / 3.2, 2, seed + 5130))
-    fkind = (noise.fbm(CX / 7.0, CZ / 7.0, 2, seed + 5131) * len(FLOWERS) * 1.6).astype(int) % len(FLOWERS)
-    fk = fpatch * (comm["meadow"] * 0.7 + comm["edge"] * 0.5 + comm["sanctum"] * 1.3 + comm["dry"] * 0.4) * room
-    flower = ground_ok & ~keep & (R.uniform(size=len(CX)) < fk * 0.28)
-    for i in np.nonzero(flower)[0]:
-        sp = FLOWERS[fkind[i]]
-        if sp == "tsuyukusa" and shade_k[i] < 0.2 and wet_k[i] < 0.2 and R.uniform() < 0.6:
-            sp = "nadeshiko"
-        best[i] = names.index(sp)
-    idx = np.nonzero(keep | flower)[0]
+    gz, gx = np.gradient(Hs, cs)
+    slope_g = np.degrees(np.arctan(np.hypot(gx, gz)))
+    south_g = np.clip(-gz / np.sqrt(1 + gx * gx + gz * gz) * 2.5, 0, 1)
+    yard_g = geom.smoothstep(0.4, -0.2, F["yard_sdf"])
+    zero = np.zeros_like(Hs)
 
-    # ---- choose tiles, avoid the same tile within 0.45 m, build cards
+    def sampler(CX, CZ):
+        si = np.clip(((CX - Xs[0, 0]) / cs).astype(int), 0, Xs.shape[1] - 1)
+        sj = np.clip(((CZ - Zs[0, 0]) / cs).astype(int), 0, Xs.shape[0] - 1)
+        return lambda a: np.asarray(a)[sj, si] if np.ndim(a) == 2 else np.full(len(CX), float(a))
+
+    def fields(CX, CZ):
+        S = sampler(CX, CZ)
+        d = dict(grass=S(W["grass"]), moss=S(W["moss"]), litter=S(W["litter"]), rock=S(W["rock"]), dirt=S(W["dirt"]),
+                 gravel=S(W["gravel"]), bank=S(W["bank"]), paddy=S(W["paddy"]), canopy=S(F["canopy"]), water_d=S(F["water_d"]),
+                 sanct=S(F.get("sanctum", zero)), oku=S(F.get("oku", zero)), trail=S(F.get("trail_k", zero)),
+                 pave=S(F.get("pave_k", zero)), stone=S(F.get("stone_k", zero)), yard=S(yard_g), slope=S(slope_g),
+                 south=S(south_g), wear=S(F.get("yard_wear", zero)), drip=S(F.get("drip_k", zero)))
+        d["ground_ok"] = ((d["dirt"] < 0.5) & (d["rock"] < 0.5) & (d["gravel"] < 0.6) & (d["paddy"] < 0.5) & (d["pave"] < 0.2)
+                          & (d["yard"] < 0.4) & (d["water_d"] > 0.35))
+        n_lo = noise.fbm(CX / 9.0, CZ / 9.0, 3, seed + 5110)
+        shade_k = geom.smoothstep(0.25, 0.65, d["canopy"] + d["litter"] * 0.4)
+        wet_k = geom.smoothstep(3.5, 1.0, d["water_d"])
+        dry_k = geom.smoothstep(22.0, 32.0, d["slope"]) * d["south"] * (1 - shade_k) * (1 - d["sanct"])
+        edge_k = geom.smoothstep(0.08, 0.3, d["canopy"]) * (1 - geom.smoothstep(0.45, 0.75, d["canopy"]))
+        near_trail = geom.smoothstep(0.0, 0.5, d["trail"]) * (1 - geom.smoothstep(0.75, 1.0, d["trail"]))
+        d["shade_k"], d["wet_k"] = shade_k, wet_k
+        d["comm"] = {
+            "meadow": (1 - shade_k) * (1 - wet_k) * (1 - dry_k) * (1 - d["sanct"] * 0.6) * (0.6 + 0.4 * n_lo),
+            "edge": edge_k * (1 - wet_k) * 0.9,
+            "shade": shade_k * (1 - d["oku"]) * (1 - wet_k * 0.5),
+            "wet": wet_k,
+            "trodden": near_trail * 1.4 + d["stone"] * 0.6,
+            "sanctum": d["sanct"] * (1 - d["oku"]) * (1 - shade_k * 0.5) * (1 - wet_k) * 0.95,
+            "oku": d["oku"] * 1.2,
+            "dry": dry_k * 1.2,
+            "wallfoot": np.zeros(len(CX)),
+        }
+        return d
+
+    def species_scores(CX, CZ, comm, salt):
+        score = np.zeros((len(names), len(CX)))
+        for k, name in enumerate(names):
+            w = np.zeros(len(CX))
+            for cname, ck in comm.items():
+                w = w + ck * COMMUNITIES[cname].get(name, 0.0)
+            sc = 6.0 if name in ("short", "mid", "blue", "clover", "moss") else (4.0 if name in ("fern", "sasa", "long", "sedge") else 3.0)
+            clump = noise.fbm(CX / sc + k * 13.1, CZ / sc - k * 7.7, 2, seed + 5200 + k)
+            score[k] = w * (0.35 + 1.3 * geom.smoothstep(0.38, 0.72, clump)) * R.uniform(0.8, 1.2, len(CX))
+        return score
+
+    clumps = []        # (cx, cz, species index, radius, n cards, companion index or -1, kind)
+
+    # ---- 1. plant clumps on a jittered lattice; big open areas between groups of clumps
+    SP = 0.95
+    xs = np.arange(Xs[0, 0] + SP / 2, Xs[0, -1], SP)
+    zs = np.arange(Zs[0, 0] + SP / 2, Zs[-1, 0], SP)
+    CX, CZ = np.meshgrid(xs, zs)
+    CX = (CX + R.uniform(-0.42, 0.42, CX.shape) * SP).ravel()
+    CZ = (CZ + R.uniform(-0.42, 0.42, CZ.shape) * SP).ravel()
+    fd = fields(CX, CZ)
+    score = species_scores(CX, CZ, fd["comm"], 0)
+    order = np.argsort(-score, axis=0)
+    best, second = order[0], order[1]
+    best_s = score[best, np.arange(len(CX))]
+    # groups of clumps with open ground between (the 3-6 m pattern), finer gaps inside a group
+    mass = geom.smoothstep(0.4, 0.6, noise.fbm(CX / 3.4, CZ / 3.4, 2, seed + 5120) + (noise.fbm(CX / 1.1, CZ / 1.1, 1, seed + 5121) - 0.5) * 0.3)
+    room = np.clip(fd["grass"] + fd["moss"] * 0.9 + fd["litter"] * 0.45 + fd["bank"] * 0.35, 0, 1)
+    p_clump = room * (0.06 + 0.94 * mass) * np.clip(best_s * 1.4, 0, 1.0) * (1 - geom.smoothstep(0.55, 0.9, fd["trail"]))
+    p_clump *= 0.62 * (0.85 + 0.25 * fd["sanct"])
+    keep = fd["ground_ok"] & (R.uniform(size=len(CX)) < p_clump)
+    for i in np.nonzero(keep)[0]:
+        name = names[best[i]]
+        r0, r1 = CLUMP_R.get(name, CLUMP_R_DEFAULT)
+        r = R.uniform(r0, r1) * (0.75 + 0.5 * float(mass[i]))
+        dens = CARDS_PER_M2.get(name, CARDS_PER_M2_DEFAULT)
+        n = int(np.clip(round(math.pi * r * r * dens * R.uniform(0.8, 1.2)), 2, 18))
+        comp = int(second[i]) if R.uniform() < 0.45 and score[second[i], i] > 0.25 * best_s[i] else -1
+        clumps.append((float(CX[i]), float(CZ[i]), int(best[i]), r, n, comp, "plant"))
+
+    # ---- 2. flowers: small clumps of one species, in patches (meadows, edges, thickest in the barrier)
+    FLOWERS = list(FLOWER_SPECIES)
+    SPf = 0.8
+    xs = np.arange(Xs[0, 0] + SPf / 2, Xs[0, -1], SPf)
+    zs = np.arange(Zs[0, 0] + SPf / 2, Zs[-1, 0], SPf)
+    FX, FZ = np.meshgrid(xs, zs)
+    FX = (FX + R.uniform(-0.45, 0.45, FX.shape) * SPf).ravel()
+    FZ = (FZ + R.uniform(-0.45, 0.45, FZ.shape) * SPf).ravel()
+    ff = fields(FX, FZ)
+    fpatch = geom.smoothstep(0.58, 0.76, noise.fbm(FX / 3.2, FZ / 3.2, 2, seed + 5130))
+    fkind = (noise.fbm(FX / 7.0, FZ / 7.0, 2, seed + 5131) * len(FLOWERS) * 1.6).astype(int) % len(FLOWERS)
+    froom = np.clip(ff["grass"] + ff["moss"] * 0.9 + ff["litter"] * 0.45, 0, 1)
+    fk = fpatch * (ff["comm"]["meadow"] * 0.7 + ff["comm"]["edge"] * 0.5 + ff["comm"]["sanctum"] * 1.3 + ff["comm"]["dry"] * 0.4) * froom
+    for i in np.nonzero(ff["ground_ok"] & (R.uniform(size=len(FX)) < fk * 0.55))[0]:
+        sp = FLOWERS[fkind[i]]
+        if sp == "tsuyukusa" and ff["shade_k"][i] < 0.2 and ff["wet_k"][i] < 0.2 and R.uniform() < 0.6:
+            sp = "nadeshiko"
+        r = R.uniform(0.14, 0.34)
+        clumps.append((float(FX[i]), float(FZ[i]), names.index(sp), r, int(R.integers(2, 6)), names.index("short") if R.uniform() < 0.5 else -1,
+                       "flower"))
+
+    # ---- 3. weeds at the feet of walls, fences, posts and troughs (in the yard too)
+    lines = edge_lines(L, F, Xs, Zs, cs)
+    wcomm = dict(COMMUNITIES["wallfoot"])
+    for pts, band, dens in lines:
+        seg = np.diff(pts, axis=0)
+        sl = np.hypot(seg[:, 0], seg[:, 1])
+        tot = float(sl.sum())
+        if tot < 0.2:
+            continue
+        cum = np.concatenate([[0.0], np.cumsum(sl)])
+        s_ = R.uniform(0, 0.4)
+        while s_ < tot:
+            k = min(int(np.searchsorted(cum, s_, side="right")) - 1, len(seg) - 1)
+            t = (s_ - cum[k]) / max(sl[k], 1e-6)
+            q = pts[k] + seg[k] * t
+            nrm = np.array([-seg[k][1], seg[k][0]]) / max(sl[k], 1e-6)
+            c = q + nrm * R.normal(0, band * 0.5)
+            # clumps along the line with gaps between: a patchy band, not a hedge
+            patch = float(noise.fbm(np.array([c[0] / 1.6]), np.array([c[1] / 1.6]), 2, seed + 5140)[0])
+            if R.uniform() < dens * geom.smoothstep(0.36, 0.6, patch):
+                fx = fields(np.array([c[0]]), np.array([c[1]]))
+                if fx["rock"][0] < 0.5 and fx["water_d"][0] > 0.3 and fx["wear"][0] < 0.3 and fx["pave"][0] < 0.3:
+                    ws = np.array([wcomm.get(nm, 0.0) for nm in names]) * R.uniform(0.6, 1.4, len(names))
+                    if fx["shade_k"][0] > 0.4:
+                        ws[names.index("fern")] *= 3.0
+                        ws[names.index("moss")] *= 2.5
+                    bi = int(np.argmax(ws))
+                    r = R.uniform(0.12, 0.3)
+                    clumps.append((float(c[0]), float(c[1]), bi, r, int(R.integers(2, 6)), int(np.argsort(-ws)[1]) if R.uniform() < 0.5 else -1,
+                                   "weed"))
+            s_ += R.uniform(0.25, 0.55)
+
+    # ---- 4. cards
     cellsz = 0.45
     seen = {}
     cards = {"low": {}, "tall": {}}
     counts = {}
     hx = lambda x, z: (int(math.floor(x / cellsz)), int(math.floor(z / cellsz)))
-    order = idx[np.argsort(CZ[idx])]
-    for i in order:
-        x, z = float(CX[i]), float(CZ[i])
-        name = names[best[i]]
-        opts = table[name]
-        t = opts[int(R.integers(0, len(opts)))]
-        key = hx(x, z)
-        clash = False
-        for dx in (-1, 0, 1):
-            for dz in (-1, 0, 1):
-                for (ox, oz, ot) in seen.get((key[0] + dx, key[1] + dz), ()):
-                    if ot == t and (ox - x) ** 2 + (oz - z) ** 2 < cellsz * cellsz:
-                        clash = True
-        if clash:
-            alt = [o for o in opts if o != t]
-            if not alt:
+    clumps.sort(key=lambda c: c[1])
+    up = np.array([0.0, 1.0, 0.0])
+    for (cx, cz, si, r, n, comp, kind) in clumps:
+        pts = _sunflower(n, R) * r * np.array([1.0, 0.8])
+        CXc = cx + pts[:, 0]
+        CZc = cz + pts[:, 1]
+        fc = fields(CXc, CZc)
+        ok = fc["ground_ok"] if kind != "weed" else ((fc["rock"] < 0.5) & (fc["water_d"] > 0.3) & (fc["wear"] < 0.35)
+                                                       & (fc["pave"] < 0.3) & (fc["gravel"] < 0.7))
+        hue = R.normal(0, 1)                                   # one hue nudge and one value per clump
+        val = 1.0 + R.normal(0, 0.04)
+        for j in np.argsort(CZc):
+            if not ok[j]:
                 continue
-            t = alt[int(R.integers(0, len(alt)))]
-        seen.setdefault(key, []).append((x, z, t))
-        layer = SPECIES[name][2]
-        y = float(_height(h, x0, z0, cell, x, z))
-        nrm = _normal(h, x0, z0, cell, x, z)
-        rx, ry, rw, rh = rects[t]
-        mirror = R.uniform() < 0.5
-        # per-clump tint: a hue nudge (more green / more yellow / more blue) and a value jitter
-        hue = R.normal(0, 1)
-        val = 1.0 + R.normal(0, 0.06)
-        tint = np.array([1.0 + 0.035 * hue, 1.0, 1.0 - 0.04 * hue]) * val
-        if name in ("kikyo", "ominaeshi", "hagi", "nadeshiko", "tsuyukusa", "tanpopo"):
-            tint = np.array([1.0, 1.0, 1.0]) * (1.0 + R.normal(0, 0.03))
-        ao = float(np.clip(1.0 - 0.35 * float(canopy[i]) - 0.15 * float(shade_k[i]), 0.55, 1.0))
-        flex = float(np.clip(0.35 + rh / 30.0 + R.normal(0, 0.1), 0.2, 1.0))
-        ln = nrm + np.array([0.0, 0.35, 0.45])
-        ln /= np.linalg.norm(ln)
-        ck = (int(math.floor(x / CHUNK)), int(math.floor(z / CHUNK)))
-        cards[layer].setdefault(ck, []).append((x, y, z, rx, ry, rw, rh, mirror, np.clip(tint, 0, 1.2), ao, flex, ln))
-        counts[name] = counts.get(name, 0) + 1
+            x, z = float(CXc[j]), float(CZc[j])
+            rr = float(np.hypot(pts[j, 0], pts[j, 1] / 0.8)) / max(r, 1e-6)       # 0 centre .. 1 rim
+            name = names[comp] if (comp >= 0 and rr > 0.55 and R.uniform() < 0.5) else names[si]
+            opts = table[name]
+            # tall variants in the middle of the clump, short ones at the rim
+            by_h = sorted(opts, key=lambda t: rects[t][3])
+            pick = by_h[min(len(by_h) - 1, int((1.0 - rr) * len(by_h) + R.uniform(-0.6, 0.6)))] if len(by_h) > 1 else by_h[0]
+            t = pick
+            key = hx(x, z)
+            clash = False
+            for dx in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    for (ox, oz, ot) in seen.get((key[0] + dx, key[1] + dz), ()):
+                        if ot == t and (ox - x) ** 2 + (oz - z) ** 2 < (cellsz * 0.6) ** 2:
+                            clash = True
+            if clash:
+                alt = [o for o in opts if o != t]
+                if alt:
+                    t = alt[int(R.integers(0, len(alt)))]
+            seen.setdefault(key, []).append((x, z, t))
+            layer = SPECIES[name][2]
+            y = float(_height(h, x0, z0, cell, x, z))
+            nrm = _normal(h, x0, z0, cell, x, z)
+            rx, ry, rw, rh = rects[t]
+            mirror = R.uniform() < 0.5
+            # light: the clump bulges, its top catches the light and its rim turns away
+            out = np.array([pts[j, 0], 0.0, pts[j, 1] / 0.8]) / max(r, 1e-6)
+            ln = nrm * 0.55 + up * 0.55 + out * 0.35 + np.array([0.0, 0.0, 0.25])
+            ln /= np.linalg.norm(ln)
+            front = float(np.clip(out[2], 0, 1))
+            if name in FLOWER_SPECIES:
+                tint = np.array([1.0, 1.0, 1.0]) * (1.0 + R.normal(0, 0.025))
+            else:
+                v = val * (1.0 - 0.07 * rr - 0.05 * front) * (1.0 + R.normal(0, 0.015))
+                # rim and front a little bluer (the shade side of the clump), the middle a little warmer
+                tint = np.array([1.0 + 0.03 * hue - 0.03 * rr, 1.0, 1.0 - 0.035 * hue + 0.05 * rr]) * v
+            ao = float(np.clip(1.0 - 0.32 * float(fc["canopy"][j]) - 0.14 * float(fc["shade_k"][j]) - 0.12 * rr, 0.5, 1.0))
+            flex = float(np.clip(0.35 + rh / 30.0 + R.normal(0, 0.08), 0.2, 1.0))
+            ck = (int(math.floor(x / CHUNK)), int(math.floor(z / CHUNK)))
+            cards[layer].setdefault(ck, []).append((x, y, z, rx, ry, rw, rh, mirror, np.clip(tint, 0, 1.2), ao, flex, ln))
+            counts[name] = counts.get(name, 0) + 1
+    counts["_clumps"] = len(clumps)
     return cards, counts, (AW, AH)
 
 

@@ -20,14 +20,23 @@ uniform float emission_energy = 0.0;                    // > 1 blooms (only ligh
 uniform float emission_at_night : hint_range(0.0, 1.0) = 0.0;  // 1: emission follows w3_night
 uniform float far : hint_range(0.0, 1.0) = 0.0;         // 遠化: 0 near .. 1 lost its qualities (pale, flat)
 uniform float shade_fill : hint_range(0.0, 1.0) = 0.0;  // share of the sun that still reaches its shade (big trunks under a crown)
-uniform bool cutaway = false;                           // stipple out where it hides her (roofs)
+uniform bool cutaway = false;                           // stipple out where it hides her (roofs, trees)
 uniform float cutaway_scale = 1.0;
+uniform float cutaway_keep_px = 0.0;                    // > 0: what lies this far above her stays
+// one object seen through as a whole (the cut-away mode "fade", round 4 item 4: trunk, limbs and
+// leaves of one tree go together): the share of its pixels let through, set per instance
+instance uniform float obj_fade = 0.0;
+// big masses of light and shade (G5R2 review, "大块明暗 + 局部细节"): the shade shows this share less
+// of the surface's painted detail (texture grain, the pattern's specks, cracks and boards); the
+// sun puts it back where it falls
+uniform float shade_flatten : hint_range(0.0, 1.0) = 0.55;
 
 varying vec3 v_wp;
 varying vec3 v_wu;      // upright (un-leaned) world position: lamps light the real place
 varying vec3 v_wn;
 varying flat vec2 v_origin_px;
 varying vec2 v_cell;
+varying vec3 v_detail;      // detailed albedo / the shade's flattened albedo (light() restores the detail)
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -45,25 +54,42 @@ void vertex() {
 void fragment() {
 	vec2 cell = w3_ptex(v_wp);
 	// (never in the shadow pass: the cut-away is for the eye, the shadow stays whole)
-	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
+	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_k(v_wp, cell, cutaway_scale, cutaway_keep_px)) {
+		discard;
+	}
+	if (obj_fade > 0.0 && !IN_SHADOW_PASS && w3_stipple(cell) < obj_fade) {
 		discard;
 	}
 	vec3 wn = normalize(v_wn);
 	vec3 alb = w3_srgb_to_linear(COLOR.rgb) * tint.rgb;
+	vec3 flat_alb = alb;
 	if (albedo_mode == 1) {
-		alb *= texture(albedo_tex, UV).rgb;
+		vec3 tc = texture(albedo_tex, UV).rgb;
+		alb *= tc;
+		// the texture's local mean (five taps two texels apart): its grain without the specks
+		vec2 ts = 2.0 / vec2(textureSize(albedo_tex, 0));
+		vec3 tm = tc + texture(albedo_tex, UV + vec2(ts.x, 0.0)).rgb + texture(albedo_tex, UV - vec2(ts.x, 0.0)).rgb
+				+ texture(albedo_tex, UV + vec2(0.0, ts.y)).rgb + texture(albedo_tex, UV - vec2(0.0, ts.y)).rgb;
+		flat_alb *= tm * 0.2;
 	} else if (albedo_mode == 2) {
 		vec2 d = cell + 0.5 - round(v_origin_px);
 		ivec2 tp = ivec2(floor(screen_origin_px + vec2(d.x, -d.y)));
 		alb *= texelFetch(albedo_tex, tp, 0).rgb;
+		flat_alb = alb;
 	}
 	alb = w3_pattern(alb, UV2.x, UV2.y, v_wp, wn, cell);
 	alb = w3_wetten(alb, porosity);
 	alb = w3_far(alb, far);
+	flat_alb = w3_far(w3_wetten(flat_alb, porosity), far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
 	v_cell = cell;
-	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times this albedo and AO
-	ALBEDO = alb;
+	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times ALBEDO and AO: the shade
+	// gets the flattened colour; light() puts the detail back into the direct light
+	// and the painter's shade colour (w3_shade_tint, blue-green by day): only the ambient sees it,
+	// v_detail undoes it in the direct light
+	vec3 a_shade = mix(alb, flat_alb, shade_flatten) * w3_shade_tint;
+	v_detail = alb / max(a_shade, vec3(1e-4));
+	ALBEDO = a_shade;
 	AO = ao;
 	AO_LIGHT_AFFECT = 0.0;
 	vec3 em = emission_color * emission_energy * mix(1.0, w3_night, emission_at_night) * (1.0 - far);
@@ -80,12 +106,13 @@ void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.3);
 		// big trunks under a crown: a share of the light reaches their shade anyway (continuous)
+		c *= v_detail;
 		if (shade_fill > 0.0) {
 			float lit = w3_wrap(dot(NORMAL, LIGHT), 0.3) * ATTENUATION;
 			c += LIGHT_COLOR / W3_PI * shade_fill * (1.0 - lit);
 		}
 		DIFFUSE_LIGHT += c * k;
 	} else {
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * k;
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail * k;
 	}
 }

@@ -10,7 +10,7 @@ render_mode world_vertex_coords, unshaded, depth_test_disabled, depth_draw_never
 stencil_mode read, compare_not_equal, 3;
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
-uniform sampler2D sheet : source_color, filter_nearest, hint_default_white;
+uniform sampler2D sheet : filter_nearest, hint_default_white;    // sRGB values (converted once below)
 uniform vec4 frame_rect = vec4(0.0, 0.0, 64.0, 64.0);   // px in the sheet: x, y, w, h
 uniform bool flip_h = false;
 uniform vec3 line_col : source_color = vec3(1.0, 0.86, 0.56);   // her colour (sRGB)

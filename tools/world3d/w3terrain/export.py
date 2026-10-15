@@ -106,7 +106,26 @@ def write(L, out: Path, tmp: Path, D):
     info["cover"] = D.get("cover", {})
     info["props"] = L.get("props", [])
     info["routes"] = L.get("routes", {})
-    info["perches"] = L.get("perches", {})
+    info["perches"] = dict(L.get("perches", {}))
+    info["fog"] = L.get("fog", {})
+    info["sets"] = L.get("sets", {})
+    # the great camphor's walkable branch path and the crows' perches up it (built by the asset
+    # generator in the tree's own space: tools/world3d_assets/w3a/species/camphor.py) -> world
+    cat_path = Path(__file__).resolve().parents[3] / "godot" / "world3d" / "assets" / "catalog.json"
+    if cat_path.exists() and "camphor" in L["markers"]:
+        cat = json.loads(cat_path.read_text())
+        cam = cat.get("assets", {}).get("camphor_great")
+        if isinstance(cam, dict):
+            cx, cz = L["markers"]["camphor"]
+            cy = hat(cx, cz)
+            anc = cam.get("anchors", {})
+            w = lambda q: [round(float(q[0]) + cx, 3), round(float(q[1]) + cy, 3), round(float(q[2]) + cz, 3)]
+            if anc.get("perch_crow"):
+                info["perches"]["crow"] = [w(q) for q in anc["perch_crow"]]
+            if cam.get("climb"):
+                c = cam["climb"]
+                info["climb"] = {"camphor": {"points": [w(q) for q in c["points"]], "width": c["width"],
+                                             "note": c.get("note", ""), "nest": w(c["nest"]) if c.get("nest") else None}}
     (out / "terrain.json").write_text(json.dumps(info, ensure_ascii=False, indent=1))
 
     # ---- previews for checking (not shipped)

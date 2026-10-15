@@ -33,8 +33,11 @@ ROWS = {
     "needles": (33.0, 10.0, 72.0),
     "bamboo_litter": (45.0, 12.0, 86.0),
     "bank": (35.0, 11.0, 70.0),
-    "paddy": (30.0, 11.0, 96.0),
+    "paddy": (38.5, 9.5, 74.0),      # also the yard's trodden paths (packed earth, smooth): round 4b
 }
+# how far a row's tones spread (1 = the full ramp): vegetation reads below the characters and the
+# things she can touch (lead 12:45: by day the greens' contrast was stronger than the characters')
+ROW_CONTRAST = {"grass": 0.78, "grass_dry": 0.8, "moss": 0.6, "litter": 0.85, "paddy": 0.7}
 ROW_INDEX = {k: i for i, k in enumerate(ROWS)}
 ACCENT_ROW = 11
 ACCENTS = {
@@ -51,11 +54,11 @@ def lch_to_srgb(L, C, h):
     return np.clip(rgb, 0, 1)
 
 
-def ramp(L, C, h, n=8):
+def ramp(L, C, h, n=8, contrast=1.0):
     out = []
     for i in range(n):
         t = (i - 3.5) / 3.5                       # -1 dark .. +1 light
-        Li = L + t * (13.0 if t > 0 else 15.0)
+        Li = L + t * (13.0 if t > 0 else 15.0) * contrast
         Ci = C * (1.0 - 0.38 * abs(t) ** 1.4)
         hi = h + (-14.0 * -t if t < 0 else 10.0 * -t) * (1 if h > 90 else -0.6)
         # darks lean toward cyan-blue, lights toward yellow (hue wheel: 90 yellow, 200 cyan)
@@ -70,7 +73,7 @@ def ramp(L, C, h, n=8):
 def palette():
     P = np.zeros((16, 8, 3))
     for name, (L, C, h) in ROWS.items():
-        P[ROW_INDEX[name]] = ramp(L, C, h)
+        P[ROW_INDEX[name]] = ramp(L, C, h, contrast=ROW_CONTRAST.get(name, 1.0))
     for i, ch in enumerate(ACCENT_ORDER):
         P[ACCENT_ROW, i % 8] = lch_to_srgb(*ACCENTS[ch]) if i < 8 else P[ACCENT_ROW, i % 8]
     # accents beyond 8 go to row 12

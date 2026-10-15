@@ -664,5 +664,19 @@ def build(L, h, x0, z0, cell, placements, seed):
         k = st.get('kind', 'cut')
         t = steps(sink, ground, rt, 0.0, rt.length, st['width'], R, kind=k, count=st.get('count'))
         stats[f"{st['id']}:steps_{k}"] = t
+    # the yard: clusters of pebbles where feet and brooms have pushed them (layout yard.scatter)
+    t = 0
+    for sc in L.get('yard', {}).get('scatter', []):
+        c = np.asarray(sc['c'], np.float64)
+        r = float(sc.get('r', 0.5))
+        for k in range(int(sc.get('n', 5))):
+            q = c + R.normal(0, r * 0.45, 2)
+            rr = R.uniform(0.03, 0.075) * (1.7 if R.uniform() < 0.18 else 1.0)
+            m = 7
+            ang = np.sort(R.uniform(0, 2 * math.pi, m))
+            poly = np.stack([q[0] + np.cos(ang) * rr * R.uniform(0.75, 1.15, m), q[1] + np.sin(ang) * rr * R.uniform(0.7, 1.05, m)], 1)
+            t += slab(sink, ground, chaikin(poly, 1), R.uniform(0.012, 0.035), 0.04, GRANITE * (0.72 + 0.25 * R.uniform()),
+                      R.uniform(0.0, 0.3), R, layer='solid', dome=0.012)
+    stats['yard:scatter'] = t
     stats['triangles'] = sink.tri_count()
     return sink.finish(), stats

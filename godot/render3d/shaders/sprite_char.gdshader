@@ -14,7 +14,7 @@ render_mode world_vertex_coords, ambient_light_disabled, specular_disabled, fog_
 stencil_mode write, compare_always, 3;
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
-uniform sampler2D sheet : source_color, filter_nearest, hint_default_white;
+uniform sampler2D sheet : filter_nearest, hint_default_white;    // sRGB values (converted once below)
 uniform sampler2D sheet_n : filter_nearest, hint_normal;
 uniform vec4 frame_rect = vec4(0.0, 0.0, 64.0, 64.0);   // px in the sheet: x, y, w, h
 uniform bool flip_h = false;

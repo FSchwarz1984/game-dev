@@ -124,6 +124,10 @@ bool w3_cutaway_k(vec3 wp, vec2 cell, float scale, float keep_px) {
 	// scattered, not ordered (an ordered dither reads as a printed screen)
 	return w3_hash(cell * 1.11 + 2.9) * 0.75 + w3_vnoise(cell / 1.7) * 0.25 < k;
 }
+// a scattered (not ordered) threshold per screen texel, fixed to the world's pixel lattice
+float w3_stipple(vec2 cell) {
+	return w3_hash(cell * 1.11 + 2.9) * 0.75 + w3_vnoise(cell / 1.7) * 0.25;
+}
 bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
 	return w3_cutaway_k(wp, cell, scale, 0.0);
 }

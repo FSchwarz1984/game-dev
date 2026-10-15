@@ -25,22 +25,25 @@ var fog_haze_focus := 0.0       # height the haze is measured from (her height)
 # blue-cyan sky and a green bounce off the grass, so shadows lean blue-green; the grade's contrast is
 # soft and its saturation favours the greens (composite.gdshader).
 const KEYS := [
-	[0.0, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
-	[4.4, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
+	[0.0, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
+	[4.4, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[5.4, Color(0.95, 0.62, 0.58), 0.35, Color(0.22, 0.24, 0.36), Color(0.07, 0.07, 0.07), Color(0.45, 0.42, 0.52), Color(0.02, 0.012, 0.04), Color(1.02, 0.99, 1.02), 0.92, Color(-0.004, 0.002, 0.02), Color(0.02, 0.01, 0.0), 0.6],
-	[6.4, Color(1.0, 0.80, 0.60), 1.6, Color(0.44, 0.56, 0.84), Color(0.12, 0.15, 0.10), Color(0.80, 0.76, 0.72), Color(0.012, 0.008, 0.02), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
-	[8.0, Color(1.0, 0.92, 0.80), 1.75, Color(0.48, 0.63, 0.94), Color(0.16, 0.20, 0.12), Color(0.80, 0.84, 0.86), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.01), 1.06, Color(-0.012, 0.004, 0.02), Color(0.018, 0.012, 0.0), 0.0],
-	[12.0, Color(1.0, 0.95, 0.88), 1.8, Color(0.48, 0.64, 0.95), Color(0.17, 0.21, 0.12), Color(0.78, 0.85, 0.90), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.02), 1.08, Color(-0.012, 0.005, 0.02), Color(0.012, 0.010, 0.0), 0.0],
-	[15.5, Color(1.0, 0.92, 0.80), 1.8, Color(0.50, 0.62, 0.92), Color(0.17, 0.20, 0.12), Color(0.80, 0.80, 0.80), Color(0.012, 0.010, 0.022), Color(1.03, 1.02, 1.0), 1.06, Color(-0.012, 0.004, 0.022), Color(0.02, 0.012, 0.0), 0.0],
-	[17.4, Color(1.0, 0.80, 0.55), 1.9, Color(0.46, 0.50, 0.84), Color(0.15, 0.15, 0.10), Color(0.86, 0.74, 0.62), Color(0.010, 0.006, 0.026), Color(1.04, 1.01, 0.98), 1.06, Color(-0.02, 0.0, 0.05), Color(0.03, 0.02, 0.0), 0.0],
+	[6.4, Color(1.0, 0.80, 0.60), 1.6, Color(0.56, 0.64, 0.80), Color(0.14, 0.17, 0.11), Color(0.80, 0.78, 0.74), Color(0.008, 0.011, 0.02), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
+	[8.0, Color(1.0, 0.92, 0.80), 1.75, Color(0.52, 0.66, 0.88), Color(0.16, 0.20, 0.12), Color(0.80, 0.84, 0.86), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.01), 1.03, Color(-0.012, 0.004, 0.02), Color(0.018, 0.012, 0.0), 0.0],
+	[12.0, Color(1.0, 0.95, 0.88), 1.8, Color(0.54, 0.68, 0.87), Color(0.17, 0.21, 0.12), Color(0.78, 0.85, 0.90), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.02), 1.04, Color(-0.012, 0.005, 0.02), Color(0.012, 0.010, 0.0), 0.0],
+	[15.5, Color(1.0, 0.92, 0.80), 1.8, Color(0.54, 0.65, 0.86), Color(0.17, 0.20, 0.12), Color(0.80, 0.80, 0.80), Color(0.012, 0.010, 0.022), Color(1.03, 1.02, 1.0), 1.03, Color(-0.012, 0.004, 0.022), Color(0.02, 0.012, 0.0), 0.0],
+	[17.4, Color(1.0, 0.80, 0.55), 1.9, Color(0.50, 0.54, 0.78), Color(0.15, 0.15, 0.10), Color(0.86, 0.74, 0.62), Color(0.010, 0.006, 0.026), Color(1.04, 1.01, 0.98), 1.03, Color(-0.02, 0.0, 0.05), Color(0.03, 0.02, 0.0), 0.0],
 	[18.4, Color(1.0, 0.62, 0.40), 1.2, Color(0.34, 0.34, 0.56), Color(0.08, 0.07, 0.06), Color(0.50, 0.44, 0.50), Color(0.014, 0.010, 0.034), Color(1.02, 0.99, 0.98), 1.0, Color(-0.02, 0.0, 0.05), Color(0.025, 0.015, 0.0), 0.5],
-	[19.6, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
-	[24.0, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
+	[19.6, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
+	[24.0, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 ]
 
 
 var sky_mat: ShaderMaterial          # the hemisphere the ambient light comes from (not drawn)
 var ambient_gain := 1.0
+# by day the sky light is strong next to the sun (round 4: soft contrast; a shaded patch keeps about
+# half the light of a sunlit one, so the shade reads as a large blue-green mass, not a black hole)
+var ambient_day_gain := 1.5
 
 
 func setup(v: PixelView3D) -> void:
@@ -122,7 +125,7 @@ func use_volumetric_fog(strength: float, t: Terrain3D) -> void:
 	environment.volumetric_fog_length = view.cam_distance + 80.0
 	environment.volumetric_fog_detail_spread = 1.0
 	environment.volumetric_fog_gi_inject = 0.5
-	environment.volumetric_fog_ambient_inject = 0.35
+	environment.volumetric_fog_ambient_inject = 0.2
 	environment.volumetric_fog_temporal_reprojection_enabled = false   # no ghosting as she walks
 	sun.light_volumetric_fog_energy = 1.0
 	if strength <= 0.0:
@@ -150,7 +153,7 @@ func _fog_for_hour() -> void:
 		return
 	var morning := clampf(1.0 - absf(hours - 6.8) / 2.4, 0.0, 1.0)
 	var night := float(sample(hours)[11])
-	var d := lerpf(0.010, 0.05, morning) + night * 0.012 + rain * 0.03
+	var d := lerpf(0.009, 0.024, morning) + night * 0.01 + rain * 0.012
 	var layer := lerpf(5.0, 3.0, morning)
 	fog_mat.set_shader_parameter("density", d * fog_strength)
 	fog_mat.set_shader_parameter("layer", layer)
@@ -203,13 +206,13 @@ func set_time(h: float) -> void:
 	var k := sample(hours)
 	var dir := sun_direction(hours)
 	var wet := rain
-	var rain_dim := 1.0 - 0.55 * rain
+	var rain_dim := 1.0 - 0.8 * rain           # overcast: hardly a shadow
 	sun.light_color = k[1]
 	sun.light_energy = float(k[2]) * rain_dim
 	if absf(dir.y) > 0.999:
 		dir = (dir + Vector3(0.01, 0, 0)).normalized()
 	sun.basis = Basis.looking_at(-dir, Vector3.UP)
-	var sky: Color = (k[3] as Color).lerp(Color(0.2, 0.22, 0.26), rain * 0.5)
+	var sky: Color = (k[3] as Color).lerp(Color(0.44, 0.5, 0.54) * (1.0 - float(k[11]) * 0.8), rain * 0.6)
 	var ground: Color = k[4]
 	var fog: Color = (k[5] as Color).lerp(Color(0.5, 0.53, 0.56) * (1.0 - float(k[11]) * 0.75), rain * 0.6)
 	var night := float(k[11])
@@ -218,14 +221,19 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_sky", Vector3(sky.r, sky.g, sky.b))
 	RenderingServer.global_shader_parameter_set("w3_ground", Vector3(ground.r, ground.g, ground.b))
 	if sky_mat:
-		sky_mat.set_shader_parameter("top", sky * ambient_gain)
-		sky_mat.set_shader_parameter("bottom", ground * ambient_gain)
+		var ag := ambient_gain * lerpf(ambient_day_gain, 1.0, float(k[11]))
+		sky_mat.set_shader_parameter("top", sky * ag)
+		sky_mat.set_shader_parameter("bottom", ground * ag)
 	RenderingServer.global_shader_parameter_set("w3_fog_col", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("w3_night", night)
 	RenderingServer.global_shader_parameter_set("w3_wet", wet)
 	# the golden hour: what the low sun does not reach is lit by the blue-violet sky (long cool shadows)
 	var golden := clampf(1.0 - absf(hours - 17.7) / 1.3, 0.0, 1.0) * (1.0 - night)
-	RenderingServer.global_shader_parameter_set("w3_shade_tint", Vector3(0.95, 0.98, 1.05).lerp(Vector3(0.93, 0.94, 1.14), golden))
+	# the painter's shade colour (multiplies the ambient light only: sky, VoxelGI bounce): blue-green
+	# by day, so the warm bounce off the sunlit earth never turns the shade brown (round 4: "大块的蓝绿阴影");
+	# blue-violet in the golden hour; neutral at night (the night grade does it)
+	var shade_tint := Vector3(0.88, 0.98, 1.08).lerp(Vector3(0.92, 0.95, 1.1), golden).lerp(Vector3(0.97, 1.0, 1.03), night)
+	RenderingServer.global_shader_parameter_set("w3_shade_tint", shade_tint)
 	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.01, 1.0, 0.98).lerp(Vector3(0.95, 1.0, 1.06), night))
 	environment.background_color = fog
 	# valley mist: thick in the early morning, thin at noon, back at dusk and at night
@@ -240,7 +248,8 @@ func set_time(h: float) -> void:
 	var c := view.composite
 	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b))
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))
-	c.set_shader_parameter("saturation", float(k[8]) * (1.0 - 0.15 * rain))
+	# (rain: wet leaves and wet earth are deeper, not greyer; the light is what goes flat)
+	c.set_shader_parameter("saturation", float(k[8]))
 	# split toning, a little stronger than the keys (round 4): shade leans blue-green, light warm
 	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b) * 1.6 + Vector3(0.0, 0.004, 0.004) * (1.0 - night))
 	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * 1.3)
