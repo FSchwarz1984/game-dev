@@ -51,6 +51,7 @@ func _run() -> void:
 	for s in plan.get("shots", []):
 		var v := Vista.new()
 		v.autoplay = false
+		v.legacy = false        # laid out at this tool's own canvas (_fit above), sampled back at its scale
 		v.exact = bool(plan.get("exact", false))
 		v.quality = String(plan.get("quality", "high"))
 		v.data_dir = String(plan.get("data_dir", VistaData.DEFAULT_DIR))

@@ -9,12 +9,15 @@ extends Control
 ## Put it on a CanvasLayer above the world (it is opaque and fills the logical canvas; hide the
 ## world meanwhile) and below the cinema layer (letterbox, fades) and the text layers. It renders in
 ## its own HDR viewport at native resolution (glow only on the light sources: they are the only
-## values above 1) and is shown at the stage's integer scale like everything else.
+## values above 1). Its canvas is the one of the stage rule it was drawn for (480x270 base, round(h /
+## 270)), shown at that rule's integer scale over the whole window whatever the stage's own canvas is
+## (legacy_fit; `legacy = false` lays it out at the Control's size instead).
 ##
 ##   var v := Vista.new(); layer.add_child(v)
 ##   v.show_shot("south"); v.state.tod = 19.4 ...    or the timeline below, from a director scene
 ##   v.figure_slot()   a Node2D between the crown behind her and the leaves in front of her
-##   v.anchors()       {branch, stand} in logical px (where she sits / stands)
+##   v.anchors()       {branch, stand} in the vista's own px (where she sits / stands; she stands up
+##                     where she sat); shown_scale / shown_origin map them to the stage's logical px
 ## State (as the JS vista): tod 17.5..21, pan 0..1 (crane out of the crown), rise 0..1 (the lights
 ## leave), sky 0..1 (the deck parts, the sky shore shows), wave -1 | 0..1 (the far), tower 1 | 0.
 ## The clock: by default the vista advances itself every frame (_process); a host that drives the
@@ -29,6 +32,12 @@ var state := {"tod": 19.4, "pan": 1.0, "rise": 0.0, "sky": 0.0, "wave": -1.0, "t
 var t := 0.0
 var autoplay := true
 var exact := false            # JS parity mode (palette keys snapped, stepped deck hole): checks only
+## Draw at the canvas of the stage rule the vista was made for and show it at that rule's integer
+## scale (legacy_fit), whatever the stage's canvas is. False: the Control's own size is its canvas (for a
+## host that sets the window's canvas to the vista's itself, or checks that lay it out by hand).
+var legacy := true
+var shown_scale := 1.0        # one vista pixel in the Control's (the stage's logical) pixels
+var shown_origin := Vector2.ZERO
 var quality := "auto"         # "high" | "low" | "auto" (low on phones): rising-light count, motes
 var data_dir := VistaData.DEFAULT_DIR
 
@@ -75,6 +84,8 @@ func _ready() -> void:
 	view_rect.texture = vp.get_texture()
 	add_child(view_rect)
 	resized.connect(_fit)
+	# the vista's canvas follows the window (legacy_fit), which can change while the stage's canvas does not
+	get_window().size_changed.connect(_fit)
 	_fit()
 	if shot == "":
 		show_shot("south")
@@ -120,17 +131,39 @@ func _fit() -> void:
 		s = Vector2i(get_viewport_rect().size.round())
 	if s.x < 16 or s.y < 16:
 		return
-	if s == view:
+	var fit := {"view": s, "scale": 1.0, "origin": Vector2.ZERO}
+	if legacy and is_inside_tree():
+		fit = Vista.legacy_fit(Vector2(get_window().size), s)
+	if fit["view"] == view and is_equal_approx(float(fit["scale"]), shown_scale) and fit["origin"] == shown_origin:
 		return
-	view = s
+	view = fit["view"]
+	shown_scale = float(fit["scale"])
+	shown_origin = fit["origin"]
 	vp.size = view + Vector2i(BORDER * 2, BORDER * 2)
 	view_rect.size = Vector2(vp.size)
-	view_rect.position = -Vector2(BORDER, BORDER)
+	view_rect.scale = Vector2(shown_scale, shown_scale)
+	view_rect.position = shown_origin - Vector2(BORDER, BORDER) * shown_scale
 	var mat := view_rect.material as ShaderMaterial
 	mat.set_shader_parameter("tex_size", Vector2(vp.size))
 	mat.set_shader_parameter("border", Vector2(BORDER, BORDER))
 	for n in shots:
 		shots[n].layout(view)
+
+
+## Where the vista goes for a window and the stage's logical canvas: its own canvas is the one of the
+## stage rule it was drawn for (PixelStage.legacy_canvas, round(h / 270): 1280x720 -> 426x240 x3,
+## 1920x1080 -> 480x270 x4), shown at that rule's integer scale (one vista pixel = scale x scale window
+## pixels) and centred on the window on whole window pixels, whatever the stage's own rule is (640x360
+## base since 2026-10-15: 1920x1080 is 640x360 x3, so a vista pixel is 4/3 of a logical one). Returns
+## {view: its canvas, scale: a vista pixel in logical pixels, origin: its top-left in logical pixels}.
+static func legacy_fit(win: Vector2, logical: Vector2i) -> Dictionary:
+	var lc: Dictionary = PixelStage.legacy_canvas(win)
+	var vs: Vector2i = lc["size"]
+	var ls := float(lc["scale"])
+	var ss := maxf(1.0, roundf(win.y / maxf(1.0, float(logical.y))))   # the stage's integer scale
+	var stage_origin := ((win - Vector2(logical) * ss) * 0.5).round()   # window px of the logical (0, 0)
+	var own_origin := ((win - Vector2(vs) * ls) * 0.5).floor()           # window px of the vista's (0, 0)
+	return {"view": vs, "scale": ls / ss, "origin": (own_origin - stage_origin) / ss}
 
 
 ## Show a shot (builds it the first time: the data is loaded and kept).
