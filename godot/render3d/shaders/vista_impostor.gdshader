@@ -70,7 +70,7 @@ void fragment() {
 	vec3 lab = w3_lin_to_oklab(alb);
 	// (round 4: the baked leaves now carry their painted colour, lighter than before the sRGB fix;
 	// in the sun they are held a little lower and quieter so a sunlit hillside never goes lime)
-	v_alb_sun = (leaf > 0.5 && lab.y < 0.0) ? max(w3_oklab_to_lin(vec3(lab.x * 0.97, lab.yz * 0.66)), vec3(0.0)) * 0.8 : alb;
+	v_alb_sun = (leaf > 0.5 && lab.y < 0.0) ? max(w3_oklab_to_lin(vec3(lab.x * 0.93, lab.yz * 0.6)), vec3(0.0)) * 0.72 : alb;
 	v_leaf = leaf;
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	ALBEDO = vec3(1.0);

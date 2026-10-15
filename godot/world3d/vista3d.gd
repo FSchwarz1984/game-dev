@@ -1497,6 +1497,9 @@ func update(dt: float) -> void:
 	pv.vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	for k in ["lift", "gain", "saturation", "shadow_tone", "high_tone", "fade", "contrast"]:
 		display.set_shader_parameter(k, pv.composite.get_shader_parameter(k))
+	# (the view holds whole sunlit hillsides of leaves: the world's extra saturation would turn them
+	# lime; the distance wants quieter colour anyway)
+	display.set_shader_parameter("saturation", minf(float(pv.composite.get_shader_parameter("saturation")), 1.04))
 	if _vdebug.has("nograde"):
 		display.set_shader_parameter("lift", Vector3.ZERO)
 		display.set_shader_parameter("gain", Vector3.ONE)

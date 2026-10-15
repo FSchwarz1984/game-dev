@@ -56,6 +56,7 @@ var placed_props: Array = []      # [catalog name, position, yaw, scale, height 
 var realm_mask: W3RealmMask       # the barrier: where she stands sets the frame's look (W3Env.set_realm)
 var hut_smoke := Vector3.INF      # the home's smoke hole (catalog anchors.smoke)
 var _realm_k := -1.0
+var _swell_k := 0.0
 
 
 func _ready() -> void:
@@ -806,12 +807,17 @@ var _shot_i := 0
 func _update_realm(dt: float) -> void:
 	if realm_mask == null or her == null:
 		return
-	var target: float = realm_mask.sample(her.pos.x, her.pos.z).r
+	var here: Color = realm_mask.sample(her.pos.x, her.pos.z)
+	var target: float = here.r
+	var swell := smoothstep(0.62, 0.95, here.g)
 	if _realm_k < 0.0:
 		_realm_k = target
+		_swell_k = swell
 	else:
 		_realm_k = lerpf(_realm_k, target, 1.0 - exp(-dt * 1.5))
+		_swell_k = lerpf(_swell_k, swell, 1.0 - exp(-dt * 2.0))
 	env.set_realm(_realm_k)
+	env.set_band_swell(_swell_k)
 
 
 func _set_view(i: int) -> void:

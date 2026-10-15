@@ -37,7 +37,7 @@ uniform vec2 g_litter = vec2(65.0, 11.0);
 uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
-uniform float lush : hint_range(0.0, 1.0) = 0.25;            // fresh greens over the palette (w3_lush)
+uniform float lush : hint_range(0.0, 1.0) = 0.45;            // fresh greens over the palette (w3_lush)
 uniform float dry_bias = 0.12;                              // raises the dry-grass threshold (fewer withered patches)
 uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;    // how much of the painted detail the shade drops
 

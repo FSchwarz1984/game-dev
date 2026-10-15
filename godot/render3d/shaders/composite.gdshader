@@ -25,12 +25,13 @@ uniform vec2 view_size = vec2(640.0, 360.0);   // logical (visible) size in nati
 uniform vec2 margin_px = vec2(1.0, 1.0);       // the low-res image's hidden border
 uniform bool hdr_input = true;            // the viewport holds linear HDR values
 uniform float exposure = 1.0;             // linear multiplier before the grade
-uniform float green_turn = 0.14;          // radians the olive hues turn toward green
-uniform float green_gain = 1.0;           // chroma of the greens
+uniform float green_turn = 0.08;          // radians the olive hues turn toward green (a natural green keeps some yellow)
+uniform float green_gain = 1.08;          // chroma of the greens (lead 16:00: full natural greens)
 uniform float yellow_gain = 0.9;          // chroma of the yellows (straw, dry grass)
 uniform sampler2D blue_noise : filter_nearest, repeat_enable;
 uniform vec2 cam_cell = vec2(0.0);        // the world lattice cell at the image's centre (y up)
 uniform float dither_amp = 1.0;           // in 8-bit code values (peak to peak)
+uniform float soft_ends = 0.0;            // ease both ends of the tone curve (the barrier): black stays black
 
 vec3 lin_to_srgb(vec3 c) {
 	c = max(c, vec3(0.0));
@@ -89,6 +90,10 @@ void fragment() {
 	// place, the mids and lights open up, the top rolls off
 	float l0 = dot(c, vec3(0.299, 0.587, 0.114));
 	float ls = l0 + contrast * max(l0 - 0.26, 0.0) * (1.0 - l0) * 1.6;
+	// soft ends: the darks open a little (zero stays zero: no lift, no veil), the top rolls off a little
+	float t0 = clamp(1.0 - l0 / 0.3, 0.0, 1.0);
+	ls += soft_ends * 0.35 * l0 * t0 * t0;
+	ls -= soft_ends * 0.5 * max(l0 - 0.75, 0.0) * max(l0 - 0.75, 0.0);
 	c *= ls / max(l0, 1e-4);
 	float l = dot(c, vec3(0.299, 0.587, 0.114));
 	c = mix(vec3(l), c, saturation);

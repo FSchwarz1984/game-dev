@@ -23,7 +23,8 @@ uniform vec4 realm_frame = vec4(-80.0, -96.0, 1.0, 0.0);
 uniform vec2 realm_cells = vec2(161.0, 209.0);
 uniform float realm_boost = 0.0;       // inside: the air holds this much more light (density x (1 + k))
 uniform vec3 realm_albedo : source_color = vec3(1.0, 0.97, 0.9);
-uniform float band_density = 0.0;      // the mist curtain at a gate, at the band's full value
+uniform float band_density = 0.0;      // a gate's mist, at the band's full value
+uniform float band_swell = 0.0;        // 0 .. 1 she is deep in a gate's band: the mist rises and fills it
 
 float hash2(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -48,11 +49,21 @@ void fog() {
 	vec4 rm = texture(realm, ((wp.xz - realm_frame.xy) / realm_frame.z + 0.5) / realm_cells);
 	// inside the barrier the air is fuller of light (thicker, warmer: a soft glow in the shafts)
 	d *= 1.0 + realm_boost * rm.r;
-	// a gate's curtain of mist: dense from the ground up to the band's height, a soft broken top,
-	// slowly stirring
+	// a gate's mist (lead 16:00: not a lit box over her): low wisps along the ground, densest at the
+	// ground and thinning within a metre or so, uneven, drifting between the stones and the cedars,
+	// the band's edge broken by noise. When she is deep in the band (band_swell) it rises to the
+	// band's height and fills up: the moment the place can change unseen.
 	float bh = max(rm.b * 8.0, 0.5);
-	float stir = vnoise2(q * 3.1 + vec2(drift * 0.05, 0.0)) * 0.6 + 0.7;
-	float curtain = rm.g * band_density * stir * (1.0 - smoothstep(bh * 0.55, bh * 1.2, above));
+	vec2 fq = wp.xz * vec2(0.42, 0.9) + vec2(drift * 0.11, drift * 0.02);
+	float wisp = vnoise2(fq) * 0.6 + vnoise2(fq * 2.3 + 3.1) * 0.4;
+	vec2 eq = wp.xz * 0.55 + vec2(drift * 0.05, 0.0);
+	// (the noise only breaks the band's own edge: nothing where the band's feather has not reached)
+	float edge = smoothstep(0.22, 0.62, rm.g + (vnoise2(eq + 11.0) - 0.5) * 0.8 + (vnoise2(eq * 2.6 + 4.0) - 0.5) * 0.35)
+			* smoothstep(0.0, 0.18, rm.g);
+	float low = exp(-max(above, 0.0) / mix(0.8, bh * 0.55, band_swell));
+	float streaks = smoothstep(0.42, 0.8, wisp);
+	float body = mix(streaks * 2.4, 0.8 + 0.8 * wisp, band_swell);
+	float curtain = edge * band_density * low * body * (1.0 + 3.0 * band_swell);
 	DENSITY = above < -1.0 ? 0.0 : d + curtain;
 	ALBEDO = mix(albedo, realm_albedo, rm.r * 0.6);
 	EMISSION = emission;
