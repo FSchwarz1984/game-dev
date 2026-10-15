@@ -17,6 +17,7 @@ uniform vec4 splat_frame = vec4(-80.0, -96.0, 0.25, 0.0);    // origin x, z, cel
 uniform vec2 splat_size = vec2(641.0, 833.0);
 uniform vec4 local_bounds = vec4(-80.0, -96.0, 80.0, 112.0);
 uniform vec3 eye = vec3(0.0);
+uniform int dbg_mode = 0;
 
 varying vec3 v_wp;
 varying vec3 v_n;
@@ -46,6 +47,17 @@ vec3 pal(float row, float tone) {
 
 vec3 srgb(vec3 c) { return w3_srgb_to_linear(c); }
 
+// value noise in three dimensions (the far land's grain: on a face seen steeply a noise of the map
+// alone stretches into streaks down the face; one that also changes with height never does)
+float vnoise3(vec3 p) {
+	vec3 i = floor(p);
+	vec3 f = p - i;
+	vec3 u = f * f * (3.0 - 2.0 * f);
+	float a = mix(mix(w3_hash3(i), w3_hash3(i + vec3(1, 0, 0)), u.x), mix(w3_hash3(i + vec3(0, 1, 0)), w3_hash3(i + vec3(1, 1, 0)), u.x), u.y);
+	float b = mix(mix(w3_hash3(i + vec3(0, 0, 1)), w3_hash3(i + vec3(1, 0, 1)), u.x), mix(w3_hash3(i + vec3(0, 1, 1)), w3_hash3(i + vec3(1, 1, 1)), u.x), u.y);
+	return mix(a, b, u.z);
+}
+
 void fragment() {
 	vec3 wp = v_wp;
 	vec2 xz = wp.xz;
@@ -54,6 +66,21 @@ void fragment() {
 	v_river = 0.0;
 	v_town = 0.0;
 	vec3 n = normalize(v_n);
+	// (round 4: away from the eye the mesh's rings lie tens of metres apart and its radial strips
+	// run straight up the screen; a normal interpolated across them shaded every strip of a hill's
+	// face its own way, a curtain of vertical streaks. Out there the normal comes from the height
+	// maps, per pixel.)
+	if (dist > 160.0) {
+		// (and the height: inside a long triangle the mesh's height strays tens of metres from the
+		// land's; every choice made by height, the plain's edge, the strata, the haze, then changed
+		// from one strip to the next)
+		wp.y = v_height(xz);
+		float e = max(1.0, dist * 0.004);
+		float hx = v_height(xz + vec2(e, 0.0)) - v_height(xz - vec2(e, 0.0));
+		float hz = v_height(xz + vec2(0.0, e)) - v_height(xz - vec2(0.0, e));
+		n = normalize(vec3(-hx, 2.0 * e, -hz));
+		NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
+	}
 	// texture cell: about a pixel and a half wide at this distance (fine grain near, never blocks).
 	// On steep faces the cells lie in the face (along it and down its fall line), not in the map:
 	// map cells seen on a face that turns toward the eye stretch into vertical streaks.
@@ -66,6 +93,13 @@ void fragment() {
 	vec2 cell = floor(pl / tc);
 	float n1 = w3_hash(cell);
 	float clump = w3_vnoise(pl / max(3.0, dist * 0.02));
+	// (out on the far land, where the mesh is coarse and faces are seen steeply, the grain in three
+	// dimensions: round 4, the hills beside the plain were curtains of vertical streaks)
+	vec3 wq = vec3(xz.x, wp.y * 1.6, xz.y);
+	if (dist > 160.0) {
+		n1 = w3_hash3(floor(wq / tc) + 0.5);
+		clump = vnoise3(wq / max(3.0, dist * 0.02));
+	}
 	float slope = degrees(acos(clamp(n.y, 0.0, 1.0)));
 	vec3 alb;
 	bool water = false;
@@ -206,7 +240,7 @@ void fragment() {
 		bool far_hill = !plain && dist > 2600.0;
 		if (forest > 0.4 && !plain) {
 			// canopy seen from above: dark clumps, lit crowns
-			float k = w3_vnoise(pl / max(4.0, dist * 0.012) + 3.0);
+			float k = dist > 160.0 ? vnoise3(wq / max(4.0, dist * 0.012) + 3.0) : w3_vnoise(pl / max(4.0, dist * 0.012) + 3.0);
 			alb = k > 0.62 ? srgb(vec3(0.27, 0.36, 0.19)) : (k > 0.35 ? srgb(vec3(0.2, 0.29, 0.16)) : srgb(vec3(0.13, 0.2, 0.12)));
 		}
 		if (rock > 0.5 && !far_hill) {
@@ -266,16 +300,35 @@ void fragment() {
 		v_alb = alb;
 		ALBEDO = vec3(1.0);
 		EMISSION = v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy);
+		if (dbg_mode == 1) { EMISSION = vec3(clamp(slope / 60.0, 0.0, 1.0), n.y, 0.0); ALBEDO = vec3(0.0); }
+		if (dbg_mode == 3) { EMISSION = alb; ALBEDO = vec3(0.0); }
+		if (dbg_mode == 4) { EMISSION = w3_ambient(alb, n, 1.0); ALBEDO = vec3(0.0); }
+		if (dbg_mode == 2) { EMISSION = (local ? vec3(0,0,1) : (wp.y < -270.0 ? vec3(1,0,0) : vec3(0,1,0))) * 0.5; ALBEDO = vec3(0.0); }
 		// the home's lanterns light their pools on the ground at night (the same lamps as the
 		// top-down world: render3d/lamps.gd)
 		if (local) {
 			EMISSION += w3_lamp_light(alb, wp, n, cell, 1.0) * v_air_keep(wp, eye, FRAGCOORD.xy);
 		}
 	}
-	// at night the villages' streets glow warm between their lit windows (the drained ones do not)
-	if (w3_night > 0.3 && v_town > 0.05) {
-		float t = floor(min(v_town * 1.6, 1.0) * 3.0 + 0.5 + (w3_hash(v_dir_cell(wp, eye) * 0.9) - 0.5) * 0.6) / 3.0;
-		EMISSION += vec3(1.0, 0.5, 0.16) * 0.13 * t * w3_night * (1.0 - step(0.9, v_drain(xz, wp.y)));
+	// at night the villages' streets glow warm between their lit windows (the drained ones do not);
+	// in the city the streets, the shop fronts and the cars' lights join the windows into one carpet
+	// of light (round 4, lead: "the city's lights must run together at night"), with points brighter
+	// here and there; they come on with the dusk
+	// (the city's own footprint, as vista3d.gd _build_city lays it out round its heart)
+	vec2 dc = xz - city_c.xy;
+	float c_in = 1.0 - smoothstep(0.8, 1.0, length(dc) / (640.0 + 160.0 * sin(atan(dc.y, dc.x) * 3.0 + 1.3)));
+	if (water) c_in = 0.0;
+	if (city_lights > 0.05 && max(v_town, c_in) > 0.05 && !local && wp.y < -200.0) {
+		float drained = 1.0 - step(0.9, v_drain(xz, wp.y));
+		vec2 pc = v_dir_cell(wp, eye);
+		float c = c_in;
+		float t = max(min(v_town * 1.6, 1.0), c * 0.9) * (0.75 + 0.5 * w3_hash(pc * 0.9));
+		vec3 warm = vec3(1.0, 0.52, 0.18);
+		EMISSION += warm * (0.13 + 0.22 * c) * t * city_lights * drained;
+		float pt = w3_hash(pc * 1.37 + 4.1);
+		if (pt > 1.0 - (0.08 + 0.3 * c) * max(min(v_town * 2.0, 1.0), c) * city_lights) {
+			EMISSION += mix(warm, vec3(0.85, 0.92, 1.0), step(0.5, fract(pt * 13.0))) * (0.6 + 1.4 * c) * drained;
+		}
 	}
 	// (the 遠化's edge, a line of light where the white meets the land, is drawn by vista_post)
 }

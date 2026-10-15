@@ -10,7 +10,8 @@
 shader_type sky;
 
 uniform vec3 zenith : source_color = vec3(0.3, 0.45, 0.75);   // linear
-uniform vec3 horizon : source_color = vec3(0.7, 0.76, 0.82);
+uniform vec3 horizon : source_color = vec3(0.7, 0.76, 0.82);       // toward the sun
+uniform vec3 horizon_away : source_color = vec3(0.7, 0.76, 0.82);  // away from it (round 4: cooler; rose at dusk)
 uniform vec3 mist_col : source_color = vec3(0.8, 0.8, 0.84);
 uniform vec3 sun_dir = vec3(0.0, 0.5, -0.8);
 uniform vec3 sun_col : source_color = vec3(1.0, 0.9, 0.7);
@@ -58,9 +59,13 @@ void sky() {
 	// the gradient, continuous: the pale humid horizon opening into the clear blue overhead
 	float t = clamp(el / 1.1, 0.0, 1.0);
 	t = pow(t, 0.55);
-	vec3 col = mix(horizon, zenith, t);
-	// the sun's glow: a soft wide halo and a brighter core around the disc
 	vec3 s = normalize(sun_dir);
+	// (the horizon warm toward the sun, cooler away from it: the far land's air takes the same,
+	// vista_common v_haze)
+	float tw = dot(normalize(vec2(d.x, d.z) + 1e-4), normalize(vec2(s.x, s.z) + 1e-4));
+	vec3 hz = mix(horizon_away, horizon, smoothstep(-0.6, 0.8, tw));
+	vec3 col = mix(hz, zenith, t);
+	// the sun's glow: a soft wide halo and a brighter core around the disc
 	float cs = dot(d, s);
 	float glow = smoothstep(0.86, 1.0, cs) * (1.0 - night * 0.7);
 	float halo = pow(clamp(cs * 0.5 + 0.5, 0.0, 1.0), 6.0) * (1.0 - night * 0.8);

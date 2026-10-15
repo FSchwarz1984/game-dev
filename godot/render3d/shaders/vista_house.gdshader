@@ -9,8 +9,15 @@
 // the side away from the sun in shade; at night most windows lit, warm or fluorescent), factory
 // chimneys (red and white bands at the top, a blinking red light at night), and long halls (the
 // station, the factories' saw-tooth sheds).
+// Round 4, second pass (lead: "the city too small and faint: it must read at once as prosperous and
+// modern"): high-rises round the station (kind 4: a glass curtain wall that holds the sky by day,
+// lighter toward the top, mullions, its crown; at night its floors lit and a red light on top),
+// blocks up to 48 px tall, panes that throw the sun back here and there by day (glints that move on
+// as the sun moves), and the lights coming on with the dusk, window by window (city_lights: 0 day ..
+// 1 night; vista3d.gd), so the dusk already has the first windows lit and the night a carpet.
 // Instance: origin = the foot; INSTANCE_CUSTOM = (width m, depth m, height m, seed 0..1);
-// COLOR = the roof's colour (sRGB); COLOR.a = kind: 1 house, 0.75 block, 0.5 chimney, 0.25 hall.
+// COLOR = the roof's colour (sRGB); COLOR.a = kind: 1 house, 0.9 high-rise, 0.75 block, 0.5 chimney,
+// 0.25 hall.
 shader_type spatial;
 render_mode world_vertex_coords, unshaded, cull_disabled, fog_disabled, shadows_disabled;
 #include "res://render3d/shaders/vista_common.gdshaderinc"
@@ -37,12 +44,17 @@ void vertex() {
 	float wpx = clamp(floor(max(c.x, c.y) * ppm * 0.9 + 0.5), 1.0, 9.0);
 	float rpx = clamp(floor(c.z * 0.55 * ppm + 0.5), 1.0, 4.0);
 	float hpx = clamp(floor(c.z * 0.45 * ppm + 0.35), 0.0, 3.0);
-	int kind = COLOR.a > 0.9 ? 0 : (COLOR.a > 0.6 ? 1 : (COLOR.a > 0.35 ? 2 : 3));
+	int kind = COLOR.a > 0.95 ? 0 : (COLOR.a > 0.85 ? 4 : (COLOR.a > 0.6 ? 1 : (COLOR.a > 0.35 ? 2 : 3)));
 	if (kind == 1) {
 		// a block: a flat roof row over storeys of facade
 		wpx = clamp(floor(max(c.x, c.y) * ppm * 0.85 + 0.5), 1.0, 16.0);
 		rpx = 1.0;
-		hpx = clamp(floor(c.z * ppm + 0.5), 1.0, 30.0);
+		hpx = clamp(floor(c.z * ppm + 0.5), 1.0, 48.0);
+	} else if (kind == 4) {
+		// a high-rise: never under two pixels wide (it must read as a tower, not a post)
+		wpx = clamp(floor(max(c.x, c.y) * ppm * 0.85 + 0.5), 2.0, 16.0);
+		rpx = 1.0;
+		hpx = clamp(floor(c.z * ppm + 0.5), 3.0, 72.0);
 	} else if (kind == 2) {
 		// a chimney: one or two pixels wide, tall
 		wpx = c.x * ppm > 1.4 ? 2.0 : 1.0;
@@ -74,8 +86,8 @@ void vertex() {
 
 void fragment() {
 	if (v_cus.x < 0.0) {
-		// a street lamp: only its light, at night (a single warm pixel)
-		if (night < 0.3 || v_drain(v_wp.xz, v_wp.y) > 0.9) discard;
+		// a street lamp: only its light, at night (a single warm pixel), lit with the dusk
+		if (city_lights < 0.15 + 0.5 * v_cus.w || v_drain(v_wp.xz, v_wp.y) > 0.9) discard;
 		ALBEDO = w3_srgb_to_linear(window_col) * 3.4;
 	} else {
 	vec2 q = floor(v_px);
@@ -93,6 +105,12 @@ void fragment() {
 		vec3 lit = ambient_col + light_col * 0.55 * day * side;
 		bool lamp = false;
 		vec3 lamp_c = w3_srgb_to_linear(window_col);
+		// a pane that throws the sun back (by day, on the sunny half, now and then; the set moves on
+		// as the sun moves)
+		float sun_step = floor(atan(sd.x, sd.z) * 18.0);
+		float gl = w3_hash(vec2(v_cus.w * 733.0 + q.x * 1.7, row * 2.3 + sun_step));
+		// (the sun's own colour, a little over 1: a glint is the sun itself, it may bloom)
+		vec3 glint = w3_sun / max(max(w3_sun.r, w3_sun.g), 0.01) * 1.3;
 		if (v_kind == 1) {
 			if (row < v_roof) {
 				// flat roofs: pale concrete on some, dark tar on others
@@ -102,18 +120,41 @@ void fragment() {
 				// storeys: a row of windows on every other pixel row, a pane on every other column
 				bool pane = mod(row - v_roof, 2.0) < 1.0 && (v_size.x < 2.5 || mod(q.x, 2.0) < 1.0);
 				col = base * lit;
-				if (pane) col = mix(col, w3_srgb_to_linear(vec3(0.34, 0.42, 0.52)) * lit, 0.55);
-				// at night most panes lit: homes warm, offices a cooler white
+				// (the glass holds the sky)
+				if (pane) col = mix(col, mix(w3_srgb_to_linear(vec3(0.34, 0.42, 0.52)) * lit, haze_col * 0.9, 0.3), 0.55);
+				if (pane && sunny && day > 0.2 && gl > 0.95) col = glint;
+				// at night most panes lit: homes warm, offices a cooler white; they come on with the dusk
 				float h = w3_hash(vec2(v_cus.w * 911.0 + q.x * 3.1, row * 1.7));
-				lamp = night > 0.3 && pane && h > 0.38 && !dark_drain;
+				lamp = pane && h > 1.0 - 0.62 * city_lights && !dark_drain;
 				if (fract(v_cus.w * 5.3) > 0.55) lamp_c = w3_srgb_to_linear(vec3(0.86, 0.92, 1.0));
+			}
+		} else if (v_kind == 4) {
+			// a high-rise: its crown (a band of concrete, a red light on top at night), then the
+			// curtain wall: glass holding the sky, lighter toward the top, the sunny half lighter,
+			// mullions on every other column, a floor line every third row
+			if (row < v_roof) {
+				col = base * 1.08 * (ambient_col + light_col * 0.7 * day);
+				lamp = city_lights > 0.4 && q.x == floor(v_size.x * 0.5) && fract(w3_time * 0.5 + v_cus.w * 3.0) < 0.5 && !dark_drain;
+				lamp_c = w3_srgb_to_linear(vec3(1.0, 0.25, 0.18));
+			} else {
+				float up = 1.0 - (row - v_roof) / max(v_size.y - v_roof, 1.0);
+				vec3 glass = mix(w3_srgb_to_linear(vec3(0.30, 0.38, 0.48)), haze_col, 0.25 + 0.4 * up);
+				col = mix(base * lit, glass * mix(0.85, 1.0, sunny ? 1.0 : 0.0) * (0.75 + 0.45 * day), 0.7);
+				bool mullion = v_size.x > 2.5 && mod(q.x, 2.0) > 0.5;
+				bool floor_line = mod(row - v_roof, 3.0) > 1.5;
+				if (mullion || floor_line) col *= 0.82;
+				if (!mullion && sunny && day > 0.2 && gl > 0.88) col = glint;
+				// (lit by floors and by offices along them, not one pane in two: runs of three columns)
+				float h = w3_hash(vec2(v_cus.w * 577.0 + floor(q.x / 3.0) * 2.3, row * 1.3));
+				lamp = !floor_line && h > 1.0 - 0.72 * city_lights && !dark_drain;
+				lamp_c = w3_srgb_to_linear(h > 0.8 ? vec3(1.0, 0.86, 0.6) : vec3(0.84, 0.92, 1.0));
 			}
 		} else if (v_kind == 2) {
 			// bands of red and white at the top, the stack below
 			bool band = row < 4.0 && mod(row, 2.0) < 1.0;
 			col = (band ? w3_srgb_to_linear(vec3(0.72, 0.28, 0.22)) : base) * lit;
 			// the aviation light at the top, blinking
-			lamp = night > 0.3 && row < 0.5 && fract(w3_time * 0.6 + v_cus.w * 3.0) < 0.5 && !dark_drain;
+			lamp = city_lights > 0.4 && row < 0.5 && fract(w3_time * 0.6 + v_cus.w * 3.0) < 0.5 && !dark_drain;
 			lamp_c = w3_srgb_to_linear(vec3(1.0, 0.25, 0.18));
 		} else {
 			if (row < v_roof) {
@@ -123,7 +164,7 @@ void fragment() {
 			} else {
 				col = w3_srgb_to_linear(vec3(0.74, 0.72, 0.68)) * lit;
 				float h = w3_hash(vec2(v_cus.w * 617.0, q.x));
-				lamp = night > 0.3 && h > 0.35 && !dark_drain;
+				lamp = h > 1.0 - 0.65 * city_lights && !dark_drain;
 				lamp_c = w3_srgb_to_linear(vec3(0.92, 0.95, 1.0));
 			}
 		}
@@ -146,7 +187,7 @@ void fragment() {
 	// windows at night: most houses lit (a pane or two; a far house that is a single pixel shows
 	// only its light)
 	// (past the 遠化 front a house has lost its light with everything else)
-	bool lit_house = night > 0.3 && fract(v_cus.w * 7.31) > 0.12 && v_drain(v_wp.xz, v_wp.y) < 0.9;
+	bool lit_house = fract(v_cus.w * 7.31) > 1.0 - 0.88 * city_lights && v_drain(v_wp.xz, v_wp.y) < 0.9;
 	float h = w3_hash(vec2(v_cus.w * 913.0, q.x));
 	bool win = lit_house && ((row >= v_roof && (h > 0.45 || v_size.x < 2.5)) || (v_size.y < 1.5 && h > 0.3));
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);

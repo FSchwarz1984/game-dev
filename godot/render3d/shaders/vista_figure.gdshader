@@ -29,20 +29,39 @@ void vertex() {
 
 uniform float rim_side = 1.0;           // +1: the sun is to the screen's right, -1: to its left
 uniform vec3 rim_col = vec3(1.0, 0.92, 0.78);
+// her 3D model's picture (vista3d.gd _build_fig3d): lit already by her own material in her own
+// world (the light of the hour, her brightness floor, her rims); here only her outline, a pixel wide,
+// a dark tone of the colour beside it (the top-down world draws it in its post pass), and the air
+uniform bool baked = false;
 
 void fragment() {
 	ivec2 tp = ivec2(frame_rect.xy + floor(v_px));
 	vec4 t = texelFetch(sheet, tp, 0);
-	if (t.a < 0.5) discard;
-	vec3 col = t.rgb * light_col;
-	// the protection: never darker than a floor of her own colour, a light rim on the sun's side of
-	// her outline (the edge pixel whose neighbour toward the light is empty), no dither on her
-	col = max(col, t.rgb * 0.42);
-	ivec2 side = ivec2(int(rim_side), 0);
-	ivec2 q = tp + side;
-	bool inside = q.x >= int(frame_rect.x) && q.x < int(frame_rect.x + frame_rect.z);
-	if (!inside || texelFetch(sheet, q, 0).a < 0.5) {
-		col = mix(col, max(col, t.rgb) * rim_col * 1.25, 0.6);
+	vec3 col = t.rgb;
+	if (baked) {
+		if (t.a < 0.5) {
+			vec4 nb = vec4(0.0);
+			for (int k = 0; k < 4; k++) {
+				ivec2 o = k == 0 ? ivec2(1, 0) : (k == 1 ? ivec2(-1, 0) : (k == 2 ? ivec2(0, 1) : ivec2(0, -1)));
+				ivec2 qp = clamp(tp + o, ivec2(frame_rect.xy), ivec2(frame_rect.xy + frame_rect.zw) - 1);
+				vec4 tn = texelFetch(sheet, qp, 0);
+				if (tn.a >= 0.5 && nb.a < 0.5) nb = tn;
+			}
+			if (nb.a < 0.5) discard;
+			col = nb.rgb * vec3(0.32, 0.28, 0.3);
+		}
+	} else {
+		if (t.a < 0.5) discard;
+		col = t.rgb * light_col;
+		// the protection: never darker than a floor of her own colour, a light rim on the sun's side of
+		// her outline (the edge pixel whose neighbour toward the light is empty), no dither on her
+		col = max(col, t.rgb * 0.42);
+		ivec2 side = ivec2(int(rim_side), 0);
+		ivec2 q = tp + side;
+		bool inside = q.x >= int(frame_rect.x) && q.x < int(frame_rect.x + frame_rect.z);
+		if (!inside || texelFetch(sheet, q, 0).a < 0.5) {
+			col = mix(col, max(col, t.rgb) * rim_col * 1.25, 0.6);
+		}
 	}
 	ALBEDO = v_air(col, v_wp, eye, FRAGCOORD.xy);
 }

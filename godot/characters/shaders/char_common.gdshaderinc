@@ -26,12 +26,18 @@ const int CM_TIE = 9;
 // on the pixel lattice.
 instance uniform vec3 c3_anchor;
 instance uniform float c3_base_y;
+// 1: upright, no lean and no snap: the figure is drawn by a camera of its own, not the top-down one
+// (the view from the lookout bakes her through an orthographic camera behind her: world3d/vista3d.gd)
+instance uniform float c3_no_lean;
 
 vec3 c3_leaned_anchor() {
 	return vec3(c3_anchor.x, c3_anchor.y, c3_anchor.z - w3_view.w * (c3_anchor.y - c3_base_y));
 }
 
 vec3 c3_lean_snap(vec3 wp) {
+	if (c3_no_lean > 0.5) {
+		return wp;
+	}
 	wp = w3_lean(wp, c3_base_y, 1.0);
 	return wp + w3_snap(c3_leaned_anchor());
 }

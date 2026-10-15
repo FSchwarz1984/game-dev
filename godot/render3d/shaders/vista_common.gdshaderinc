@@ -1,10 +1,12 @@
 // vista_common.gdshaderinc — shared by the shaders of the view from the lookout (W3Vista,
 // godot/world3d/vista3d.gd): a perspective camera in its own world, drawn at native resolution in
 // the same pixel-art language as the top-down world. Height maps, aerial perspective (haze toward
-// the horizon colour in whole steps, the seams scattered on cells fixed to the world), the sea of
-// clouds over the lowland (its billows, and the shade they cast on the plain), and the 遠化 beyond
-// the region's ring: the land there pales with distance and, past a front that wanders round the
-// region a few kilometres out, lies flat and white, faintly luminous, with a bright edge.
+// the horizon colour, continuous), the sea of clouds over the lowland (where its banks may lie, how
+// they creep, the shade they cast on the plain), and the 遠化 beyond the region's ring: the land
+// there sinks into the air with distance, faster than the haze alone would take it, and past a front
+// that wanders round the region a few kilometres out it is far land in the air's blue-grey, low in
+// contrast, layer behind layer (round 4: no longer a flat white with a bright edge, which read as a
+// beach).
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
 uniform sampler2D mid_tex : filter_nearest, repeat_disable;   // RG u16 height, B forest, A water
@@ -15,7 +17,9 @@ uniform vec2 mid_h = vec2(-480.0, 960.0);                     // min, range
 uniform vec4 far_frame = vec4(-16000.0, -16000.0, 32.0, 1001.0);
 uniform vec2 far_h = vec2(-480.0, 2400.0);
 uniform vec4 mist_ellipse = vec4(-50.0, 100.0, 430.0, 370.0);  // centre x, z, radii x, z
-uniform vec3 haze_col : source_color = vec3(0.7, 0.75, 0.8);   // linear; the horizon of the sky
+uniform vec3 haze_col : source_color = vec3(0.7, 0.75, 0.8);   // linear; the horizon of the sky (toward the sun)
+uniform vec3 haze_away : source_color = vec3(0.7, 0.75, 0.8);  // the horizon away from the sun (cooler; at dusk rose)
+uniform vec3 haze_sun : source_color = vec3(1.0, 0.92, 0.75);  // the sun's glow in the air round it (vista_sky's)
 uniform vec3 mist_col : source_color = vec3(0.8, 0.8, 0.84);   // linear; the 遠化's pale land
 uniform vec3 far_white = vec3(0.66, 0.635, 0.59);              // linear; past the front (its edge glows brighter)
 uniform float haze_dist = 2200.0;                              // metres for 63 % haze
@@ -23,6 +27,8 @@ uniform float mist_max = 1.0;               // the 遠化's strength (1: as draw
 uniform sampler2D plain_tex : filter_linear, repeat_disable;   // R river m, G road m*2, B village, A rail m*2
 uniform vec4 plain_frame = vec4(-6000.0, 400.0, 8.0, 1501.0);  // x0, z0, cell, n
 uniform float cloud_time = 0.0;             // seconds (the clouds drift)
+uniform float city_lights = 0.0;            // the lights of the plain: 0 by day .. 1 at night (on with the dusk)
+uniform vec3 city_c = vec3(0.0, 2000.0, 900.0);   // the city: centre x, z, radius (m): its glow at night
 uniform float sea_base = -255.0;            // the sea of clouds' flat underside (m)
 uniform vec3 front_c = vec3(-50.0, 0.0, 4300.0);  // the 遠化 front: centre x, z, mean radius (m)
 uniform float v_ppr = 371.0;                // native pixels per radian
@@ -79,6 +85,14 @@ vec3 v_dir_of(vec2 px) {
 // angle (cells fixed to the map stretch into streaks where the land is seen at a grazing angle).
 vec2 v_dir_cell(vec3 wp, vec3 cam) {
 	return floor(v_px_of(wp, cam) + v_cam.zw + v_lat);
+}
+
+// a 4x4 ordered dither threshold (0..1) for a pixel cell
+float v_bayer(vec2 cell) {
+	ivec2 i = ivec2(mod(cell, 4.0));
+	int k = i.x + i.y * 4;
+	float m[16] = float[](0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 11.0, 1.0, 9.0, 15.0, 7.0, 13.0, 5.0);
+	return (m[k] + 0.5) / 16.0;
 }
 
 float v_u16(vec4 t, vec2 hr) {
@@ -139,78 +153,38 @@ float v_mist_e(vec2 xz) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// the sea of clouds: billows on three scales (big banks, the billows riding on them, small heads)
-// on jittered grids, thinned by a slow cover field into banks with gaps; only beyond the region's
-// ring, thinning out toward the 遠化 front (the far plain lies open, white)
+// the sea of clouds: banks of billows (vista_cloud.gdshader), laid out by vista3d.gd _build_mist in a
+// square domain round the region; they creep east with the wind, wrapping round the domain (far
+// beyond the front, where no bank has room). cloud_tex over the domain: R the banks' shade on the
+// land below as they lay at the start, G the room a bank has at a place (fixed to the land).
 
-// (composed for the lookout's view south: banks on either hand and near, a lane open down the middle
-// toward the plain's river and town, closing again before the 遠化 front)
-const vec2 V_LOOKOUT = vec2(-23.6, 42.4);
-uniform float cloud_thin = 0.08;             // round 4: more gaps between the banks (the plain shows through)
-float v_cover(vec2 p) {
-	vec2 q = p / 1400.0 + vec2(3.0 + cloud_time * 0.0004, 0.5 + cloud_time * 0.00015);
-	float c = w3_vnoise(q) * 0.62 + w3_vnoise(q * 2.7 + 5.0) * 0.38 - cloud_thin;
-	vec2 d = p - V_LOOKOUT;
-	float r = length(d);
-	float a = degrees(atan(d.x, -d.y));
-	float la = (abs(a) - 178.0) / 15.0;
-	float lane = exp(-la * la) * smoothstep(1300.0, 1900.0, r) * (1.0 - smoothstep(3500.0, 4100.0, r));
-	return smoothstep(0.32, 0.76, c) - 0.5 * lane;
+uniform sampler2D cloud_tex : filter_linear, repeat_disable;
+uniform vec4 cloud_box = vec4(-4950.0, -4900.0, 9800.0, 9800.0);   // x0, z0, width, depth (m)
+uniform vec2 cloud_wind = vec2(0.45, 0.0);                         // m/s
+
+// how far a bank (by its centre at the start) has crept by now: east with the wind, round the domain
+vec3 v_cloud_shift(vec2 bc) {
+	vec2 d = cloud_wind * cloud_time;
+	float x = cloud_box.x + mod(bc.x + d.x - cloud_box.x, cloud_box.z);
+	return vec3(x - bc.x, 0.0, d.y);
 }
-
-// where the sea may lie: 0 inside the ring .. 1, fading again toward the front
-float v_sea_room(vec2 p) {
-	float e = v_mist_e(p);
-	float r = length(p - front_c.xy);
-	return smoothstep(1.04, 1.4, e) * (1.0 - smoothstep(front_c.z * 0.55, front_c.z * 0.95, r));
+// the room a bank has at a place: 0 none (it dissolves) .. 1
+float v_cloud_room(vec2 p) {
+	vec2 uv = (p - cloud_box.xy) / cloud_box.zw;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return 0.0;
+	return textureLod(cloud_tex, uv, 0.0).g;
 }
-
-// the highest dome over p on a grid of cell s: (height m, gradient x, gradient z)
-vec3 v_domes(vec2 p, float s, float hmul, float th, float seed) {
-	vec2 c = floor(p / s);
-	vec3 best = vec3(0.0);
-	for (int j = -1; j <= 1; j++) {
-		for (int i = -1; i <= 1; i++) {
-			vec2 cc = c + vec2(float(i), float(j)) + seed;
-			vec2 ctr = (cc - seed + 0.2 + 0.6 * vec2(w3_hash(cc * 1.7 + 3.1), w3_hash(cc * 2.3 + 7.7))) * s;
-			float room = v_sea_room(ctr);
-			float rad = s * (0.36 + 0.26 * w3_hash(cc * 3.1 + 1.3)) * smoothstep(th, th + 0.12, v_cover(ctr) * (0.6 + 0.4 * room)) * step(0.05, room);
-			vec2 d = p - ctr;
-			float q = 1.0 - dot(d, d) / max(rad * rad, 1e-3);
-			if (q > 0.0) {
-				float h = sqrt(q) * rad * hmul;
-				if (h > best.x) {
-					best = vec3(h, -hmul * d / (rad * max(sqrt(q), 0.06)));
-				}
-			}
-		}
-	}
-	return best;
-}
-
-// the top of the sea over its base (m) and its slope; lod 0 near .. 1 far (the small heads go first)
-vec3 v_cloud_field(vec2 p, float lod) {
-	vec3 big = v_domes(p, 300.0, 0.38, 0.62, 0.0);
-	vec3 mid = v_domes(p + 37.0, 100.0, 0.52, 0.58, 11.0) * (1.0 - lod);
-	vec3 small = v_domes(p + 91.0, 34.0, 0.6, 0.3, 23.0) * (1.0 - smoothstep(0.0, 0.45, lod));
-	vec3 f = big;
-	if (big.x > 0.5) {
-		vec3 riding = big * 0.65 + mid;
-		if (riding.x > f.x) f = riding;
-		if (mid.x > 0.5) f += small * 0.45;
-	} else {
-		vec3 lone = mid * 0.7;
-		if (lone.x > f.x) f = lone;
-	}
-	return f;
-}
-
-// the shade of the big billows on the land below (0 open sky .. 1 under a bank)
+// the shade of the banks on the land below (0 open sky .. 1 under a bank)
 float v_cloud_shade(vec3 wp) {
 	vec3 sd = normalize(w3_sun_dir);
 	if (sd.y < 0.05) return 0.0;
 	vec2 p = wp.xz + sd.xz / sd.y * (sea_base + 40.0 - wp.y);
-	return step(0.5, v_domes(p, 300.0, 0.38, 0.62, 0.0).x);
+	// where that point of the sky lay at the start (the banks creep with the wind)
+	vec2 p0 = p - cloud_wind * cloud_time;
+	p0.x = cloud_box.x + mod(p0.x - cloud_box.x, cloud_box.z);
+	vec2 uv = (p0 - cloud_box.xy) / cloud_box.zw;
+	if (uv.y < 0.0 || uv.y > 1.0) return 0.0;
+	return textureLod(cloud_tex, uv, 0.0).r * v_cloud_room(p);
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -225,23 +199,22 @@ float v_front_r(vec2 xz) {
 	return front_c.z * (0.62 + 0.8 * w);
 }
 
-// 0 inside the ring; up to about 0.3 before the front; 1 past it
+// 0 inside the ring; up to about 0.3 before the front; past it rising to 1 over the next third of
+// the front's radius (round 4: continuous; high ground keeps more of itself, so the far ranges stand
+// out of the lowland's haze layer behind layer)
 float v_drain(vec2 xz, float y) {
 	float e = v_mist_e(xz);
 	if (e < 1.0) return 0.0;
 	float r = length(xz - front_c.xy);
 	float rf = v_front_r(xz);
-	// (the high ground keeps more of itself: far mountains stand out of the white)
-	float hk = 1.0 - 0.85 * smoothstep(-300.0, -60.0, y);
-	if (r > rf) {
-		// past the front the white takes the land up to a height that wanders from place to place:
-		// up one slope, short of the next, so its far side is no level line (a white that stopped
-		// at one height read as a lake filling the plain)
-		float top = -250.0 + 600.0 * w3_vnoise(xz / 2500.0 + 5.0);
-		return y < top ? 1.0 : min(hk, 0.55);
-	}
 	float f = r / rf;
-	return (0.03 + 0.3 * f * f) * hk;
+	// (the high ground keeps more of itself)
+	float hk = 1.0 - 0.85 * smoothstep(-300.0, -60.0, y);
+	// (round 4: before the front the 遠化 takes less than it did: the town on the plain must read as
+	// a living city, not a faded one)
+	float before = (0.02 + 0.16 * min(f * f, 1.0)) * hk;
+	float past = smoothstep(1.0, 1.3, f) * mix(1.0, 0.55, smoothstep(-250.0, 350.0, y));
+	return max(before, past);
 }
 
 // haze (air) and drain (遠化) amounts at a point. Round 4: continuous (the aerial perspective is a
@@ -252,44 +225,55 @@ vec2 v_air_k(vec3 wp, vec3 cam, vec2 frag) {
 	float thin = mix(1.0, 0.35, smoothstep(-100.0, 700.0, wp.y));
 	float h = 1.0 - exp(-d / haze_dist * thin);
 	float m = v_drain(wp.xz, wp.y) * mist_max;
-	return vec2(clamp(h, 0.0, 1.0), m > 0.99 ? 1.0 : clamp(m, 0.0, 1.0));
+	return vec2(clamp(h, 0.0, 1.0), clamp(m, 0.0, 1.0));
 }
-// the far land in the air (round 4, lead: "the beige band reads as a beach"): past the 遠化 front the
-// land sinks into the blue-grey of the distance, low in contrast, its drawing (ridges, woods, roofs)
-// a faint darker line. far_white is set from the hour's horizon (vista3d.gd): blue-grey by day.
+// the share of the air in what is seen at a point: the haze of the distance, and the 遠化 (the land
+// there has lost its nearness: it lies farther in the air than its distance alone would put it)
+float v_air_amount(vec2 k) {
+	return 1.0 - (1.0 - k.x) * (1.0 - 0.68 * k.y);
+}
+// the far land in the air (round 4, lead: "the beige band reads as a beach; make it aerial
+// perspective: farther, bluer and greyer, lower in contrast, the far mountains fading out layer by
+// layer"). The 遠化 drains the land's colour first (it keeps its lightness), then the air takes it
+// toward the horizon's colour; nothing is flat: the land's relief and its drawing stay in it, fainter
+// and fainter. (far_white is only the faint ink of the far ridges now: vista_post.)
 vec3 v_paper(float ink) {
 	return far_white * (1.0 - 0.12 * ink);
 }
-// haze and the 遠化 over a colour: farther, bluer and greyer and lower in contrast, layer on layer
+// the city's lights in the air round it at night: the haze over a lit city glows warm (linear)
+vec3 v_city_glow(vec3 wp) {
+	float d = length(wp.xz - city_c.xy) / (city_c.z * 1.7);
+	return vec3(1.0, 0.5, 0.2) * 0.05 * city_lights * exp(-d * d);
+}
+// the air's colour along a line of sight: the sky's horizon there (warm toward the sun, cooler away
+// from it, rose at dusk; the sun's own glow round it, as vista_sky draws them), so the far land
+// fades into the very sky behind it
+vec3 v_haze(vec3 wp, vec3 cam) {
+	vec3 d = normalize(wp - cam);
+	vec3 s = normalize(w3_sun_dir);
+	float toward = dot(normalize(d.xz + vec2(1e-4)), normalize(s.xz + vec2(1e-4)));
+	vec3 h = mix(haze_away, haze_col, smoothstep(-0.6, 0.8, toward));
+	float halo = pow(clamp(dot(d, s) * 0.5 + 0.5, 0.0, 1.0), 6.0) * (1.0 - w3_night * 0.8);
+	return mix(h, haze_sun, halo * 0.22) + v_city_glow(wp);
+}
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
 	vec2 k = v_air_k(wp, cam, frag);
-	float l0 = dot(col, vec3(0.299, 0.587, 0.114));
-	if (k.y >= 1.0) {
-		// past the front: the air's colour with the land's own lightness left in it, faintly (dark
-		// woods and roofs a little darker): far land in haze, not a flat sheet
-		// (col is the land's ambient light here: the sun is added later, and not past the front; so
-		// divided by the ambient it is about the land's own lightness, at every hour)
-		float la = max(dot(w3_sky + w3_ground, vec3(0.299, 0.587, 0.114)), 0.01);
-		return v_paper(1.0 - smoothstep(0.02, 0.09, l0 / la));
-	}
-	col = mix(col, haze_col, k.x);
 	float l = dot(col, vec3(0.299, 0.587, 0.114));
-	// toward the front the land greys and blues into the air (not toward a warm white)
-	vec3 pale = mix(vec3(l), col, 0.5) * 0.45 + mix(haze_col, far_white, 0.5) * 0.55;
-	return mix(col, pale, clamp(k.y * 1.3, 0.0, 1.0));
+	col = mix(col, vec3(l), 0.6 * k.y);
+	return mix(col, v_haze(wp, cam), v_air_amount(k));
 }
 // the clouds and the sky: haze only (weather is not drained)
 vec3 v_air_only(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
-	return mix(col, haze_col, v_air_k(wp, cam, frag).x);
+	return mix(col, v_haze(wp, cam), v_air_k(wp, cam, frag).x);
 }
 // what is left of a light added later (in light()) after the same air
 float v_air_keep(vec3 wp, vec3 cam, vec2 frag) {
-	vec2 k = v_air_k(wp, cam, frag);
-	return k.y >= 1.0 ? 0.0 : (1.0 - k.x) * (1.0 - clamp(k.y * 1.4, 0.0, 0.85));
+	return 1.0 - v_air_amount(v_air_k(wp, cam, frag));
 }
-// past the 遠化 front (the flat white): the things drawn on it give their own ink
+// (round 3's flat white past the front, where the things drawn on it gave their own ink: gone in
+// round 4; kept as a name so the callers read the same)
 bool v_past(vec3 wp, vec3 cam, vec2 frag) {
-	return v_air_k(wp, cam, frag).y >= 1.0;
+	return false;
 }
 
 // the toon sun of the vista: three bands, the painted shade of pixel_toon (w3_ambient); the band

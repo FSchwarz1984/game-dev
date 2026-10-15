@@ -10,13 +10,15 @@ extends Node
 ##     shoulder, the 裏見之瀑 falling into the canyon to the west (its mist rises out of it), the lower
 ##     layer to the south (溜池, the terraces and the farm), the old road going down to the plain;
 ##   * the plain far below: fields, the river, villages and a town (vista_house), the railway on its
-##     viaduct and iron bridge (vista_line); a sea of clouds over it in banks with a lane open down
-##     the middle (vista_cloud); past a front a few kilometres out the 遠化 has drained the land flat
-##     and white (vista_common v_air); mountains on the horizon;
+##     viaduct and iron bridge (vista_line) with trains on it, the city round the station (blocks,
+##     high-rises, its lights from the dusk on); banks of cumulus over the lowland with a lane open
+##     down the middle toward the town (vista_cloud); the far land sinking into the air, faster past
+##     the 遠化's front a few kilometres out (vista_common v_air); mountains on the horizon;
 ##   * trees, the great camphor, the hut, the shrine and the graves as impostors baked from the real
 ##     assets (vista_impostor), the lookout's granite rocks, the kiln, the temple, the bridges, the
 ##     tower and its red light, the home's lanterns at night;
 ##   * smoke from the kiln, steam from the hot spring, the waterfall's mist (vista_puff);
+##   * her (the 3D model, drawn through a camera of its own: _build_fig3d) and さぢ (a sprite);
 ##   * sky, sun, moon, stars and painted clouds (vista_sky).
 ## The projection is equirectangular, not perspective (vista_common.gdshaderinc v_project): a screen
 ## pixel is a fixed step of azimuth and elevation, so turning her head by whole pixels moves the whole
@@ -190,6 +192,8 @@ func _marks_setup(pm: ShaderMaterial) -> void:
 	pm.set_shader_parameter("local_bounds", Vector4(o.x, o.y, o.x + (terrain.nx - 1) * terrain.cell, o.y + (terrain.nz - 1) * terrain.cell))
 	if _vdebug.has("nomarks"):
 		pm.set_shader_parameter("marks", false)
+	if _vdebug.has("nooutline"):
+		pm.set_shader_parameter("strength", 0.0)
 
 
 var post_mat: ShaderMaterial
@@ -211,6 +215,7 @@ func build() -> void:
 		return
 	built = true
 	var t0 := Time.get_ticks_msec()
+	_cloud_layout()
 	_build_land()
 	_build_mist()
 	_build_impostors()
@@ -220,6 +225,7 @@ func build() -> void:
 	_build_plain()
 	_build_city()
 	_build_lines()
+	_build_trains()
 	_build_temple()
 	_build_figures()
 	_build_puffs()
@@ -249,6 +255,10 @@ func _common(m: ShaderMaterial) -> void:
 		m.set_shader_parameter("v_ppr", px_per_rad())
 	m.set_shader_parameter("front_c", FRONT)
 	m.set_shader_parameter("eye", eye)
+	if cloud_tex:
+		m.set_shader_parameter("cloud_tex", cloud_tex)
+		m.set_shader_parameter("cloud_box", cloud_box)
+		m.set_shader_parameter("cloud_wind", CLOUD_WIND)
 	mats.append(m)
 
 
@@ -279,6 +289,14 @@ func _mat(shader: String) -> ShaderMaterial:
 
 func _build_land() -> void:
 	var mat := _mat("vista_ground")
+	if _vdebug.has("slope"):
+		mat.set_shader_parameter("dbg_mode", 1)
+	if _vdebug.has("plainmap"):
+		mat.set_shader_parameter("dbg_mode", 2)
+	if _vdebug.has("albedo"):
+		mat.set_shader_parameter("dbg_mode", 3)
+	if _vdebug.has("ambient"):
+		mat.set_shader_parameter("dbg_mode", 4)
 	var tm: ShaderMaterial = terrain.terrain_mat
 	for k in ["m0", "m1", "m2", "m3", "palette"]:
 		mat.set_shader_parameter(k, tm.get_shader_parameter(k))
@@ -415,44 +433,209 @@ var _mat_img: Image
 
 
 # ------------------------------------------------------------------------------------------------
-# the sea of clouds over the lowland beyond the region's ring
+# the sea of clouds over the lowland beyond the region's ring (round 4, second pass: banks of
+# billows, vista_cloud.gdshader; the lead found the lifted height field of round 4 read as rocks)
 
 var sea_mat: ShaderMaterial
-const SEA_Y := -255.0                 # the sea of clouds' underside (the plain lies at about -340)
+const SEA_Y := -255.0                 # the banks' soft base (the plain lies at about -340)
 const FRONT := Vector3(-50.0, 0.0, 5000.0)   # the 遠化 front: centre x, z, mean radius (m)
+const CLOUD_CELL := 340.0             # at most one big bank to a cell of this size
+const CLOUD_SMALL := 200.0            # and one small cumulus
+const CLOUD_TEX_CELL := 70.0          # m per texel of the room and shade map
+const CLOUD_WIND := Vector2(0.45, 0.0)  # m/s: the banks creep east (round their domain)
+var cloud_box := Vector4.ZERO         # x0, z0, width, depth of the banks' domain (m)
+var cloud_tex: ImageTexture
+var cloud_banks: Array = []           # [centre at the start, its billows' instance rows (PackedFloat32Array)]
+var cloud_mm := MultiMesh.new()
+var cloud_inst: MultiMeshInstance3D
+var _cloud_sorted_t := -1e9
+var _cloud_sorted_eye := Vector3.INF
+
+
+## Where the banks lie and the room they have (before the land is built: the ground's material
+## reads the shade of the banks).
+func _cloud_layout() -> void:
+	var half := FRONT.z * 0.98
+	cloud_box = Vector4(FRONT.x - half, FRONT.y - half, half * 2.0, half * 2.0)
+	var crng := RandomNumberGenerator.new()
+	crng.seed = 4711
+	var fn := FastNoiseLite.new()
+	fn.seed = 23
+	fn.noise_type = FastNoiseLite.TYPE_SIMPLEX_SMOOTH
+	fn.frequency = 1.0 / 1700.0
+	fn.fractal_octaves = 2
+	# big banks where the cover is thick, small cumulus round their edges, the land open between
+	var n := int(ceil(cloud_box.z / CLOUD_CELL))
+	for j in n:
+		for i in n:
+			var c := Vector2(cloud_box.x + (i + crng.randf_range(0.2, 0.8)) * CLOUD_CELL, cloud_box.y + (j + crng.randf_range(0.2, 0.8)) * CLOUD_CELL)
+			var cov := fn.get_noise_2d(c.x, c.y) * 0.5 + 0.5
+			var k := crng.randf()
+			var sz := crng.randf_range(0.36, 0.52)
+			if cov > 0.42 and k > 0.06 and _cloud_room_at(c) > 0.1 + 0.3 * crng.randf():
+				_cloud_bank(c, CLOUD_CELL * sz * lerpf(0.9, 1.45, smoothstep(0.42, 0.75, cov)), crng, 1.0)
+	var ns := int(ceil(cloud_box.z / CLOUD_SMALL))
+	for j in ns:
+		for i in ns:
+			var c := Vector2(cloud_box.x + (i + crng.randf_range(0.15, 0.85)) * CLOUD_SMALL, cloud_box.y + (j + crng.randf_range(0.15, 0.85)) * CLOUD_SMALL)
+			var cov := fn.get_noise_2d(c.x, c.y) * 0.5 + 0.5
+			var k := crng.randf()
+			var sz := crng.randf_range(0.2, 0.36)
+			if cov > 0.3 and cov < 0.5 and k < 0.3 and _cloud_room_at(c) > 0.1:
+				_cloud_bank(c, CLOUD_SMALL * sz, crng, 1.0)
+	# the map: G the room (fixed to the land), R the banks' shade as they lie at the start
+	var tw := int(ceil(cloud_box.z / CLOUD_TEX_CELL))
+	var th := int(ceil(cloud_box.w / CLOUD_TEX_CELL))
+	var shade := PackedFloat32Array()
+	shade.resize(tw * th)
+	for b in cloud_banks:
+		var bc: Vector3 = b[0]
+		var rr: float = float(b[1]) * 0.85
+		var k: float = b[5]
+		var i0 := maxi(0, int((bc.x - rr - cloud_box.x) / CLOUD_TEX_CELL))
+		var i1 := mini(tw - 1, int((bc.x + rr - cloud_box.x) / CLOUD_TEX_CELL))
+		var j0 := maxi(0, int((bc.z - rr - cloud_box.y) / CLOUD_TEX_CELL))
+		var j1 := mini(th - 1, int((bc.z + rr - cloud_box.y) / CLOUD_TEX_CELL))
+		for j in range(j0, j1 + 1):
+			for i in range(i0, i1 + 1):
+				var p := Vector2(cloud_box.x + (i + 0.5) * CLOUD_TEX_CELL, cloud_box.y + (j + 0.5) * CLOUD_TEX_CELL)
+				var v := (1.0 - smoothstep(0.55, 1.0, p.distance_to(Vector2(bc.x, bc.z)) / rr)) * k
+				shade[j * tw + i] = maxf(shade[j * tw + i], v)
+	var img := Image.create(tw, th, false, Image.FORMAT_RG8)
+	for j in th:
+		for i in tw:
+			var p := Vector2(cloud_box.x + (i + 0.5) * CLOUD_TEX_CELL, cloud_box.y + (j + 0.5) * CLOUD_TEX_CELL)
+			img.set_pixel(i, j, Color(shade[j * tw + i], _cloud_room_at(p), 0.0))
+	cloud_tex = ImageTexture.create_from_image(img)
+	if _vdebug.has("cloudmap"):
+		var dbg := img.duplicate() as Image
+		dbg.convert(Image.FORMAT_RGB8)
+		for b in cloud_banks:
+			var bc: Vector3 = b[0]
+			var i := int((bc.x - cloud_box.x) / CLOUD_TEX_CELL)
+			var j := int((bc.z - cloud_box.y) / CLOUD_TEX_CELL)
+			if i >= 0 and j >= 0 and i < tw and j < th:
+				dbg.set_pixel(i, j, Color(1, 1, 1))
+		var li := int((feet.x - cloud_box.x) / CLOUD_TEX_CELL)
+		var lj := int((feet.z - cloud_box.y) / CLOUD_TEX_CELL)
+		dbg.set_pixel(li, lj, Color(0, 0, 1))
+		dbg.save_png("user://cloudmap.png")
+		print("VISTA cloudmap ", OS.get_user_data_dir())
+
+
+## The room a bank has at a place: none near the region's ring, over the lane open toward the town
+## (the lookout's view down the middle to the river and the town), over ground higher than the
+## banks' middle (a bank lies against a slope, never over a hill), and less and less toward the
+## 遠化 front.
+func _cloud_room_at(p: Vector2) -> float:
+	var me: Dictionary = data["mist"]
+	var e := ((p - Vector2(float(me["cx"]), float(me["cz"]))) / Vector2(float(me["rx"]), float(me["rz"]))).length()
+	var rf := p.distance_to(Vector2(FRONT.x, FRONT.y))
+	var d := p - Vector2(feet.x, feet.z)
+	var rl := d.length()
+	var a := rad_to_deg(atan2(d.x, -d.y))
+	# (the lane: open full down the middle over the town, its sides closing over a few degrees)
+	var la := (absf(a) - 176.0) / 21.0
+	var lane := exp(-la * la * la * la) * smoothstep(450.0, 900.0, rl) * (1.0 - smoothstep(3900.0, 4600.0, rl))
+	var room := smoothstep(1.04, 1.4, e) * (1.0 - smoothstep(FRONT.z * 0.62, FRONT.z * 0.95, rf)) * (1.0 - lane)
+	if room <= 0.0:
+		return 0.0
+	# (a bank may lie against a slope, its billows fading out before it: vista_cloud)
+	return room * smoothstep(-40.0, 10.0, SEA_Y + 20.0 - ground_h(p.x, p.y))
+
+
+## One bank: a body of big billows along its base over its footprint (longer across the wind), a
+## crown heaped toward its middle up to its top, a few heads breaking the top, and thin low fringes
+## round its edge. Its billows' instance rows, nearest the eye last.
+func _cloud_bank(c: Vector2, big_r: float, crng: RandomNumberGenerator, cover: float) -> void:
+	var h := big_r * crng.randf_range(0.34, 0.58)
+	var base := SEA_Y + crng.randf_range(-10.0, 12.0)
+	var bc := Vector3(c.x, base + h * 0.35, c.y)
+	var rows: Array = []   # [centre, radius, cover]
+	for k in 4 + int(big_r / 22.0):
+		var a := crng.randf() * TAU
+		var d := sqrt(crng.randf()) * big_r * 0.66
+		var rb := big_r * crng.randf_range(0.24, 0.36)
+		rows.append([Vector3(c.x + cos(a) * d * 1.2, base + rb * 0.5, c.y + sin(a) * d * 0.85), rb, cover])
+	for k in 2 + int(big_r / 45.0):
+		var a := crng.randf() * TAU
+		var d := sqrt(crng.randf()) * big_r * 0.4
+		var ru := big_r * crng.randf_range(0.22, 0.32)
+		var top := base + h * sqrt(maxf(0.0, 1.0 - (d / big_r) * (d / big_r)))
+		rows.append([Vector3(c.x + cos(a) * d, top - ru * 0.85, c.y + sin(a) * d), ru, cover])
+	for k in crng.randi_range(1, 2) + int(big_r / 90.0):
+		var a := crng.randf() * TAU
+		var d := crng.randf() * big_r * 0.32
+		var rh := big_r * crng.randf_range(0.12, 0.19)
+		var top := base + h * sqrt(maxf(0.0, 1.0 - (d / big_r) * (d / big_r)))
+		rows.append([Vector3(c.x + cos(a) * d, top + rh * 0.1, c.y + sin(a) * d), rh, cover])
+	for k in crng.randi_range(2, 3) + int(big_r / 100.0):
+		var a := crng.randf() * TAU
+		var d := big_r * crng.randf_range(0.78, 1.0)
+		var rf := big_r * crng.randf_range(0.17, 0.25)
+		rows.append([Vector3(c.x + cos(a) * d * 1.1, base + rf * 0.3, c.y + sin(a) * d * 0.9), rf, cover * 0.85])
+	cloud_banks.append([bc, big_r, h, base, rows, cover * 0.75 + 0.25 * float(cover >= 1.0)])
+
+
+## The rows of a bank's billows for the MultiMesh buffer (3x4 rows: basis x = bank radius, height,
+## base; basis y = the bank's centre; basis z = billow radius, seed, cover; origin = its centre),
+## the farthest from the eye first.
+func _cloud_rows(b: Array) -> PackedFloat32Array:
+	var rows: Array = (b[4] as Array).duplicate()
+	rows.sort_custom(func(p, q): return (p[0] as Vector3).distance_squared_to(eye) > (q[0] as Vector3).distance_squared_to(eye))
+	var bc: Vector3 = b[0]
+	var out := PackedFloat32Array()
+	for r in rows:
+		var o: Vector3 = r[0]
+		var seed := fposmod(o.x * 0.0137 + o.z * 0.0071, 1.0)
+		out.append_array([float(b[1]), bc.x, float(r[1]), o.x,
+			float(b[2]), bc.y, seed, o.y,
+			float(b[3]), bc.z, float(r[2]), o.z])
+	return out
 
 
 func _build_mist() -> void:
-	# the sea of clouds over the lowland: a radial grid around the eye, lifted by the cloud field in
-	# the vertex stage (vista_cloud.gdshader); rings closer near the eye
-	var rings := PackedFloat32Array()
-	var r := 120.0
-	while r < 9000.0:
-		rings.append(r)
-		r *= 1.022
-	var segs := 384
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var cols := segs + 1
-	for ri in rings.size():
-		for c in cols:
-			var a := TAU * float(c) / float(segs)
-			st.add_vertex(Vector3(eye.x + sin(a) * rings[ri], SEA_Y, eye.z - cos(a) * rings[ri]))
-	# outer rings first: the translucent sea is drawn back to front from the eye
-	for rr in rings.size() - 1:
-		var ri := rings.size() - 2 - rr
-		for c in segs:
-			var i0 := ri * cols + c
-			var j0 := i0 + cols
-			st.add_index(i0); st.add_index(j0); st.add_index(i0 + 1)
-			st.add_index(i0 + 1); st.add_index(j0); st.add_index(j0 + 1)
-	var mi := MeshInstance3D.new()
-	mi.mesh = st.commit()
 	sea_mat = _mat("vista_cloud")
-	mi.material_override = sea_mat
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
-	root.add_child(mi)
+	var total := 0
+	for b in cloud_banks:
+		total += (b[4] as Array).size()
+	cloud_mm.transform_format = MultiMesh.TRANSFORM_3D
+	var q := QuadMesh.new()
+	q.size = Vector2(1, 1)
+	cloud_mm.mesh = q
+	cloud_mm.instance_count = total
+	cloud_inst = MultiMeshInstance3D.new()
+	cloud_inst.multimesh = cloud_mm
+	cloud_inst.material_override = sea_mat
+	cloud_inst.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	cloud_inst.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
+	root.add_child(cloud_inst)
+	_sort_clouds()
+	print("VISTA clouds banks=%d billows=%d" % [cloud_banks.size(), total])
+
+
+## Back to front from the eye: the banks by where they have crept to, each bank's billows as laid
+## out (now and then: they creep slowly; and whenever the eye moves to the other place).
+func _sort_clouds() -> void:
+	_cloud_sorted_t = _t
+	var moved := _cloud_sorted_eye.distance_to(eye) > 1.0
+	_cloud_sorted_eye = eye
+	var order: Array = []
+	for i in cloud_banks.size():
+		var b: Array = cloud_banks[i]
+		if moved or b.size() < 7:
+			if b.size() < 7:
+				b.append(PackedFloat32Array())
+			b[6] = _cloud_rows(b)
+		var bc: Vector3 = b[0]
+		var x := cloud_box.x + fposmod(bc.x + CLOUD_WIND.x * _t - cloud_box.x, cloud_box.z)
+		var cur := Vector3(x, bc.y, bc.z + CLOUD_WIND.y * _t)
+		order.append([cur.distance_squared_to(eye), i])
+	order.sort_custom(func(p, q): return p[0] > q[0])
+	var buf := PackedFloat32Array()
+	for o in order:
+		buf.append_array(cloud_banks[o[1]][6])
+	cloud_mm.buffer = buf
 
 
 # ------------------------------------------------------------------------------------------------
@@ -828,6 +1011,7 @@ const CONCRETE := [Color(0.74, 0.72, 0.68), Color(0.60, 0.60, 0.59), Color(0.50,
 	Color(0.42, 0.44, 0.47)]
 var city_rows: Array = []             # [foot, colour (kind in alpha), custom]
 var city_centre := Vector2.ZERO
+var city_heart := Vector3(0.0, 2000.0, 0.0)  # x, z, radius (m): the city's glow at night
 
 
 func _plain_at(x: float, z: float) -> Color:
@@ -893,6 +1077,28 @@ func _build_city() -> void:
 			if rng2.randf() < 0.6:
 				var lp := p + (axis + perp) * blk * 0.5
 				lamps.append(Vector3(lp.x, ground_h(lp.x, lp.y) + 5.0, lp.y))
+	# the heart's high-rises (round 4, lead: "the city too small and faint: a few taller buildings in
+	# the middle distance"): glass towers of 70 to 165 m round the station, the tallest nearest it
+	var towers: Array[Vector2] = []
+	var tcols := [Color(0.56, 0.62, 0.68, 0.9), Color(0.68, 0.69, 0.7, 0.9), Color(0.47, 0.54, 0.6, 0.9), Color(0.74, 0.72, 0.68, 0.9)]
+	for k in 40:
+		if towers.size() >= 14:
+			break
+		var tp := station.lerp(heart, rng2.randf_range(0.0, 0.9)) + axis * rng2.randf_range(-320.0, 320.0) + perp * rng2.randf_range(-180.0, 180.0)
+		var td := _plain_at(tp.x, tp.y)
+		if td.r * 255.0 < 30.0 or td.a * 255.0 * 0.5 < 26.0:
+			continue
+		var crowded := false
+		for o in towers:
+			if o.distance_to(tp) < 55.0:
+				crowded = true
+		if crowded:
+			continue
+		towers.append(tp)
+		var near_st := 1.0 - clampf(tp.distance_to(station) / 450.0, 0.0, 1.0)
+		var th := lerpf(70.0, 165.0, near_st) * rng2.randf_range(0.8, 1.1)
+		city_rows.append([Vector3(tp.x, ground_h(tp.x, tp.y), tp.y), tcols[k % tcols.size()], Color(rng2.randf_range(20.0, 32.0), rng2.randf_range(16.0, 26.0), th, rng2.randf())])
+	city_heart = Vector3(heart.x, heart.y, 720.0)
 	# the station: a long hall on the line, lamps along its platform
 	var sy := ground_h(station.x, station.y)
 	city_rows.append([Vector3(station.x, sy, station.y), Color(0.42, 0.5, 0.48, 0.25), Color(120.0, 22.0, 13.0, 0.13)])
@@ -965,6 +1171,108 @@ func _build_city() -> void:
 
 func _line(a: Vector3, b: Vector3, hw: float, min_px: float, col: Color, side := 0.0, em := 0.0) -> void:
 	line_rows.append([a, b, hw, min_px, side, em, col])
+
+
+## The plain's lights: on with the dusk (the first windows before sunset), all on at night, off
+## again at dawn.
+static func city_lights_at(h: float) -> float:
+	h = fposmod(h, 24.0)
+	return maxf(smoothstep(16.9, 18.4, h), 1.0 - smoothstep(5.2, 6.4, h))
+
+
+# ------------------------------------------------------------------------------------------------
+# trains on the viaduct (round 4, lead: "a train on the long red bridge"): four trains of eight
+# cars, two each way, silver with a coloured band at the windows, the windows lit with the dusk; drawn
+# as members of the line shader (vista_line: never under a pixel across), moved along the deck every
+# frame. One passes the town every two or three minutes; at the start of the view one each way is in
+# the town.
+const TRAIN_CARS := 8
+const CAR_LEN := 20.0
+const CAR_GAP := 1.0
+const TRAINS := 4
+const TRAIN_V := 20.0                  # m/s (about 70 km/h)
+var rail_pts: Array[Vector3] = []
+var rail_s := PackedFloat32Array()
+var train_mm := MultiMesh.new()
+
+
+func _build_trains() -> void:
+	var rail: Array = data.get("railway", [])
+	if rail.size() < 2 or line_mat == null:
+		return
+	var s := 0.0
+	for i in rail.size():
+		var p := Vector3(rail[i][0], float(rail[i][1]) + 0.2, rail[i][2])
+		if i > 0:
+			s += p.distance_to(rail_pts[i - 1])
+		rail_pts.append(p)
+		rail_s.append(s)
+	train_mm.transform_format = MultiMesh.TRANSFORM_3D
+	train_mm.use_colors = true
+	train_mm.use_custom_data = true
+	train_mm.mesh = _uv_quad()
+	train_mm.instance_count = TRAINS * TRAIN_CARS * 2
+	for i in train_mm.instance_count:
+		# body rows (even): silver; window rows (odd): the coloured band, lit at night
+		train_mm.set_instance_color(i, Color(0.8, 0.81, 0.8) if i % 2 == 0 else Color(0.24, 0.55, 0.42))
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = train_mm
+	mi.material_override = line_mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
+	root.add_child(mi)
+	_place_trains(0.0)
+
+
+func _rail_at(s: float) -> Vector3:
+	s = clampf(s, 0.0, rail_s[rail_s.size() - 1])
+	var lo := 0
+	var hi := rail_s.size() - 1
+	while hi - lo > 1:
+		var mid := (lo + hi) >> 1
+		if rail_s[mid] <= s:
+			lo = mid
+		else:
+			hi = mid
+	var t := (s - rail_s[lo]) / maxf(rail_s[hi] - rail_s[lo], 1e-3)
+	return rail_pts[lo].lerp(rail_pts[hi], t)
+
+
+func _place_trains(lights: float) -> void:
+	if rail_pts.is_empty():
+		return
+	var total := rail_s[rail_s.size() - 1]
+	var length := TRAIN_CARS * (CAR_LEN + CAR_GAP)
+	var period := total + length + 900.0
+	var hide := Transform3D(Basis(Vector3(0, -9999, 0), Vector3(0, -9999, 0), Vector3(0.1, 0.0, 0.0)), Vector3(0, -9999, 0))
+	for k in TRAINS:
+		var dir := 1.0 if k % 2 == 0 else -1.0
+		# (phased so that one each way is in the town at the start of the view: down the line the
+		# head 2150 m from its top end, up the line 2600 m)
+		var at0 := 2150.0 if dir > 0.0 else total - 2600.0
+		var head := fposmod(_t * TRAIN_V + at0 + length + float(k / 2) * period * 0.5, period) - length
+		for c in TRAIN_CARS:
+			var s0 := head - float(c) * (CAR_LEN + CAR_GAP)
+			var s1 := s0 - CAR_LEN
+			if dir < 0.0:
+				s0 = total - s0
+				s1 = total - s1
+			var i := (k * TRAIN_CARS + c) * 2
+			if minf(s0, s1) < 0.0 or maxf(s0, s1) > total:
+				train_mm.set_instance_transform(i, hide)
+				train_mm.set_instance_transform(i + 1, hide)
+				continue
+			var a := _rail_at(s0) + Vector3(0.0, 2.0, 0.0)
+			var b := _rail_at(s1) + Vector3(0.0, 2.0, 0.0)
+			# the body (never under two pixels tall), then the band of windows a little nearer the eye
+			# (drawn over it: one pixel, the coloured band by day, the lit windows at night)
+			train_mm.set_instance_transform(i, Transform3D(Basis(a, b, Vector3(1.3, 2.0, 0.0)), (a + b) * 0.5))
+			var aw := a + Vector3(0.0, 0.3, 0.0) + (eye - a).normalized() * 1.5
+			var bw := b + Vector3(0.0, 0.3, 0.0) + (eye - b).normalized() * 1.5
+			train_mm.set_instance_transform(i + 1, Transform3D(Basis(aw, bw, Vector3(0.45, 1.0, 0.0)), (aw + bw) * 0.5))
+			train_mm.set_instance_custom_data(i, Color(0.0, 0, 0, 0))
+			train_mm.set_instance_color(i + 1, Color(0.24, 0.55, 0.42).lerp(Color(1.0, 0.86, 0.62), lights))
+			train_mm.set_instance_custom_data(i + 1, Color(2.4 * lights, 0, 0, 0))
 
 
 func _build_lines() -> void:
@@ -1248,15 +1556,25 @@ func _build_figures() -> void:
 		return
 	var chars: Dictionary = JSON.parse_string(f.get_as_text())
 	for spec in [["tsuzumi", "load", Vector3(0, 0, 0)], ["saji", "main", Vector3(0.85, 0, -0.35)]]:
-		var c: Dictionary = chars[spec[0]]
-		var sh: Dictionary = c["sheets"][spec[1]]
-		var a: Dictionary = sh["anims"]["idle"]["back"]
-		var fw := int(c["frame"][0])
-		var fh := int(c["frame"][1])
 		var m := _mat("vista_figure")
-		m.set_shader_parameter("sheet", CharSprite3D.pixel_texture("res://world3d/sprites/%s.png" % sh["file"]))
-		m.set_shader_parameter("frame_rect", Vector4(int(a["col"]) * fw, int(a["row"]) * fh, fw, fh))
-		m.set_shader_parameter("pivot_px", Vector2(c["pivot"][0], c["pivot"][1]))
+		if spec[0] == "tsuzumi" and _build_fig3d():
+			# her: the 3D model (round 4: the lead asked whether the view still showed the old sprite),
+			# drawn upright through an orthographic camera of its own at the view's scale (20 px per
+			# metre), its picture used like a sprite's frame
+			m.set_shader_parameter("sheet", fig_vp.get_texture())
+			m.set_shader_parameter("frame_rect", Vector4(0, 0, FIG_PX.x, FIG_PX.y))
+			m.set_shader_parameter("pivot_px", FIG_FOOT)
+			m.set_shader_parameter("baked", true)
+			fig_mat = m
+		else:
+			var c: Dictionary = chars[spec[0]]
+			var sh: Dictionary = c["sheets"][spec[1]]
+			var a: Dictionary = sh["anims"]["idle"]["back"]
+			var fw := int(c["frame"][0])
+			var fh := int(c["frame"][1])
+			m.set_shader_parameter("sheet", CharSprite3D.pixel_texture("res://world3d/sprites/%s.png" % sh["file"]))
+			m.set_shader_parameter("frame_rect", Vector4(int(a["col"]) * fw, int(a["row"]) * fh, fw, fh))
+			m.set_shader_parameter("pivot_px", Vector2(c["pivot"][0], c["pivot"][1]))
 		var q := QuadMesh.new()
 		q.size = Vector2(1, 1)
 		var mi := MeshInstance3D.new()
@@ -1268,6 +1586,109 @@ func _build_figures() -> void:
 		mi.position = p
 		root.add_child(mi)
 		figure_mats.append(m)
+
+
+# her 3D model in the view: a world of its own (her, the sun) seen by an orthographic camera from the
+# view's eye, at 20 px per metre like the view itself; she turns toward where the view looks
+const FIG_PX := Vector2i(40, 52)       # the picture's size (native px)
+const FIG_FOOT := Vector2(20.0, 47.0)  # her feet in it (px from its top left)
+var fig_vp: SubViewport
+var fig_cam: Camera3D
+var fig_sun: DirectionalLight3D
+var fig_fill: DirectionalLight3D
+var fig_char: Character3D
+var fig_mat: ShaderMaterial
+var _fig_eye := Vector3.INF
+var _fig_started := false
+
+
+func _build_fig3d() -> bool:
+	if not FileAccess.file_exists("res://characters/kasasagi/rig.json") or _vdebug.has("sprites"):
+		return false
+	fig_vp = SubViewport.new()
+	fig_vp.name = "VistaFigure"
+	fig_vp.size = FIG_PX
+	fig_vp.own_world_3d = true
+	fig_vp.transparent_bg = true
+	fig_vp.msaa_3d = Viewport.MSAA_DISABLED
+	fig_vp.screen_space_aa = Viewport.SCREEN_SPACE_AA_DISABLED
+	fig_vp.use_taa = false
+	fig_vp.positional_shadow_atlas_size = 0
+	fig_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	add_child(fig_vp)
+	var w := Node3D.new()
+	w.name = "Figure"
+	fig_vp.add_child(w)
+	fig_char = Character3D.new()
+	w.add_child(fig_char)
+	fig_char.setup("kasasagi")
+	fig_char.ground_y = 0.0
+	for mm in fig_char.meshes:
+		mm.set_instance_shader_parameter("c3_no_lean", 1.0)
+		mm.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+	fig_cam = Camera3D.new()
+	fig_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+	fig_cam.keep_aspect = Camera3D.KEEP_HEIGHT
+	fig_cam.size = float(FIG_PX.y) / 20.0
+	fig_cam.near = 0.05
+	fig_cam.far = 40.0
+	fig_cam.current = true
+	fig_vp.add_child(fig_cam)
+	fig_sun = DirectionalLight3D.new()
+	fig_sun.light_specular = 0.0
+	fig_sun.shadow_enabled = true
+	fig_sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
+	fig_sun.directional_shadow_max_distance = 8.0
+	fig_vp.add_child(fig_sun)
+	# (the character protection's fill from the camera's side: the view sees her back, which the sun
+	# of the view to the south leaves in shade all day)
+	fig_fill = DirectionalLight3D.new()
+	fig_fill.light_specular = 0.0
+	fig_fill.shadow_enabled = false
+	fig_vp.add_child(fig_fill)
+	return true
+
+
+## Every frame while the view is shown: her camera from the view's eye (the picture's feet pixel
+## fixed), the sun, and where she faces (where the view looks, turned at most 55 degrees from her back
+## to the camera: the face itself is the top-down view's, pixel stamps that only that camera draws).
+func _update_fig3d(bearing: float) -> void:
+	if fig_vp == null:
+		return
+	fig_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	fig_char.process_mode = Node.PROCESS_MODE_INHERIT
+	var look := (feet + Vector3(0.0, 0.9, 0.0) - eye).normalized()
+	if _fig_eye.distance_to(eye) > 0.01:
+		_fig_eye = eye
+		var up := (Vector3.UP - look * look.y).normalized()
+		# the orthographic picture is centred on its middle: the feet FIG_FOOT px from its top left
+		var below := (FIG_FOOT.y - float(FIG_PX.y) * 0.5) / 20.0
+		var right := look.cross(up).normalized()
+		var aside := (FIG_FOOT.x - float(FIG_PX.x) * 0.5) / 20.0
+		var aim := up * below - right * aside
+		fig_cam.look_at_from_position(aim - look * 12.0, aim, Vector3.UP)
+	var cam_yaw := atan2(look.x, look.z)
+	var b := deg_to_rad(bearing)
+	var want := atan2(sin(b), -cos(b))
+	var rel := clampf(wrapf(want - cam_yaw, -PI, PI), deg_to_rad(-55.0), deg_to_rad(55.0))
+	fig_char.face_angle(cam_yaw + rel, not _fig_started)
+	_fig_started = true
+	fig_sun.global_transform = env.sun.global_transform
+	fig_sun.light_color = env.sun.light_color
+	fig_sun.light_energy = env.sun.light_energy
+	# the fill: from the camera, a little above it, the sky's colour, about a third of the sun's
+	# light by day and a share of the moon's at night
+	var night := clampf(float(env.sample(env.hours)[11]), 0.0, 1.0)
+	fig_fill.look_at_from_position(Vector3.ZERO, look + Vector3(0.0, -0.35, 0.0), Vector3.UP)
+	fig_fill.light_color = Color(0.86, 0.9, 1.0).lerp(Color(0.6, 0.68, 0.95), night)
+	fig_fill.light_energy = maxf(env.sun.light_energy, 0.25) * 0.38 * (1.0 - 0.5 * night)
+
+
+func _pause_fig3d() -> void:
+	if fig_vp == null:
+		return
+	fig_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
+	fig_char.process_mode = Node.PROCESS_MODE_DISABLED
 
 
 ## Where the camera stands: behind her, so that one sprite pixel is one screen pixel (distance = px
@@ -1491,6 +1912,7 @@ func update(dt: float) -> void:
 	if not shown:
 		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		pv.vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		_pause_fig3d()
 		return
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	# the world view underneath stops while the view covers it
@@ -1517,6 +1939,7 @@ func update(dt: float) -> void:
 	var pitch := roundf(pitch_for(yq) / step) * step
 	eye = cam_pos()
 	_place_impostors(eye)
+	_update_fig3d(yq)
 	var lat := Vector2(roundf(deg_to_rad(yq) * ppr), roundf(deg_to_rad(pitch) * ppr))
 	var vc := Vector4(lat.x / ppr, lat.y / ppr, float(vp.size.x) * 0.5, float(vp.size.y) * 0.5)
 	# (every frame, on every material: the eye moves when she turns round to the other place, and the
@@ -1537,7 +1960,12 @@ func update(dt: float) -> void:
 	var k := _sky_at(env.hours)
 	var night := clampf(float(env.sample(env.hours)[11]), 0.0, 1.0)
 	sky_mat.set_shader_parameter("zenith", k[1])
-	sky_mat.set_shader_parameter("horizon", (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7))
+	var hz: Color = (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7)
+	# (the horizon away from the sun: a little bluer by day, rose and mauve at dusk and dawn)
+	var golden := maxf(clampf(1.0 - absf(env.hours - 17.7) / 1.3, 0.0, 1.0), clampf(1.0 - absf(env.hours - 6.0) / 1.2, 0.0, 1.0)) * (1.0 - night)
+	var hz_away := hz.lerp(k[1] as Color, (0.15 + 0.3 * golden) * (1.0 - env.rain))
+	sky_mat.set_shader_parameter("horizon", hz)
+	sky_mat.set_shader_parameter("horizon_away", hz_away)
 	sky_mat.set_shader_parameter("mist_col", k[3])
 	sky_mat.set_shader_parameter("cloud_lit", k[4])
 	sky_mat.set_shader_parameter("cloud_shade", k[5])
@@ -1556,10 +1984,12 @@ func update(dt: float) -> void:
 	# (a warm paper white, like a print faded in the sun: a cool white beside the haze read as water)
 	# (round 4, lead: the far land is aerial perspective, not a warm white band: the horizon's own
 	# blue-grey, a little lighter, so the far plain and the ranges fade into the air layer by layer)
-	var hz: Color = (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7)
 	var fw := hz.lerp(Color(0.58, 0.64, 0.74), 0.35 * (1.0 - night)) * 0.94
+	var sun_c := Color(1.0, 0.92, 0.75) if night < 0.5 else Color(0.9, 0.92, 1.0)
 	for m in mats:
-		m.set_shader_parameter("haze_col", (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7))
+		m.set_shader_parameter("haze_col", hz)
+		m.set_shader_parameter("haze_away", hz_away)
+		m.set_shader_parameter("haze_sun", sun_c)
 		m.set_shader_parameter("mist_col", k[3])
 		m.set_shader_parameter("haze_dist", haze_dist)
 		m.set_shader_parameter("far_white", Vector3(fw.r, fw.g, fw.b))
@@ -1586,8 +2016,8 @@ func update(dt: float) -> void:
 		house_mat.set_shader_parameter("night", night)
 	if puff_mat:
 		# smoke and mist take the hour's light: warm at dusk, dim and blue at night
-		var golden := clampf(1.0 - absf(env.hours - 17.7) / 1.3, 0.0, 1.0) * (1.0 - night)
-		var pk := Color(1, 1, 1).lerp(Color(1.0, 0.84, 0.7), golden * 0.8).lerp(Color(0.1, 0.11, 0.16), night)
+		var dusk_k := clampf(1.0 - absf(env.hours - 17.7) / 1.3, 0.0, 1.0) * (1.0 - night)
+		var pk := Color(1, 1, 1).lerp(Color(1.0, 0.84, 0.7), dusk_k * 0.8).lerp(Color(0.1, 0.11, 0.16), night)
 		puff_mat.set_shader_parameter("light_k", Vector3(pk.r, pk.g, pk.b))
 	if line_mat and lamp_src:
 		var on := 0.0
@@ -1595,8 +2025,14 @@ func update(dt: float) -> void:
 			if not l["manual"]:
 				on = maxf(on, float(l["on"]))
 		line_mat.set_shader_parameter("lamp_on", on)
+	var cl := city_lights_at(env.hours)
 	for m in mats:
 		m.set_shader_parameter("cloud_time", _t)
+		m.set_shader_parameter("city_lights", cl)
+		m.set_shader_parameter("city_c", city_heart)
+	_place_trains(cl)
+	if cloud_inst and (_t - _cloud_sorted_t > 8.0 or _cloud_sorted_eye.distance_to(eye) > 1.0):
+		_sort_clouds()
 
 	if sea_mat:
 		var lit_c: Color = k[4]
@@ -1614,8 +2050,8 @@ func update(dt: float) -> void:
 				m.set_shader_parameter("mist_max", 0.0)
 			if _vdebug.has("nohaze"):
 				m.set_shader_parameter("haze_dist", 1e9)
-		if _vdebug.has("nocloud") and sea_mat:
-			sea_mat.set_shader_parameter("lit_col", Vector3(1, 0, 1))
+		if _vdebug.has("nocloud") and cloud_inst:
+			cloud_inst.visible = false
 	_step_puffs(dt)
 	_write_puffs()
 

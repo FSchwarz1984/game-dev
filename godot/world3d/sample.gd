@@ -976,6 +976,13 @@ func _process(dt: float) -> void:
 	var dir := _input_dir()
 	if args.has("perf") and frame == 3:
 		RenderingServer.viewport_set_measure_render_time(pv.vp.get_viewport_rid(), true)
+	if args.has("perf") and vista and vista.vp and frame % 60 == 1:
+		RenderingServer.viewport_set_measure_render_time(vista.vp.get_viewport_rid(), true)
+	if args.has("perf") and frame % 60 == 0 and frame > 0 and vista and vista.shown:
+		# (the view from the lookout: its own viewport's render time while it is shown)
+		print("PERF_VISTA f=%d fps=%.1f vista_gpu_ms=%.1f vista_cpu_ms=%.1f draws=%d" % [frame, Performance.get_monitor(Performance.TIME_FPS),
+			RenderingServer.viewport_get_measured_render_time_gpu(vista.vp.get_viewport_rid()), RenderingServer.viewport_get_measured_render_time_cpu(vista.vp.get_viewport_rid()),
+			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME)])
 	if args.has("perf") and frame % 60 == 0 and frame > 0:
 		# (the world viewport's own render time: on the software rasteriser "gpu" is the rasterising)
 		var vr := pv.vp.get_viewport_rid()
