@@ -75,7 +75,11 @@ void fragment() {
 		}
 	}
 #endif
+#ifdef OL_FOG
+	col = mix(col, w3_apply_fog(col, wp, cell), OL_FOG);
+#else
 	col = w3_apply_fog(col, wp, cell);
+#endif
 	ALBEDO = col;
 	ALPHA = 1.0;
 }

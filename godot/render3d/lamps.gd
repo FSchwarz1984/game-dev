@@ -12,6 +12,7 @@ extends Node
 
 const MAX := 64
 
+var enabled := true            # false: no lamp light at all (debugging, --nolamps)
 var lamps: Array = []          # {pos, reach, col (Color, linear, times energy), on, want, delay, flicker}
 var _img := Image.create(MAX, 2, false, Image.FORMAT_RGBAF)
 var _tex: ImageTexture
@@ -27,10 +28,19 @@ func _ready() -> void:
 ## A lamp at a world point. reach: metres to the end of its light; col: its colour (linear);
 ## energy: the core's strength (1 lights a mid-grey ground to about L* 60). flicker: 0 still .. 1 a
 ## live flame.
-func add(pos: Vector3, reach: float, col: Color, energy: float, flicker := 0.15) -> int:
+func add(pos: Vector3, reach: float, col: Color, energy: float, flicker := 0.15, manual := false) -> int:
 	lamps.append({"pos": pos, "reach": reach, "col": Color(col.r * energy, col.g * energy, col.b * energy),
-		"on": 0.0, "want": 0.0, "delay": 0.0, "flicker": flicker, "phase": float(lamps.size()) * 1.618})
+		"on": 0.0, "want": 0.0, "delay": 0.0, "flicker": flicker, "phase": float(lamps.size()) * 1.618,
+		"manual": manual})
 	return lamps.size() - 1
+
+
+## A lamp that something else drives (a wandering will-o'-wisp): its place and how lit it is.
+func set_lamp(i: int, pos: Vector3, on: float) -> void:
+	var l: Dictionary = lamps[i]
+	l["pos"] = pos
+	l["on"] = on
+	l["want"] = on
 
 
 ## Turn the lamps on (or off). stagger > 0: one after another, that many seconds apart, each fading
@@ -39,6 +49,8 @@ func set_on(on: bool, instant := false, stagger := 0.18, fade := 1.2) -> void:
 	var order := range(lamps.size())
 	for i in order:
 		var l: Dictionary = lamps[i]
+		if l["manual"]:
+			continue
 		var w := 1.0 if on else 0.0
 		if instant:
 			l["on"] = w
@@ -53,8 +65,13 @@ func set_on(on: bool, instant := false, stagger := 0.18, fade := 1.2) -> void:
 func update(dt: float) -> void:
 	_t += dt
 	var n := 0
+	if not enabled:
+		RenderingServer.global_shader_parameter_set("w3_lamp_n", 0.0)
+		return
 	for l in lamps:
-		if float(l["delay"]) > 0.0:
+		if l["manual"]:
+			pass
+		elif float(l["delay"]) > 0.0:
 			l["delay"] = float(l["delay"]) - dt
 		else:
 			var f := float(l.get("fade", 1.2))

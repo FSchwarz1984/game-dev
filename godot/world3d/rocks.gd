@@ -101,8 +101,9 @@ func make_shape(seed: int, flat := 0.65, strata := 0.22, sharp := 0.35, subdiv :
 		var p: Vector3 = P[i]
 		var crevice := clampf((1.0 - disp[i]) * 3.0, 0.0, 1.0)
 		var tone := 0.9 + 0.12 * noise.get_noise_3dv(p * 0.7 + Vector3(9, 1, 3))
-		var col := Color(0.50, 0.50, 0.48) * tone
-		col = col.lerp(Color(0.40, 0.42, 0.42), crevice * 0.6)
+		# granite: a warm grey (feldspar and quartz), the crevices a cooler grey
+		var col := Color(0.52, 0.515, 0.495) * tone
+		col = col.lerp(Color(0.41, 0.42, 0.42), crevice * 0.6)
 		col.a = clampf(0.5 + (p.y + 0.25) * 0.9, 0.45, 1.0)          # AO: dark where it meets the ground
 		st.set_color(col)
 		var moss_n := mnoise.get_noise_3dv(p) * 0.5 + 0.5

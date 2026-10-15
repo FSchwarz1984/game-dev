@@ -29,34 +29,46 @@ STRAW = K.col('#c2a868')
 WX, WZ = 2.8, 1.9                 # half extents of the walls
 HW, HD = 3.65, 2.85               # half extents of the roof edge
 EAVE = 2.85                       # outer thatch height at the eave edge
-THICK = 0.56                      # thatch thickness seen at the eave
+THICK = 0.38                      # thatch thickness seen at the eave (the cut face, 30-40 cm)
 TAN_F, TAN_E = 0.9, 1.35          # slope of the long sides and of the hip ends
 WALL_TOP = 2.35
+TIERS = (0.78, 1.62)              # runs (m in from the eave) where the thatch steps in: three tiers
+TIER_STEP = 0.13                  # how far each upper tier sits in (its own small cut face)
 
 
 def _soft_min(a, b, k):
     return K.smin(a, b, k)
 
 
+def _step(run, at, w=0.05):
+    t = np.clip((run - (at - w)) / (2 * w), 0.0, 1.0)
+    return t * t * (3 - 2 * t)
+
+
 def thatch_sdf(P, seed=8201):
     x, y, z = P[..., 0], P[..., 1], P[..., 2]
+    # the eave line is cut by hand: it wanders a little in plan and in height
+    wob = (fbm3(x * 0.8 + 3.0, z * 0.8, y * 0.1, octaves=2, seed=seed + 3) - 0.5)
     # height of the outer surface: hipped (front/back slopes and steeper ends), soft hips and ridge
-    run_f = HD - np.abs(z)
-    run_e = (HW - np.abs(x)) * (TAN_E / TAN_F)
+    run_f = HD + wob * 0.10 - np.abs(z)
+    run_e = (HW + wob * 0.10 - np.abs(x)) * (TAN_E / TAN_F)
     run = _soft_min(run_f, run_e, 0.5)
     ridge_run = HD - 0.12
     run = _soft_min(run, ridge_run, 0.35)
-    h = EAVE + TAN_F * run
+    # three tiers of thatch: each upper course sits in a little, so a band of cut straw shows above
+    # each lower one (the stepped eaves of a kayabuki roof)
+    steps = sum(_step(run, r) for r in TIERS) * TIER_STEP
+    h = EAVE + wob * 0.06 + TAN_F * run - steps
     d_out = (y - h) / math.sqrt(1 + TAN_F ** 2)
     shell = np.maximum(d_out, -(d_out + THICK * 0.95))
-    # the trimmed eave: vertical cut faces at the roof edge, corners rounded in plan
-    qx = np.abs(x) - (HW - 0.9)
-    qz = np.abs(z) - (HD - 0.9)
+    # the trimmed eave: vertical cut faces at the roof edge, corners rounded in plan, the line wavy
+    qx = np.abs(x) - (HW - 0.9) - wob * 0.12
+    qz = np.abs(z) - (HD - 0.9) - wob * 0.12
     edge = np.hypot(np.maximum(qx, 0), np.maximum(qz, 0)) + np.minimum(np.maximum(qx, qz), 0) - 0.9
     d = np.maximum(shell, edge)
-    # straw lumps on the surface, ragged straw ends on the cut
-    d = d + (fbm3(x * 2.2, y * 2.2, z * 2.2, octaves=3, seed=seed) - 0.5) * 0.09
-    d = d + (fbm3(x * 9.0, y * 3.0, z * 9.0, octaves=2, seed=seed + 1) - 0.5) * 0.05 * (np.abs(edge) < 0.2)
+    # straw lumps on the surface, ragged straw ends on the cuts
+    d = d + (fbm3(x * 2.2, y * 2.2, z * 2.2, octaves=3, seed=seed) - 0.5) * 0.07
+    d = d + (fbm3(x * 9.0, y * 3.0, z * 9.0, octaves=2, seed=seed + 1) - 0.5) * 0.04 * (np.abs(edge) < 0.2)
     return d
 
 
@@ -71,10 +83,11 @@ def thatch_shade(P, N):
     m = m * (1 - 0.25 * top) + np.array([0.86, 0.86, 0.84]) * 0.25 * top
     moss = (fbm3(P[:, 0] * 1.2, P[:, 1] * 1.2, P[:, 2] * 1.2, octaves=3, seed=8206) > 0.55) & (y < EAVE + 0.9)
     moss &= N[:, 1] > 0.2
-    m[moss] = m[moss] * np.array([0.82, 0.9, 0.74])
-    cut = np.abs(N[:, 1]) < 0.45
-    lay = (np.floor((y - EAVE) / 0.09) % 2 == 0)
-    m[cut] = np.array([1.12, 1.08, 1.0]) * np.where(lay[cut], 0.85, 1.0)[:, None]
+    m[moss] = m[moss] * np.array([0.84, 0.9, 0.8])
+    # the cut faces (the eave and the steps between the tiers): the ends of the straw, paler and
+    # warmer than the weathered slope (the renderer's thatch pattern speckles them)
+    cut = np.abs(N[:, 1]) < 0.5
+    m[cut] = np.array([1.22, 1.15, 1.0])
     return m
 
 
@@ -169,20 +182,50 @@ def house_pieces(R):
     return P
 
 
+def roof_height(x, z):
+    """The outer thatch height at a plan point (the same hip and tiers as thatch_sdf, no noise)."""
+    run_f = HD - abs(z)
+    run_e = (HW - abs(x)) * (TAN_E / TAN_F)
+    run = float(K.smin(np.array(run_f), np.array(run_e), 0.5))
+    run = float(K.smin(np.array(run), np.array(HD - 0.12), 0.35))
+    steps = sum(float(_step(np.array(run), r)) for r in TIERS) * TIER_STEP
+    return EAVE + TAN_F * run - steps
+
+
 def ridge_pieces(R):
     P = []
-    ridge_y = EAVE + TAN_F * (HD - 0.12) - 0.05
+    ridge_y = EAVE + TAN_F * (HD - 0.12) - 0.05 - len(TIERS) * TIER_STEP
     L = HW - (HD - 0.12) * TAN_F / TAN_E
-    bundle = K.lathe([(0.0, -L - 0.25), (0.2, -L - 0.2), (0.27, -L + 0.1), (0.27, L - 0.1), (0.2, L + 0.2), (0.0, L + 0.25)],
-                     K.col('#5f5546'), n=8, R=K.rot_z(math.pi / 2), base=(0, ridge_y + 0.12, 0), pattern='bark', amount=0.3,
-                     var=0.06, seed=8210)
-    P.append(bundle)
+    # the ridge cap (棟): a thick roll of cedar bark over the ridge, tied down at five places
+    cap = K.lathe([(0.0, -L - 0.32), (0.24, -L - 0.26), (0.34, -L + 0.05), (0.34, L - 0.05), (0.24, L + 0.26), (0.0, L + 0.32)],
+                  K.col('#62574a'), n=10, R=K.rot_z(math.pi / 2), base=(0, ridge_y + 0.14, 0), pattern='bark', amount=0.35,
+                  var=0.06, seed=8210)
+    P.append(cap)
+    for k in range(5):                        # rope ties around the cap
+        x = -L + 0.1 + (2 * L - 0.2) * k / 4
+        P.append(K.lathe([(0.355, -0.04), (0.36, 0.0), (0.355, 0.04)], K.col('#3e3328'), n=10, R=K.rot_z(math.pi / 2),
+                         base=(x, ridge_y + 0.14, 0), var=0.0, cap_top=False, cap_bottom=False))
     for k in range(6):                        # crossed sticks holding the ridge
         x = -L + (2 * L) * k / 5
         for s in (-1, 1):
-            a = np.array([x, ridge_y + 0.62, s * 0.18])
-            b = np.array([x, ridge_y - 0.12, -s * 0.55])
+            a = np.array([x, ridge_y + 0.68, s * 0.18])
+            b = np.array([x, ridge_y - 0.1, -s * 0.6])
             P.append(cyl(b, a, 0.035, K.col('#4e4136'), n=5, pattern='bark', amount=0.2, seed=8211 + k))
+    # bamboo battens (竹押さえ) laid along the slopes below the ridge, holding the top course down,
+    # front and back, each a little bowed and not quite level
+    for zs in (1.0, -1.0):
+        for run in (2.15, 1.45):
+            z = zs * (HD - run)
+            half = HW - run * TAN_F / TAN_E - 0.25
+            if half < 0.6:
+                continue
+            pts = []
+            for k in range(9):
+                x = -half + 2 * half * k / 8
+                y = roof_height(x, z) + 0.035 + 0.02 * math.sin(k * 1.3 + run)
+                pts.append([x, y, z + zs * 0.015 * math.sin(k * 0.9)])
+            P.append(K.rod(pts, 0.032, K.col('#8a7a4e'), n=5, cap=True, step=0.25, var=0.03, pattern='bark', amount=0.2,
+                           seed=8215 + int(run * 10)))
     return P, ridge_y
 
 
@@ -268,8 +311,8 @@ def sandals_pieces():
 def build(out):
     R = rng(8200)
     pieces = house_pieces(R)
-    thatch = K.sdf_piece(thatch_sdf, (-HW - 0.1, EAVE - THICK - 0.15, -HD - 0.1),
-                         (HW + 0.1, EAVE + TAN_F * HD + 0.3, HD + 0.1), THATCH, h=0.05, tris=1650, pattern='bark',
+    thatch = K.sdf_piece(thatch_sdf, (-HW - 0.2, EAVE - THICK - 0.2, -HD - 0.2),
+                         (HW + 0.2, EAVE + TAN_F * HD + 0.3, HD + 0.2), THATCH, h=0.045, tris=2300, pattern='thatch',
                          amount=0.5, var=0.04, seed=8201, mat='roof', shade=thatch_shade, dirt=False)
     pieces.append(thatch)
     rp, ridge_y = ridge_pieces(R)

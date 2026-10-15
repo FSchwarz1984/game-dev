@@ -41,7 +41,10 @@ var keys_down := {}
 var _haze_h := 0.0
 var atmos: W3Atmosphere
 var dressing: W3Dressing
+var lamps: W3Lamps
 var vista: W3Vista
+var _lit_on := -1                 # the lanterns' lit bodies: on (1), off (0), unset (-1)
+var _lit_wait: Array = []         # [pair, seconds until it switches] while they light one by one
 var _still := 0.0                 # seconds she has stood still on the lookout
 var _route_done_t := -1.0         # route recordings: time since she reached the end
 
@@ -88,9 +91,13 @@ func _ready() -> void:
 	pv.world_root.add_child(grass)
 	grass.build(terrain)
 	print("GRASS tufts=", grass.count, " ms=", Time.get_ticks_msec() - g0)
+	lamps = W3Lamps.new()
+	lamps.name = "Lamps"
+	add_child(lamps)
 	dressing = W3Dressing.new()
 	dressing.name = "Dressing"
 	pv.world_root.add_child(dressing)
+	dressing.lamps = lamps
 	dressing.lean_k = pv_lean()
 	dressing.build(terrain, catalog)
 	_place_marker_props()
@@ -98,6 +105,7 @@ func _ready() -> void:
 	atmos = W3Atmosphere.new()
 	atmos.name = "Atmosphere"
 	pv.world_root.add_child(atmos)
+	atmos.lamps = lamps
 	atmos.setup(env, terrain)
 	atmos.glints = dressing.glints
 	vista = W3Vista.new()
@@ -124,6 +132,8 @@ func _ready() -> void:
 		env.sun.directional_shadow_pancake_size = float(args["pancake"])
 	if args.has("sblur"):
 		env.sun.shadow_blur = float(args["sblur"])
+	if args.has("nolamps"):
+		lamps.enabled = false                       # debugging: the night without its lanterns
 	if args.has("hide_props"):
 		# debugging: hide placed props whose node name contains one of these (camphor, hut, sugi, ...)
 		var subs := String(args["hide_props"]).split(",")
@@ -279,8 +289,8 @@ func _place_marker_props() -> void:
 		for i in hooks.size():
 			var hk: Array = hooks[i]
 			slots.append(["lantern_paper", g + Vector3(hk[0], float(hk[1]) - 0.58, hk[2]), 0.0, true])
-			if i % 3 == 1:
-				dressing._light(g + Vector3(hk[0], float(hk[1]) - 0.4, float(hk[2]) + 0.3), Color(1.0, 0.74, 0.46), 1.2, 4.2)
+			# every lantern lights its own small pool (the renderer's lamps have no 8-light limit)
+			dressing._light(g + Vector3(hk[0], float(hk[1]) - 0.45, float(hk[2]) + 0.25), Color(1.0, 0.74, 0.46), 1.35, 2.2)
 	var lean := pv_lean()
 	for sl in slots:
 		var nm: String = sl[0]
@@ -341,14 +351,27 @@ func _instance(path: String) -> Node3D:
 
 
 ## The time of day for the world, the dressing's lights and the lit variants of the lanterns.
-func _set_hours(h: float) -> void:
+## instant: a still or a jump in time; otherwise (time passing in play) the lanterns are lit one
+## after another as their light fades in (render3d/lamps.gd).
+func _set_hours(h: float, instant := true) -> void:
 	env.set_time(h)
 	if dressing:
-		dressing.set_time(h)
-	var on := h >= 18.4 or h <= 5.4
-	for lp in _lit_pairs:
-		(lp[0] as Node3D).visible = not on
-		(lp[1] as Node3D).visible = on
+		dressing.set_time(h, instant)
+	var on := 1 if (h >= 18.4 or h <= 5.4) else 0
+	if on == _lit_on:
+		return
+	_lit_wait.clear()
+	for i in _lit_pairs.size():
+		if instant or _lit_on < 0:
+			_switch_lit(_lit_pairs[i], on == 1)
+		else:
+			_lit_wait.append([_lit_pairs[i], 0.18 * i, on == 1])
+	_lit_on = on
+
+
+func _switch_lit(lp: Array, on: bool) -> void:
+	(lp[0] as Node3D).visible = not on
+	(lp[1] as Node3D).visible = on
 
 
 ## A dense evergreen crown casts one deep shade: a shadow-only body inside the camphor's crown fills
@@ -448,6 +471,9 @@ func _spawn_characters() -> void:
 	saji.blockers = blockers
 	saji.radius = 0.25
 	saji.place(her.pos + Vector3(-0.9, 0, -0.5))
+	# their outlines when something covers them: her warm (the lamp of her hat), さぢ a pale sky blue
+	her.sprite.set_xray_colour(Color(1.0, 0.84, 0.52))
+	saji.sprite.set_xray_colour(Color(0.62, 0.86, 1.0))
 	her_shadow = _contact_shadow(Vector2(9.0, 3.5))
 	saji_shadow = _contact_shadow(Vector2(7.0, 3.0))
 
@@ -677,6 +703,17 @@ func _save_shot(base: String) -> void:
 func _process(dt: float) -> void:
 	frame += 1
 	env.tick(dt)
+	# time passing (verification of the evening, F2-style): hours per second
+	if args.has("timelapse"):
+		_set_hours(fposmod(env.hours + float(args["timelapse"]) * dt, 24.0), false)
+	for i in range(_lit_wait.size() - 1, -1, -1):
+		var w: Array = _lit_wait[i]
+		w[1] = float(w[1]) - dt
+		if float(w[1]) <= 0.0:
+			_switch_lit(w[0], w[2])
+			_lit_wait.remove_at(i)
+	if lamps:
+		lamps.update(dt)
 	if not route.is_empty():
 		_drive_route()
 	var dir := _input_dir()

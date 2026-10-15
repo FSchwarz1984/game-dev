@@ -21,17 +21,17 @@ var fog_haze_focus := 0.0       # height the haze is measured from (her height)
 # hour, sun colour (linear), sun energy, sky ambient, ground bounce, fog colour,
 # grade lift, grade gain, saturation, shadow tone, high tone, night
 const KEYS := [
-	[0.0,  Color(0.42, 0.52, 0.85), 0.34, Color(0.105, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.09, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
-	[4.4,  Color(0.42, 0.52, 0.85), 0.32, Color(0.11, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.10, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
+	[0.0, Color(0.52, 0.62, 0.95), 0.50, Color(0.060, 0.075, 0.125), Color(0.020, 0.020, 0.030), Color(0.07, 0.085, 0.14), Color(0.006, 0.010, 0.026), Color(0.98, 1.0, 1.07), 0.82, Color(-0.004, 0.0, 0.016), Color(0.0, 0.0, 0.0), 1.0],
+	[4.4, Color(0.52, 0.62, 0.95), 0.50, Color(0.060, 0.075, 0.125), Color(0.020, 0.020, 0.030), Color(0.07, 0.085, 0.14), Color(0.006, 0.010, 0.026), Color(0.98, 1.0, 1.07), 0.82, Color(-0.004, 0.0, 0.016), Color(0.0, 0.0, 0.0), 1.0],
 	[5.4,  Color(0.85, 0.55, 0.55), 0.35, Color(0.20, 0.19, 0.30), Color(0.06, 0.05, 0.06), Color(0.42, 0.36, 0.46), Color(0.02, 0.01, 0.04), Color(1.02, 0.98, 1.02), 0.86, Color(-0.005, 0.0, 0.02), Color(0.02, 0.01, 0.0), 0.6],
 	[6.4, Color(1.0, 0.74, 0.50), 1.30, Color(0.42, 0.43, 0.56), Color(0.140, 0.110, 0.095), Color(0.88, 0.72, 0.60), Color(0.012, 0.006, 0.022), Color(1.08, 1.04, 1.00), 1.0, Color(-0.012, 0.0, 0.024), Color(0.035, 0.02, 0.0), 0.0],
-	[8.0, Color(1.0, 0.89, 0.68), 1.65, Color(0.70, 0.78, 0.97), Color(0.20, 0.175, 0.14), Color(0.86, 0.80, 0.72), Color(0.012, 0.012, 0.03), Color(1.06, 1.04, 1.01), 1.0, Color(-0.012, 0.0, 0.022), Color(0.03, 0.018, 0.0), 0.0],
-	[12.0, Color(1.0, 0.95, 0.84), 1.72, Color(0.70, 0.80, 1.0), Color(0.20, 0.18, 0.15), Color(0.78, 0.82, 0.86), Color(0.012, 0.012, 0.03), Color(1.07, 1.05, 1.02), 1.0, Color(-0.014, 0.0, 0.022), Color(0.025, 0.015, 0.0), 0.0],
+	[8.0, Color(1.0, 0.90, 0.72), 1.65, Color(0.70, 0.78, 0.97), Color(0.20, 0.175, 0.14), Color(0.86, 0.80, 0.72), Color(0.012, 0.012, 0.03), Color(1.06, 1.04, 1.01), 1.0, Color(-0.012, 0.0, 0.022), Color(0.03, 0.018, 0.0), 0.0],
+	[12.0, Color(1.0, 0.96, 0.88), 1.72, Color(0.70, 0.80, 1.0), Color(0.20, 0.18, 0.15), Color(0.78, 0.82, 0.86), Color(0.012, 0.012, 0.03), Color(1.07, 1.05, 1.02), 1.05, Color(-0.014, 0.0, 0.022), Color(0.025, 0.015, 0.0), 0.0],
 	[15.5, Color(1.0, 0.87, 0.62), 1.75, Color(0.71, 0.76, 0.96), Color(0.21, 0.175, 0.14), Color(0.80, 0.75, 0.70), Color(0.014, 0.01, 0.03), Color(1.07, 1.04, 1.0), 1.0, Color(-0.012, 0.0, 0.022), Color(0.035, 0.018, 0.0), 0.0],
-	[17.4, Color(1.0, 0.70, 0.46), 0.948, Color(0.435, 0.420, 0.566), Color(0.156, 0.117, 0.104), Color(0.70, 0.56, 0.52), Color(0.015, 0.0, 0.02), Color(1.08, 1.03, 0.98), 0.94, Color(-0.012, -0.004, 0.03), Color(0.035, 0.015, -0.005), 0.0],
-	[18.4, Color(0.92, 0.52, 0.34), 0.5, Color(0.22, 0.2, 0.28), Color(0.08, 0.055, 0.05), Color(0.44, 0.3, 0.32), Color(0.025, 0.01, 0.035), Color(1.02, 0.96, 0.98), 0.9, Color(-0.008, -0.004, 0.03), Color(0.035, 0.012, -0.004), 0.5],
-	[19.6, Color(0.42, 0.52, 0.85), 0.34, Color(0.105, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.09, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
-	[24.0, Color(0.42, 0.52, 0.85), 0.34, Color(0.105, 0.13, 0.22), Color(0.03, 0.03, 0.05), Color(0.09, 0.11, 0.19), Color(0.015, 0.02, 0.05), Color(0.96, 1.0, 1.1), 0.78, Color(-0.01, 0.0, 0.03), Color(0.0, 0.0, 0.0), 1.0],
+	[17.4, Color(1.0, 0.85, 0.57), 1.55, Color(0.45, 0.48, 0.71), Color(0.17, 0.145, 0.11), Color(0.82, 0.74, 0.62), Color(0.010, 0.008, 0.026), Color(1.04, 1.03, 0.97), 1.02, Color(-0.012, -0.002, 0.032), Color(0.03, 0.026, 0.0), 0.0],
+	[18.4, Color(1.0, 0.72, 0.44), 0.80, Color(0.25, 0.26, 0.42), Color(0.09, 0.075, 0.06), Color(0.50, 0.45, 0.48), Color(0.014, 0.01, 0.034), Color(1.02, 1.0, 0.98), 0.95, Color(-0.008, -0.002, 0.03), Color(0.026, 0.02, 0.0), 0.5],
+	[19.6, Color(0.52, 0.62, 0.95), 0.50, Color(0.060, 0.075, 0.125), Color(0.020, 0.020, 0.030), Color(0.07, 0.085, 0.14), Color(0.006, 0.010, 0.026), Color(0.98, 1.0, 1.07), 0.82, Color(-0.004, 0.0, 0.016), Color(0.0, 0.0, 0.0), 1.0],
+	[24.0, Color(0.52, 0.62, 0.95), 0.50, Color(0.060, 0.075, 0.125), Color(0.020, 0.020, 0.030), Color(0.07, 0.085, 0.14), Color(0.006, 0.010, 0.026), Color(0.98, 1.0, 1.07), 0.82, Color(-0.004, 0.0, 0.016), Color(0.0, 0.0, 0.0), 1.0],
 ]
 
 
@@ -140,11 +140,16 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_night", night)
 	RenderingServer.global_shader_parameter_set("w3_wet", wet)
 	RenderingServer.global_shader_parameter_set("w3_shade_tint", Vector3(0.95, 0.98, 1.05).lerp(Vector3(0.95, 0.98, 1.05), night))
-	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.04, 1.0, 0.94).lerp(Vector3(0.95, 1.0, 1.06), night))
+	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.03, 1.0, 0.96).lerp(Vector3(0.95, 1.0, 1.06), night))
 	environment.background_color = fog
 	# valley mist: thick in the early morning, thin at noon, back at dusk and at night
 	var mist_k := clampf(1.0 - absf(hours - 6.6) / 3.2, 0.0, 1.0) * 0.85 + clampf(1.0 - absf(hours - 19.5) / 3.0, 0.0, 1.0) * 0.45 + night * 0.35 + rain * 0.4
-	RenderingServer.global_shader_parameter_set("w3_mist", Vector4(-11.0, -26.0, clampf(0.25 + mist_k, 0.0, 0.92), 0.012))
+	# early morning the mist stands higher, up through the saddle (thin there, thick in the gully and
+	# down the spur), warm in the low sun; by mid-morning it has sunk back into the valleys
+	var morning := clampf(1.0 - absf(hours - 7.2) / 2.6, 0.0, 1.0)
+	var mist_top := lerpf(-11.0, 1.5, morning)
+	var mist_bottom := lerpf(-26.0, -22.0, morning)
+	RenderingServer.global_shader_parameter_set("w3_mist", Vector4(mist_top, mist_bottom, clampf(0.25 + mist_k, 0.0, lerpf(0.92, 0.7, morning)), 0.012))
 	var c := view.composite
 	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b))
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))

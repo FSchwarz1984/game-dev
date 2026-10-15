@@ -119,9 +119,10 @@ bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
 	vec2 ds = w3_screen(wp) - w3_screen(w3_player.xyz);
 	float r = length(ds * vec2(1.0, 0.8));
 	float R = w3_player.w * scale;
-	float ring = min(12.0, R * 0.35);                 // a dithered edge, clear inside
+	float ring = min(12.0, R * 0.35);                 // a stippled edge, clear inside
 	float k = clamp((R - r) / ring, 0.0, 1.0) * smoothstep(0.3, 1.2, toward);
-	return w3_bayer4(cell) < k;
+	// scattered, not ordered (an ordered dither reads as a printed screen)
+	return w3_hash(cell * 1.11 + 2.9) * 0.75 + w3_vnoise(cell / 1.7) * 0.25 < k;
 }
 bool w3_cutaway(vec3 wp, vec2 cell) {
 	return w3_cutaway_r(wp, cell, 1.0);
@@ -226,18 +227,21 @@ vec3 w3_lamp_light(vec3 albedo, vec3 wp, vec3 n, vec2 cell, float dither) {
 	for (int i = 0; i < cnt; i++) {
 		vec4 a = texelFetch(w3_lamps, ivec2(i, 0), 0);
 		vec3 d = a.xyz - wp;
-		float dist = length(d);
+		// the pool spreads on the ground under a lamp that hangs or stands above it: height counts
+		// for less than distance along the ground
+		float dist = length(d * vec3(1.0, 0.4, 1.0));
 		if (dist >= a.w) continue;
 		vec4 c = texelFetch(w3_lamps, ivec2(i, 1), 0);
 		float f = 1.0 - dist / a.w;
-		float face = clamp(dot(n, d / max(dist, 1e-3)) * 0.7 + 0.3, 0.0, 1.0);
-		float v = f * mix(1.0, face, 0.8);
+		float face = clamp(dot(n, normalize(d)) * 0.7 + 0.3, 0.0, 1.0);
+		// a little over 1 at the lamp, so the ground right under it gets the warm core
+		float v = min(f * 1.22, 1.0) * mix(1.0, face, 0.8);
 		// steps 1 (core), 0.75, 0.5, 0.25 (rim); a narrow scattered seam between them
 		float q = floor(v * 4.0 + 0.5 + (sc - 0.5) * 0.3 * dither) / 4.0;
 		if (q <= 0.0) continue;
 		float inten = q * q * q;                                    // 1, 0.42, 0.125, 0.016
-		vec3 tint = mix(vec3(1.0, 0.45, 0.16), vec3(1.0, 0.80, 0.56), q * q);
-		best = max(best, c.rgb * tint * inten);
+		vec3 lamp_tint = mix(vec3(1.0, 0.45, 0.16), vec3(1.0, 0.80, 0.56), q * q);
+		best = max(best, c.rgb * lamp_tint * inten);
 	}
 	return albedo * best;
 }
@@ -278,14 +282,30 @@ vec3 w3_pattern(vec3 col, float id, float amount, vec3 wp, vec3 wn, vec2 cell) {
 		float strand = w3_hash(vec2(cell.x, floor(cell.y / 6.0)));
 		col *= 0.82 + strand * 0.28;
 		if (w3_hash(vec2(cell.x * 0.5, floor(cell.y / 3.0))) > 0.9) col *= 0.75;
-	} else if (p == 3) {            // thatch: straw strands, combed rows
-		float strand = w3_hash(vec2(cell.x, floor(cell.y / 5.0)));
-		col *= 0.8 + strand * 0.32;
-		if (mod(cell.y, 6.0) < 1.0) col *= 0.78;
-	} else if (p == 4) {            // stone: speckle, organic cracks (noise iso-lines), lit edges, tidy moss on the tops
+	} else if (p == 3) {            // thatch
+		if (abs(wn.y) < 0.5) {
+			// a cut face (the eave, the steps between the courses): the ends of the straw, a dense
+			// speckle of pale stalk ends with dark gaps between, in loose layers
+			float lay = w3_vnoise(vec2(cell.x / 9.0, floor(cell.y / 3.0)));
+			col *= (r > 0.6 ? 1.2 : (r < 0.16 ? 0.62 : 0.95)) * (0.9 + lay * 0.2);
+		} else {
+			// the slope: straw strands down the fall line, broken, a few darker combed gaps
+			float strand = w3_hash(vec2(cell.x, floor(cell.y / 5.0)));
+			col *= 0.82 + strand * 0.3;
+			if (w3_hash(vec2(floor(cell.x / 3.0), floor(cell.y / 7.0)) + 5.0) > 0.86) col *= 0.82;
+		}
+	} else if (p == 4) {            // stone (granite): grain, organic cracks (noise iso-lines), lichen, tidy moss on the tops
 		float bl = w3_vnoise(cell / 9.0);
 		col *= 0.95 + floor(bl * 3.0) * 0.04;
-		col *= (r < 0.1 ? 0.88 : (r > 0.94 ? 1.08 : 1.0));
+		// the grain of granite: dark mica specks, pale feldspar
+		col *= (r < 0.07 ? 0.74 : (r < 0.14 ? 0.9 : (r > 0.95 ? 1.14 : 1.0)));
+		// crustose lichen: pale grey-green rosettes, and now and then a small orange-yellow one, on
+		// the faces that see the sky
+		if (wn.y > -0.25) {
+			float ln = w3_vnoise(cell / 3.3 + 21.0) * 0.75 + w3_hash(cell * 0.7 + 5.0) * 0.25;
+			if (ln > 0.72) col = mix(col, vec3(0.40, 0.43, 0.33), 0.55);
+			else if (w3_vnoise(cell / 2.1 + 57.0) > 0.9 && r < 0.5) col = mix(col, vec3(0.50, 0.32, 0.08), 0.5);
+		}
 		float cr = abs(w3_vnoise(cell / 7.0 + 13.0) - 0.5);
 		if (cr < 0.022) col *= 0.62;
 		float cr2 = abs(w3_vnoise(cell / 4.0 + 41.0) - 0.5);

@@ -1,4 +1,5 @@
-// Screen post, outline class 3 (characters): their sprites carry their own outline; fog only, lighter.
+// Screen post, outline class 3 (characters): their sprites carry their own outline; fog only, and
+// only a third of it (character protection: she reads first, in the morning mist too).
 shader_type spatial;
 render_mode unshaded, depth_draw_never, depth_test_disabled, cull_disabled, skip_vertex_transform, fog_disabled, blend_mix, shadows_disabled;
 stencil_mode read, compare_equal, 3;
@@ -6,4 +7,5 @@ stencil_mode read, compare_equal, 3;
 #define OL_CREASE 0.0
 #define OL_TINT vec3(1.0)
 #define OL_RIM 0
+#define OL_FOG 0.33
 #include "res://render3d/shaders/post_body.gdshaderinc"

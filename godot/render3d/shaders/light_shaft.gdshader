@@ -44,5 +44,5 @@ void fragment() {
 	float sc = w3_hash(cell * 1.29 + 4.3) * 0.7 + w3_vnoise(cell / 2.3 + 1.7) * 0.3;
 	float aq = floor(a * 3.0 + 0.35 + (sc - 0.5) * 0.3) / 3.0;
 	if (aq <= 0.0) discard;
-	ALBEDO = w3_sun * vec3(1.0, 0.93, 0.74) * aq * 0.075;
+	ALBEDO = w3_sun * vec3(1.0, 0.93, 0.74) * aq * 0.06;
 }

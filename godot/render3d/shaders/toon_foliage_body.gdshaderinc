@@ -95,6 +95,12 @@ void fragment() {
 	}
 	vec3 wn = normalize(v_wn);
 	vec3 alb = w3_srgb_to_linear(COLOR.rgb * tx.rgb) * tint.rgb;
+	// leaves read a touch quieter than they were painted (strong sun lifts their chroma; v0.1's
+	// olive greens, knowledge/17 §3); reds and golds (the maples, the persimmons) keep theirs
+	vec3 lab0 = w3_lin_to_oklab(alb);
+	if (lab0.y < 0.0) {
+		alb = max(w3_oklab_to_lin(vec3(lab0.x, lab0.yz * 0.84)), vec3(0.0));
+	}
 	alb *= (w3_hash(cell) < 0.08 ? 0.94 : 1.0);
 	alb = w3_wetten(alb, porosity);
 	alb = w3_far(alb, far);

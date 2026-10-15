@@ -23,13 +23,13 @@ from skimage import color
 
 ROWS = {
     # name: (L*, C*, hue deg) of the middle tone (index 3.5); albedos, the light adds its own warmth
-    "grass": (34.0, 17.5, 130.0),
-    "grass_dry": (40.0, 15.5, 112.0),  # dry, not yellow: in strong sun hue 104 read as straw-yellow
-    "dirt": (43.0, 8.0, 78.0),      # packed earth, light and quiet (dirt only where feet wear it)
+    "grass": (34.0, 14.5, 134.0),
+    "grass_dry": (40.0, 12.5, 118.0),  # dry, not yellow: in strong sun hue 104 read as straw-yellow
+    "dirt": (43.0, 10.0, 76.0),      # packed earth, light and quiet (dirt only where feet wear it)
     "gravel": (42.0, 5.0, 80.0),
     "rock": (38.0, 7.0, 68.0),     # warm grey; the shade turns it violet
     "moss": (31.0, 19.0, 126.0),
-    "litter": (34.0, 10.0, 84.0),
+    "litter": (34.0, 11.5, 82.0),
     "needles": (33.0, 10.0, 72.0),
     "bamboo_litter": (45.0, 12.0, 86.0),
     "bank": (35.0, 11.0, 70.0),

@@ -15,6 +15,7 @@ var _mote_acc := 0.0
 var _fly_acc := 0.0
 var _rain_acc := 0.0
 var glints: Array = []          # [position, phase] from the dressing: small things that catch the light
+var lamps: W3Lamps              # the renderer's lamps (the wisps light the graves a cold blue)
 
 
 func setup(e: W3Env, t: Terrain3D) -> void:
@@ -82,15 +83,10 @@ func _build_wisps() -> void:
 	var g := terrain.marker("graves")
 	for i in 3:
 		var home := g + Vector3(-4.0 + i * 3.6, 1.2 + i * 0.2, 0.6 + (i % 2) * 0.7)
-		var light := OmniLight3D.new()
-		light.light_color = Color(0.55, 0.85, 1.0)
-		light.light_energy = 0.0
-		light.omni_range = 3.6
-		light.omni_attenuation = 1.0
-		light.shadow_enabled = false
-		light.light_specular = 0.0
-		add_child(light)
-		wisps.append({"pos": home, "home": home, "phase": rng.randf() * TAU, "light": light})
+		var li := -1
+		if lamps:
+			li = lamps.add(home, 1.9, Color(0.55, 0.85, 1.0), 0.55, 0.0, true)
+		wisps.append({"pos": home, "home": home, "phase": rng.randf() * TAU, "lamp": li})
 
 
 func _step(p: Array, dt: float) -> void:
@@ -168,18 +164,18 @@ func update(dt: float, at: Vector3) -> void:
 			particles.spawn(gp + Vector3(rng.randf_range(-0.12, 0.12), 0.0, rng.randf_range(-0.05, 0.05)), Vector3.ZERO, 0.45, gc, Vector2(1, 1), 1.0, 6)
 	# will-o'-wisps by the graves at night
 	for wd in wisps:
-		var light: OmniLight3D = wd["light"]
+		var li: int = wd["lamp"]
 		if is_night:
 			wd["phase"] = float(wd["phase"]) + dt
 			var ph: float = wd["phase"]
 			var home: Vector3 = wd["home"]
 			var pos := home + Vector3(sin(ph * 0.37) * 0.9, sin(ph * 0.9) * 0.25, cos(ph * 0.29) * 0.6)
 			wd["pos"] = pos
-			light.position = pos
-			light.light_energy = 0.9 + 0.25 * sin(ph * 7.0)
+			if li >= 0:
+				lamps.set_lamp(li, pos, 0.85 + 0.15 * sin(ph * 7.0))
 			particles.spawn(pos, Vector3(0, 0.0, 0), 0.06, Color(0.7, 0.95, 1.0) * 2.2, Vector2(2, 3), 1.0, 0)
 			if rng.randf() < dt * 14.0:
 				particles.spawn(pos + Vector3(rng.randf_range(-0.05, 0.05), 0.1, 0), Vector3(rng.randf_range(-0.1, 0.1), 0.55, 0), rng.randf_range(0.4, 0.8), Color(0.55, 0.85, 1.0) * 1.6, Vector2(1, 1), 0.0, 3)
-		else:
-			light.light_energy = 0.0
+		elif li >= 0:
+			lamps.set_lamp(li, wd["pos"], 0.0)
 	particles.update(dt, _step)

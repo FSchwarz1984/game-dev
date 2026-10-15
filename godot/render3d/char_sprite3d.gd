@@ -8,6 +8,9 @@ extends MeshInstance3D
 var mat := ShaderMaterial.new()
 var frame_size := Vector2i(64, 64)
 var pivot := Vector2i(32, 58)
+## her silhouette through whatever covers her (shaders/sprite_xray.gdshader)
+var xray := MeshInstance3D.new()
+var xray_mat := ShaderMaterial.new()
 
 
 func _init() -> void:
@@ -15,6 +18,18 @@ func _init() -> void:
 	material_override = mat
 	cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 	extra_cull_margin = 2.0
+	xray_mat.shader = load("res://render3d/shaders/sprite_xray.gdshader")
+	xray_mat.render_priority = 120
+	xray.material_override = xray_mat
+	xray.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	xray.extra_cull_margin = 2.0
+	xray.name = "XRay"
+	add_child(xray)
+
+
+## The colour of her outline when something covers her (sRGB).
+func set_xray_colour(c: Color) -> void:
+	xray_mat.set_shader_parameter("line_col", c)
 
 
 ## Textures are copied into ImageTextures: a CompressedTexture2D used by a 3D material gets its
@@ -34,6 +49,7 @@ func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i,
 	mat.set_shader_parameter("sprite_pitch_deg", sprite_pitch)
 	mat.set_shader_parameter("sheet", sheet)
 	mat.set_shader_parameter("sheet_n", sheet_n)
+	xray_mat.set_shader_parameter("sheet", sheet)
 	var l := -float(piv.x)
 	var r := float(fsize.x - piv.x)
 	var t := float(piv.y)
@@ -61,9 +77,12 @@ func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i,
 	var m := ArrayMesh.new()
 	m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	mesh = m
+	xray.mesh = m
 
 
 func show_frame(col: int, row: int, flip := false, head := Vector2(0.5, -35.0)) -> void:
 	mat.set_shader_parameter("frame_rect", Vector4(col * frame_size.x, row * frame_size.y, frame_size.x, frame_size.y))
 	mat.set_shader_parameter("flip_h", flip)
+	xray_mat.set_shader_parameter("frame_rect", Vector4(col * frame_size.x, row * frame_size.y, frame_size.x, frame_size.y))
+	xray_mat.set_shader_parameter("flip_h", flip)
 	mat.set_shader_parameter("head_px", head)
