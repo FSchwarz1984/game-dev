@@ -1,0 +1,569 @@
+{
+ "note": "landmarks: model space, bind pose, Godot axes (x east, y up, z toward the camera)",
+ "landmarks": {
+  "face": {
+   "p": [
+    -0.0,
+    1.25,
+    0.19908
+   ],
+   "n": [
+    -0.0,
+    -0.188,
+    0.98217
+   ]
+  },
+  "eye_R": {
+   "p": [
+    -0.1,
+    1.25,
+    0.18407
+   ],
+   "n": [
+    -0.44687,
+    -0.18055,
+    0.87619
+   ]
+  },
+  "eye_L": {
+   "p": [
+    0.1,
+    1.25,
+    0.18407
+   ],
+   "n": [
+    0.44687,
+    -0.18055,
+    0.87619
+   ]
+  },
+  "brow_R": {
+   "p": [
+    -0.095,
+    1.365,
+    0.18179
+   ],
+   "n": [
+    -0.43383,
+    0.16914,
+    0.88498
+   ]
+  },
+  "brow_L": {
+   "p": [
+    0.095,
+    1.365,
+    0.18179
+   ],
+   "n": [
+    0.43383,
+    0.16914,
+    0.88498
+   ]
+  },
+  "mouth": {
+   "p": [
+    -0.0,
+    1.135,
+    0.18864
+   ],
+   "n": [
+    -0.0,
+    -0.50645,
+    0.86227
+   ]
+  },
+  "cheek_R": {
+   "p": [
+    -0.135,
+    1.178,
+    0.15922
+   ],
+   "n": [
+    -0.57334,
+    -0.37751,
+    0.72716
+   ]
+  },
+  "cheek_L": {
+   "p": [
+    0.135,
+    1.178,
+    0.15922
+   ],
+   "n": [
+    0.57334,
+    -0.37751,
+    0.72716
+   ]
+  },
+  "mark": {
+   "p": [
+    0.17454,
+    1.46,
+    0.15098
+   ],
+   "n": [
+    0.67317,
+    0.38957,
+    0.62855
+   ]
+  },
+  "sweat": {
+   "p": [
+    -0.23206,
+    1.33,
+    0.10238
+   ],
+   "n": [
+    -0.89575,
+    0.05199,
+    0.44151
+   ]
+  }
+ },
+ "clips": {
+  "cheer": {
+   "loop": false
+  },
+  "climb": {
+   "loop": true,
+   "rise": 0.5
+  },
+  "heavy_walk": {
+   "loop": true,
+   "speed": 0.95
+  },
+  "idle": {
+   "loop": true
+  },
+  "idle_hat": {
+   "loop": false,
+   "reach": [
+    8,
+    15,
+    50,
+    60
+   ]
+  },
+  "idle_look": {
+   "loop": false
+  },
+  "idle_sway": {
+   "loop": true
+  },
+  "jump_air": {
+   "loop": true
+  },
+  "jump_land": {
+   "loop": false
+  },
+  "jump_start": {
+   "loop": false
+  },
+  "pout": {
+   "loop": false
+  },
+  "run": {
+   "loop": true,
+   "speed": 3.6
+  },
+  "sigh": {
+   "loop": false
+  },
+  "sit_down": {
+   "loop": false
+  },
+  "sit_idle": {
+   "loop": true
+  },
+  "sob": {
+   "loop": false
+  },
+  "stand_up": {
+   "loop": false
+  },
+  "startle": {
+   "loop": false
+  },
+  "stop": {
+   "loop": false
+  },
+  "tilt": {
+   "loop": false
+  },
+  "turn_step": {
+   "loop": true
+  },
+  "walk": {
+   "loop": true,
+   "speed": 1.5
+  },
+  "wave": {
+   "loop": false
+  }
+ },
+ "hat_tilt_deg": 52.0,
+ "hat_tilt_away_deg": 24.0,
+ "hat_roll_deg": 12.0,
+ "head_turn_bias_deg": 20.0,
+ "hat_brim": {
+  "y": -0.124,
+  "r": 0.5,
+  "arm": [
+   "upper_arm_R",
+   "forearm_R",
+   "hand_R"
+  ],
+  "hand_len": 0.062
+ },
+ "springs": [
+  {
+   "name": "hair_0",
+   "root": "hair_0_0",
+   "end": "hair_0_3",
+   "stiffness": 0.95,
+   "drag": 0.4,
+   "gravity": 0.55,
+   "radius": 0.035,
+   "tip": 0.06,
+   "collide": [
+    "col_head",
+    "col_chest",
+    "col_spine",
+    "col_hips",
+    "col_thigh_L",
+    "col_thigh_R"
+   ],
+   "wind": 0.26
+  },
+  {
+   "name": "hair_1",
+   "root": "hair_1_0",
+   "end": "hair_1_3",
+   "stiffness": 1.6,
+   "drag": 0.55,
+   "gravity": 0.4,
+   "radius": 0.035,
+   "tip": 0.06,
+   "collide": [
+    "col_head",
+    "col_chest",
+    "col_spine",
+    "col_hips",
+    "col_thigh_L",
+    "col_thigh_R"
+   ],
+   "wind": 0.2
+  },
+  {
+   "name": "hair_2",
+   "root": "hair_2_0",
+   "end": "hair_2_3",
+   "stiffness": 0.95,
+   "drag": 0.4,
+   "gravity": 0.55,
+   "radius": 0.035,
+   "tip": 0.06,
+   "collide": [
+    "col_head",
+    "col_chest",
+    "col_spine",
+    "col_hips",
+    "col_thigh_L",
+    "col_thigh_R"
+   ],
+   "wind": 0.26
+  },
+  {
+   "name": "lock_L",
+   "root": "lock_L_0",
+   "end": "lock_L_2",
+   "stiffness": 2.0,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.02,
+   "tip": 0.03,
+   "collide": [
+    "col_chest",
+    "col_head"
+   ],
+   "wind": 0.15
+  },
+  {
+   "name": "sleeve_L",
+   "root": "sleeve_L_0",
+   "end": "sleeve_L_1",
+   "stiffness": 2.4,
+   "drag": 0.5,
+   "gravity": 0.15,
+   "radius": 0.04,
+   "tip": 0.05,
+   "collide": [
+    "col_chest",
+    "col_spine",
+    "col_hips",
+    "col_thigh_L"
+   ],
+   "wind": 0.2
+  },
+  {
+   "name": "lock_R",
+   "root": "lock_R_0",
+   "end": "lock_R_2",
+   "stiffness": 2.0,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.02,
+   "tip": 0.03,
+   "collide": [
+    "col_chest",
+    "col_head"
+   ],
+   "wind": 0.15
+  },
+  {
+   "name": "sleeve_R",
+   "root": "sleeve_R_0",
+   "end": "sleeve_R_1",
+   "stiffness": 2.4,
+   "drag": 0.5,
+   "gravity": 0.15,
+   "radius": 0.04,
+   "tip": 0.05,
+   "collide": [
+    "col_chest",
+    "col_spine",
+    "col_hips",
+    "col_thigh_R"
+   ],
+   "wind": 0.2
+  },
+  {
+   "name": "coat_FL",
+   "root": "coat_FL_0",
+   "end": "coat_FL_1",
+   "stiffness": 2.2,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.035,
+   "tip": 0.03,
+   "collide": [
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.12
+  },
+  {
+   "name": "coat_FR",
+   "root": "coat_FR_0",
+   "end": "coat_FR_1",
+   "stiffness": 2.2,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.035,
+   "tip": 0.03,
+   "collide": [
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.12
+  },
+  {
+   "name": "coat_BL",
+   "root": "coat_BL_0",
+   "end": "coat_BL_1",
+   "stiffness": 2.2,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.035,
+   "tip": 0.03,
+   "collide": [
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.12
+  },
+  {
+   "name": "coat_BR",
+   "root": "coat_BR_0",
+   "end": "coat_BR_1",
+   "stiffness": 2.2,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.035,
+   "tip": 0.03,
+   "collide": [
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.12
+  },
+  {
+   "name": "coat_SL",
+   "root": "coat_SL_0",
+   "end": "coat_SL_1",
+   "stiffness": 2.2,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.035,
+   "tip": 0.03,
+   "collide": [
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.12
+  },
+  {
+   "name": "coat_SR",
+   "root": "coat_SR_0",
+   "end": "coat_SR_1",
+   "stiffness": 2.2,
+   "drag": 0.55,
+   "gravity": 0.3,
+   "radius": 0.035,
+   "tip": 0.03,
+   "collide": [
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.12
+  },
+  {
+   "name": "sashA",
+   "root": "sashA_0",
+   "end": "sashA_3",
+   "stiffness": 1.5,
+   "drag": 0.34,
+   "gravity": 0.3,
+   "radius": 0.02,
+   "tip": 0.04,
+   "collide": [
+    "col_hips",
+    "col_thigh_L",
+    "col_thigh_R",
+    "col_shin_L",
+    "col_shin_R"
+   ],
+   "wind": 0.35
+  },
+  {
+   "name": "sashB",
+   "root": "sashB_0",
+   "end": "sashB_3",
+   "stiffness": 1.3,
+   "drag": 0.34,
+   "gravity": 0.3,
+   "radius": 0.02,
+   "tip": 0.04,
+   "collide": [
+    "col_hips",
+    "col_thigh_L",
+    "col_thigh_R"
+   ],
+   "wind": 0.4
+  }
+ ],
+ "colliders": [
+  {
+   "name": "col_head",
+   "bone": "head",
+   "radius": 0.21,
+   "height": 0.42,
+   "offset": [
+    0,
+    0.21,
+    0.0
+   ]
+  },
+  {
+   "name": "col_chest",
+   "bone": "chest",
+   "radius": 0.125,
+   "height": 0.3,
+   "offset": [
+    0,
+    0.07,
+    0.0
+   ]
+  },
+  {
+   "name": "col_spine",
+   "bone": "spine",
+   "radius": 0.115,
+   "height": 0.26,
+   "offset": [
+    0,
+    0.05,
+    0.0
+   ]
+  },
+  {
+   "name": "col_hips",
+   "bone": "hips",
+   "radius": 0.13,
+   "height": 0.3,
+   "offset": [
+    0,
+    0.02,
+    0.0
+   ]
+  },
+  {
+   "name": "col_thigh_L",
+   "bone": "thigh_L",
+   "radius": 0.095,
+   "height": 0.4,
+   "offset": [
+    0,
+    0.125,
+    0.0
+   ]
+  },
+  {
+   "name": "col_shin_L",
+   "bone": "shin_L",
+   "radius": 0.08,
+   "height": 0.32,
+   "offset": [
+    0,
+    0.13,
+    0.0
+   ]
+  },
+  {
+   "name": "col_thigh_R",
+   "bone": "thigh_R",
+   "radius": 0.095,
+   "height": 0.4,
+   "offset": [
+    0,
+    0.125,
+    0.0
+   ]
+  },
+  {
+   "name": "col_shin_R",
+   "bone": "shin_R",
+   "radius": 0.08,
+   "height": 0.32,
+   "offset": [
+    0,
+    0.13,
+    0.0
+   ]
+  }
+ ]
+}

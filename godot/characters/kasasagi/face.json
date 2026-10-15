@@ -1,0 +1,1902 @@
+{
+ "cell": 8,
+ "cols": 16,
+ "stamps": {
+  "eye_R_open_f": {
+   "cell": 0,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_open_f": {
+   "cell": 1,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_open_t": {
+   "cell": 2,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_open_t": {
+   "cell": 3,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_open_s": {
+   "cell": 4,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_open_s": {
+   "cell": 5,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_blink_f": {
+   "cell": 6,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_blink_f": {
+   "cell": 7,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_blink_t": {
+   "cell": 8,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_blink_t": {
+   "cell": 9,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_blink_s": {
+   "cell": 10,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_blink_s": {
+   "cell": 11,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_half_f": {
+   "cell": 12,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_half_f": {
+   "cell": 13,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_half_t": {
+   "cell": 14,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_half_t": {
+   "cell": 15,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_half_s": {
+   "cell": 16,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_half_s": {
+   "cell": 17,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_smug_f": {
+   "cell": 18,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_smug_f": {
+   "cell": 19,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_smug_t": {
+   "cell": 20,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_smug_t": {
+   "cell": 21,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_smug_s": {
+   "cell": 22,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_smug_s": {
+   "cell": 23,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_happy_f": {
+   "cell": 24,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    3,
+    3
+   ]
+  },
+  "eye_L_happy_f": {
+   "cell": 25,
+   "pivot": [
+    2,
+    1
+   ],
+   "size": [
+    3,
+    3
+   ]
+  },
+  "eye_R_happy_t": {
+   "cell": 26,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    3,
+    3
+   ]
+  },
+  "eye_L_happy_t": {
+   "cell": 27,
+   "pivot": [
+    2,
+    1
+   ],
+   "size": [
+    3,
+    3
+   ]
+  },
+  "eye_R_happy_s": {
+   "cell": 28,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_happy_s": {
+   "cell": 29,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_wide_f": {
+   "cell": 30,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_wide_f": {
+   "cell": 31,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_wide_t": {
+   "cell": 32,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_wide_t": {
+   "cell": 33,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_wide_s": {
+   "cell": 34,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_wide_s": {
+   "cell": 35,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_angry_f": {
+   "cell": 36,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_angry_f": {
+   "cell": 37,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_angry_t": {
+   "cell": 38,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_angry_t": {
+   "cell": 39,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_angry_s": {
+   "cell": 40,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_angry_s": {
+   "cell": 41,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_sad_f": {
+   "cell": 42,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_sad_f": {
+   "cell": 43,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_sad_t": {
+   "cell": 44,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_sad_t": {
+   "cell": 45,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_sad_s": {
+   "cell": 46,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_sad_s": {
+   "cell": 47,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_grin_f": {
+   "cell": 48,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_grin_f": {
+   "cell": 49,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_grin_t": {
+   "cell": 50,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_L_grin_t": {
+   "cell": 51,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "eye_R_grin_s": {
+   "cell": 52,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_L_grin_s": {
+   "cell": 53,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    3
+   ]
+  },
+  "eye_R_teary_f": {
+   "cell": 54,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    4
+   ]
+  },
+  "eye_L_teary_f": {
+   "cell": 55,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    4
+   ]
+  },
+  "eye_R_teary_t": {
+   "cell": 56,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    4
+   ]
+  },
+  "eye_L_teary_t": {
+   "cell": 57,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    4
+   ]
+  },
+  "eye_R_teary_s": {
+   "cell": 58,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    4
+   ]
+  },
+  "eye_L_teary_s": {
+   "cell": 59,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    4
+   ]
+  },
+  "eye_R_cry0_f": {
+   "cell": 60,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_L_cry0_f": {
+   "cell": 61,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_R_cry0_t": {
+   "cell": 62,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_L_cry0_t": {
+   "cell": 63,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_R_cry0_s": {
+   "cell": 64,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    6
+   ]
+  },
+  "eye_L_cry0_s": {
+   "cell": 65,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    6
+   ]
+  },
+  "eye_R_cry1_f": {
+   "cell": 66,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_L_cry1_f": {
+   "cell": 67,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_R_cry1_t": {
+   "cell": 68,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_L_cry1_t": {
+   "cell": 69,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    6
+   ]
+  },
+  "eye_R_cry1_s": {
+   "cell": 70,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    6
+   ]
+  },
+  "eye_L_cry1_s": {
+   "cell": 71,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    1,
+    6
+   ]
+  },
+  "brow_R_normal_f": {
+   "cell": 72,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_normal_f": {
+   "cell": 73,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_normal_t": {
+   "cell": 74,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_normal_t": {
+   "cell": 75,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_normal_s": {
+   "cell": 76,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_normal_s": {
+   "cell": 77,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_angry_f": {
+   "cell": 78,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_L_angry_f": {
+   "cell": 79,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_R_angry_t": {
+   "cell": 80,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_L_angry_t": {
+   "cell": 81,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_R_angry_s": {
+   "cell": 82,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_L_angry_s": {
+   "cell": 83,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_R_sad_f": {
+   "cell": 84,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_L_sad_f": {
+   "cell": 85,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_R_sad_t": {
+   "cell": 86,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_L_sad_t": {
+   "cell": 87,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_R_sad_s": {
+   "cell": 88,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_L_sad_s": {
+   "cell": 89,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "brow_R_up_f": {
+   "cell": 90,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_up_f": {
+   "cell": 91,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_up_t": {
+   "cell": 92,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_up_t": {
+   "cell": 93,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_up_s": {
+   "cell": 94,
+   "pivot": [
+    0,
+    1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_up_s": {
+   "cell": 95,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_arch_f": {
+   "cell": 96,
+   "pivot": [
+    0,
+    2
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_arch_f": {
+   "cell": 97,
+   "pivot": [
+    1,
+    2
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_arch_t": {
+   "cell": 98,
+   "pivot": [
+    0,
+    2
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_arch_t": {
+   "cell": 99,
+   "pivot": [
+    1,
+    2
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_arch_s": {
+   "cell": 100,
+   "pivot": [
+    0,
+    2
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_arch_s": {
+   "cell": 101,
+   "pivot": [
+    1,
+    2
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_flat_f": {
+   "cell": 102,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_flat_f": {
+   "cell": 103,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_flat_t": {
+   "cell": 104,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_flat_t": {
+   "cell": 105,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_flat_s": {
+   "cell": 106,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_flat_s": {
+   "cell": 107,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_low_f": {
+   "cell": 108,
+   "pivot": [
+    0,
+    -1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_low_f": {
+   "cell": 109,
+   "pivot": [
+    1,
+    -1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_low_t": {
+   "cell": 110,
+   "pivot": [
+    0,
+    -1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_low_t": {
+   "cell": 111,
+   "pivot": [
+    1,
+    -1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_R_low_s": {
+   "cell": 112,
+   "pivot": [
+    0,
+    -1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "brow_L_low_s": {
+   "cell": 113,
+   "pivot": [
+    1,
+    -1
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_neutral_f": {
+   "cell": 114,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_neutral_t": {
+   "cell": 115,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_neutral_s": {
+   "cell": 116,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_smile_f": {
+   "cell": 117,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_smile_t": {
+   "cell": 118,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_smile_s": {
+   "cell": 119,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_laugh_f": {
+   "cell": 120,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_laugh_t": {
+   "cell": 121,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_laugh_s": {
+   "cell": 122,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_grin_f": {
+   "cell": 123,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_grin_t": {
+   "cell": 124,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_grin_s": {
+   "cell": 125,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_o_f": {
+   "cell": 126,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_o_t": {
+   "cell": 127,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_o_s": {
+   "cell": 128,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_frown_f": {
+   "cell": 129,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_frown_t": {
+   "cell": 130,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_frown_s": {
+   "cell": 131,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_grit_f": {
+   "cell": 132,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    1
+   ]
+  },
+  "mouth_grit_t": {
+   "cell": 133,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    1
+   ]
+  },
+  "mouth_grit_s": {
+   "cell": 134,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    1
+   ]
+  },
+  "mouth_wail_f": {
+   "cell": 135,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mouth_wail_t": {
+   "cell": 136,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mouth_wail_s": {
+   "cell": 137,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mouth_smirk_f": {
+   "cell": 138,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_smirk_t": {
+   "cell": 139,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_smirk_s": {
+   "cell": 140,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_pout_f": {
+   "cell": 141,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    1,
+    2
+   ]
+  },
+  "mouth_pout_t": {
+   "cell": 142,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    1,
+    2
+   ]
+  },
+  "mouth_pout_s": {
+   "cell": 143,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    1,
+    2
+   ]
+  },
+  "mouth_yawn_f": {
+   "cell": 144,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mouth_yawn_t": {
+   "cell": 145,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mouth_yawn_s": {
+   "cell": 146,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mouth_talk_a_f": {
+   "cell": 147,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_talk_a_t": {
+   "cell": 148,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_talk_a_s": {
+   "cell": 149,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    2
+   ]
+  },
+  "mouth_talk_b_f": {
+   "cell": 150,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_talk_b_t": {
+   "cell": 151,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_talk_b_s": {
+   "cell": 152,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "mouth_talk_c_f": {
+   "cell": 153,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_talk_c_t": {
+   "cell": 154,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "mouth_talk_c_s": {
+   "cell": 155,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    3,
+    2
+   ]
+  },
+  "cheek_R_blush_f": {
+   "cell": 156,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "cheek_L_blush_f": {
+   "cell": 157,
+   "pivot": [
+    1,
+    0
+   ],
+   "size": [
+    2,
+    1
+   ]
+  },
+  "cheek_R_blush_t": {
+   "cell": 158,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    1,
+    1
+   ]
+  },
+  "cheek_L_blush_t": {
+   "cell": 159,
+   "pivot": [
+    0,
+    0
+   ],
+   "size": [
+    1,
+    1
+   ]
+  },
+  "mark_anger": {
+   "cell": 160,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    3,
+    3
+   ]
+  },
+  "mark_sweat": {
+   "cell": 161,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    2,
+    3
+   ]
+  },
+  "mark_zzz": {
+   "cell": 162,
+   "pivot": [
+    1,
+    1
+   ],
+   "size": [
+    3,
+    3
+   ]
+  }
+ },
+ "expressions": {
+  "neutral": {
+   "eyes": "open",
+   "brows": "normal",
+   "mouth": "neutral"
+  },
+  "smile": {
+   "eyes": "open",
+   "brows": "normal",
+   "mouth": "smile"
+  },
+  "happy": {
+   "eyes": "happy",
+   "brows": "up",
+   "mouth": "laugh",
+   "blush": true
+  },
+  "grin": {
+   "eyes": "grin",
+   "brows": "up",
+   "mouth": "grin"
+  },
+  "mischief": {
+   "eyes": "smug",
+   "brows": {
+    "R": "low",
+    "L": "arch"
+   },
+   "mouth": "smirk"
+  },
+  "cat": {
+   "eyes": "grin",
+   "brows": "normal",
+   "mouth": "smile"
+  },
+  "curious": {
+   "eyes": "open",
+   "brows": {
+    "R": "normal",
+    "L": "up"
+   },
+   "mouth": "o"
+  },
+  "surprised": {
+   "eyes": "wide",
+   "brows": "up",
+   "mouth": "o"
+  },
+  "angry": {
+   "eyes": "angry",
+   "brows": "angry",
+   "mouth": "grit",
+   "mark": "anger"
+  },
+  "sad": {
+   "eyes": "sad",
+   "brows": "sad",
+   "mouth": "frown"
+  },
+  "teary": {
+   "eyes": "teary",
+   "brows": "sad",
+   "mouth": "frown"
+  },
+  "cry": {
+   "eyes": [
+    "cry0",
+    "cry1"
+   ],
+   "brows": "sad",
+   "mouth": "wail"
+  },
+  "smug": {
+   "eyes": "smug",
+   "brows": "flat",
+   "mouth": "smile"
+  },
+  "sleepy": {
+   "eyes": "half",
+   "brows": "flat",
+   "mouth": "yawn",
+   "mark": "zzz"
+  },
+  "pout": {
+   "eyes": "angry",
+   "brows": "angry",
+   "mouth": "pout",
+   "blush": true
+  },
+  "embarrassed": {
+   "eyes": "open",
+   "brows": "sad",
+   "mouth": "frown",
+   "blush": true,
+   "mark": "sweat"
+  }
+ },
+ "talk": [
+  "talk_a",
+  "talk_b",
+  "talk_c",
+  "neutral"
+ ]
+}
