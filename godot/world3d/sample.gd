@@ -69,6 +69,8 @@ func _ready() -> void:
 	pv = PixelView3D.new()
 	if args.has("pitch"):
 		pv.pitch_deg = float(args["pitch"])
+	if args.has("scale"):
+		pv.force_scale = int(args["scale"])     # comparisons: e.g. --scale=4 at 1920x1080 = 480x270 x4
 	add_child(pv)
 	env = W3Env.new()
 	add_child(env)
@@ -657,6 +659,10 @@ func _spawn_characters() -> void:
 	saji.set_xray_colour(Color(0.62, 0.86, 1.0))
 	her_shadow = _contact_shadow(Vector2(9.0, 3.5))
 	saji_shadow = _contact_shadow(Vector2(7.0, 3.0))
+	# (comparison: the 3D model casts its own shadow; --nocontact hides the painted contact ellipse)
+	if args.has("nocontact"):
+		her_shadow.visible = false
+		saji_shadow.visible = false
 
 
 func _contact_shadow(r: Vector2) -> MeshInstance3D:
@@ -769,8 +775,13 @@ func _drive_route() -> void:
 		return
 	var t := route[route_i]
 	var d := t - Vector2(her.pos.x, her.pos.z)
-	if d.length() < 0.6:
+	# arrived; or stopped close to it by something in the way for a second (a waypoint the layout's
+	# props have since crowded: the recording walks on rather than pushing at it forever)
+	if d.length() < 0.6 or (d.length() < 1.3 and _stall_t > 1.0):
+		if d.length() >= 0.6:
+			print("ROUTE skip i=%d (stopped %.2f m short)" % [route_i, d.length()])
 		route_i += 1
+		_stall_t = 0.0
 		return
 	d = d.normalized()
 	# the keys a player would hold (8 directions)
