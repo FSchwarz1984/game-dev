@@ -26,3 +26,4 @@ x $e23b4e  anger mark
 X $931f35  anger mark dark
 h $4a3c51  hair (bangs) mid
 H $2a202d  hair dark
+B $2a202d  brow (rarely visible: her bangs cover it)

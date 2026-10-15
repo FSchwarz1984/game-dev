@@ -1,8 +1,27 @@
-# Saji, serious. Source C_25 ("抬手示意停下严肃"). Upper lids flattened one row lower, a firm straight mouth.
-@ 45 50
+# Saji, serious. Source C_25 ("抬手示意停下严肃"). Eyes narrowed into a level, steady look: upper lids two rows lower
+# and flat, lower lids one row higher; a firm straight mouth.
+@ 44 50
+kkkkkkkkkkk
+kkkkkkkkkkk
+@ 48 52
+l
+@ 46 58
+tttttttttt
+@ 75 61
+kkkkkkkkk
 kkkkkkkk
-@ 76 61
-kkkkkkk
+@ 78 63
+l
+@ 74 68
+tttttttt
 @ 57 78
 qqqqqq
 ....sss
+# Brows: the illustration draws a low, level brow through the bangs (lost in the pixelising); level, the inner end
+# one row lower (a slight knit, not the angry slant).
+@ 45 45
+BBBBBBBB
+........BBB
+@ 72 56
+...BBBBB
+BBB

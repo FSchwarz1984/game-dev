@@ -11,7 +11,8 @@ C_01..C_36 = Saji, extracted as DIR/Character_<L>_<nn-nn>/<L>_<nn>.png (one dire
 of the repo; `crops` keeps one 320x320 work crop per selected expression in assets/portraits/src/<char>/<expr>.webp
 (lossy WebP, alpha lossless) and `build` reads only those, so the PNGs are reproducible from the repo.
 
-Output: assets/portraits/pixel/<char>/<expr>.png, SIZE x SIZE (80 x 80) native pixels, binary alpha, every colour
+Output: assets/portraits/pixel_v1/<char>/<expr>.png (v1, kept for reference; the current portraits are v4,
+tools/art/portraits4), SIZE x SIZE (80 x 80) native pixels, binary alpha, every colour
 from the character's palette below; portraits.json lists the expressions, the eye line and the palettes.
 
 Method (notes and reasons: docs/knowledge/13-pixel-portraits.md):
@@ -56,7 +57,7 @@ from skimage.morphology import thin
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..'))
 SRC_DIR = os.path.join(ROOT, 'assets', 'portraits', 'src')
-OUT_DIR = os.path.join(ROOT, 'assets', 'portraits', 'pixel')
+OUT_DIR = os.path.join(ROOT, 'assets', 'portraits', 'pixel_v1')   # v1 (superseded by v4, tools/art/portraits4)
 
 # ------------------------------------------------------------------------------------------------ parameters
 

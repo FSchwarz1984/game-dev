@@ -11,7 +11,7 @@
 # - godot/icon.png: a plain placeholder app icon.
 # Re-run whenever those sources change. Only reads and writes inside the repository.
 # `--sprites-only` copies just the sprite sheets and their layout (tools/art/sprite3d uses it);
-# `--portraits-only` copies just the dialogue portraits (tools/art/portraits4 uses it).
+# `--portraits-only` copies just the dialogue portraits (run it after tools/art/portraits4/build.py).
 import json
 import os
 import shutil

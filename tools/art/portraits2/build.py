@@ -1,6 +1,6 @@
 """Pixel dialogue portraits, v3 (rebuild: one command).
 
-    python3 -I tools/art/portraits2/build.py               # write assets/portraits/pixel/<char>/<expr>.png + portraits.json
+    python3 -I tools/art/portraits2/build.py               # write assets/portraits/pixel_v3/<char>/<expr>.png + portraits.json (v3, superseded by v4)
     python3 -I tools/art/portraits2/build.py --check       # validate only (sizes, palette, alpha, stray pixels)
     python3 -I tools/art/portraits2/build.py --preview DIR [--packs DIR] [--seed N]
                                                            # also write review sheets (x1 x2 x4, faces x8, dialogue box
@@ -38,7 +38,7 @@ import pxgrid  # noqa: E402
 from palettes import PALETTES  # noqa: E402
 
 ROOT = os.path.abspath(os.path.join(HERE, '..', '..', '..'))
-OUT = os.path.join(ROOT, 'assets', 'portraits', 'pixel')
+OUT = os.path.join(ROOT, 'assets', 'portraits', 'pixel_v3')   # v3 (superseded by v4, tools/art/portraits4)
 V1 = os.path.join(ROOT, 'assets', 'portraits', 'pixel_v1')
 V2 = os.path.join(ROOT, 'assets', 'portraits', 'pixel_v2')
 CHARS = ('tsuzumi', 'shione', 'saji')

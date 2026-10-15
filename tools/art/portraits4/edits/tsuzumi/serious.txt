@@ -1,9 +1,20 @@
-# Kasasagi, serious. Source A_25 ("抬手示意停下严肃"). Upper lids flattened one row lower (stern, narrowed eyes),
-# a firm straight mouth.
-@ 40 47
-kkkkkkkkk
-@ 72 58
-kkkkkkk
+# Kasasagi, serious. Source A_25 ("抬手示意停下严肃"). The first blind test read the source face as neutral, so the
+# eyes narrow into a level, steady look: upper lids two rows lower and flat, lower lids one row higher (no slant,
+# so it is not the angry face), catchlights kept; a firm straight mouth.
+@ 38 47
+kkkkkkkkkkkkkkk
+kkkkkkkkkkkkkk
+@ 44 50
+l
+@ 42 56
+ttttttttt
+@ 69 58
+kkkkkkkkkkk
+kkkkkkkkkk
+@ 72 61
+l
+@ 69 66
+ttttttttt
 @ 53 75
 ..s....
 qqqqqq.

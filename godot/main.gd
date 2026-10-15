@@ -256,7 +256,7 @@ func _talk(lines: Array) -> void:
 func _talk_to_saji() -> String:
 	_talk([
 		{"who": "saji", "face": "smile", "text": "（测试对话）名牌一行、立绘在自己的框里、正文从框右边开始。"},
-		{"who": "tsuzumi", "face": "neutral", "text": "（测试）「百々つゞみ」「家守さぢ」「垣外しをね」——ゝゞヽヾ々っゃゅょ。取「重」，予「熱」。"},
+		{"who": "tsuzumi", "face": "neutral", "text": "（测试）「百々かさゝぎ」「家守さぢ」「垣外しをね」——ゝゞヽヾ々っゃゅょ。取「重」，予「熱」。"},
 		{"who": "saji", "face": "think", "text": "（测试）第三行：两行换行与打字机的停顿；句读不放在行首，小假名不放在行首。"},
 	])
 	return "说话"

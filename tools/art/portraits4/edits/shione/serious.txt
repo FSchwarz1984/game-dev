@@ -1,8 +1,27 @@
-# Shione, serious. Source B_25 ("抬手示意停下严肃"; its faint mouth is lost at 128 px). Upper lids flattened one row
-# lower, a firm straight mouth drawn in.
-@ 59 52
+# Shione, serious. Source B_25 ("抬手示意停下严肃"; its faint mouth is lost at 128 px). Read as determined in the first
+# blind test, so the eyes narrow into a level, steady look: upper lids two rows lower and flat, lower lids one row
+# higher; a firm straight mouth drawn in.
+@ 58 52
+kkkkkkkkkkk
+kkkkkkkkkkk
+@ 62 55
+l
+@ 60 59
+ttttttttt
+@ 87 61
 kkkkkkkk
-@ 88 61
-kkkkkk
+kkkkkkk
+@ 89 63
+l
+@ 87 67
+ttttttt
 @ 70 74
 qqqqq
+# Brows: the illustration draws a low, level brow through the bangs (lost in the pixelising); level, the inner end
+# one row lower (a slight knit, not the angry slant).
+@ 59 47
+BBBBBBBBB
+.........BB
+@ 86 56
+..BBBBBB
+BB

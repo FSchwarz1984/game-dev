@@ -1,6 +1,17 @@
-# Shione, grin. Source B_02 ("左三分之四挥手开朗"). Upper teeth under the lip, light blush.
-@ 69 75
-yyyyyy
+# Shione, grin. Source B_02 ("左三分之四挥手开朗"). Its round open mouth read as shouting in the first blind test,
+# so it is redrawn as an open smile: wide, corners turned up, upper teeth, tongue; light blush.
+@ 66 73
+ssssssssssssssss
+ssssssssssssssss
+ssqsssssssssqsss
+ssqqyyyyyyyqqsss
+sssqmmmmmmmqssss
+ssssqnnnnnqsssss
+sssssqqqqqssssss
+ssssssssssssssss
+ssssssssssssssss
+ssssssssssssssss
+ssssssssssssssss
 @ 82 69
 bpb
 @ 56 64

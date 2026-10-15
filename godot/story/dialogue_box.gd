@@ -65,7 +65,10 @@ func apply_theme(kind: String) -> void:
 	var f := UiTheme.font(kind)
 	text.add_theme_font_override("normal_font", f)
 	text.add_theme_font_size_override("normal_font_size", UiTheme.size(kind, "body"))
-	text.add_theme_constant_override("line_separation", UiTheme.LINE[kind] - UiTheme.size(kind, "body"))
+	# Line pitch UiTheme.LINE (16 px): the separation is measured from the font's real height (Fusion Pixel at
+	# 12 px is 18 px high with its descent), not from the font size, or the pitch grows to 22 px.
+	var body := UiTheme.size(kind, "body")
+	text.add_theme_constant_override("line_separation", int(UiTheme.LINE[kind]) - int(ceilf(f.get_height(body))))
 	name_label.add_theme_font_override("font", f)
 	name_label.add_theme_font_size_override("font_size", UiTheme.size(kind, "name"))
 	relayout()
@@ -92,9 +95,10 @@ func relayout() -> void:
 	var has_card := portrait_tex != null
 	card = Rect2(bx + 4, by - CARD_RISE, CARD, CARD) if has_card else Rect2()
 	var tx := card.end.x + 8 if has_card else bx + 12
-	var line := int(UiTheme.LINE[_kind])
 	text.position = Vector2(tx, by + 12)
-	text.size = Vector2(bx + bw - 9 - tx, line * 2 + 2)
+	# two lines at the 16-px pitch need 16 + font height (34 px at 12 px); room for that plus slack, ending
+	# above the advance arrow
+	text.size = Vector2(bx + bw - 9 - tx, BOX_H - 22)
 	var nw := ceilf(name_label.get_minimum_size().x)
 	var px := card.end.x + 6 if has_card else bx + 10
 	plate = Rect2(px, by - 8, 15 + nw, 15) if speaker != "" else Rect2()

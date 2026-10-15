@@ -4,11 +4,13 @@
     python3 -I tools/art/portraits4/build.py build                  # 2. crops + edits -> assets/portraits/pixel
     python3 -I tools/art/portraits4/build.py build --auto DIR       #    also write the un-edited auto results to DIR
     python3 -I tools/art/portraits4/build.py check                  #    verify the PNGs against a fresh build
+    python3 -I tools/godot/sync_assets.py --portraits-only          # 3. copy them into godot/art/portraits
+`build --out DIR` writes somewhere else; PORTRAITS4_CACHE=DIR caches the slow pixelising step (~5 min -> ~80 s).
 
 Dependencies: numpy, Pillow, opencv-python-headless, scipy (the same as v1's tools/art/pixel_portraits.py).
 
-Inputs: the owner's packs (12 zips of 1024x1536 RGBA PNGs, A = Tsuzumi/Kasasagi, B = Shione, C = Saji, extracted as
-DIR/Character_<L>_<nn-nn>/<L>_<nn>.png) are read once by `crops`, which keeps the source pixels around every window
+Inputs: the owner's packs (12 zips of 1024x1536 RGBA PNGs, A = Kasasagi (id tsuzumi), B = Shione, C = Saji, extracted
+as DIR/Character_<L>_<nn-nn>/<L>_<nn>.png) are read once by `crops`, which keeps the source pixels around every window
 in assets/portraits/src4/<char>/<source>.webp (lossy colour, lossless alpha) with their origin in crops.json; `build`
 reads only those, so the portraits are reproducible from the repository.
 
@@ -22,11 +24,17 @@ Method:
  3. Pixelise. Contrast-aware downscale (oe.py, a port of PixelOE): dark strokes (lashes, mouth, outlines) survive
     as 1-px lines instead of averaging into the skin.
  4. Palette. Per character, PALETTE_K colours measured by k-means (Lab) over all her expressions (face pixels
-    count three times), plus the colours named in the edit legends. Nearest colour in Lab, no dithering.
- 5. Clean. Colour islands of <= CLEAN_MAX px merge into their most similar neighbour, except inside the eyes,
-    mouth and the edit masks.
- 6. Edits. tools/art/portraits4/edits/<char>/<expr>.txt: hand-placed pixels (legend keys -> colours) laid over
-    the result: tears, brows, mouths, blush, highlights. '.' leaves a pixel as it is, '_' makes it transparent.
+    count three times). Nearest colour in Lab, no dithering.
+ 5. Clean. Colour islands of <= CLEAN_MAX px merge into their most similar neighbour, except inside the eyes and
+    the mouth.
+ 6. Face features. Eyes: every colour inside the eye ellipses snaps to the character's canonical eye colours
+    (config.EYE_CANON) and the illustration's catchlights come back. A closed mouth becomes one continuous 1-px
+    stroke along the illustration's mouth line (as in v1); an open mouth gets a full lip line, a dark cavity
+    above and the tongue colour below.
+ 7. Edits. tools/art/portraits4/edits/<char>/<expr>.txt, laid over the result: `@ X Y` then rows of keys from
+    <char>/_legend.txt ('.' leaves a pixel as it is, '_' makes it transparent); `use NAME X Y` stamps a symbol from
+    edits/_symbols.txt; `recolor X Y W H #from #to` swaps one exact colour inside a box. Tears, mouths, lids, brows,
+    blush and the manga marks are drawn this way, only where the illustration's own expression is too quiet.
 """
 
 from __future__ import annotations
@@ -247,8 +255,11 @@ def cached_pixelise(char, expr):
     name = C.SELECTION[char][expr][0]
     h = hashlib.sha1()
     h.update(open(os.path.join(SRC4, char, f'{name}.webp'), 'rb').read())
+    import inspect
+    code = ''.join(inspect.getsource(f) for f in (pixelise, load_work, l0_smooth, fill_transparent, face_mask, window,
+                                                  scale_of, to_native))
     h.update(repr((C.SIZE, C.SUB, C.CARD, C.REF_EYE_DIST[char], C.FRAME[char], C.SELECTION[char][expr],
-                   C.L0_LAMBDA, C.OE_THICKNESS, open(os.path.join(HERE, 'oe.py'), 'rb').read())).encode())
+                   C.L0_LAMBDA, C.OE_THICKNESS, open(os.path.join(HERE, 'oe.py'), 'rb').read(), code)).encode())
     path = os.path.join(CACHE, f'{char}_{expr}_{h.hexdigest()[:16]}.npz')
     if os.path.exists(path):
         z = np.load(path)
@@ -476,12 +487,14 @@ def render_open_mouth(char, expr, img):
     inner = blob & ~edge
     line = (hexrgb(C.MOUTH[char][0]) * 255).round().astype(np.uint8)
     cav = (hexrgb(C.MOUTH_CAVITY[char]) * 255).round().astype(np.uint8)
+    tongue = (hexrgb(C.MOUTH_TONGUE[char]) * 255).round().astype(np.uint8)
     img[edge, :3] = line
     if inner.any():
         ys = np.nonzero(inner)[0]
         top, h = ys.min(), ys.max() - ys.min() + 1
         upper = inner & (yy - 0.5 < top + max(1, round(0.45 * h)))
         img[upper, :3] = cav
+        img[inner & ~upper, :3] = tongue     # the painting's tongue is almost skin-coloured: it read as a ring
     drawn |= blob
     return drawn
 

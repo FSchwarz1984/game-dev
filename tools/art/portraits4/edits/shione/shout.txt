@@ -1,2 +1,12 @@
-# Shione, shout. Source B_12 ("快步焦急"). Two exclamation marks.
+# Shione, shout. Source B_12 ("快步焦急"): a wide yelling mouth with the upper teeth showing, and two
+# exclamation marks.
+@ 67 76
+sssssssssss
+sssqqqqqsss
+ssqyyyyyqss
+sqmmmmmmmqs
+sqmmmmmmmqs
+sqmnnnnnmqs
+ssqnnnnnqss
+sssqqqqqsss
 use bang2 109 2

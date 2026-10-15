@@ -26,3 +26,4 @@ X $931f35  anger mark dark
 r $c4505f  red mark (朱痕)
 h $bfa8bb  hair mid
 H $867087  hair dark
+B $6e5a6e  brow (drawn over the bangs, as in the illustrations)

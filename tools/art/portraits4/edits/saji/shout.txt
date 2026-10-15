@@ -1,2 +1,13 @@
-# Saji, shout. Source C_12 ("快步焦急"). Two exclamation marks.
+# Saji, shout. Source C_12 ("快步焦急"; a medium open mouth that read as surprise in the first blind test):
+# a wide yelling mouth with the upper teeth showing, and two exclamation marks.
+@ 51 79
+sssqqqqqqqsss
+ssqyyyyyyyqss
+sqmmmmmmmmmqs
+sqmmmmmmmmmqs
+sqmmmmmmmmmqs
+sqmmnnnnnmmqs
+ssqnnnnnnnqss
+sssqqqqqqqsss
+sssssssssssss
 use bang2 104 12

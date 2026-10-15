@@ -113,6 +113,7 @@ MOUTH = {
     'saji': ('#8a3b3a', '#cf8c7c'),
 }
 MOUTH_CAVITY = {'tsuzumi': '#6e2a38', 'shione': '#6e2434', 'saji': '#6e2430'}   # inside of an open mouth, upper part
+MOUTH_TONGUE = {'tsuzumi': '#d9707c', 'shione': '#de6f7c', 'saji': '#de6f7c'}   # lower part of an open mouth
 MOUTH_PINK = {'tsuzumi': '#e8968f', 'shione': '#e8968f', 'saji': '#ea8f86'}   # the inside of a slightly open mouth
 MOUTH_BH = 5.0             # black-hat threshold (L*) of the mouth stroke in the work image
 MOUTH_MAX_W = 9            # widest closed mouth, native px

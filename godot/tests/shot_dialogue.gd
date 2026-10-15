@@ -7,7 +7,8 @@ extends SceneTree
 ## DIR/dialogue_<n>_<who>_<face>.png. Also writes DIR/layout.txt: the box, card, text and name-plate rectangles
 ## and whether the card overlaps the text column (it must not).
 
-## Lines from docs/design/script-03-draft.md and characters.md (layout fixtures only).
+## Lines from docs/design/script-03-draft.md and characters.md (layout fixtures only; the long one joins two of
+## Shione's lines from characters.md to check a two-line page).
 const LINES := [
 	{"who": "tsuzumi", "face": "cry", "text": "您说，婆婆会不会当我是故意不去的。"},
 	{"who": "shione", "face": "cry", "text": "……不要紧的。我这就把它插回去。"},
@@ -16,6 +17,7 @@ const LINES := [
 	{"who": "shione", "face": "surprise", "text": "啊，这个吗？刚才横在路上，我想搬开比较方便大家走。"},
 	{"who": "saji", "face": "angry", "text": "看什么看！快抬啊！"},
 	{"who": "tsuzumi", "face": "neutral", "text": "十盏灯，一包供品，送到山口那几座墓，对吧。运费还跟去年一样？"},
+	{"who": "shione", "face": "neutral", "text": "啊，这个吗？刚才横在路上，我想搬开比较方便大家走。……不要紧的。我这就把它插回去。"},
 	{"who": "narr", "face": "", "text": "送り盆"},
 ]
 
@@ -69,13 +71,16 @@ func _run() -> void:
 	box.apply_theme("pixel")
 	var report := PackedStringArray()
 	report.append("window %s, native %s" % [str(win.size), str(native)])
+	var fnt := UiTheme.font("pixel")
+	report.append("font height %.1f ascent %.1f descent %.1f at 12 px; line separation %d" % [
+		fnt.get_height(12), fnt.get_ascent(12), fnt.get_descent(12), UiTheme.LINE["pixel"] - 12])
 	var i := 0
 	for line in LINES:
 		var who := String(line["who"])
 		var shown := String(NAMES.get(who, ""))
 		var tex: Texture2D = null
 		if shown != "":
-			tex = StoryUI.portrait(who, String(line["face"]))
+			tex = _portrait(who, String(line["face"]))
 		box.show_line(shown, tex, String(line["text"]))
 		box.text.visible_characters = -1
 		box.done = true
@@ -87,13 +92,25 @@ func _run() -> void:
 		shot.save_png(out_dir.path_join(name))
 		var text_rect := Rect2(box.text.position, box.text.size)
 		var lines_used := box.text.get_line_count()
+		var content_h := box.text.get_content_height()
 		var overlap := box.card.has_area() and box.card.intersects(text_rect)
 		var plate_overlap := box.card.has_area() and box.plate.has_area() and box.card.intersects(box.plate)
-		report.append("%s  box %s  card %s  text %s (%d lines)  plate %s  card/text overlap: %s  card/plate overlap: %s" % [
-			name, str(box.box), str(box.card), str(text_rect), lines_used, str(box.plate), str(overlap), str(plate_overlap)])
+		var clipped := content_h > text_rect.size.y
+		report.append("%s  box %s  card %s  text %s (%d lines, content %d px, clipped: %s)  plate %s  card/text overlap: %s  card/plate overlap: %s" % [
+			name, str(box.box), str(box.card), str(text_rect), lines_used, content_h, str(clipped), str(box.plate), str(overlap), str(plate_overlap)])
 		i += 1
 	var f := FileAccess.open(out_dir.path_join("layout.txt"), FileAccess.WRITE)
 	f.store_string("\n".join(report) + "\n")
 	f.close()
 	print("\n".join(report))
 	quit()
+
+
+## The same lookup as StoryUI.portrait (not referenced here: story_ui.gd needs the autoloads, which a -s
+## script does not get at compile time).
+static func _portrait(who: String, face: String) -> Texture2D:
+	for f in [face, "neutral"]:
+		var p := "res://art/portraits/%s/%s.png" % [who, f]
+		if ResourceLoader.exists(p):
+			return load(p) as Texture2D
+	return null

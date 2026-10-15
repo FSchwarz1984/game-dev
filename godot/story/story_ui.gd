@@ -12,7 +12,7 @@ extends Control
 signal dialogue_closed
 
 const CAST := {
-	"tsuzumi": {"name": "百々つゞみ", "kana": "もも つづみ", "voice": "tsuzumi"},
+	"tsuzumi": {"name": "百々かさゝぎ", "kana": "もも かささぎ", "voice": "tsuzumi"},
 	"saji": {"name": "家守さぢ", "kana": "やもり さじ", "voice": "saji"},
 	"shione": {"name": "垣外しをね", "kana": "かいと しおね", "voice": "shione"},
 	"narr": {"name": "", "kana": "", "voice": ""},

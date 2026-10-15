@@ -25,3 +25,4 @@ x $e23b4e  anger mark
 X $931f35  anger mark dark
 h $d43d3c  hair mid
 H $822127  hair dark
+B $5a1f20  brow (drawn over the bangs, as in the illustrations)
