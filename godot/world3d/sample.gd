@@ -457,6 +457,7 @@ func _instance(path: String) -> Node3D:
 ## after another as their light fades in (render3d/lamps.gd).
 func _set_hours(h: float, instant := true) -> void:
 	env.set_time(h)
+	_fit_crown_proxy(h)
 	if dressing:
 		dressing.set_time(h, instant)
 	var on := 1 if (h >= 18.4 or h <= 5.4) else 0
@@ -501,15 +502,39 @@ func _crown_proxy(parent: Node3D, a: Dictionary) -> void:
 		var v: Vector3 = verts[i] * 2.0
 		var ang := atan2(v.z, v.x)
 		var lob: float = 1.0 + 0.12 * sin(3.0 * ang + ph[0]) + 0.08 * sin(5.0 * ang + ph[1]) + 0.05 * sin(7.0 * ang + ph[2])
-		verts[i] = Vector3(v.x * r * lob + float(c[0]), v.y * ry + cy, v.z * r * lob + float(c[2]))
+		verts[i] = Vector3(v.x * r * lob, v.y * ry, v.z * r * lob)
 	arr[Mesh.ARRAY_VERTEX] = verts
 	var mesh := ArrayMesh.new()
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
 	var mi := MeshInstance3D.new()
 	mi.name = "CrownShadow"
 	mi.mesh = mesh
+	mi.position = Vector3(float(c[0]), cy, float(c[2]))
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY
 	parent.add_child(mi)
+	crown_proxy = mi
+	crown_proxy_at = mi.position
+	crown_proxy_r = r
+	_fit_crown_proxy(env.hours)
+
+
+## The proxy shrinks and steps back from a low sun (morning, and toward dusk): the last low light
+## comes in between the leaf masses on the crown's sunward side (the climbing path, the branch nest
+## and the crows' nest catch it; scene agent 14:45), while the high sun of the day still finds a
+## solid crown.
+var crown_proxy: MeshInstance3D
+var crown_proxy_at := Vector3.ZERO
+var crown_proxy_r := 0.0
+
+
+func _fit_crown_proxy(h: float) -> void:
+	if crown_proxy == null:
+		return
+	var sd := W3Env.sun_direction(h)
+	var k := lerpf(0.5, 1.0, smoothstep(0.12, 0.45, sd.y))
+	var away := Vector3(-sd.x, 0.0, -sd.z).normalized() * crown_proxy_r * (1.0 - k) * 0.9
+	crown_proxy.scale = Vector3(k, lerpf(0.75, 1.0, k), k)
+	crown_proxy.position = crown_proxy_at + away
 
 
 func _set_foliage_shader(n: Node, sh: Shader) -> void:
@@ -921,10 +946,15 @@ func _process(dt: float) -> void:
 	if not route.is_empty():
 		_drive_route()
 	var dir := _input_dir()
+	if args.has("perf") and frame == 3:
+		RenderingServer.viewport_set_measure_render_time(pv.vp.get_viewport_rid(), true)
 	if args.has("perf") and frame % 60 == 0 and frame > 0:
-		print("PERF f=%d fps=%.1f draws=%d prims=%d objects=%d vram_mb=%.0f" % [frame, Performance.get_monitor(Performance.TIME_FPS),
+		# (the world viewport's own render time: on the software rasteriser "gpu" is the rasterising)
+		var vr := pv.vp.get_viewport_rid()
+		print("PERF f=%d fps=%.1f draws=%d prims=%d objects=%d vram_mb=%.0f world_gpu_ms=%.1f world_cpu_ms=%.1f" % [frame, Performance.get_monitor(Performance.TIME_FPS),
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
-			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
+			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
+			RenderingServer.viewport_get_measured_render_time_gpu(vr), RenderingServer.viewport_get_measured_render_time_cpu(vr)])
 	if args.has("log_pos") and frame % maxi(int(args["log_pos"]), 1) == 0:
 		print("POS f=%d her=(%.2f, %.2f) saji=(%.2f, %.2f) facing=%d vista=%s yaw=%.1f" % [frame, her.pos.x, her.pos.z, saji.pos.x, saji.pos.z, her.facing, str(vista.active), vista.yaw_target])
 	_update_vista(dt, dir)

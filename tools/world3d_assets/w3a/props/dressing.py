@@ -313,6 +313,44 @@ def signpost(out, name, kind, seed):
     return export_prop(out, name, 'props', prop, cat, porosity=0.7, budget=900)
 
 
+def itabashi(out):
+    """A plank bridge (板橋) over the stream where the way north crosses it: two log stringers 2.8 m
+    long, grey planks across (one missing, one split), mossy log ends, a stake at each corner.
+    Long axis along z; origin at the middle of the deck's underside at bank level (place with 'hang'
+    so it sits on the banks over the stream bed)."""
+    R = rng(8381)
+    P = []
+    L_, W_ = 2.8, 1.25
+    for x in (-0.5, 0.5):
+        pc = cyl((x, 0.0, -L_ / 2), (x + R.normal(0, 0.02), 0.01, L_ / 2), 0.13, BARK, n=7)
+        pc.pattern, pc.amount, pc.seed = K.PAT['bark'], 0.6, int(R.integers(0, 1 << 20))
+        P.append(pc)
+        for z in (-L_ / 2, L_ / 2):
+            P.append(K.cprism(7, 0.125, 0.125, 0.012, K.col('#a08a68'), base=(x, 0.0, z), bevel=0.0,
+                              R=K.frame_to((0, 0, 1 if z > 0 else -1))))
+    z = -L_ / 2 + 0.16
+    k = 0
+    while z < L_ / 2 - 0.1:
+        w = R.uniform(0.2, 0.27)
+        if k != 6:
+            sh = R.uniform(0.82, 1.05)
+            pc = K.cbox((W_ + R.uniform(-0.06, 0.06), 0.05, w - 0.025), WOOD_GREY * sh, centre=(R.normal(0, 0.03), 0.15, z + w / 2),
+                        bevel=0.008, R=K.rot_y(R.normal(0, 0.03)), jitter=0.004, seed=int(R.integers(0, 1 << 20)))
+            pc.pattern, pc.amount = K.PAT['planks'], 0.3
+            P.append(pc)
+        z += w
+        k += 1
+    for x in (-0.66, 0.66):
+        for zz in (-L_ / 2 + 0.1, L_ / 2 - 0.1):
+            P.append(cyl((x, -0.5, zz), (x + R.normal(0, 0.02), 0.32, zz), 0.045, WOOD, n=5))
+    prop = K.Prop('itabashi', 8381).add(P)
+    cat = {'footprint': [], 'tags': ['life', 'bridge'],
+           'notes': 'A plank bridge 2.8 x 1.25 m over a small stream (long axis z); place with hang ~0.5 so the deck '
+                    '(0.17 m over the origin) sits on the banks.',
+           'anchors': {'perch': [[-0.66, 0.34, -1.3], [0.66, 0.34, 1.3]]}}
+    return export_prop(out, 'itabashi', 'props', prop, cat, porosity=0.9, far=False, budget=1600)
+
+
 def build(out):
     # round 4: the bamboo fence, baskets and straw are rebuilt in yard.py under new names, the signs
     # here are renamed (the assembly placed the round-3 names at fixed spots of the old layout)
@@ -324,4 +362,5 @@ def build(out):
     st['kakehi'] = kakehi(out)
     st['signpost_a'] = signpost(out, 'signpost_a', 'wood', 8371)
     st['waymark_a'] = signpost(out, 'waymark_a', 'stone', 8375)
+    st['itabashi'] = itabashi(out)
     return st

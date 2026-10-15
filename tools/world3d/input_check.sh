@@ -12,6 +12,9 @@
 #    held against the end, round to the look back home), then W 1.2 s (the top-down view comes back,
 #    she walks on north).
 # Screens: <out>/A_*.png, <out>/B_*.png, <out>/C_*.png (import -window root); logs: <out>/?.log.
+# (round 4: the check runs without the VoxelGI bake and the volumetric fog, --gi=none --vfog=0: on the
+# software rasteriser they take the frame rate to about one a second and the bake blocks for 12-27 s,
+# so the held keys would fall into frames that never come; the input path is the same either way)
 set -uo pipefail
 GODOT_BIN="${GODOT_BIN:-/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64}"
 PROJ="$(cd "$(dirname "$0")/../../godot" && pwd)"
@@ -25,7 +28,7 @@ run_case() {
 	local xp=$!
 	for _ in $(seq 1 50); do DISPLAY="$disp" xdpyinfo >/dev/null 2>&1 && break; sleep 0.1; done
 	DISPLAY="$disp" "$GODOT_BIN" --path "$PROJ" --rendering-method "${METHOD:-forward_plus}" --rendering-driver vulkan \
-		--resolution "$RES" --position 0,0 res://world3d/sample.tscn -- --log_pos=2 "$@" > "$OUT/$name.log" 2>&1 &
+		--resolution "$RES" --position 0,0 res://world3d/sample.tscn -- --log_pos=2 --gi=none --vfog=0 "$@" > "$OUT/$name.log" 2>&1 &
 	local gp=$!
 	# wait for the window and for the world to be built (the log says so)
 	for _ in $(seq 1 600); do grep -q "GRASS tufts" "$OUT/$name.log" 2>/dev/null && break; sleep 0.1; done

@@ -70,7 +70,9 @@ void fragment() {
 			if (lap > 0.06) {
 				col = mix(col, col * mix(OL_TINT, vec3(1.0), 0.45), OL_CREASE);          // concave: a valley line
 			} else if (lap2 < -0.06) {
-				col = mix(col, col * 1.18 + vec3(0.012), OL_CREASE * 0.8);             // convex: light catches the edge
+				// convex: light catches the edge (the small lift only where there is light to catch: on a
+				// near-black surface at night it drew a faint wireframe; the buffer is linear since round 4)
+				col = mix(col, col * 1.18 + vec3(0.012) * smoothstep(0.0, 0.06, w3_luma(col)), OL_CREASE * 0.8);
 			}
 		}
 	}
