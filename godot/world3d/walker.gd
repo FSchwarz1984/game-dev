@@ -91,12 +91,41 @@ func _try_move(d: Vector3) -> float:
 	if d.length() < 1e-5:
 		return 0.0
 	var start := pos
-	for attempt in [d, Vector3(d.x, 0, 0), Vector3(0, 0, d.z)]:
+	# round footprints: she slides round them (the step is pushed back out of every circle it entered,
+	# along the circle's normal) instead of stopping dead. Without it a step that only grazes a circle
+	# was refused whole, and at 30 frames a second or more (small steps) she stuck on a trunk's edge
+	# that a slow frame (a big step) had jumped past.
+	var slid := _slide(pos + d)
+	var tries: Array = [d, Vector3(d.x, 0, 0), Vector3(0, 0, d.z)]
+	if slid != Vector3.INF and Vector2(slid.x - pos.x, slid.z - pos.z).length() <= d.length() * 1.05:
+		tries.push_front(slid - pos)
+	for attempt in tries:
 		var np: Vector3 = pos + attempt
 		if _free(np):
 			pos = Vector3(np.x, terrain.height_at(np.x, np.z), np.z)
 			break
 	return Vector2(pos.x - start.x, pos.z - start.z).length()
+
+
+## The point pushed out of the circles it overlaps (two passes, for the corner between two circles);
+## INF when it cannot be freed that way.
+func _slide(np: Vector3) -> Vector3:
+	for _pass in 2:
+		var moved := false
+		for b in blockers:
+			var c: Vector3 = b[0]
+			var rr: float = float(b[1]) + radius + 0.002
+			var off := Vector2(np.x - c.x, np.z - c.z)
+			var l := off.length()
+			if l < rr:
+				if l < 1e-4:
+					return Vector3.INF
+				off = off / l * rr
+				np = Vector3(c.x + off.x, np.y, c.z + off.y)
+				moved = true
+		if not moved:
+			return np
+	return np if _free(np) else Vector3.INF
 
 
 func _free(p: Vector3) -> bool:

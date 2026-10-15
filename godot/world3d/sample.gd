@@ -657,7 +657,8 @@ func _spawn_characters() -> void:
 	# their outlines when something covers them: her warm (the lamp of her hat), さぢ a pale sky blue
 	her.set_xray_colour(Color(1.0, 0.84, 0.52))
 	saji.set_xray_colour(Color(0.62, 0.86, 1.0))
-	her_shadow = _contact_shadow(Vector2(9.0, 3.5))
+	# (the 3D model casts its own shadow: her contact shadow is only the darkening right under her feet)
+	her_shadow = _contact_shadow(Vector2(8.0, 3.0) if her.model else Vector2(9.0, 3.5))
 	saji_shadow = _contact_shadow(Vector2(7.0, 3.0))
 	# (comparison: the 3D model casts its own shadow; --nocontact hides the painted contact ellipse)
 	if args.has("nocontact"):
@@ -805,6 +806,16 @@ func _drive_route() -> void:
 			keys_down[KEY_D if d.x >= 0.0 else KEY_A] = true
 		if absf(d.y) < 0.38:
 			keys_down[KEY_S if d.y >= 0.0 else KEY_W] = true
+	if args.has("route_log") and _stall_t > 2.0 and _stall_t - get_process_delta_time() <= 2.0:
+		# what holds her (debugging the layout's routes): the nearest round footprints
+		var near: Array = []
+		for b in her.blockers:
+			var bp: Vector3 = b[0]
+			var dd := Vector2(bp.x - her.pos.x, bp.z - her.pos.z).length() - float(b[1])
+			if dd < 0.8:
+				near.append("(%.2f, %.2f) r %.2f gap %.2f" % [bp.x, bp.z, float(b[1]), dd])
+		print("ROUTE stalled at (%.2f, %.2f) toward (%.2f, %.2f): %s; walkable ahead %s" % [her.pos.x, her.pos.z, t.x, t.y,
+			", ".join(near), str(terrain.walkable(her.pos.x + d.x * 0.4, her.pos.z + d.y * 0.4))])
 
 
 # ------------------------------------------------------------------------------------------------
