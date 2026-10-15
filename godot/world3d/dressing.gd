@@ -8,6 +8,8 @@ extends Node3D
 ## the renderer's lamps. Small life that moves (crows, sparrows, dragonflies, butterflies, frogs,
 ## the cat's tail) lives in W3Life (dressing_life, built here when the catalog has the creatures).
 ##
+## The east gate's giant straw sandal (node "Waraji" in michikiri_e) turns slowly on its cord.
+##
 ## A prop entry: {"name": catalog name, "x", "z", "yaw" (degrees), "hang" (m above the ground,
 ## for things hung from an eave or a hook; leaned like what they hang from), "light": [height above
 ## the prop's origin, energy, reach] (a lamp: lit from dusk to dawn), "anchor": [prop name, anchor
@@ -37,6 +39,24 @@ func build(t: Terrain3D, cat := {}) -> void:
 
 
 var _lamp_count := 0
+var _spin: Array = []        # [node, phase, base yaw]: things that turn in the wind on a cord
+var _spin_t := 0.0
+var _spin_looked := 0
+
+
+## Things hung on a cord turn slowly back and forth (the gate's sandal). Found once the assembly has
+## instanced the slots (a frame or two after build()).
+func _process(delta: float) -> void:
+	_spin_t += delta
+	if _spin_looked < 2 and _spin_t > 0.2 * float(_spin_looked + 1):
+		_spin_looked += 1
+		_spin.clear()
+		for n in get_tree().root.find_children("Waraji", "Node3D", true, false):
+			_spin.append([n, fmod(float((n as Node3D).global_position.x) * 1.7, TAU), (n as Node3D).rotation.y])
+	for sp in _spin:
+		var n: Node3D = sp[0]
+		if is_instance_valid(n):
+			n.rotation.y = float(sp[2]) + 0.55 * sin(_spin_t * 0.33 + float(sp[1])) + 0.2 * sin(_spin_t * 0.12 + float(sp[1]) * 2.0)
 
 
 func _prop(e: Dictionary) -> void:

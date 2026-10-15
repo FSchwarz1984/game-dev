@@ -64,19 +64,23 @@ func _roads() -> void:
 	if info.is_empty():
 		return
 	var dir := "res://world3d/terrain/" + String(terrain.info.get("name", "saddle"))
-	var f := FileAccess.open(dir.path_join(String(info.get("file", "roads.bin"))), FileAccess.READ)
-	if f == null:
+	var raw := W3Grass.read_blob(dir.path_join(String(info.get("file", "roads.bin"))))
+	if raw.is_empty():
 		push_warning("W3Stonework: no road geometry (%s)" % info.get("file", ""))
 		return
 	for c in info.get("chunks", []):
 		var n := int(c["vertices"])
 		var t := int(c["triangles"])
-		f.seek(int(c["offset"]))
-		var verts := f.get_buffer(n * 12).to_vector3_array()
-		var norms := f.get_buffer(n * 12).to_vector3_array()
-		var cols := f.get_buffer(n * 16).to_color_array()
-		var uvs := f.get_buffer(n * 8).to_vector2_array()
-		var idx := f.get_buffer(t * 12).to_int32_array()
+		var o := int(c["offset"])
+		var verts := raw.slice(o, o + n * 12).to_vector3_array()
+		o += n * 12
+		var norms := raw.slice(o, o + n * 12).to_vector3_array()
+		o += n * 12
+		var cols := raw.slice(o, o + n * 16).to_color_array()
+		o += n * 16
+		var uvs := raw.slice(o, o + n * 8).to_vector2_array()
+		o += n * 8
+		var idx := raw.slice(o, o + t * 12).to_int32_array()
 		var arr := []
 		arr.resize(Mesh.ARRAY_MAX)
 		arr[Mesh.ARRAY_VERTEX] = verts

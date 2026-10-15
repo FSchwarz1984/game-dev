@@ -100,9 +100,12 @@ def write(L, out: Path, tmp: Path, D):
         for arr in (P, N, C, U, I):
             blob += np.ascontiguousarray(arr).tobytes()
         chunks.append(e)
-    (out / "roads.bin").write_bytes(bytes(blob))
-    info["roads"] = {"file": "roads.bin", "layout": "per chunk: pos f32x3, normal f32x3, colour f32x4 (sRGB + AO), uv2 f32x2 "
-                     "(pattern, amount), index u32x3", "chunks": chunks, "stats": D.get("road_stats", {})}
+    # gzip (deterministic, mtime 0): 10.7 MB -> about 2 MB; the loader (stonework.gd) inflates it
+    import gzip
+    (out / "roads.bin").write_bytes(gzip.compress(bytes(blob), compresslevel=9, mtime=0))
+    info["roads"] = {"file": "roads.bin", "compression": "gzip",
+                     "layout": "gzip of: per chunk: pos f32x3, normal f32x3, colour f32x4 (sRGB + AO), uv2 f32x2 "
+                     "(pattern, amount), index u32x3 (offsets into the inflated bytes)", "chunks": chunks, "stats": D.get("road_stats", {})}
     info["cover"] = D.get("cover", {})
     info["props"] = L.get("props", [])
     info["routes"] = L.get("routes", {})
@@ -125,7 +128,15 @@ def write(L, out: Path, tmp: Path, D):
             if cam.get("climb"):
                 c = cam["climb"]
                 info["climb"] = {"camphor": {"points": [w(q) for q in c["points"]], "width": c["width"],
-                                             "note": c.get("note", ""), "nest": w(c["nest"]) if c.get("nest") else None}}
+                                             "note": c.get("note", ""), "nest": w(c["nest"]) if c.get("nest") else None,
+                                             "crow_nest": w(c["crow_nest"]) if c.get("crow_nest") else None}}
+        # the crow comes back to the engawa and eats in front of her if she ignores it (draft §3)
+        hut = cat.get("assets", {}).get("hut")
+        if isinstance(hut, dict) and "hut" in L["markers"] and hut.get("anchors", {}).get("engawa"):
+            hx, hz = L["markers"]["hut"]
+            e = hut["anchors"]["engawa"]
+            e = e[0] if isinstance(e[0], list) else e
+            info["perches"]["crow_lure"] = [[round(hx + float(e[0]), 3), round(hat(hx, hz) + float(e[1]) + 0.02, 3), round(hz + float(e[2]), 3)]]
     (out / "terrain.json").write_text(json.dumps(info, ensure_ascii=False, indent=1))
 
     # ---- previews for checking (not shipped)

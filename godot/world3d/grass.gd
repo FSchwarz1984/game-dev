@@ -34,24 +34,30 @@ func build(t: Terrain3D) -> void:
 	mat.set_shader_parameter("lush", 0.15)
 	mat.set_shader_parameter("transmit", 0.35)
 	var dir := "res://world3d/terrain/" + String(t.info.get("name", "saddle"))
-	var f := FileAccess.open(dir.path_join(String(info.get("file", "cover.bin"))), FileAccess.READ)
-	if f == null:
+	var raw := W3Grass.read_blob(dir.path_join(String(info.get("file", "cover.bin"))))
+	if raw.is_empty():
 		push_warning("W3Grass: no cover.bin")
 		return
 	var fmt := Mesh.ARRAY_CUSTOM_RGBA_FLOAT << Mesh.ARRAY_FORMAT_CUSTOM0_SHIFT
 	for c in info.get("chunks", []):
 		var n := int(c["vertices"])
 		var nt := int(c["triangles"])
-		f.seek(int(c["offset"]))
+		var o := int(c["offset"])
 		var arr := []
 		arr.resize(Mesh.ARRAY_MAX)
-		arr[Mesh.ARRAY_VERTEX] = f.get_buffer(n * 12).to_vector3_array()
-		arr[Mesh.ARRAY_NORMAL] = f.get_buffer(n * 12).to_vector3_array()
-		arr[Mesh.ARRAY_TEX_UV] = f.get_buffer(n * 8).to_vector2_array()
-		arr[Mesh.ARRAY_TEX_UV2] = f.get_buffer(n * 8).to_vector2_array()
-		arr[Mesh.ARRAY_COLOR] = f.get_buffer(n * 16).to_color_array()
-		arr[Mesh.ARRAY_CUSTOM0] = f.get_buffer(n * 16).to_float32_array()
-		arr[Mesh.ARRAY_INDEX] = f.get_buffer(nt * 12).to_int32_array()
+		arr[Mesh.ARRAY_VERTEX] = raw.slice(o, o + n * 12).to_vector3_array()
+		o += n * 12
+		arr[Mesh.ARRAY_NORMAL] = raw.slice(o, o + n * 12).to_vector3_array()
+		o += n * 12
+		arr[Mesh.ARRAY_TEX_UV] = raw.slice(o, o + n * 8).to_vector2_array()
+		o += n * 8
+		arr[Mesh.ARRAY_TEX_UV2] = raw.slice(o, o + n * 8).to_vector2_array()
+		o += n * 8
+		arr[Mesh.ARRAY_COLOR] = raw.slice(o, o + n * 16).to_color_array()
+		o += n * 16
+		arr[Mesh.ARRAY_CUSTOM0] = raw.slice(o, o + n * 16).to_float32_array()
+		o += n * 16
+		arr[Mesh.ARRAY_INDEX] = raw.slice(o, o + nt * 12).to_int32_array()
 		var m := ArrayMesh.new()
 		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr, [], {}, fmt)
 		var a: Array = c["aabb"]
@@ -67,3 +73,12 @@ func build(t: Terrain3D) -> void:
 		count += n / 4
 		tris += nt
 	print("COVER cards=%d tris=%d species=%s" % [count, tris, str(info.get("species", {}))])
+
+
+## The bytes of a baked binary (cover.bin, roads.bin): gzip-compressed since round 4b (the terrain
+## generator writes them with mtime 0, so they are committed as they are); a raw file still loads.
+static func read_blob(path: String) -> PackedByteArray:
+	var b := FileAccess.get_file_as_bytes(path)
+	if b.size() > 2 and b[0] == 0x1f and b[1] == 0x8b:
+		return b.decompress_dynamic(1 << 28, FileAccess.COMPRESSION_GZIP)
+	return b

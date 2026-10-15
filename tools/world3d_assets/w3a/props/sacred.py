@@ -49,9 +49,9 @@ def cyl(p0, p1, r, colour, n=6, **kw):
     return K.cprism(n, r, r, float(np.linalg.norm(d)), colour, base=p0, bevel=0.0, R=K.frame_to(d), **kw)
 
 
-def rope(points, r, seed, colour=ROPE):
+def rope(points, r, seed, colour=ROPE, step=0.08):
     """A twisted straw rope along points: the body, and a darker spiral of the twist."""
-    pc = K.rod(points, r, colour, n=6, cap=True, step=0.08, var=0.05, seed=seed)
+    pc = K.rod(points, r, colour, n=6, cap=True, step=step, var=0.05, seed=seed)
     pc.pattern, pc.amount = K.PAT['thatch'], 0.25
     return pc
 
@@ -96,36 +96,14 @@ def standing_stone(seed, H, W, D, lean=0.0):
 
 
 def gate_stones(out):
+    """The east gate's posts: two old standing stones with nothing tied on them (lead 14:00: at the
+    gates a michikiri rope, not a shimenawa; the shimenawa only marks what cannot be taken)."""
     R = rng(9801)
     P = []
     xl, xr = -1.65, 1.62
     Hl, Hr = 1.72, 1.45
     P.append(standing_stone(9802, Hl, 0.42, 0.36, lean=-0.05).moved(K.rot_y(0.2), (xl, 0.0, 0.0)))
     P.append(standing_stone(9803, Hr, 0.38, 0.34, lean=0.06).moved(K.rot_y(-0.3), (xr, 0.0, 0.02)))
-    # the rope: wrapped round each stone near its top, slung between them with a deep sag
-    ya, yb = Hl - 0.4, Hr - 0.35
-    for (x, y, r) in ((xl, ya, 0.37), (xr, yb, 0.33)):
-        ring = [[x + math.cos(a) * r, y + 0.02 * math.sin(2 * a), math.sin(a) * r * 0.9] for a in np.linspace(0, 2 * math.pi, 13)]
-        P.append(rope(ring, 0.05, 9804))
-    pts = []
-    for t in np.linspace(0, 1, 13):
-        x = xl + 0.3 + (xr - 0.27 - xl - 0.3) * t
-        y = ya + (yb - ya) * t - 0.34 * math.sin(math.pi * t)
-        pts.append([x, y, 0.12 + 0.06 * math.sin(math.pi * t)])
-    P.append(rope(pts, 0.07, 9805))
-    P.append(rope([[p[0], p[1] + 0.035, p[2] + 0.02] for p in pts], 0.03, 9806, ROPE_DARK))
-    # streamers and straw tassels hanging from the rope
-    for t in (0.2, 0.42, 0.62, 0.84):
-        i = int(round(t * 12))
-        x, y, z = pts[i]
-        P += shide(x, y - 0.05, z + 0.06, 9810 + i, scale=1.2)
-    for t in (0.31, 0.52, 0.73):
-        i = int(round(t * 12))
-        x, y, z = pts[i]
-        for k in range(5):
-            st = cyl((x + (k - 2) * 0.012, y - 0.04, z + 0.05), (x + (k - 2) * 0.016, y - 0.3 - 0.03 * (k % 2), z + 0.06), 0.008, ROPE, n=3)
-            st.swaying((x, y, z), 0.5, mat='swaynl')
-            P.append(st)
     # small offerings at the foot of the left stone: a pile of pebbles, a tiny sake cup
     for k in range(5):
         a = R.uniform(0, 2 * math.pi)
@@ -134,10 +112,119 @@ def gate_stones(out):
     P.append(K.lathe([(0.0, 0.0), (0.035, 0.0), (0.045, 0.035), (0.0, 0.035)], K.col('#e8e2d2'), n=7, base=(xl + 0.52, 0.0, 0.3)))
     prop = K.Prop('gate_stones', 9801).add(P)
     cat = {'footprint': [[xl, 0.0, 0.42], [xr, 0.0, 0.38]], 'tags': ['sacred', 'gate', 'landmark'],
-           'notes': 'The main gate of the barrier: two old standing stones (1.7 and 1.45 m) 3.3 m apart, a thick rope slung between '
-                    'them (lowest 0.95 m), four paper streamers and three straw tassels that swing; the path passes between.',
+           'notes': 'The east gate of the barrier: two old standing stones (1.7 and 1.45 m) 3.3 m apart, the path passes between; '
+                    'the michikiri rope (michikiri_e) hangs over them between two old cedars.',
            'anchors': {'gate': [0.0, 0.0, 0.0], 'perch': [[xl, Hl + 0.05, 0.0], [xr, Hr + 0.05, 0.0]]}}
-    return export_prop(out, 'gate_stones', 'props', prop, cat, porosity=0.5, far=False, budget=3600)
+    return export_prop(out, 'gate_stones', 'props', prop, cat, porosity=0.5, far=False, budget=2000)
+
+
+def waraji(seed, L=1.9, W=0.82):
+    """大わらじ: a straw sandal bigger than a person, hung by its toe (y up = toe): a woven sole of
+    straw cords with rows across, the toe loop, the side loops and the long tying cords."""
+    R = rng(seed)
+    T = 0.14
+    straw = K.col('#b29e66')
+
+    def sole(Q):
+        q = Q - np.array([0.0, -L / 2, 0.0])
+        # a little narrower at the heel (bottom) than at the ball, rounded ends
+        w = W / 2 * (0.86 + 0.14 * np.clip((q[..., 1] + L / 2) / L, 0, 1))
+        d = K.sd_box(np.stack([q[..., 0] * (W / 2) / np.maximum(w, 1e-3), q[..., 1], q[..., 2]], -1), (W / 2, L / 2, T / 2), r=0.11)
+        return d + (fbm3(Q[..., 0] * 9, Q[..., 1] * 9, Q[..., 2] * 9, 2, seed) - 0.5) * 0.012
+    pc = K.sdf_piece(sole, (-W / 2 - 0.03, -L - 0.03, -T / 2 - 0.03), (W / 2 + 0.03, 0.03, T / 2 + 0.03), straw, h=0.03, tris=520,
+                     pattern='plain', amount=0.0, var=0.05, seed=seed + 1)
+
+    def weave(P_, N_):
+        # rows of straw across the sole (every 7 cm, a darker groove between), four warp cords along
+        rows = np.mod(P_[:, 1], 0.07) / 0.07
+        m = np.where(rows < 0.22, 0.78, 1.0 + 0.06 * np.sin(rows * 6.0))
+        warp = np.zeros(len(P_))
+        for x in (-0.27, -0.09, 0.09, 0.27):
+            warp = np.maximum(warp, np.clip(1.0 - np.abs(P_[:, 0] - x * W / 0.82) / 0.025, 0, 1))
+        m = m * (1.0 - 0.12 * warp)
+        return np.repeat(m[:, None], 3, axis=1)
+    pc.shade = weave
+    P = [pc]
+    rope_c = K.col('#9c8752')
+    # the toe loop (前緒) at the top and the side loops (乳), the tying cords hanging loose
+    P.append(rope([[0.0, -0.05, T / 2 + 0.02], [-0.07, -0.18, T / 2 + 0.07], [0.0, -0.3, T / 2 + 0.05], [0.07, -0.18, T / 2 + 0.07],
+                   [0.0, -0.05, T / 2 + 0.02]], 0.03, seed + 2, rope_c))
+    for sgn in (-1, 1):
+        for y in (-0.55, -0.95):
+            x0 = sgn * (W / 2 - 0.02)
+            P.append(rope([[x0, y + 0.06, 0.0], [x0 + sgn * 0.08, y, 0.05], [x0, y - 0.06, 0.0]], 0.022, seed + 3, rope_c))
+        P.append(rope([[sgn * (W / 2 - 0.02), -0.55, 0.04], [sgn * (W / 2 + 0.1), -0.9, 0.1], [sgn * (W / 2 + 0.05), -1.35, 0.08],
+                       [sgn * (W / 2 - 0.05), -1.6, 0.06]], 0.018, seed + 4, rope_c))
+    return P
+
+
+def _michikiri(name, seed, span, h_end, sag, r_rope, tassels, sandal, tree_r):
+    """道切り: a thick straw rope tied round two trees on either side of the way, across it at h_end
+    metres, sagging by `sag`; straw tassels hang along it; on the east gate a giant sandal in the
+    middle (its own node 'Waraji': the dressing turns it slowly in the wind)."""
+    R = rng(seed)
+    P = []
+    x0, x1 = -span / 2, span / 2
+    for (x, rr) in ((x0, tree_r[0]), (x1, tree_r[1])):
+        for k in range(2):
+            y = h_end + 0.1 - k * 0.12
+            ring = [[x + math.cos(a) * (rr + r_rope), y + 0.03 * math.sin(3 * a), math.sin(a) * (rr + r_rope) * 0.95]
+                    for a in np.linspace(0, 2 * math.pi, 15)]
+            P.append(rope(ring, r_rope * 0.8, seed + 2 + k, step=0.14))
+    pts = []
+    n = 25
+    for i in range(n):
+        t = i / (n - 1)
+        x = x0 + tree_r[0] * 0.9 + (x1 - tree_r[1] * 0.9 - x0 - tree_r[0] * 0.9) * t
+        y = h_end - sag * math.sin(math.pi * t) - 0.04 * math.sin(3 * math.pi * t)
+        pts.append([x, y, 0.06 * math.sin(math.pi * t)])
+    P.append(rope(pts, r_rope, seed + 5, step=0.16))
+    P.append(rope([[q[0], q[1] + r_rope * 0.55, q[2] + r_rope * 0.35] for q in pts], r_rope * 0.42, seed + 6, ROPE_DARK, step=0.2))
+    # straw tassels (房) hanging along the rope, swinging
+    for t in tassels:
+        i = int(round(t * (n - 1)))
+        x, y, z = pts[i]
+        L_ = R.uniform(0.35, 0.55)
+        for k in range(6):
+            st = cyl((x + (k - 2.5) * 0.014, y - r_rope * 0.6, z + 0.02), (x + (k - 2.5) * 0.02, y - r_rope - L_ - 0.04 * (k % 2), z + 0.03),
+                     0.009, ROPE, n=3)
+            st.swaying((x, y, z), 0.55, mat='swaynl')
+            P.append(st)
+        P.append(cyl((x, y - r_rope * 0.4, z), (x, y - r_rope - 0.08, z), 0.03, ROPE_DARK, n=5))
+    extras = None
+    mid = pts[n // 2]
+    if sandal:
+        # the hanging cord, and the sandal under it by its toe, sole to the camera
+        hang = 0.32
+        P.append(rope([[mid[0], mid[1] - r_rope * 0.5, mid[2]], [mid[0], mid[1] - hang, mid[2] + 0.02]], 0.028, seed + 7, ROPE_DARK))
+        # the node stands at the ground under the rope (its origin's height is what the renderer leans
+        # an upright object from); the sandal hangs in it at the rope's height, turning about the cord
+        top = (0.0, float(mid[1] - hang), 0.0)
+        wp = K.Prop('waraji', seed + 20).add([pc.moved(None, top) for pc in waraji(seed + 21)])
+        extras = {'Waraji': (wp, (float(mid[0]), 0.0, float(mid[2] + 0.02)))}
+    return P, extras, mid
+
+
+def michikiri_e(out):
+    P, extras, mid = _michikiri('michikiri_e', 9901, 8.4, 4.6, 0.5, 0.075, (0.14, 0.27, 0.37, 0.63, 0.73, 0.86), True, (0.47, 0.42))
+    prop = K.Prop('michikiri_e', 9901).add(P)
+    cat = {'footprint': [], 'tags': ['sacred', 'gate', 'landmark'],
+           'notes': 'The east gate\'s michikiri (道切り): a thick straw rope 8.4 m long tied round two old cedars at x = -4.2 and '
+                    '4.2 (4.6 m up; the trees stand on the same level ground as the rope\'s origin), across the way, sagging to 4.1 m; straw tassels along it; a giant straw sandal (大わらじ, '
+                    '1.9 m) hangs from the middle by its toe: node "Waraji", turned slowly by the dressing (dressing.gd).',
+           'anchors': {'waraji': [round(float(mid[0]), 3), round(float(mid[1] - 0.32), 3), round(float(mid[2]), 3)],
+                       'perch': [[-2.2, 4.42, 0.05], [2.2, 4.42, 0.05]]}}
+    return export_prop(out, 'michikiri_e', 'props', prop, cat, porosity=0.8, far=False, budget=5000, extras=extras)
+
+
+def michikiri_n(out):
+    P, extras, mid = _michikiri('michikiri_n', 9931, 4.6, 3.7, 0.32, 0.05, (0.25, 0.5, 0.75), False, (0.42, 0.38))
+    prop = K.Prop('michikiri_n', 9931).add(P)
+    cat = {'footprint': [], 'tags': ['sacred', 'gate'],
+           'notes': 'A thinner michikiri rope for the north and south-west gates: 4.6 m between two trees at x = -2.3 and 2.3 '
+                    '(3.7 m up), three straw tassels, no sandal.',
+           'anchors': {'perch': [[0.0, 3.4, 0.03]]}}
+    return export_prop(out, 'michikiri_n', 'props', prop, cat, porosity=0.8, far=False, budget=2500)
 
 
 def chozubachi(out):
@@ -336,6 +423,80 @@ def sekimori(out):
                        porosity=0.5, far=False, budget=600)
 
 
+def hiraishi(out):
+    """A flat stone by the graves (she lays her towel on it): 0.75 x 0.5 m, its top worn flat, moss
+    round its foot."""
+    def f(Q):
+        d = K.sd_box(Q - np.array([0.0, 0.08, 0.0]), (0.37, 0.1, 0.25), r=0.06)
+        return d + K.weathered(Q, 0.012, 0.08, 9961)
+    pc = K.sdf_piece(f, (-0.42, -0.04, -0.3), (0.42, 0.22, 0.3), STONE_OLD, h=0.025, tris=160, pattern='stone', amount=0.55,
+                     var=0.05, seed=9962)
+    prop = K.Prop('hiraishi', 9961).add([pc])
+    cat = {'footprint': [[0.0, 0.0, 0.3]], 'tags': ['interact', 'life'],
+           'notes': 'A flat stone by the graves, 0.75 x 0.5 m, top at 0.18 m: where she lays her towel.',
+           'anchors': {'interact': [0.0, 0.0, 0.5], 'top': [0.0, 0.18, 0.0]}}
+    return export_prop(out, 'hiraishi', 'props', prop, cat, porosity=0.5, far=False, budget=400)
+
+
+def shoikago(out):
+    """A bamboo back basket (背負い籠) leaning back against something behind it (-z): woven split
+    bamboo in a diagonal plait, a bamboo rim, two straw shoulder straps on its back; a folded indigo
+    cloth in it."""
+    R = rng(9971)
+    H = 0.72
+    prof = [(0.0, 0.0), (0.16, 0.0), (0.2, 0.06), (0.25, H * 0.55), (0.27, H), (0.24, H), (0.22, H * 0.55), (0.15, 0.04), (0.0, 0.04)]
+    body = K.lathe(prof, K.col('#b59c64'), n=14, smooth=False)
+
+    def plait(P_, N_):
+        th = np.arctan2(P_[:, 0], P_[:, 2])
+        u = th * 0.25
+        a = np.floor((u + P_[:, 1]) / 0.045) + np.floor((u - P_[:, 1]) / 0.045)
+        m = np.where(np.mod(a, 2) == 0, 1.0, 0.82)
+        return np.repeat(m[:, None], 3, axis=1)
+    body.shade = plait
+    P = [body]
+    P.append(K.lathe([(0.255, H - 0.025), (0.285, H - 0.01), (0.285, H + 0.02), (0.255, H + 0.03)], K.col('#9c8a58'), n=14,
+                     cap_top=False, cap_bottom=False))
+    for sx in (-0.11, 0.11):
+        P.append(rope([[sx, H - 0.05, -0.25], [sx * 1.3, H * 0.6, -0.36], [sx * 1.2, 0.18, -0.3], [sx, 0.12, -0.2]], 0.018, 9972 + int(sx > 0)))
+    P.append(K.cbox((0.3, 0.08, 0.22), K.col('#2f3d5c'), centre=(0.0, H - 0.02, 0.02), bevel=0.02, R=K.rot_x(0.2)))
+    Rl = K.rot_x(-0.17)
+    P = [pc.moved(Rl, (0.0, 0.0, 0.0)) for pc in P]
+    prop = K.Prop('shoikago', 9971).add(P)
+    cat = {'footprint': [[0.0, 0.0, 0.3]], 'tags': ['life', 'interact'],
+           'notes': 'A bamboo back basket 0.72 m tall leaning back 10 degrees (against the camphor\'s root, under the '
+                    'shimenawa: it keeps its colour the next morning, being under the rope).'}
+    return export_prop(out, 'shoikago', 'props', prop, cat, porosity=0.8, far=True, budget=1200)
+
+
+def radio(out):
+    """A wooden radio hung on a nail on an engawa post: varnished case with a rounded top, a cloth
+    speaker grille behind three slats, a dial window with its needle, two knobs; the cord over the
+    nail. Origin: the nail on the post's face (place it with 'hang' at the nail's height)."""
+    P = []
+    case = K.col('#7e5232')
+    W_, H_, D_ = 0.36, 0.25, 0.14
+    cy = -0.06 - H_ / 2
+    P.append(K.cbox((W_, H_, D_), case, centre=(0.0, cy, D_ / 2 + 0.005), bevel=0.025, pattern='planks', amount=0.15))
+    P.append(K.cbox((0.17, 0.15, 0.006), K.col('#cbb690'), centre=(-0.07, cy + 0.01, D_ + 0.008), bevel=0.0))
+    for k in range(3):
+        P.append(K.cbox((0.012, 0.15, 0.008), case * 0.8, centre=(-0.12 + k * 0.05, cy + 0.01, D_ + 0.012), bevel=0.0))
+    P.append(K.cbox((0.11, 0.05, 0.006), K.col('#e9dfc2'), centre=(0.1, cy + 0.05, D_ + 0.008), bevel=0.0))
+    P.append(K.cbox((0.004, 0.04, 0.004), K.col('#b03022'), centre=(0.09, cy + 0.05, D_ + 0.012), bevel=0.0))
+    for x in (0.07, 0.13):
+        P.append(K.cprism(8, 0.02, 0.018, 0.02, K.col('#2e2420'), base=(x, cy - 0.05, D_ + 0.005), bevel=0.0, R=K.rot_x(math.pi / 2)))
+    P.append(rope([[-0.14, cy + H_ / 2, 0.05], [0.0, 0.0, 0.01], [0.14, cy + H_ / 2, 0.05]], 0.006, 9981, K.col('#3a3028')))
+    P.append(K.cprism(5, 0.008, 0.008, 0.04, K.col('#55504a'), base=(0.0, 0.0, -0.01), bevel=0.0, R=K.rot_x(math.pi / 2)))
+    prop = K.Prop('radio', 9981).add(P)
+    cat = {'footprint': [], 'tags': ['life', 'interact', 'sound'],
+           'notes': 'A wooden radio (case 0.36 x 0.25 x 0.14 m) hung on a nail: origin = the nail; the case hangs 0.06-0.31 m below '
+                    'it, its back against the post (+z is its front).',
+           'anchors': {'sound': [0.0, -0.18, 0.15], 'interact': [0.0, -1.2, 0.6]}}
+    return export_prop(out, 'radio', 'props', prop, cat, porosity=0.4, far=True, budget=600, ground=False)
+
+
 def build(out):
-    return {'gate_stones': gate_stones(out), 'chozubachi': chozubachi(out), 'ema_kake': ema_kake(out), 'massha': massha(out),
-            'iwakura': iwakura(out), 'jizo': jizo(out), 'sekimori': sekimori(out)}
+    return {'gate_stones': gate_stones(out), 'michikiri_e': michikiri_e(out), 'michikiri_n': michikiri_n(out),
+            'chozubachi': chozubachi(out), 'ema_kake': ema_kake(out), 'massha': massha(out),
+            'iwakura': iwakura(out), 'jizo': jizo(out), 'sekimori': sekimori(out), 'hiraishi': hiraishi(out),
+            'shoikago': shoikago(out), 'radio': radio(out)}

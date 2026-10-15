@@ -842,9 +842,9 @@ def branch_path(base, named, ground, R):
     idx = np.array(idx)
     P = Pm.reshape(-1, 3)
     N = Nm.reshape(-1, 3)
-    # orient: Godot's front faces have (b - a) x (c - a) pointing INTO the solid (knowledge/22 §7)
+    # orient: MeshData is counter-clockwise outward (the asset exporter flips to Godot's order once)
     tri_n = np.cross(P[idx[:, 1]] - P[idx[:, 0]], P[idx[:, 2]] - P[idx[:, 0]])
-    flip = np.einsum('ij,ij->i', tri_n, N[idx[:, 0]] + N[idx[:, 1]] + N[idx[:, 2]]) > 0
+    flip = np.einsum('ij,ij->i', tri_n, N[idx[:, 0]] + N[idx[:, 1]] + N[idx[:, 2]]) < 0
     idx[flip] = idx[flip][:, [0, 2, 1]]
     # uv: across in metres of arc, along in metres; the moss texture is 64 texels
     across = np.zeros((n, W_))
@@ -894,13 +894,13 @@ def crow_nest(R, c):
     the bark material, straw for the rope material, small things for the paper material)."""
     twigs, straw, bits = MeshData(), MeshData(), MeshData()
     c = np.asarray(c, np.float64)
-    for k in range(70):
+    for k in range(110):
         a = R.uniform(0, 2 * math.pi)
-        r = R.uniform(0.18, 0.36)
-        y = R.uniform(-0.14, 0.12)
+        r = R.uniform(0.22, 0.46)
+        y = R.uniform(-0.18, 0.14)
         mid = c + np.array([math.cos(a) * r, y, math.sin(a) * r])
-        tang = normalize(np.array([-math.sin(a), R.normal(0, 0.35), math.cos(a)]) + R.normal(0, 0.25, 3))
-        Ln = R.uniform(0.25, 0.6)
+        tang = normalize(np.array([-math.sin(a), R.normal(0, 0.35), math.cos(a)]) + R.normal(0, 0.3, 3))
+        Ln = R.uniform(0.3, 0.75) if k % 9 else R.uniform(0.8, 1.1)       # a few long ones stick out
         p0, p1 = mid - tang * Ln / 2, mid + tang * Ln / 2
         sp = Spine([p0, p1], [0.016, 0.01], step=0.3)
         md, _ = tube(sp, n_around=3, cap_end=False)

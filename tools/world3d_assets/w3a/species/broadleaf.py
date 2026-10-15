@@ -60,7 +60,7 @@ def variant(sp, key, H, nl, spread, vs, R):
     t0, t1, t2 = sp['tints']
     crown_kw = dict(centre=tuple(cc), radii=(span, H * 0.32, span), base_tint=TR.tint_for(t0), young_tint=TR.tint_for(t1),
                     old_tint=TR.tint_for(t2), overlap=1.2, fill_density=0.8, clump_overlap=1.0, interior_frac=0.3,
-                    spray_rate=0.0, env_k=0.25, clump_k=0.12, up_bias=0.3, flex_r=span, max_cards=560)
+                    spray_rate=0.0, env_k=0.25, clump_k=0.3, up_bias=0.3, flex_r=span, max_cards=1000)
     cat = {'category': 'tree', 'species': sp['species'], 'footprint': [[0.0, 0.0, 0.45]], 'height': H,
            'crown': {'centre': [float(cc[0]), float(cc[1]), float(cc[2])], 'radius': float(span), 'base': float(fork)},
            'tags': ['tree', 'broadleaf'], 'anchors': {}, 'notes': f"{sp['note']} {H:.0f} m."}

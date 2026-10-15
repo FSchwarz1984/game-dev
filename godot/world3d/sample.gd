@@ -53,6 +53,9 @@ var _lit_wait: Array = []         # [pair, seconds until it switches] while they
 var _still := 0.0                 # seconds she has stood still on the lookout
 var _route_done_t := -1.0         # route recordings: time since she reached the end
 var placed_props: Array = []      # [catalog name, position, yaw, scale, height m]: for the vista's impostors
+var realm_mask: W3RealmMask       # the barrier: where she stands sets the frame's look (W3Env.set_realm)
+var hut_smoke := Vector3.INF      # the home's smoke hole (catalog anchors.smoke)
+var _realm_k := -1.0
 
 
 func _ready() -> void:
@@ -84,6 +87,11 @@ func _ready() -> void:
 	var t0 := Time.get_ticks_msec()
 	terrain.load_region("res://world3d/terrain/saddle")
 	print("TERRAIN_LOADED ms=", Time.get_ticks_msec() - t0)
+	var r0 := Time.get_ticks_msec()
+	realm_mask = W3RealmMask.new()
+	realm_mask.build(terrain)
+	env.realm_mask = realm_mask
+	print("REALM_MASK ms=", Time.get_ticks_msec() - r0)
 	props_root = Node3D.new()
 	props_root.name = "Props"
 	pv.world_root.add_child(props_root)
@@ -124,6 +132,8 @@ func _ready() -> void:
 	atmos.camphor = Vector3(cm.x, terrain.height_at(cm.x, cm.z), cm.z)
 	atmos.setup(env, terrain)
 	atmos.glints = dressing.glints
+	atmos.realm_mask = realm_mask
+	atmos.chimney = hut_smoke
 	vista = W3Vista.new()
 	vista.name = "Vista"
 	vista.props = placed_props
@@ -143,8 +153,10 @@ func _ready() -> void:
 	_setup_gi()
 	if args.has("camdist"):
 		pv.set_camera_distance(float(args["camdist"]))
-	if args.has("vfog"):
-		env.use_volumetric_fog(float(args["vfog"]), terrain)
+	# the air near the ground (volumetric fog: shafts, halos, the morning mist, the gates' curtains);
+	# --vfog=0 turns it off (comparisons, quick input checks)
+	if float(args.get("vfog", "1")) > 0.0:
+		env.use_volumetric_fog(float(args.get("vfog", "1")), terrain)
 	if args.has("noshadow"):
 		env.sun.shadow_enabled = false     # debugging: tell shadow-map artefacts from shading ones
 	if args.has("sbias"):
@@ -158,7 +170,7 @@ func _ready() -> void:
 	if args.has("nolamps"):
 		lamps.enabled = false                       # debugging: the night without its lanterns
 	if args.has("noxray"):
-		her.sprite.xray.visible = false             # debugging: no silhouettes through what covers them
+		her.sprite.xray.visible = false             # debugging: no silhouettes through what covers them (sprites only)
 		saji.sprite.xray.visible = false
 	if args.has("hide_props"):
 		# debugging: hide placed props whose node name contains one of these (camphor, hut, sugi, ...)
@@ -311,26 +323,14 @@ var _lit_pairs: Array = []        # [unlit node, lit node]
 
 func _place_marker_props() -> void:
 	var t := terrain
-	var door := t.marker("hut_door")
 	var slots := [
 		["hut", t.marker("hut"), 0.0, false],
 		["shrine", t.marker("shrine"), 0.0, false],
 		["offering_box", t.marker("offering_box"), 0.0, false],
 		["graves", t.marker("graves"), deg_to_rad(-2.0), false],
 		["dosojin", t.marker("dosojin"), 0.0, false],
-		["woodpile", t.marker("woodpile"), deg_to_rad(90.0), false],
-		["fallen_branch", t.marker("fallen_branch"), 0.6, false],
-		["stump_axe", t.marker("choppable_tree") + Vector3(1.4, 0, 0.9), 0.3, false],
-		["kakehi", t.marker("spring") + Vector3(1.6, 0, 2.2), 0.0, false],
-		["fence_bamboo", Vector3(-23.0, 0, 17.3), 0.0, false],
-		["fence_bamboo", Vector3(-21.0, 0, 17.3), 0.0, false],
-		["signpost", Vector3(-16.4, 0, 19.0), 0.25, false],
-		["waymark", Vector3(8.4, 0, 17.4), -0.1, false],
-		["basket_tall", door + Vector3(-1.75, 0, 0.15), 0.4, false],
-		["basket_flat", door + Vector3(-3.0, 0, 0.9), 0.0, false],
-		["straw_sheaves", Vector3(-22.2, 0, 11.4), 1.4, false],
-		["straw_heap", Vector3(-21.6, 0, 17.0), -0.3, false],
 	]
+	# (the yard's and the paths' small things are the layout's own since round 4: dressing.asset_slots)
 	for ds in dressing.asset_slots:
 		slots.append([ds[0], ds[1], ds[2], true])
 	# the graves' hooks carry the ten paper lanterns of the bon (lit at night)
@@ -364,6 +364,18 @@ func _place_marker_props() -> void:
 		props_root.add_child(base)
 		if nm in ["hut", "shrine", "graves"]:
 			placed_props.append([nm, p, float(sl[2]), 1.0, float(a.get("height", 3.0))])
+		if nm == "hut":
+			# the home's hearth (its embers light the room through the open door and the shoji at
+			# night) and the kitchen's smoke hole (the morning's and the evening's cooking smoke)
+			var anc: Dictionary = a.get("anchors", {})
+			var yaw := float(sl[2])
+			if anc.has("light"):
+				var la: Array = anc["light"]
+				var lp := p + Vector3(la[0], la[1], la[2]).rotated(Vector3.UP, yaw)
+				lamps.add(lp, 3.2, Color(1.0, 0.58, 0.3), 0.9, 0.3)
+			if anc.has("smoke"):
+				var sa: Array = anc["smoke"]
+				hut_smoke = p + Vector3(sa[0], sa[1], sa[2]).rotated(Vector3.UP, yaw)
 		var lit_path := String(a.get("variants", {}).get("lit", ""))
 		if lit_path != "":
 			var lit := _instance(lit_path)
@@ -615,8 +627,8 @@ func _spawn_characters() -> void:
 	saji.radius = 0.25
 	saji.place(her.pos + Vector3(-0.9, 0, -0.5))
 	# their outlines when something covers them: her warm (the lamp of her hat), さぢ a pale sky blue
-	her.sprite.set_xray_colour(Color(1.0, 0.84, 0.52))
-	saji.sprite.set_xray_colour(Color(0.62, 0.86, 1.0))
+	her.set_xray_colour(Color(1.0, 0.84, 0.52))
+	saji.set_xray_colour(Color(0.62, 0.86, 1.0))
 	her_shadow = _contact_shadow(Vector2(9.0, 3.5))
 	saji_shadow = _contact_shadow(Vector2(7.0, 3.0))
 
@@ -764,9 +776,23 @@ var _shot_list: Array = []
 var _shot_i := 0
 
 
+## The barrier's look follows where she stands, eased (she crosses a gate's fog band in two or three
+## seconds); a cut (a still, a jump) sets it at once.
+func _update_realm(dt: float) -> void:
+	if realm_mask == null or her == null:
+		return
+	var target: float = realm_mask.sample(her.pos.x, her.pos.z).r
+	if _realm_k < 0.0:
+		_realm_k = target
+	else:
+		_realm_k = lerpf(_realm_k, target, 1.0 - exp(-dt * 1.5))
+	env.set_realm(_realm_k)
+
+
 func _set_view(i: int) -> void:
 	var v: Array = _shot_list[i]
 	her.place(Vector3(v[0], 0.0, v[1]))
+	_realm_k = -1.0
 	saji.place(her.pos + Vector3(-0.9, 0, -0.5))
 	trail.clear()
 	env.rain = float(args.get("rain", "0"))
@@ -918,6 +944,7 @@ func _process(dt: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 26.0))
 	pv.update_camera(dt)
 	_update_fades(dt)
+	_update_realm(dt)
 	if atmos:
 		atmos.update(dt, her.pos)
 	if args.has("shots"):

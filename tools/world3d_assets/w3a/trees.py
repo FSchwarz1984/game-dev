@@ -54,7 +54,7 @@ def default_ao(masses, floor=0.45, n_rays=12):
 
 def build_variant(asset, key, limbs, masses, tiles, sets, crown_kw, bark_mat, leaf_mat, catalog,
                   colour_fn=None, ao_fn=None, moss_fn=None, extra_cards=(), extra_wood=(), seed=0,
-                  max_tris=8000, max_cards=600, scene_meta=None, card_post=None):
+                  max_tris=8000, max_cards=1100, scene_meta=None, card_post=None):
     """Make one variant: meshes <name>_<key>_wood/_leaves, scene <name>_<key>.tscn, a catalog entry.
     tiles: (atlas, rects). Returns stats."""
     atlas, rects = tiles

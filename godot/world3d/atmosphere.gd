@@ -4,6 +4,10 @@ extends Node3D
 ## and the water at night, will-o'-wisps (鬼火) by the nameless graves at night, light shafts under
 ## the great camphor and old leaves coming down from its crown, rain. Driven by the time of day
 ## (W3Env) and her position (spawn near view).
+## Inside the barrier (round 4, item 5; W3RealmMask) the air is fuller: twice the motes, three
+## times in the inner precinct, and small petals of bush clover (萩, in flower now) drifting down
+## by day. Fireflies gather at their perches (terrain.json perches.firefly: the spring, the
+## basin, the grass by the water) and only a few wander elsewhere.
 
 var env: W3Env
 var terrain: Terrain3D
@@ -21,6 +25,14 @@ var camphor := Vector3.INF      # the great camphor's foot: old leaves come down
 const CAMPHOR_REACH := 15.5     # m from the trunk where its leaves fall
 var _leaf_acc := 0.0
 var _leaf_light := 1.0          # daylight on the leaves (they are unlit pixels)
+var realm_mask: W3RealmMask     # the barrier (sanctum, oku): where the air is fuller
+var perches: Array = []         # fireflies' perches, world points
+var _petal_acc := 0.0
+var _perch_acc := 0.0
+var chimney := Vector3.INF      # the home's smoke hole: cooking smoke morning and evening
+var _smoke_acc := 0.0
+# bush clover petals: rose-violet, a paler one, a white one (sRGB as painted)
+const PETAL_COLS := [Color("#c46a9a"), Color("#d995bb"), Color("#efe2ea")]
 # the camphor's old leaves (it sheds them through the year): red, rust, ochre, a few still green
 # (sRGB as painted; turned linear for the unlit particle pixels)
 const LEAF_COLS := [Color("#c4643a"), Color("#d08a3c"), Color("#d6b04e"), Color("#a84a32"), Color("#8a9a4a")]
@@ -30,6 +42,8 @@ func setup(e: W3Env, t: Terrain3D) -> void:
 	env = e
 	terrain = t
 	rng.seed = 99
+	for pp in t.info.get("perches", {}).get("firefly", []):
+		perches.append(Vector3(float(pp[0]), float(pp[1]), float(pp[2])))
 	add_child(particles)
 	_build_shafts()
 	_build_wisps()
@@ -133,6 +147,29 @@ func _step(p: Array, dt: float) -> void:
 			if float(p[2]) - t > 3.0:
 				p[2] = t + 3.0
 		c.a = clampf((float(p[2]) - t) / 1.0, 0.0, 1.0) * clampf(t / 0.4, 0.0, 1.0)
+	elif kind == 8:      # a petal: drifts down slowly, swaying, and lies a moment on the ground
+		var gy := terrain.height_at(p[0].x, p[0].z)
+		var ph: float = p[8]
+		if p[0].y > gy + 0.02:
+			p[1] = Vector3(sin(t * 1.3 + ph) * 0.35 + env.wind * 0.1, -0.32 - 0.12 * sin(t * 2.6 + ph), cos(t * 1.1 + ph) * 0.12)
+			var turn := sin(t * 3.1 + ph * 2.0)
+			p[5] = Vector2(2, 1) if turn > -0.3 else Vector2(1, 1)
+			var base: Color = (PETAL_COLS[int(float(p[9]) * PETAL_COLS.size()) % PETAL_COLS.size()] as Color).srgb_to_linear()
+			var k := (0.7 + 0.45 * (1.0 if turn > 0.8 else 0.0)) * _leaf_light
+			c = Color(base.r * k, base.g * k, base.b * k, c.a)
+		else:
+			p[1] = Vector3.ZERO
+			p[0].y = gy + 0.02
+			p[5] = Vector2(1, 1)
+			if float(p[2]) - t > 2.0:
+				p[2] = t + 2.0
+		c.a = clampf((float(p[2]) - t) / 0.8, 0.0, 1.0) * clampf(t / 0.6, 0.0, 1.0)
+	elif kind == 9:      # cooking smoke: rises, slows, leans with the wind, spreads and thins
+		var age: float = t / life
+		p[1] = Vector3(env.wind * 0.35 * age + sin(t * 0.7 + p[8]) * 0.06, 0.55 * (1.0 - age * 0.6), 0.05)
+		var sz := 1.0 + floorf(age * 3.2)
+		p[5] = Vector2(sz, sz)
+		c.a = clampf(t / 0.6, 0.0, 1.0) * (1.0 - age) * 0.55 * float(p[9])
 	elif kind == 4:      # rain: falls; dies on the ground
 		var gy := terrain.height_at(p[0].x, p[0].z)
 		if p[0].y <= gy:
@@ -150,15 +187,30 @@ func update(dt: float, at: Vector3) -> void:
 	var day := not is_night and env.rain < 0.4
 	var lowsun := clampf(1.0 - absf(env.hours - 12.0) / 6.5, 0.0, 1.0)
 	# motes in the warm light (by day, under the trees)
+	var here := realm_mask.sample(at.x, at.z) if realm_mask else Color(0, 0, 0, 0)
 	if day:
-		_mote_acc += dt * 10.0
+		_mote_acc += dt * 10.0 * (1.0 + 1.0 * here.r + 1.0 * here.a)
 		while _mote_acc > 1.0:
 			_mote_acc -= 1.0
 			var p := at + Vector3(rng.randf_range(-12, 12), 0, rng.randf_range(-9, 7))
+			# outside the barrier the air is thinner: half the motes there
+			if realm_mask and realm_mask.sample(p.x, p.z).r < 0.5 and rng.randf() < 0.5:
+				continue
 			p.y = terrain.height_at(p.x, p.z) + rng.randf_range(0.6, 3.2)
 			var warm := Color(1.0, 0.92, 0.7) * (0.9 + 0.3 * (1.0 - lowsun))
 			warm.a = 1.0
 			particles.spawn(p, Vector3.ZERO, rng.randf_range(4.0, 8.0), warm, Vector2(1, 1), 0.0, 1, rng.randf_range(0.45, 0.85))
+	# bush clover petals inside the barrier (by day): from above the top of the view like the leaves
+	if day and realm_mask and here.r > 0.05:
+		_petal_acc += dt * 3.0 * here.r
+		while _petal_acc > 1.0:
+			_petal_acc -= 1.0
+			var pp := at + Vector3(rng.randf_range(-12.0, 12.0), 0, rng.randf_range(-6.0, 5.0))
+			if realm_mask.sample(pp.x, pp.z).r < 0.5:
+				continue
+			var dz2 := pp.z - at.z
+			pp.y = at.y + 0.9 + (6.9 + 0.819 * (dz2 + 0.47)) / 0.574 + rng.randf_range(0.0, 1.0)
+			particles.spawn(pp, Vector3.ZERO, 40.0, Color(0.8, 0.5, 0.7, 1.0), Vector2(2, 1), 0.0, 8, rng.randf())
 	# old leaves coming down under the great camphor (by day). Each starts just above the top of the
 	# view, so it drifts in from the crown overhead and never appears out of nothing: a point's height
 	# on screen is 0.574 m per metre of height (particles do not lean) less 0.819 m per metre south
@@ -178,9 +230,31 @@ func update(dt: float, at: Vector3) -> void:
 				if lp.y < terrain.height_at(lp.x, lp.z) + 4.0:
 					continue
 				particles.spawn(lp, Vector3.ZERO, 45.0, Color(0.6, 0.3, 0.15, 1.0), Vector2(2, 1), 0.0, 7, rng.randf())
+	# cooking smoke from the home's smoke hole, early morning and toward evening (炊烟)
+	if chimney != Vector3.INF and env.rain < 0.6:
+		var cook := clampf(1.0 - absf(env.hours - 7.0) / 1.6, 0.0, 1.0) + clampf(1.0 - absf(env.hours - 17.8) / 1.6, 0.0, 1.0)
+		if cook > 0.0 and Vector2(chimney.x - at.x, chimney.z - at.z).length() < 24.0:
+			_smoke_acc += dt * 3.0 * cook
+			while _smoke_acc > 1.0:
+				_smoke_acc -= 1.0
+				var sp := chimney + Vector3(rng.randf_range(-0.15, 0.15), 0.0, rng.randf_range(-0.1, 0.1))
+				var shade := 0.82 if env.hours < 12.0 else 0.74
+				particles.spawn(sp, Vector3.ZERO, rng.randf_range(5.0, 7.0), Color(shade, shade, shade * 1.02, 1.0), Vector2(1, 1), 0.0, 9, minf(cook * 1.5, 1.0))
 	# fireflies at night over grass and water
 	if is_night and env.rain < 0.3:
-		_fly_acc += dt * 7.0
+		# most of them over their perches (the spring, the basin, the grass by the water), close
+		# together; a few wander over the grass elsewhere
+		_perch_acc += dt * 6.0
+		while _perch_acc > 1.0:
+			_perch_acc -= 1.0
+			for pc in perches:
+				var pv3: Vector3 = pc
+				if Vector2(pv3.x - at.x, pv3.z - at.z).length() > 16.0 or rng.randf() < 0.35:
+					continue
+				var fp := Vector3(pv3.x + rng.randf_range(-2.4, 2.4), 0.0, pv3.z + rng.randf_range(-2.0, 2.0))
+				fp.y = terrain.height_at(fp.x, fp.z) + rng.randf_range(0.25, 1.4)
+				particles.spawn(fp, Vector3.ZERO, rng.randf_range(6.0, 11.0), Color(0.8, 1.0, 0.45) * 2.4, Vector2(1, 1), 1.0, 2)
+		_fly_acc += dt * 2.5
 		while _fly_acc > 1.0:
 			_fly_acc -= 1.0
 			var p := at + Vector3(rng.randf_range(-12, 12), 0, rng.randf_range(-9, 7))

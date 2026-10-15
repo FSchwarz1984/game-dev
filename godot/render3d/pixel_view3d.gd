@@ -108,7 +108,12 @@ func _init() -> void:
 		q.extra_cull_margin = 16384.0
 		q.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		var sm := ShaderMaterial.new()
-		sm.shader = load("res://render3d/shaders/%s.gdshader" % c)
+		var path := "res://render3d/shaders/%s.gdshader" % c
+		# the 3D characters draw their own outline pass for class 3 (round 4, item 7: depth outline,
+		# inner lines between parts; docs/knowledge/24) once they are in the tree
+		if c == "post_char" and ResourceLoader.exists(CHAR_POST):
+			path = CHAR_POST
+		sm.shader = load(path)
 		sm.render_priority = -100
 		q.material_override = sm
 		q.position = Vector3(0, 0, -2)
@@ -143,10 +148,18 @@ func set_environment(e: Environment) -> void:
 	env_node.environment = e
 
 
+const CHAR3D := "res://characters/character3d.gd"
+const CHAR_POST := "res://characters/shaders/char_post.gdshader"
+
+
 func apply_view_globals() -> void:
 	var p := deg_to_rad(pitch_deg)
 	RenderingServer.global_shader_parameter_set("w3_view", Vector4(PPM, sin(p), cos(p), tan(p * 0.5)))
 	cam.rotation = Vector3(-p, 0.0, 0.0)
+	# the 3D characters stamp their faces with the same numbers (a global shader parameter cannot be
+	# read back at run time)
+	if ResourceLoader.exists(CHAR3D):
+		(load(CHAR3D) as GDScript).call("set_view", PPM, pitch_deg)
 
 
 ## Integer scale from the window, the same rule as the 2D core (core/pixel_stage.gd scale_for()):

@@ -1,11 +1,12 @@
-// The sky of the view from the lookout (W3Vista), painted rather than dithered: a gradient from the
-// horizon to the zenith in whole steps (each seam broken by a scatter on cells fixed to the sky, so a
-// pan carries it along, never an ordered halftone), the sun with stepped rings of glow (only the disc
-// goes above 1, so only it blooms), the moon and the stars at night; and two kinds of cloud in flat
-// tones with clean edges: banks of cumulus low over the horizon (flat bases, heaped tops in lobes,
-// lit on the sun's side, a darker belly, the seams between the lobes drawn), and long thin streaks
-// higher up (lit along their upper edges). By day they are white and blue-grey, at dusk lit from below
-// in warm colours, at night dark with pale moonlit rims.
+// The sky of the view from the lookout (W3Vista). Round 4 (G5R2-1: Shinkai's skies, soft light):
+// every tone is continuous (the viewport is HDR and the display dithers the 8-bit output with blue
+// noise fixed to the view's lattice, so a slow gradient neither bands nor crawls): a deep clear blue
+// at the zenith opening to a pale, humid horizon; the sun with a soft wide glow (only the disc goes
+// above 1, so only it blooms); the moon and the stars at night; and two kinds of cloud with soft,
+// translucent edges: banks of cumulus low over the horizon (flat bases, heaped tops in lobes, lit on
+// the sun's side with a bright rim where the light comes through, a cool blue-grey belly), and long
+// thin streaks higher up (lit along their upper edges). By day they are white and blue-grey, at dusk
+// lit from below in warm colours, at night dark with pale moonlit rims.
 shader_type sky;
 
 uniform vec3 zenith : source_color = vec3(0.3, 0.45, 0.75);   // linear
@@ -54,20 +55,19 @@ void sky() {
 	// sky-fixed pixel cells: the seams' scatter turns with the sky
 	vec2 cell = floor(vec2(az, el) * px_per_rad);
 	float dz = (hash(cell * 1.37 + 0.5) * 0.7 + vnoise(cell / 1.7) * 0.3) - 0.5;
-	// gradient in whole steps
+	// the gradient, continuous: the pale humid horizon opening into the clear blue overhead
 	float t = clamp(el / 1.1, 0.0, 1.0);
 	t = pow(t, 0.55);
-	float tq = floor(t * 9.0 + 0.5 + dz * 0.5) / 9.0;
-	vec3 col = mix(horizon, zenith, tq);
-	// the sun's glow: rings in steps
+	vec3 col = mix(horizon, zenith, t);
+	// the sun's glow: a soft wide halo and a brighter core around the disc
 	vec3 s = normalize(sun_dir);
 	float cs = dot(d, s);
 	float glow = smoothstep(0.86, 1.0, cs) * (1.0 - night * 0.7);
-	float gq = floor(glow * 5.0 + 0.5 + dz * 0.5) / 5.0;
-	col = mix(col, sun_col * 0.95, gq * 0.55);
-	// a thin pale band along the horizon
-	float mb = 1.0 - smoothstep(0.0, 0.03, abs(el + 0.004));
-	col = mix(col, mist_col, floor(mb * 3.0 + 0.5 + dz * 0.5) / 3.0 * 0.3);
+	float halo = pow(clamp(cs * 0.5 + 0.5, 0.0, 1.0), 6.0) * (1.0 - night * 0.8);
+	col = mix(col, sun_col * 0.95, glow * glow * 0.55 + halo * 0.22);
+	// a pale band of haze along the horizon
+	float mb = 1.0 - smoothstep(0.0, 0.035, abs(el + 0.004));
+	col = mix(col, mist_col, mb * 0.32);
 	vec2 sh = normalize(vec2(s.x, s.z) + 1e-4);
 	float toward_sun = dot(normalize(vec2(d.x, d.z) + 1e-4), sh);      // -1 away .. 1 toward
 	vec3 lit_c = cloud_lit;
@@ -81,20 +81,25 @@ void sky() {
 		float bank = smoothstep(0.42, 0.62, vnoise(vec2(u * 0.55, 9.0)));  // where a bank stands at all
 		float lobes = fbm(vec2(u * 2.4, 1.7));
 		float top = base + bank * (0.03 + lobes * 0.075);
-		if (bank > 0.05 && el > base && el < top) {
-			float h = (el - base) / max(top - base, 1e-3);
-			// the lobes: round heads inside the bank, their seams a darker line
+		// a soft fringe: the top thins out over a few pixels, the base over one or two
+		float px = 1.0 / px_per_rad;
+		float edge = smoothstep(0.0, 3.5 * px, top - el) * smoothstep(-0.5 * px, 1.5 * px, el - base);
+		if (bank > 0.05 && edge > 0.0) {
+			float h = clamp((el - base) / max(top - base, 1e-3), 0.0, 1.0);
+			// the lobes: round heads inside the bank, softly parted
 			vec2 q = vec2(u * 9.0, el * 120.0);
 			float inner = fbm(q * 0.5 + 3.0);
 			float seam = abs(fract(inner * 3.0) - 0.5);
-			float l = 0.42 + h * 0.45 + toward_sun * 0.22 + (inner - 0.5) * 0.3;
-			float lv = floor(l * 3.0 + 0.5 + dz * 0.4) / 3.0;
-			vec3 cc = mix(shade_c, lit_c, clamp(lv, 0.0, 1.0));
-			if (h < 0.18 + dz * 0.1) cc = belly_c;
-			if (seam < 0.05 && h > 0.25) cc = mix(cc, shade_c, 0.6);
-			// the rim that faces the sun catches the light
-			if (top - el < 1.2 / px_per_rad && toward_sun > -0.2) cc = mix(cc, lit_c * 1.08, 0.7);
-			col = cc;
+			// lit from above and from the sun's side, the lobes only a gentle swell (no mottling)
+			float l = 0.46 + h * 0.5 + toward_sun * 0.2 + (inner - 0.5) * 0.12;
+			vec3 cc = mix(shade_c, lit_c, clamp(l, 0.0, 1.0));
+			cc = mix(cc, belly_c, 1.0 - smoothstep(0.04, 0.32, h));
+			cc = mix(cc, shade_c, (1.0 - smoothstep(0.02, 0.09, seam)) * smoothstep(0.2, 0.4, h) * 0.35);
+			// the rim toward the sun: the light comes through the thin top
+			float rim = (1.0 - smoothstep(0.0, 2.5 * px, top - el)) * smoothstep(-0.3, 0.4, toward_sun);
+			cc = mix(cc, lit_c * 1.08, rim * 0.75);
+			// the thin fringe lets the sky through
+			col = mix(col, cc, edge * (0.55 + 0.45 * smoothstep(0.0, 0.25, h)));
 		}
 	}
 	// ---- long thin streaks higher up
@@ -103,14 +108,14 @@ void sky() {
 		float n = fbm(vec2(q.x * 1.2, q.y + fbm(vec2(q.x * 0.6, 4.0)) * 1.4));
 		float band = smoothstep(0.07, 0.16, el) * (1.0 - smoothstep(0.6, 0.85, el));
 		float th = 0.66 - band * 0.06;
-		if (band > 0.0 && n > th) {
-			// lit along the upper edge, darker underneath
+		float a = band * smoothstep(th, th + 0.09, n);
+		if (a > 0.0) {
+			// lit along the upper edge, darker underneath, thin and wispy at the ends
 			float up = fbm(vec2(q.x * 1.2, q.y + 0.08 + fbm(vec2(q.x * 0.6, 4.0)) * 1.4));
-			float lv = up > th ? 0.67 : 0.33;
-			if (n > th + 0.1) lv += 0.33;
-			lv = clamp(lv + toward_sun * 0.2 + dz * 0.1, 0.0, 1.0);
-			vec3 cc = mix(shade_c, lit_c, floor(lv * 3.0 + 0.5) / 3.0);
-			col = mix(col, cc, 0.85);
+			float lv = 0.33 + 0.34 * smoothstep(th - 0.05, th + 0.05, up) + 0.33 * smoothstep(th + 0.05, th + 0.15, n);
+			lv = clamp(lv + toward_sun * 0.2, 0.0, 1.0);
+			vec3 cc = mix(shade_c, lit_c, lv);
+			col = mix(col, cc, 0.85 * a);
 		}
 	}
 	// stars at night
@@ -129,8 +134,9 @@ void sky() {
 			vec2 m = vec2(dot(d, normalize(cross(s, vec3(0.0, 1.0, 0.0)))), d.y - s.y) / 0.013;
 			col = vec3(0.92, 0.93, 0.86) * 1.25;
 			if (length(m - vec2(0.25, 0.2)) < 0.35 || length(m - vec2(-0.3, -0.25)) < 0.25) col *= 0.82;
-		} else if (ang < 0.05) {
-			col = mix(col, vec3(0.5, 0.55, 0.7), floor((1.0 - ang / 0.05) * 3.0 + 0.5 + dz * 0.4) / 3.0 * 0.35);
+		} else if (ang < 0.06) {
+			float mg = 1.0 - ang / 0.06;
+			col = mix(col, vec3(0.5, 0.55, 0.7), mg * mg * 0.4);
 		}
 	}
 	COLOR = col;

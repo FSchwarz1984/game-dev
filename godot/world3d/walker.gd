@@ -28,6 +28,11 @@ var anim_t := 0.0
 var running := false
 var radius := 0.32
 var blockers: Array = []           # [Vector3 centre (y unused), radius]
+# round 4 (item 7): the 3D model (Character3D, docs/knowledge/24) when the characters are in the
+# tree and this character has one; then the sprite is not used. The model stands in the world
+# beside the walker; the walker moves it (its position is her feet) and hands it her ground speed.
+const MODELS := {"tsuzumi": "kasasagi"}
+var model: Node3D
 
 
 func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> void:
@@ -39,6 +44,14 @@ func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> vo
 	var fsize := Vector2i(meta["frame"][0], meta["frame"][1])
 	var piv := Vector2i(meta["pivot"][0], meta["pivot"][1])
 	var file: String = sheet["file"]
+	var mid: String = MODELS.get(id, "")
+	if mid != "" and ResourceLoader.exists(PixelView3D.CHAR3D) and ResourceLoader.exists("res://characters/%s" % mid) \
+			and not OS.get_cmdline_user_args().has("--sprites"):
+		model = (load(PixelView3D.CHAR3D) as GDScript).new()
+		model.name = "Model_" + mid
+		get_parent().add_child(model)
+		model.call("setup", mid)
+		return
 	sprite.setup(CharSprite3D.pixel_texture("%s/%s.png" % [sprite_dir, file]),
 		CharSprite3D.pixel_texture("%s/%s_n.png" % [sprite_dir, file]), fsize, piv, float(chars.get("_sprite_pitch_deg", 39.33)))
 	add_child(sprite)
@@ -65,6 +78,12 @@ func step(dt: float, dir: Vector2) -> float:
 		facing = _view_of(dir)
 	_animate(dt)
 	_apply()
+	if model:
+		# her ground speed as she really moved (the gait locks to it: the feet never skate)
+		var gv := Vector3(vel.x, 0.0, vel.z)
+		if moved < 0.0005:
+			gv = Vector3.ZERO
+		model.call("drive", gv, dt)
 	return moved
 
 
@@ -118,6 +137,10 @@ func _animate(dt: float) -> void:
 
 func _apply() -> void:
 	position = pos
+	if model:
+		model.position = pos
+		model.set("ground_y", pos.y)
+		return
 	var views: Dictionary = sheet["anims"].get(anim, sheet["anims"]["idle"])
 	var view: String = VIEWS8[facing]
 	var flip := false
@@ -134,6 +157,16 @@ func _apply() -> void:
 	sprite.show_frame(int(info.get("col", 0)) + f, int(info["row"]), flip, head)
 
 
+## The colour of her silhouette where something covers her (sprite or model).
+func set_xray_colour(c: Color) -> void:
+	if model:
+		model.call("set_xray_colour", c)
+	else:
+		sprite.set_xray_colour(c)
+
+
 ## Her chest, for the camera and the canopy cut-away.
 func chest() -> Vector3:
+	if model:
+		return model.call("chest")
 	return pos + Vector3(0, 1.0, -0.5)

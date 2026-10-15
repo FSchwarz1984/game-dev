@@ -110,6 +110,10 @@ def place(L, ctx, rng):
     out.append({"kind": "camphor", "x": M["camphor"][0], "z": M["camphor"][1], "rot": 0.4, "scale": 1.0, "variant": 0})
     out.append({"kind": "persimmon", "x": M["persimmon"][0], "z": M["persimmon"][1], "rot": 1.1, "scale": 1.0, "variant": 0})
     out.append({"kind": "choppable", "x": M["choppable_tree"][0], "z": M["choppable_tree"][1], "rot": 2.0, "scale": 1.0, "variant": 0})
+    # the old trees the gates' michikiri ropes are tied to (layout gate_trees)
+    for gt in L.get("gate_trees", []):
+        out.append({"kind": gt["kind"], "x": float(gt["x"]), "z": float(gt["z"]), "rot": float(gt.get("rot", 0.0)),
+                    "scale": float(gt.get("scale", 1.0)), "variant": int(gt.get("variant", 0)), "fixed": True})
 
     # cedars: the far side of the gully and the north-west woods, with glades
     def cedar_ok(x, z):

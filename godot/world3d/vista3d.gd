@@ -95,6 +95,8 @@ func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 	vp.gui_disable_input = true
 	vp.positional_shadow_atlas_size = 0
+	# float, linear: the display converts and dithers (round 4: continuous light, no banding)
+	vp.use_hdr_2d = true
 	add_child(vp)
 	root = Node3D.new()
 	root.name = "Land"
@@ -160,6 +162,7 @@ func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
 	view.stretch_mode = TextureRect.STRETCH_SCALE
 	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	display.shader = load("res://render3d/shaders/vista_display.gdshader")
+	display.set_shader_parameter("blue_noise", load("res://render3d/textures/blue_noise64.png"))
 	view.material = display
 	view.visible = false
 	pv.add_child(view)
@@ -215,6 +218,7 @@ func build() -> void:
 	_build_rocks()
 	_build_landmarks()
 	_build_plain()
+	_build_city()
 	_build_lines()
 	_build_temple()
 	_build_figures()
@@ -356,6 +360,60 @@ func land_h(x: float, z: float) -> float:
 	return float(fd["hmin"]) + (roundf(cf.r * 255.0) * 256.0 + roundf(cf.g * 255.0)) / 65535.0 * float(fd["hrange"])
 
 
+## The vista ground's own height (exactly what vista_common.gdshaderinc v_height draws: bilinear on
+## the mid and far maps, the mid map faded out over its outer 60 m). Every impostor stands on this,
+## not on the height its generator or the region's terrain gave it (round 4: trees floated over the
+## paddies of the lower layer where the terraces had been cut after the woods were spread).
+func ground_h(x: float, z: float) -> float:
+	land_h(x, z)    # loads the maps
+	var md: Dictionary = data["mid"]
+	var fd: Dictionary = data["far"]
+	var hf := _map_h(_far_img, fd, x, z)
+	var lo := Vector2(float(md["x0"]), float(md["z0"]))
+	var hi := lo + Vector2.ONE * (float(md["nx"]) - 1.0) * float(md["cell"])
+	var e := minf(minf(x - lo.x, hi.x - x), minf(z - lo.y, hi.y - z))
+	var w := smoothstep(0.0, 60.0, e)
+	if w <= 0.0:
+		return hf
+	return lerpf(hf, _map_h(_mid_img, md, x, z), w)
+
+
+func _map_h(img: Image, d: Dictionary, x: float, z: float) -> float:
+	var n := int(d["nx"])
+	var g := Vector2((x - float(d["x0"])) / float(d["cell"]), (z - float(d["z0"])) / float(d["cell"]))
+	g = g.clamp(Vector2.ZERO, Vector2.ONE * (float(n) - 1.001))
+	var i := int(floor(g.x))
+	var j := int(floor(g.y))
+	var f := g - Vector2(i, j)
+	var a := _u16(img.get_pixel(i, j), d)
+	var b := _u16(img.get_pixel(i + 1, j), d)
+	var c := _u16(img.get_pixel(i, j + 1), d)
+	var dd := _u16(img.get_pixel(i + 1, j + 1), d)
+	return lerpf(lerpf(a, b, f.x), lerpf(c, dd, f.x), f.y)
+
+
+func _u16(c: Color, d: Dictionary) -> float:
+	return float(d["hmin"]) + (roundf(c.r * 255.0) * 256.0 + roundf(c.g * 255.0)) / 65535.0 * float(d["hrange"])
+
+
+## What the mid map says lies at a point: water (pond, paddy), cultivated land, road (no tree there).
+func _open_ground(x: float, z: float) -> bool:
+	var md: Dictionary = data["mid"]
+	var n := int(md["nx"])
+	var i := roundi((x - float(md["x0"])) / float(md["cell"]))
+	var j := roundi((z - float(md["z0"])) / float(md["cell"]))
+	if i < 0 or j < 0 or i >= n or j >= n:
+		return false
+	if _mat_img == null:
+		_mat_img = load("res://world3d/terrain/saddle/" + String(md["mat"]))
+	var c := _mid_img.get_pixel(i, j)
+	var m := _mat_img.get_pixel(i, j)
+	return c.a > 0.5 or m.r > 0.5 or m.g > 0.5
+
+
+var _mat_img: Image
+
+
 # ------------------------------------------------------------------------------------------------
 # the sea of clouds over the lowland beyond the region's ring
 
@@ -380,7 +438,9 @@ func _build_mist() -> void:
 		for c in cols:
 			var a := TAU * float(c) / float(segs)
 			st.add_vertex(Vector3(eye.x + sin(a) * rings[ri], SEA_Y, eye.z - cos(a) * rings[ri]))
-	for ri in rings.size() - 1:
+	# outer rings first: the translucent sea is drawn back to front from the eye
+	for rr in rings.size() - 1:
+		var ri := rings.size() - 2 - rr
 		for c in segs:
 			var i0 := ri * cols + c
 			var j0 := i0 + cols
@@ -425,6 +485,8 @@ var imp_rows: Array = []              # [foot, asset, yaw, scale]
 var imp_mm := MultiMesh.new()
 var imp_mat := ShaderMaterial.new()
 var _imp_cam := Vector3.INF
+var _float_max := 0.0
+var _float_dropped := 0
 
 
 func _load_impostors() -> void:
@@ -482,7 +544,11 @@ func _build_impostors() -> void:
 		var m := _imp_for(name, float(pr[4]), seed)
 		if m.is_empty() or not imp_frames.has(m[0]):
 			continue
-		imp_rows.append([pos, m[0], float(pr[2]), float(m[1]) * (1.0 if m[0] in IMP_HERO else 1.0)])
+		# on the vista's own ground (the region's terrain and the mid map can differ by a little)
+		var gp := Vector3(pos.x, ground_h(pos.x, pos.z), pos.z)
+		if absf(gp.y - pos.y) > _float_max:
+			_float_max = absf(gp.y - pos.y)
+		imp_rows.append([gp, m[0], float(pr[2]), float(m[1]) * (1.0 if m[0] in IMP_HERO else 1.0)])
 	# the woods around the region (inside the mist), as the land's generator spread them
 	for t in data.get("trees", []):
 		var kind := int(t[3])
@@ -501,7 +567,17 @@ func _build_impostors() -> void:
 			4:
 				nm = "maple_red_a" if seed < 0.4 else "maple_a"
 		var hh: float = BAKED_H[nm]
-		imp_rows.append([Vector3(t[0], t[1], t[2]), nm, seed * TAU, h / hh])
+		# stood on the ground the vista draws, and never in a paddy, a pond, a field or on a road
+		# (the woods were spread before the lower layer's terraces were cut: some stood in the air)
+		var tx := float(t[0])
+		var tz := float(t[2])
+		if _open_ground(tx, tz):
+			_float_dropped += 1
+			continue
+		var gy := ground_h(tx, tz)
+		if absf(gy - float(t[1])) > _float_max:
+			_float_max = absf(gy - float(t[1]))
+		imp_rows.append([Vector3(tx, gy, tz), nm, seed * TAU, h / hh])
 	imp_mm.transform_format = MultiMesh.TRANSFORM_3D
 	imp_mm.use_custom_data = true
 	imp_mm.mesh = _uv_quad()
@@ -514,7 +590,7 @@ func _build_impostors() -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
 	root.add_child(mi)
-	print("VISTA impostors=", imp_rows.size())
+	print("VISTA impostors=", imp_rows.size(), " regrounded max_dy=%.2f dropped_on_open_ground=%d" % [_float_max, _float_dropped])
 
 
 ## A quad whose UV (0, 0) is its top-left corner (the vertex shaders build it on screen).
@@ -737,6 +813,154 @@ func _build_plain() -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
 	root.add_child(mi)
+
+
+## The city on the plain (round 4, G5R2-1 ⑩: "a more prosperous, more modern city"): around the
+## old town's tiled roofs a modern city of concrete blocks (tall at the heart by the station, lower
+## toward its edge) on streets that run along and across the railway, with street lamps; the
+## station's long hall on the line; a factory quarter downriver (saw-tooth sheds and tall chimneys
+## smoking); road bridges over the river. Drawn by vista_house (kinds by COLOR.a), seeded, so the
+## same city every time.
+# concrete, tile and paint as they weather: greys from pale to dark, beige, brick, a few blue-grey
+# and green-grey (a city from afar is a mottle, not a white sheet)
+const CONCRETE := [Color(0.74, 0.72, 0.68), Color(0.60, 0.60, 0.59), Color(0.50, 0.51, 0.52), Color(0.68, 0.64, 0.56),
+	Color(0.56, 0.47, 0.42), Color(0.46, 0.50, 0.54), Color(0.80, 0.78, 0.72), Color(0.52, 0.56, 0.52), Color(0.64, 0.58, 0.50),
+	Color(0.42, 0.44, 0.47)]
+var city_rows: Array = []             # [foot, colour (kind in alpha), custom]
+var city_centre := Vector2.ZERO
+
+
+func _plain_at(x: float, z: float) -> Color:
+	var pd: Dictionary = data["plain"]
+	if _plain_img == null:
+		_plain_img = load("res://world3d/terrain/saddle/" + String(pd["file"]))
+	var i := clampi(roundi((x - float(pd["x0"])) / float(pd["cell"])), 0, int(pd["nx"]) - 1)
+	var j := clampi(roundi((z - float(pd["z0"])) / float(pd["cell"])), 0, int(pd["nz"]) - 1)
+	return _plain_img.get_pixel(i, j)
+
+
+var _plain_img: Image
+
+
+func _build_city() -> void:
+	var vs: Array = data.get("villages", [])
+	var rail: Array = data.get("railway", [])
+	if vs.is_empty() or rail.size() < 2 or not data.has("plain"):
+		return
+	var rng2 := RandomNumberGenerator.new()
+	rng2.seed = 4242
+	var c0: Array = vs[0]
+	city_centre = Vector2(float(c0[0]), float(c0[1]))
+	# the railway past the town: the station stands on it, the streets run along and across it
+	var best := 0
+	for i in rail.size():
+		var d2 := Vector2(float(rail[i][0]), float(rail[i][2])).distance_squared_to(city_centre)
+		if d2 < Vector2(float(rail[best][0]), float(rail[best][2])).distance_squared_to(city_centre):
+			best = i
+	var ra: Array = rail[maxi(best - 3, 0)]
+	var rb: Array = rail[mini(best + 3, rail.size() - 1)]
+	var axis := Vector2(float(rb[0]) - float(ra[0]), float(rb[2]) - float(ra[2])).normalized()
+	var perp := Vector2(-axis.y, axis.x)
+	var station := Vector2(float(rail[best][0]), float(rail[best][2]))
+	# the heart lies between the old town and the station
+	var heart := city_centre.lerp(station, 0.45)
+	var blk := 44.0
+	var lamps: Array = []
+	for gi in range(-18, 19):
+		for gj in range(-14, 15):
+			var p := heart + axis * (float(gi) * blk) + perp * (float(gj) * blk)
+			# an organic edge: the city thins out over its last few hundred metres
+			var edge := 640.0 + 160.0 * sin(atan2(p.y - heart.y, p.x - heart.x) * 3.0 + 1.3) + rng2.randf_range(-60.0, 60.0)
+			var r := p.distance_to(heart) / edge
+			if r > 1.0:
+				continue
+			var pd := _plain_at(p.x, p.y)
+			# not in the river, not on the railway
+			if pd.r * 255.0 < 22.0 or pd.a * 255.0 * 0.5 < 18.0:
+				continue
+			var n := 1 + rng2.randi_range(0, 2) + (1 if r < 0.45 else 0)
+			for b in n:
+				var q := p + axis * rng2.randf_range(-15.0, 15.0) + perp * rng2.randf_range(-15.0, 15.0)
+				var qd := _plain_at(q.x, q.y)
+				if qd.r * 255.0 < 18.0 or qd.a * 255.0 * 0.5 < 14.0:
+					continue
+				var tall := pow(clampf(1.0 - r, 0.0, 1.0), 1.7)
+				var h := lerpf(8.0, 46.0, tall) * rng2.randf_range(0.55, 1.35)
+				var col: Color = CONCRETE[rng2.randi() % CONCRETE.size()]
+				col.a = 0.75
+				city_rows.append([Vector3(q.x, ground_h(q.x, q.y), q.y), col, Color(rng2.randf_range(11.0, 26.0), rng2.randf_range(9.0, 18.0), h, rng2.randf())])
+			# a street lamp at the crossing, most crossings
+			if rng2.randf() < 0.6:
+				var lp := p + (axis + perp) * blk * 0.5
+				lamps.append(Vector3(lp.x, ground_h(lp.x, lp.y) + 5.0, lp.y))
+	# the station: a long hall on the line, lamps along its platform
+	var sy := ground_h(station.x, station.y)
+	city_rows.append([Vector3(station.x, sy, station.y), Color(0.42, 0.5, 0.48, 0.25), Color(120.0, 22.0, 13.0, 0.13)])
+	for k in 7:
+		var lp2 := station + axis * (float(k) - 3.0) * 18.0 + perp * 14.0
+		lamps.append(Vector3(lp2.x, ground_h(lp2.x, lp2.y) + 5.0, lp2.y))
+	# the factory quarter downriver along the line: saw-tooth sheds and tall chimneys, smoking
+	var fac := heart + axis * 820.0 + perp * 160.0
+	for k in 9:
+		var fp := fac + axis * rng2.randf_range(-260.0, 260.0) + perp * rng2.randf_range(-170.0, 170.0)
+		var fd := _plain_at(fp.x, fp.y)
+		if fd.r * 255.0 < 26.0 or fd.a * 255.0 * 0.5 < 20.0:
+			continue
+		var fy := ground_h(fp.x, fp.y)
+		city_rows.append([Vector3(fp.x, fy, fp.y), Color(0.6, 0.62, 0.62, 0.25), Color(rng2.randf_range(55.0, 95.0), 30.0, rng2.randf_range(11.0, 15.0), 0.6 + rng2.randf() * 0.35)])
+		if k % 2 == 0:
+			var cp := fp + perp * 26.0
+			var ch := rng2.randf_range(48.0, 82.0)
+			var cy := ground_h(cp.x, cp.y)
+			city_rows.append([Vector3(cp.x, cy, cp.y), Color(0.74, 0.72, 0.7, 0.5), Color(5.0, 5.0, ch, rng2.randf())])
+			puff_src.append([Vector3(cp.x, cy + ch + 2.0, cp.y), 0.5, 4, rng2.randf()])
+	# road bridges: where the streets across the line meet the river near the heart
+	var bridges := 0
+	for gi in range(-10, 11, 2):
+		if bridges >= 3:
+			break
+		var a0 := heart + axis * (float(gi) * blk)
+		var last := Vector2.INF
+		var inside := false
+		var start := Vector2.ZERO
+		for t in range(-40, 41):
+			var bp := a0 + perp * (float(t) * 12.0)
+			var wet := _plain_at(bp.x, bp.y).r * 255.0 < 9.0
+			if wet and not inside:
+				inside = true
+				start = last if last != Vector2.INF else bp
+			elif not wet and inside:
+				inside = false
+				var span := start.distance_to(bp)
+				if span > 20.0 and span < 140.0:
+					var y0 := maxf(ground_h(start.x, start.y), ground_h(bp.x, bp.y)) + 4.0
+					var concrete := Color(0.7, 0.7, 0.68)
+					_line(Vector3(start.x, y0, start.y), Vector3(bp.x, y0, bp.y), 5.0, 1.0, concrete)
+					bridges += 1
+					break
+			last = bp
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.use_colors = true
+	mm.use_custom_data = true
+	mm.mesh = _uv_quad()
+	mm.instance_count = city_rows.size() + lamps.size()
+	for i in city_rows.size():
+		var row: Array = city_rows[i]
+		mm.set_instance_transform(i, Transform3D(Basis(), row[0]))
+		mm.set_instance_color(i, row[1])
+		mm.set_instance_custom_data(i, row[2])
+	for j in lamps.size():
+		mm.set_instance_transform(city_rows.size() + j, Transform3D(Basis(), lamps[j]))
+		mm.set_instance_color(city_rows.size() + j, Color(1.0, 0.8, 0.5))
+		mm.set_instance_custom_data(city_rows.size() + j, Color(-1.0, 1.0, 1.0, fposmod(float(j) * 0.618, 1.0)))
+	var mi := MultiMeshInstance3D.new()
+	mi.multimesh = mm
+	mi.material_override = house_mat if house_mat else _mat("vista_house")
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
+	root.add_child(mi)
+	print("VISTA city buildings=%d lamps=%d bridges=%d" % [city_rows.size(), lamps.size(), bridges])
 
 
 func _line(a: Vector3, b: Vector3, hw: float, min_px: float, col: Color, side := 0.0, em := 0.0) -> void:
@@ -1074,7 +1298,7 @@ func _build_puffs() -> void:
 	var q := QuadMesh.new()
 	q.size = Vector2(1, 1)
 	puff_mm.mesh = q
-	puff_mm.instance_count = 520
+	puff_mm.instance_count = 900
 	puff_mm.visible_instance_count = 0
 	var mi := MultiMeshInstance3D.new()
 	mi.multimesh = puff_mm
@@ -1100,12 +1324,13 @@ func _step_puffs(dt: float) -> void:
 			var p: Vector3 = s[0]
 			# smoke from the kiln: a narrow column of small puffs widening as it rises; steam from the
 			# hot spring; the waterfall's mist: a tall plume that climbs out of the canyon
-			var col := Color(0.74, 0.73, 0.74, 1.0) if kind == 0 else (Color(0.93, 0.94, 0.95, 0.9) if kind == 1 else Color(0.92, 0.94, 0.96, 0.8))
-			var life := 14.0 if kind == 0 else (8.0 if kind == 1 else 42.0)
-			var up := 1.5 if kind == 0 else (0.8 if kind == 1 else 5.0)
+			# (kind 4: a factory chimney's smoke on the plain, kilometres out: big slow puffs)
+			var col := Color(0.74, 0.73, 0.74, 1.0) if kind == 0 else (Color(0.93, 0.94, 0.95, 0.9) if kind == 1 else (Color(0.86, 0.86, 0.85, 0.9) if kind == 4 else Color(0.92, 0.94, 0.96, 0.8)))
+			var life := 14.0 if kind == 0 else (8.0 if kind == 1 else (60.0 if kind == 4 else 42.0))
+			var up := 1.5 if kind == 0 else (0.8 if kind == 1 else (2.6 if kind == 4 else 5.0))
 			var vel := Vector3(rng.randf_range(-0.15, 0.15), up, rng.randf_range(-0.15, 0.15))
-			var sz := 0.9 if kind == 0 else (2.2 if kind == 1 else 7.0)
-			var jit := 0.3 if kind == 0 else (0.4 if kind == 1 else 5.0)
+			var sz := 0.9 if kind == 0 else (2.2 if kind == 1 else (12.0 if kind == 4 else 7.0))
+			var jit := 0.3 if kind == 0 else (0.4 if kind == 1 else (2.0 if kind == 4 else 5.0))
 			puffs.append([p + Vector3(rng.randf_range(-jit, jit), 0, rng.randf_range(-jit, jit)), vel, life, 0.0, sz, kind, rng.randf(), col, 0.0])
 	var i := 0
 	while i < puffs.size():
@@ -1121,8 +1346,8 @@ func _step_puffs(dt: float) -> void:
 			var v: Vector3 = pf[1]
 			if k == 2:
 				v.y *= 1.0 - age * 0.7
-			pf[0] = (pf[0] as Vector3) + (v + wind * age * (1.2 if k == 0 else (0.6 if k == 1 else 1.4))) * dt
-			pf[4] = float(pf[4]) + dt * (0.32 if k == 0 else (0.4 if k == 2 else 0.4)) * (1.6 if k == 2 else 1.0)
+			pf[0] = (pf[0] as Vector3) + (v + wind * age * (1.2 if k == 0 else (0.6 if k == 1 else (3.0 if k == 4 else 1.4)))) * dt
+			pf[4] = float(pf[4]) + dt * (0.32 if k == 0 else (0.4 if k == 2 else (0.9 if k == 4 else 0.4))) * (1.6 if k == 2 else 1.0)
 		i += 1
 
 
@@ -1298,6 +1523,7 @@ func update(dt: float) -> void:
 		m.set_shader_parameter("v_cam", vc)
 		m.set_shader_parameter("v_lat", lat)
 	sky_mat.set_shader_parameter("view_ang", vc)
+	display.set_shader_parameter("cam_cell", lat)
 	# (the camera itself gives the lighting its view space and culls; its own perspective is not drawn)
 	cam.position = eye
 	cam.rotation = Vector3(deg_to_rad(pitch), -deg_to_rad(yq), 0.0)

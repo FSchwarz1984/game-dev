@@ -58,7 +58,7 @@ class Bench:
             with open(job, 'w') as f:
                 json.dump({'pitch': self.pitch, 'shots': shots}, f)
             t0 = time.time()
-            r = subprocess.run([GODOT, '--path', self.dir, '--rendering-method', 'mobile', '--rendering-driver', 'vulkan',
+            r = subprocess.run([GODOT, '--path', self.dir, '--rendering-method', 'forward_plus', '--rendering-driver', 'vulkan',
                                 '--resolution', '%dx%d' % window, '--position', '0,0', 'res://w3a/w3a_bench.tscn',
                                 '--', f'--job={job}'], capture_output=True, text=True, timeout=timeout, env=env)
             log = r.stdout + r.stderr

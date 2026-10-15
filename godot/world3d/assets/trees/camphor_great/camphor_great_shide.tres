@@ -19,4 +19,5 @@ shader_parameter/far = null
 shader_parameter/shade_fill = null
 shader_parameter/cutaway = null
 shader_parameter/cutaway_scale = null
+shader_parameter/cutaway_keep_px = null
 shader_parameter/shade_flatten = null

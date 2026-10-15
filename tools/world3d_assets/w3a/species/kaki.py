@@ -66,7 +66,7 @@ def variant(key, H, nl, spread, nfruit, vs, sets):
     crown_kw = dict(centre=tuple(cc), radii=(span, H * 0.35, span),
                     base_tint=TR.tint_for('#4d6c3a'), young_tint=TR.tint_for('#5f7a3a'), old_tint=TR.tint_for('#3f5f3e'),
                     overlap=1.1, fill_density=0.8, clump_overlap=1.0, interior_frac=0.25, spray_rate=0.0,
-                    env_k=0.35, up_bias=0.35, flex_r=span, max_cards=600 - nfruit)
+                    env_k=0.35, up_bias=0.35, flex_r=span, max_cards=1000 - nfruit)
     # fruit: hanging on the outer, camera-facing side of the masses
     fruits = []
     back = WD.view_back_upright()

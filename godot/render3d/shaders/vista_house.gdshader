@@ -4,8 +4,13 @@
 // the roof's rows on top (a lighter ridge row when there is room), the wall's row under it, and at
 // night its windows lit (most houses, a few dark); the street lamps are single warm pixels. Then the
 // same air as the land.
+// Round 4 (G5R2-1 ⑩: a more prosperous, modern city): the same sprites draw the city's buildings
+// (kind by COLOR.a): concrete blocks of several storeys (a flat roof, the facade's window grid,
+// the side away from the sun in shade; at night most windows lit, warm or fluorescent), factory
+// chimneys (red and white bands at the top, a blinking red light at night), and long halls (the
+// station, the factories' saw-tooth sheds).
 // Instance: origin = the foot; INSTANCE_CUSTOM = (width m, depth m, height m, seed 0..1);
-// COLOR = the roof's colour (sRGB).
+// COLOR = the roof's colour (sRGB); COLOR.a = kind: 1 house, 0.75 block, 0.5 chimney, 0.25 hall.
 shader_type spatial;
 render_mode world_vertex_coords, unshaded, cull_disabled, fog_disabled, shadows_disabled;
 #include "res://render3d/shaders/vista_common.gdshaderinc"
@@ -21,6 +26,7 @@ varying flat vec4 v_cus;
 varying flat vec4 v_col;
 varying flat vec2 v_size;     // sprite width, height in px
 varying flat float v_roof;    // roof rows
+varying flat int v_kind;      // 0 house, 1 block, 2 chimney, 3 hall
 varying vec2 v_px;
 
 void vertex() {
@@ -31,11 +37,29 @@ void vertex() {
 	float wpx = clamp(floor(max(c.x, c.y) * ppm * 0.9 + 0.5), 1.0, 9.0);
 	float rpx = clamp(floor(c.z * 0.55 * ppm + 0.5), 1.0, 4.0);
 	float hpx = clamp(floor(c.z * 0.45 * ppm + 0.35), 0.0, 3.0);
+	int kind = COLOR.a > 0.9 ? 0 : (COLOR.a > 0.6 ? 1 : (COLOR.a > 0.35 ? 2 : 3));
+	if (kind == 1) {
+		// a block: a flat roof row over storeys of facade
+		wpx = clamp(floor(max(c.x, c.y) * ppm * 0.85 + 0.5), 1.0, 16.0);
+		rpx = 1.0;
+		hpx = clamp(floor(c.z * ppm + 0.5), 1.0, 30.0);
+	} else if (kind == 2) {
+		// a chimney: one or two pixels wide, tall
+		wpx = c.x * ppm > 1.4 ? 2.0 : 1.0;
+		rpx = 0.0;
+		hpx = clamp(floor(c.z * ppm + 0.5), 3.0, 40.0);
+	} else if (kind == 3) {
+		// a long hall: a wide roof (saw-toothed on a factory) over a low wall
+		wpx = clamp(floor(max(c.x, c.y) * ppm * 0.9 + 0.5), 2.0, 24.0);
+		rpx = clamp(floor(c.z * 0.5 * ppm + 0.5), 1.0, 3.0);
+		hpx = clamp(floor(c.z * 0.5 * ppm + 0.5), 1.0, 3.0);
+	}
 	if (c.x < 0.0) {
 		wpx = 1.0;
 		rpx = 1.0;
 		hpx = 0.0;
 	}
+	v_kind = kind;
 	// the quad: centred on the foot horizontally, from the foot up, on the lattice of pixel corners
 	vec2 foot = v_snap(v_px_of(o, eye));
 	vec2 off = vec2(UV.x * wpx - floor(wpx * 0.5), (1.0 - UV.y) * (rpx + hpx));
@@ -59,6 +83,54 @@ void fragment() {
 	vec3 sd = normalize(w3_sun_dir);
 	float day = clamp(sd.y * 3.0, 0.0, 1.0);
 	vec3 col;
+	if (v_kind > 0) {
+		// the city: blocks, chimneys, halls
+		bool dark_drain = v_drain(v_wp.xz, v_wp.y) > 0.9;
+		vec3 base = w3_srgb_to_linear(v_col.rgb);
+		// the face toward the sun lighter, the other in shade (a sprite's two halves)
+		bool sunny = (sd.x > 0.0) == (q.x >= floor(v_size.x * 0.5));
+		float side = v_size.x > 2.5 ? (sunny ? 1.0 : 0.72) : 0.88;
+		vec3 lit = ambient_col + light_col * 0.55 * day * side;
+		bool lamp = false;
+		vec3 lamp_c = w3_srgb_to_linear(window_col);
+		if (v_kind == 1) {
+			if (row < v_roof) {
+				// flat roofs: pale concrete on some, dark tar on others
+				float rk = fract(v_cus.w * 13.7) > 0.45 ? 1.12 : 0.72;
+				col = base * rk * (ambient_col + light_col * 0.7 * day);
+			} else {
+				// storeys: a row of windows on every other pixel row, a pane on every other column
+				bool pane = mod(row - v_roof, 2.0) < 1.0 && (v_size.x < 2.5 || mod(q.x, 2.0) < 1.0);
+				col = base * lit;
+				if (pane) col = mix(col, w3_srgb_to_linear(vec3(0.34, 0.42, 0.52)) * lit, 0.55);
+				// at night most panes lit: homes warm, offices a cooler white
+				float h = w3_hash(vec2(v_cus.w * 911.0 + q.x * 3.1, row * 1.7));
+				lamp = night > 0.3 && pane && h > 0.38 && !dark_drain;
+				if (fract(v_cus.w * 5.3) > 0.55) lamp_c = w3_srgb_to_linear(vec3(0.86, 0.92, 1.0));
+			}
+		} else if (v_kind == 2) {
+			// bands of red and white at the top, the stack below
+			bool band = row < 4.0 && mod(row, 2.0) < 1.0;
+			col = (band ? w3_srgb_to_linear(vec3(0.72, 0.28, 0.22)) : base) * lit;
+			// the aviation light at the top, blinking
+			lamp = night > 0.3 && row < 0.5 && fract(w3_time * 0.6 + v_cus.w * 3.0) < 0.5 && !dark_drain;
+			lamp_c = w3_srgb_to_linear(vec3(1.0, 0.25, 0.18));
+		} else {
+			if (row < v_roof) {
+				// the station's long roof, or a factory's saw-tooth (light and dark by turns)
+				float k = fract(v_cus.w * 3.7) > 0.5 && mod(q.x, 3.0) < 1.0 ? 0.7 : 1.05;
+				col = base * k * (ambient_col + light_col * 0.7 * day);
+			} else {
+				col = w3_srgb_to_linear(vec3(0.74, 0.72, 0.68)) * lit;
+				float h = w3_hash(vec2(v_cus.w * 617.0, q.x));
+				lamp = night > 0.3 && h > 0.35 && !dark_drain;
+				lamp_c = w3_srgb_to_linear(vec3(0.92, 0.95, 1.0));
+			}
+		}
+		vec3 cc = v_air(col, v_wp, eye, FRAGCOORD.xy);
+		if (v_past(v_wp, eye, FRAGCOORD.xy)) cc = v_paper(row < v_roof ? 0.8 : 0.0);
+		ALBEDO = lamp ? mix(cc, lamp_c * 3.0, 0.85) : cc;
+	} else {
 	if (row < v_roof) {
 		vec3 roof = w3_srgb_to_linear(v_col.rgb);
 		// the ridge row catches the light when the roof has room for it
@@ -82,5 +154,6 @@ void fragment() {
 	if (v_past(v_wp, eye, FRAGCOORD.xy)) c = v_paper(row < v_roof ? 0.8 : 0.0);
 	// (a lit window shines through the air)
 	ALBEDO = win ? mix(c, w3_srgb_to_linear(window_col) * 3.2, 0.88) : c;
+	}
 	}
 }

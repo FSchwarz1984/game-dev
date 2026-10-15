@@ -347,6 +347,38 @@
    "corner": 1.2,
    "wall": "auto",
    "height_rel": -0.15
+  },
+  {
+   "id": "gate_apron",
+   "centre": [
+    0.0,
+    22.2
+   ],
+   "size": [
+    10.4,
+    3.8
+   ],
+   "angle": 0.0,
+   "height": -3.85,
+   "feather": 1.6,
+   "corner": 1.4,
+   "note": "the flat ground outside the east gate (where the fog puts her back without a lantern); the two gate cedars and the michikiri rope stand on it, so they lean alike (same base height)"
+  },
+  {
+   "id": "north_gate",
+   "centre": [
+    -15.2,
+    -11.0
+   ],
+   "size": [
+    6.4,
+    2.4
+   ],
+   "angle": -13.0,
+   "height_rel": 0.0,
+   "feather": 1.4,
+   "corner": 1.0,
+   "note": "level ground under the north gate's michikiri rope and its two cedars (same base height: they lean alike)"
   }
  ],
  "steps": [
@@ -1927,10 +1959,35 @@
    "yaw": 20
   },
   {
-   "name": "gate_stones",
+   "name": "michikiri_e",
+   "x": 0.0,
+   "z": 20.6,
+   "yaw": 0
+  },
+  {
+   "name": "michikiri_n",
    "x": -15.2,
    "z": -11.0,
-   "yaw": 12
+   "yaw": 13
+  },
+  {
+   "name": "radio",
+   "x": -19.0,
+   "z": 12.69,
+   "yaw": 0,
+   "hang": 2.05
+  },
+  {
+   "name": "shoikago",
+   "x": -0.95,
+   "z": 3.95,
+   "yaw": 8
+  },
+  {
+   "name": "hiraishi",
+   "x": 3.0,
+   "z": 13.4,
+   "yaw": 8
   }
  ],
  "perches": {
@@ -2564,7 +2621,7 @@
   ]
  },
  "fog": {
-  "note": "Fog bands behind the gates' ropes (lead 2026-10-15: east thick 4-6 m, north and south-west thinner). For the renderer's volumetric fog (FogVolume per band): the band's polygon is zones.<key>; height above the ground; density 0..1 (east densest). The swap for the seamless loop happens in the densest middle (draft §2 risk). south-west: reserved position on the west boundary, no path there yet.",
+  "note": "Fog bands behind the gates' michikiri ropes (lead 2026-10-15 14:00): east thick and 5 m deep, north and south-west thinner. For the renderer's volumetric fog (a FogVolume per band): the band's polygon is zones.<key>, height above the ground, density 0..1. The loop (renderer): in the densest middle the screen whites out for 0.5-1 s and, without a lit bon lantern, she is put back on the outer side facing out ('out': the flat apron outside the gate). South-west: a reserved place on the west boundary, no path there yet.",
   "fog_east": {
    "height": 3.6,
    "density": 1.0,
@@ -2581,6 +2638,10 @@
      1.62,
      20.5
     ]
+   ],
+   "out": [
+    0.6,
+    22.6
    ]
   },
   "fog_north": {
@@ -2599,6 +2660,10 @@
      -13.8,
      -11.4
     ]
+   ],
+   "out": [
+    -15.6,
+    -12.6
    ]
   },
   "fog_sw": {
@@ -2610,59 +2675,38 @@
    ]
   }
  },
- "sets": {
-  "gate_outside": {
-   "note": "The east gate's outside scenery as one set, relative to the gate centre (gate_main), for the seamless fog loop (lead 2026-10-15): where the replica stands is the lead's call (see coord/to_lead 13:05). Props are layout props with x, z relative to origin; paths are the layout's path ids whose geometry the replica repeats (relative to origin).",
-   "origin": [
-    0.0,
-    20.5
-   ],
-   "props": [
-    {
-     "name": "gate_stones",
-     "x": 0.0,
-     "z": 0.0,
-     "yaw": 0
-    },
-    {
-     "name": "stone_lantern_old",
-     "x": -2.9,
-     "z": 0.8,
-     "yaw": 8
-    },
-    {
-     "name": "stone_lantern_old",
-     "x": 2.9,
-     "z": 0.8,
-     "yaw": -6
-    },
-    {
-     "name": "jizo",
-     "x": 17.3,
-     "z": 0.4,
-     "yaw": -15
-    },
-    {
-     "name": "waymark_a",
-     "x": 19.9,
-     "z": -4.1,
-     "yaw": 0
-    },
-    {
-     "name": "dosojin",
-     "x": 16.2,
-     "z": -1.1,
-     "yaw": 0
-    }
-   ],
-   "paths": [
-    "sando_lane"
-   ],
-   "road_span": {
-    "from_pt": 8,
-    "to_pt": 10,
-    "note": "the paved road between control points 8 and 10 (past the dosojin)"
-   }
+ "gate_trees": [
+  {
+   "kind": "cedar",
+   "x": -4.2,
+   "z": 20.6,
+   "variant": 3,
+   "rot": 0.6,
+   "note": "east gate, west tree (the michikiri rope's end)"
+  },
+  {
+   "kind": "cedar",
+   "x": 4.2,
+   "z": 20.6,
+   "variant": 0,
+   "rot": 2.1,
+   "note": "east gate, east tree"
+  },
+  {
+   "kind": "cedar",
+   "x": -17.44,
+   "z": -10.48,
+   "variant": 0,
+   "rot": 1.2,
+   "note": "north gate, west tree"
+  },
+  {
+   "kind": "cedar",
+   "x": -12.96,
+   "z": -11.52,
+   "variant": 1,
+   "rot": 4.0,
+   "note": "north gate, east tree"
   }
- }
+ ]
 }

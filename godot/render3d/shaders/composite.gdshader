@@ -8,6 +8,7 @@
 // sunlit straw reads gold, not "withered"). A light vignette. Last, the 8-bit output is dithered by
 // half a code value with a blue-noise tile fixed to the world's pixel lattice (it moves with the
 // world as the camera moves by whole pixels, so it never crawls): dark slow gradients do not band.
+// Values over white (lights) roll off by their brightest channel, so they keep their hue.
 // No film grain (per-frame noise would read as shimmer).
 shader_type canvas_item;
 render_mode unshaded;
@@ -76,6 +77,12 @@ void fragment() {
 		float k = 1.0 + (green_gain - 1.0) * max(green, olive * 0.8) + (yellow_gain - 1.0) * yellow;
 		lab.yz = vec2(cos(h), sin(h)) * C * k;
 		lin = max(from_oklab(lab), vec3(0.0));
+	}
+	// lights brighter than white keep their hue (a lantern's core stays warm, a firefly yellow-green):
+	// the brightest channel rolls off softly above 0.8 and the others follow it
+	float mx = max(lin.r, max(lin.g, lin.b));
+	if (mx > 0.8) {
+		lin *= (0.8 + 0.2 * (1.0 - exp(-(mx - 0.8) / 0.2))) / mx;
 	}
 	c = lin_to_srgb(lin);
 	// S-curve on luma (the hue and the chroma ratio stay put), pivoting low: the darks keep their

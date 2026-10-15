@@ -1,7 +1,8 @@
 // Puffs in the view from the lookout (W3Vista): the kiln's smoke, the hot spring's steam, the mist
 // of the 裏見之瀑, the waterfall itself (kind 3: a falling sheet). Camera-facing quads; a round,
-// noise-edged body lit from the sun's side, thinned by wearing away at its edge (no halftone, no
-// smooth alpha), then the same air as the land. Values stay under 1 (no bloom), except the kiln's glow.
+// noise-edged body lit softly from the sun's side (round 4: continuous light, a soft translucent
+// edge a pixel or two wide, no halftone), thinned by wearing away at its edge, then the same air as
+// the land. Values stay under 1 (no bloom), except the kiln's glow. Kind 4: a factory's smoke.
 // Instance: origin = centre; COLOR = colour (sRGB) and cover 0..1; INSTANCE_CUSTOM = (size m,
 // kind, seed, glow). kind: 0 smoke, 1 steam, 2 mist, 3 waterfall sheet (size = width, seed = height).
 shader_type spatial;
@@ -57,18 +58,21 @@ void fragment() {
 		// (cover: 1 whole .. 0 gone), never by a halftone
 		float r = min(length(q - vec2(-0.1, 0.06)) * 2.4, min(length(q - vec2(0.13, 0.02)) * 2.6, length(q - vec2(0.0, -0.12)) * 2.5));
 		r += (n - 0.5) * 0.35;
-		if (r > mix(0.35, 1.0, cover)) discard;
-		// lit from the sun's side
+		float edge = mix(0.35, 1.0, cover);
+		if (r > edge) discard;
+		// lit softly from the sun's side
 		vec3 sd = normalize(w3_sun_dir);
 		vec3 to_cam = normalize(eye - v_wp);
 		vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), to_cam));
 		float lit = dot(vec2(q.x, -q.y), normalize(vec2(dot(right, sd), sd.y) + 1e-4)) * 2.0 + (n - 0.5) * 0.4;
-		col *= lit > 0.1 ? 1.06 : (lit < -0.3 ? 0.72 : 0.88);
+		col *= mix(0.72, 1.06, smoothstep(-0.4, 0.2, lit));
+		// a soft edge: the last stretch of the radius thins out
+		cover *= 1.0 - smoothstep(edge - 0.2, edge, r);
 	}
 	if (cover <= 0.02) discard;
 	col *= light_k;
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);
 	c += col * v_cus.w;
 	ALBEDO = c;
-	ALPHA = 1.0;
+	ALPHA = kind == 3 ? 1.0 : clamp(cover * 1.4, 0.0, 1.0);
 }

@@ -430,7 +430,8 @@ def write(cards, atlas_size, out: Path):
             for arr in (P, N, UV, UV2, C, C0, I):
                 blob += np.ascontiguousarray(arr).tobytes()
             chunks.append(e)
-    (out / "cover.bin").write_bytes(bytes(blob))
-    return {"file": "cover.bin", "atlas": "res://world3d/terrain/common/cover.png",
+    import gzip
+    (out / "cover.bin").write_bytes(gzip.compress(bytes(blob), compresslevel=9, mtime=0))
+    return {"file": "cover.bin", "compression": "gzip", "atlas": "res://world3d/terrain/common/cover.png",
             "layout": "per chunk: pos f32x3, normal f32x3, uv f32x2, uv2 f32x2 (px offset), colour f32x4 (tint + AO), custom0 f32x4 "
                       "(anchor + flex), index u32x3", "chunks": chunks}

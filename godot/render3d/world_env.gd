@@ -114,6 +114,11 @@ func setup(v: PixelView3D) -> void:
 var fog_volume: FogVolume
 var fog_mat: ShaderMaterial
 var fog_strength := 1.0
+## The barrier (round 4, item 5): 0 outside .. 1 inside, by where she stands (sample.gd blends it
+## across the gates' fog bands). Inside the light is softer and brighter: lifted, less contrast,
+## warm-white highlights, more luminous shade, fuller air.
+var realm := 0.0
+var realm_mask: W3RealmMask
 
 
 func use_volumetric_fog(strength: float, t: Terrain3D) -> void:
@@ -143,6 +148,12 @@ func use_volumetric_fog(strength: float, t: Terrain3D) -> void:
 	fog_mat.set_shader_parameter("cells", Vector2(t.nx, t.nz))
 	fog_volume.material = fog_mat
 	view.world_root.add_child(fog_volume)
+	if realm_mask == null:
+		realm_mask = W3RealmMask.new()
+		realm_mask.build(t)
+	fog_mat.set_shader_parameter("realm", realm_mask.texture)
+	fog_mat.set_shader_parameter("realm_frame", realm_mask.frame())
+	fog_mat.set_shader_parameter("realm_cells", Vector2(realm_mask.nx, realm_mask.nz))
 	_fog_for_hour()
 
 
@@ -159,6 +170,9 @@ func _fog_for_hour() -> void:
 	fog_mat.set_shader_parameter("layer", layer)
 	var fc: Color = sample(hours)[5]
 	fog_mat.set_shader_parameter("albedo", Color(0.9, 0.94, 1.0).lerp(fc, 0.25))
+	# inside the barrier the air holds more light by day; the gates' curtains stand at every hour
+	fog_mat.set_shader_parameter("realm_boost", 0.45 * (1.0 - night) + 0.3 * night)
+	fog_mat.set_shader_parameter("band_density", 0.35 * fog_strength)
 
 
 static func _lerp_key(a: Array, b: Array, t: float) -> Array:
@@ -233,6 +247,8 @@ func set_time(h: float) -> void:
 	# by day, so the warm bounce off the sunlit earth never turns the shade brown (round 4: "大块的蓝绿阴影");
 	# blue-violet in the golden hour; neutral at night (the night grade does it)
 	var shade_tint := Vector3(0.88, 0.98, 1.08).lerp(Vector3(0.92, 0.95, 1.1), golden).lerp(Vector3(0.97, 1.0, 1.03), night)
+	# inside the barrier the shade is more luminous (the realm's soft light)
+	shade_tint *= 1.0 + 0.1 * realm * (1.0 - night)
 	RenderingServer.global_shader_parameter_set("w3_shade_tint", shade_tint)
 	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.01, 1.0, 0.98).lerp(Vector3(0.95, 1.0, 1.06), night))
 	environment.background_color = fog
@@ -246,18 +262,29 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_mist", Vector4(mist_top, mist_bottom, clampf(0.25 + mist_k, 0.0, lerpf(0.92, 0.7, morning)), 0.012))
 	_fog_for_hour()
 	var c := view.composite
-	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b))
+	var rk := realm * (1.0 - 0.6 * night)
+	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b) + Vector3(0.012, 0.014, 0.011) * rk)
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))
 	# (rain: wet leaves and wet earth are deeper, not greyer; the light is what goes flat)
-	c.set_shader_parameter("saturation", float(k[8]))
+	c.set_shader_parameter("saturation", float(k[8]) * (1.0 + 0.05 * realm * (1.0 - night)))
 	# split toning, a little stronger than the keys (round 4): shade leans blue-green, light warm
 	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b) * 1.6 + Vector3(0.0, 0.004, 0.004) * (1.0 - night))
-	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * 1.3)
-	# a soft S-curve (round 4: soft contrast, nothing crushed), softer still at night
-	c.set_shader_parameter("contrast", lerpf(0.16, 0.08, night))
+	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * 1.3 + Vector3(0.008, 0.006, 0.0) * rk)
+	# a soft S-curve (round 4: soft contrast, nothing crushed), softer still at night and inside the
+	# barrier
+	c.set_shader_parameter("contrast", lerpf(0.16, 0.08, night) * (1.0 - 0.5 * rk))
 	# exposure: a low sun lights the ground at a grazing angle; the eye (and a camera) open up for it
 	var el_k := 1.0 - smoothstep(0.25, 0.75, maxf(dir.y, 0.0))
-	c.set_shader_parameter("exposure", 1.0 + 0.6 * el_k * (1.0 - night))
+	c.set_shader_parameter("exposure", (1.0 + 0.6 * el_k * (1.0 - night)) * (1.0 + 0.12 * rk))
+
+
+## Where she stands, in the barrier's terms (0 outside .. 1 inside): the frame's look follows.
+func set_realm(k: float) -> void:
+	k = clampf(k, 0.0, 1.0)
+	if absf(k - realm) < 0.002:
+		return
+	realm = k
+	set_time(hours)
 
 
 func tick(dt: float) -> void:

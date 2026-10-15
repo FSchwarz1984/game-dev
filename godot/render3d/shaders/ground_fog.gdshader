@@ -17,6 +17,13 @@ uniform vec3 albedo : source_color = vec3(0.92, 0.95, 1.0);
 uniform vec3 emission : source_color = vec3(0.0);
 uniform float drift = 0.0;             // advected offset (m), from the wind and the clock
 uniform float banks = 0.55;            // 0 even .. 1 broken into banks
+// the barrier (round 4, item 5; render3d/realm_mask.gd): R sanctum, G gate fog band, B band height / 8
+uniform sampler2D realm : filter_linear, repeat_disable;
+uniform vec4 realm_frame = vec4(-80.0, -96.0, 1.0, 0.0);
+uniform vec2 realm_cells = vec2(161.0, 209.0);
+uniform float realm_boost = 0.0;       // inside: the air holds this much more light (density x (1 + k))
+uniform vec3 realm_albedo : source_color = vec3(1.0, 0.97, 0.9);
+uniform float band_density = 0.0;      // the mist curtain at a gate, at the band's full value
 
 float hash2(vec2 p) {
 	vec3 p3 = fract(vec3(p.xyx) * 0.1031);
@@ -38,7 +45,15 @@ void fog() {
 	vec2 q = (wp.xz + vec2(drift, drift * 0.35)) * 0.045;
 	float n = vnoise2(q) * 0.65 + vnoise2(q * 2.3 + 7.1) * 0.35;
 	d *= mix(1.0, 0.25 + 1.5 * n, banks);
-	DENSITY = above < -1.0 ? 0.0 : d;
-	ALBEDO = albedo;
+	vec4 rm = texture(realm, ((wp.xz - realm_frame.xy) / realm_frame.z + 0.5) / realm_cells);
+	// inside the barrier the air is fuller of light (thicker, warmer: a soft glow in the shafts)
+	d *= 1.0 + realm_boost * rm.r;
+	// a gate's curtain of mist: dense from the ground up to the band's height, a soft broken top,
+	// slowly stirring
+	float bh = max(rm.b * 8.0, 0.5);
+	float stir = vnoise2(q * 3.1 + vec2(drift * 0.05, 0.0)) * 0.6 + 0.7;
+	float curtain = rm.g * band_density * stir * (1.0 - smoothstep(bh * 0.55, bh * 1.2, above));
+	DENSITY = above < -1.0 ? 0.0 : d + curtain;
+	ALBEDO = mix(albedo, realm_albedo, rm.r * 0.6);
 	EMISSION = emission;
 }
