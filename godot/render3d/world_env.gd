@@ -130,7 +130,7 @@ func use_volumetric_fog(strength: float, t: Terrain3D) -> void:
 	environment.volumetric_fog_length = view.cam_distance + 80.0
 	environment.volumetric_fog_detail_spread = 1.0
 	environment.volumetric_fog_gi_inject = 0.5
-	environment.volumetric_fog_ambient_inject = 0.2
+	environment.volumetric_fog_ambient_inject = 0.14
 	environment.volumetric_fog_temporal_reprojection_enabled = false   # no ghosting as she walks
 	sun.light_volumetric_fog_energy = 1.0
 	if strength <= 0.0:
@@ -164,7 +164,7 @@ func _fog_for_hour() -> void:
 		return
 	var morning := clampf(1.0 - absf(hours - 6.8) / 2.4, 0.0, 1.0)
 	var night := float(sample(hours)[11])
-	var d := lerpf(0.009, 0.024, morning) + night * 0.01 + rain * 0.012
+	var d := lerpf(0.009, 0.015, morning) + night * 0.01 + rain * 0.008
 	var layer := lerpf(5.0, 3.0, morning)
 	fog_mat.set_shader_parameter("density", d * fog_strength)
 	fog_mat.set_shader_parameter("layer", layer)
@@ -266,7 +266,7 @@ func set_time(h: float) -> void:
 	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b) + Vector3(0.012, 0.014, 0.011) * rk)
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))
 	# (rain: wet leaves and wet earth are deeper, not greyer; the light is what goes flat)
-	c.set_shader_parameter("saturation", float(k[8]) * (1.0 + 0.05 * realm * (1.0 - night)))
+	c.set_shader_parameter("saturation", float(k[8]) * (1.0 + 0.05 * realm * (1.0 - night)) * (1.0 + 0.18 * rain))
 	# split toning, a little stronger than the keys (round 4): shade leans blue-green, light warm
 	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b) * 1.6 + Vector3(0.0, 0.004, 0.004) * (1.0 - night))
 	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * 1.3 + Vector3(0.008, 0.006, 0.0) * rk)

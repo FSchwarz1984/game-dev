@@ -206,7 +206,7 @@ def _michikiri(name, seed, span, h_end, sag, r_rope, tassels, sandal, tree_r):
 
 
 def michikiri_e(out):
-    P, extras, mid = _michikiri('michikiri_e', 9901, 8.4, 4.6, 0.5, 0.075, (0.14, 0.27, 0.37, 0.63, 0.73, 0.86), True, (0.47, 0.42))
+    P, extras, mid = _michikiri('michikiri_e', 9901, 8.4, 4.6, 0.5, 0.075, (0.14, 0.27, 0.37, 0.63, 0.73, 0.86), True, (0.6, 0.6))
     prop = K.Prop('michikiri_e', 9901).add(P)
     cat = {'footprint': [], 'tags': ['sacred', 'gate', 'landmark'],
            'notes': 'The east gate\'s michikiri (道切り): a thick straw rope 8.4 m long tied round two old cedars at x = -4.2 and '
@@ -218,7 +218,7 @@ def michikiri_e(out):
 
 
 def michikiri_n(out):
-    P, extras, mid = _michikiri('michikiri_n', 9931, 4.6, 3.7, 0.32, 0.05, (0.25, 0.5, 0.75), False, (0.42, 0.38))
+    P, extras, mid = _michikiri('michikiri_n', 9931, 4.6, 3.7, 0.32, 0.05, (0.25, 0.5, 0.75), False, (0.62, 0.62))
     prop = K.Prop('michikiri_n', 9931).add(P)
     cat = {'footprint': [], 'tags': ['sacred', 'gate'],
            'notes': 'A thinner michikiri rope for the north and south-west gates: 4.6 m between two trees at x = -2.3 and 2.3 '

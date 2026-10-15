@@ -90,6 +90,57 @@ def variant(R, key, H, cb, r0, cr, lean, vseed):
     return limbs, masses, crown_kw, cat
 
 
+def old_broken(R):
+    """An old cedar whose top a storm broke off long ago (the gates' trees, round 4b): a thick old
+    trunk ending in a splintered break at 7.2 m, two side branches turned up into new leaders, a
+    small crown on them to about 9.5 m, tufts sprouting from the trunk. Short on purpose: at the
+    gates a 22-26 m cedar would cover everything 25-30 m north of it in the 3/4 view (the camphor,
+    the graves); this one hides at most 11 m."""
+    Rv = rng(SEED * 10 + 77)
+    H = 7.2
+    r0 = 0.62
+    pts = [[0, -0.5, 0], [0, 2.4, 0], [0.04, 4.8, 0.02], [0.07, H, 0.04]]
+    trunk = WD.Limb('trunk', pts, [r0 * 1.2, r0 * 0.95, r0 * 0.82, r0 * 0.7], kind='trunk', n_around=12,
+                    step_fn=lambda f: 0.6, moss=0.35, cap_end=True,
+                    rfun=lambda th, k, f, sp: sp.rad[k] * (1 + 0.28 * np.exp(-max(sp.pos[k, 1], 0) / 0.6)
+                                                          * (1 + 0.3 * np.cos(4 * th + 0.5)) + 0.04 * np.sin(7 * th + sp.pos[k, 1])))
+    limbs = [trunk]
+    top = np.array([0.07, H, 0.04])
+    # the splintered break: thin wedges sticking up round the rim
+    for k in range(6):
+        a = k * 2 * math.pi / 6 + Rv.normal(0, 0.3)
+        d = np.array([math.cos(a), 0, math.sin(a)])
+        b0 = top + d * r0 * 0.55 + np.array([0, -0.12, 0])
+        b1 = b0 + d * 0.05 + np.array([0, Rv.uniform(0.25, 0.75), 0])
+        limbs.append(WD.Limb(f'sp{k}', [b0, b1], [0.09, 0.012], kind='branch', n_around=4, step_fn=lambda f: 0.3))
+    # two side branches turned up into new leaders, a dead stub or two
+    leaders = [((0.55, 5.4, 0.25), (1.2, 7.0, 0.6), (1.35, 9.2, 0.7)), ((-0.5, 5.9, -0.2), (-1.0, 7.4, -0.6), (-1.05, 9.6, -0.75))]
+    masses = []
+    for i, (a_, b_, c_) in enumerate(leaders):
+        limbs.append(WD.Limb(f'ld{i}', [np.array([0.0, a_[1] - 0.2, 0.0]), a_, b_, c_], [0.24, 0.2, 0.13, 0.04], kind='branch',
+                             n_around=6, step_fn=lambda f: 0.5, moss=0.2))
+        c = np.array(c_)
+        for t, (rr, hh) in enumerate(((1.35, 0.55), (1.05, 0.5), (0.7, 0.45), (0.38, 0.6))):
+            masses.append(CD.Mass(c + np.array([0, -2.2 + t * 0.75, 0]), (rr, hh, rr * 0.85), seed=SEED + 7700 + i * 10 + t,
+                                  clumps=0.0, sag=0.5, tiles='mass' if rr > 0.5 else 'small', interior=rr > 1.0, lump=0.06))
+    for i, (h, az) in enumerate(((2.9, 0.6), (3.6, 3.4), (4.4, 5.0))):
+        d = np.array([math.cos(az), 0, math.sin(az)])
+        masses.append(CD.Mass(np.array([0, h, 0]) + d * (r0 * 0.9 + 0.35), (0.55, 0.35, 0.45), seed=SEED + 7800 + i,
+                              clumps=0.0, sag=0.4, tiles='small', interior=False, lump=0.05))
+    limbs.append(WD.Limb('stub', [[0.0, 3.2, 0.0], [-0.8, 3.4, 0.35], [-1.2, 3.35, 0.5]], [0.12, 0.08, 0.04], kind='branch',
+                         n_around=5, step_fn=lambda f: 0.4))
+    crown_kw = dict(centre=(0.0, 7.4, 0.0), radii=(1.8, 2.6, 1.8),
+                    base_tint=TR.tint_for('#3d5e48'), young_tint=TR.tint_for('#526e48'), old_tint=TR.tint_for('#31504a'),
+                    overlap=1.4, fill_density=1.0, clump_overlap=1.0, interior_frac=0.2, spray_rate=0.0,
+                    env_k=0.55, up_bias=0.4, trunk_axis=(0.0, 0.0), flex_r=1.8)
+    cat = {'category': 'tree', 'species': 'furusugi', 'footprint': [[0.0, 0.0, r0 * 1.35]], 'height': 9.8,
+           'crown': {'centre': [0.0, 7.8, 0.0], 'radius': 1.8, 'base': 5.2}, 'tags': ['tree', 'conifer', 'old'],
+           'anchors': {'rope': [0.0, 4.6, 0.0]},
+           'notes': 'An old cedar broken at 7.2 m long ago, two upturned leaders to 9.6 m; trunk 1.2-1.5 m across at the foot. '
+                    'The gates\' trees (the michikiri rope is tied round it at 4.6 m).'}
+    return limbs, masses, crown_kw, cat
+
+
 def bark(seed):
     return WD.bark_texture(seed, spacing=(2, 4), ridge=('#5b392b', '#6a4532', '#7a5039'), lip='#8a5c42',
                            fissure='#3a241c', deep='#2a1b16', lichen=('#7e8466', '#8e9474'), lichen_p=0.0008,
@@ -111,4 +162,14 @@ def build(out):
         limbs, masses, crown_kw, cat = variant(R, key, H, cb, r0, cr, lean, vs)
         stats[key] = TR.build_variant(a, key, limbs, masses, (atlas, rects), sets, crown_kw, m_bark, m_leaf, cat,
                                       colour_fn=TR.default_colour(), seed=SEED + vs)
+    # the gates' old broken cedar: its own asset (furusugi_a, placement kind 'furusugi'), so the random
+    # cedars never pick it
+    b = out.asset('furusugi', 'trees')
+    b_bark = b.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0},
+                        textures={'albedo_tex': b.texture('bark', bark(SEED + 1))})
+    b_leaf = b.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=1.0),
+                        textures={'leaf_tex': b.texture('leaves', atlas)})
+    limbs, masses, crown_kw, cat = old_broken(R)
+    stats['old'] = TR.build_variant(b, 'a', limbs, masses, (atlas, rects), sets, crown_kw, b_bark, b_leaf, cat,
+                                    colour_fn=TR.default_colour(), seed=SEED + 77)
     return stats

@@ -267,5 +267,5 @@ def place(L, ctx, rng):
     return out + frame_pines
 
 
-CANOPY_R = {"camphor": 13.0, "cedar": 2.6, "maple": 3.4, "beech": 3.6, "broadleaf": 3.4, "pine": 3.0,
+CANOPY_R = {"camphor": 13.0, "cedar": 2.6, "furusugi": 1.8, "maple": 3.4, "beech": 3.6, "broadleaf": 3.4, "pine": 3.0,
             "persimmon": 3.2, "choppable": 1.6, "bamboo": 1.6}

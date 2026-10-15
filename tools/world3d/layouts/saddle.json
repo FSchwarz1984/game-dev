@@ -352,15 +352,15 @@
    "id": "gate_apron",
    "centre": [
     0.0,
-    22.2
+    21.6
    ],
    "size": [
     10.4,
-    3.8
+    2.6
    ],
    "angle": 0.0,
-   "height": -3.85,
-   "feather": 1.6,
+   "height": -3.9,
+   "feather": 2.4,
    "corner": 1.4,
    "note": "the flat ground outside the east gate (where the fog puts her back without a lantern); the two gate cedars and the michikiri rope stand on it, so they lean alike (same base height)"
   },
@@ -1988,6 +1988,13 @@
    "x": 3.0,
    "z": 13.4,
    "yaw": 8
+  },
+  {
+   "name": "itabashi",
+   "x": -1.15,
+   "z": -39.05,
+   "yaw": 35,
+   "hang": 0.5
   }
  ],
  "perches": {
@@ -2641,7 +2648,7 @@
    ],
    "out": [
     0.6,
-    22.6
+    22.2
    ]
   },
   "fog_north": {
@@ -2677,36 +2684,36 @@
  },
  "gate_trees": [
   {
-   "kind": "cedar",
+   "kind": "furusugi",
    "x": -4.2,
    "z": 20.6,
-   "variant": 3,
+   "variant": 0,
    "rot": 0.6,
-   "note": "east gate, west tree (the michikiri rope's end)"
+   "note": "east gate, west tree (the michikiri rope's end) (an old cedar broken by a storm, 9.6 m: a tall one here would cover the camphor and the graves in the 3/4 view)"
   },
   {
-   "kind": "cedar",
+   "kind": "furusugi",
    "x": 4.2,
    "z": 20.6,
    "variant": 0,
    "rot": 2.1,
-   "note": "east gate, east tree"
+   "note": "east gate, east tree (an old cedar broken by a storm, 9.6 m: a tall one here would cover the camphor and the graves in the 3/4 view)"
   },
   {
-   "kind": "cedar",
+   "kind": "furusugi",
    "x": -17.44,
    "z": -10.48,
    "variant": 0,
    "rot": 1.2,
-   "note": "north gate, west tree"
+   "note": "north gate, west tree (an old cedar broken by a storm, 9.6 m: a tall one here would cover the camphor and the graves in the 3/4 view)"
   },
   {
-   "kind": "cedar",
+   "kind": "furusugi",
    "x": -12.96,
    "z": -11.52,
-   "variant": 1,
+   "variant": 0,
    "rot": 4.0,
-   "note": "north gate, east tree"
+   "note": "north gate, east tree (an old cedar broken by a storm, 9.6 m: a tall one here would cover the camphor and the graves in the 3/4 view)"
   }
  ]
 }

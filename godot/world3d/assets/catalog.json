@@ -1480,6 +1480,41 @@
    "notes": "羊歯 clump (card sprites).",
    "scene": "res://world3d/assets/plants/fern/fern_d.tscn"
   },
+  "furusugi_a": {
+   "category": "tree",
+   "species": "furusugi",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.8370000000000001
+    ]
+   ],
+   "height": 9.8,
+   "crown": {
+    "centre": [
+     0.0,
+     7.8,
+     0.0
+    ],
+    "radius": 1.8,
+    "base": 5.2
+   },
+   "tags": [
+    "tree",
+    "conifer",
+    "old"
+   ],
+   "anchors": {
+    "rope": [
+     0.0,
+     4.6,
+     0.0
+    ]
+   },
+   "notes": "An old cedar broken at 7.2 m long ago, two upturned leaders to 9.6 m; trunk 1.2-1.5 m across at the foot. The gates' trees (the michikiri rope is tied round it at 4.6 m).",
+   "scene": "res://world3d/assets/trees/furusugi/furusugi_a.tscn"
+  },
   "gate_stones": {
    "footprint": [
     [
@@ -1882,6 +1917,36 @@
     7.02
    ],
    "scene": "res://world3d/assets/buildings/hut/hut.tscn"
+  },
+  "itabashi": {
+   "footprint": [],
+   "tags": [
+    "life",
+    "bridge"
+   ],
+   "notes": "A plank bridge 2.8 x 1.25 m over a small stream (long axis z); place with hang ~0.5 so the deck (0.17 m over the origin) sits on the banks.",
+   "anchors": {
+    "perch": [
+     [
+      -0.66,
+      0.34,
+      -1.3
+     ],
+     [
+      0.66,
+      0.34,
+      1.3
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 0.32,
+   "size": [
+    1.45,
+    0.82,
+    2.82
+   ],
+   "scene": "res://world3d/assets/props/itabashi/itabashi.tscn"
   },
   "iwakura": {
    "footprint": [
@@ -2943,7 +3008,7 @@
    "notes": "The east gate's michikiri (道切り): a thick straw rope 8.4 m long tied round two old cedars at x = -4.2 and 4.2 (4.6 m up; the trees stand on the same level ground as the rope's origin), across the way, sagging to 4.1 m; straw tassels along it; a giant straw sandal (大わらじ, 1.9 m) hangs from the middle by its toe: node \"Waraji\", turned slowly by the dressing (dressing.gd).",
    "anchors": {
     "waraji": [
-     0.022,
+     0.0,
      3.82,
      0.06
     ],
@@ -2963,9 +3028,9 @@
    "category": "props",
    "height": 4.79,
    "size": [
-    9.55,
+    9.86,
     1.22,
-    1.15
+    1.39
    ],
    "scene": "res://world3d/assets/props/michikiri_e/michikiri_e.tscn"
   },
@@ -2988,9 +3053,9 @@
    "category": "props",
    "height": 3.87,
    "size": [
-    5.57,
+    6.01,
     1.07,
-    0.97
+    1.34
    ],
    "scene": "res://world3d/assets/props/michikiri_n/michikiri_n.tscn"
   },
