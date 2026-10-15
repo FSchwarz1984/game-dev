@@ -172,7 +172,7 @@ func _fog_for_hour() -> void:
 	fog_mat.set_shader_parameter("albedo", Color(0.9, 0.94, 1.0).lerp(fc, 0.25))
 	# inside the barrier the air holds more light by day; the gates' curtains stand at every hour
 	fog_mat.set_shader_parameter("realm_boost", 0.45 * (1.0 - night) + 0.3 * night)
-	fog_mat.set_shader_parameter("band_density", 0.35 * fog_strength)
+	fog_mat.set_shader_parameter("band_density", 0.28 * fog_strength)
 
 
 static func _lerp_key(a: Array, b: Array, t: float) -> Array:

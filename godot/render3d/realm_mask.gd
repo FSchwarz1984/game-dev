@@ -45,7 +45,12 @@ func build(t: Terrain3D) -> void:
 				band_h[i] = h
 	sanct = _blur(_blur(sanct))
 	oku = _blur(_blur(oku))
-	band = _blur(band)
+	# the gate's mist spills a few metres past the path into the scrub on either side (a soft edge,
+	# not a lit box): three passes, the core kept full
+	band = _blur(_blur(_blur(band)))
+	for i in band.size():
+		band[i] = minf(band[i] * 1.6, 1.0)
+	band_h = _spread(band_h, band)
 	image = Image.create(nx, nz, false, Image.FORMAT_RGBA8)
 	for j in nz:
 		for i in nx:
@@ -98,6 +103,22 @@ func _raster(poly_in: Array) -> PackedFloat32Array:
 			var w := Vector2(origin.x + i * CELL, origin.y + j * CELL)
 			if Geometry2D.is_point_in_polygon(w, poly):
 				out[j * nx + i] = 1.0
+	return out
+
+
+# the band's height carried out to where the blurred band now reaches (max over 7 x 7)
+func _spread(src: PackedFloat32Array, where: PackedFloat32Array) -> PackedFloat32Array:
+	var out := src.duplicate()
+	for j in nz:
+		for i in nx:
+			if where[j * nx + i] <= 0.0:
+				continue
+			var m := 0.0
+			for dj in range(-3, 4):
+				var jj := clampi(j + dj, 0, nz - 1)
+				for di in range(-3, 4):
+					m = maxf(m, src[jj * nx + clampi(i + di, 0, nx - 1)])
+			out[j * nx + i] = m
 	return out
 
 
