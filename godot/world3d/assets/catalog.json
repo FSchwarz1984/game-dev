@@ -720,7 +720,7 @@
     "interact",
     "home"
    ],
-   "notes": "Thatched hut, Q proportion: walls 5.6 x 3.8 m, roof 7.3 x 5.7 m, ridge 5.7 m, eave underside 2.3 m, door 0.98 x 1.82 m. Nodes: Door (slides open toward -x by 0.9 m), DoorBar (lift away to unbar), BackpackFrame (the old frame; the same object is objects/backpack_frame). The roof material stipples away over her.",
+   "notes": "Thatched hut, Q proportion: walls 5.6 x 3.8 m, roof 7.3 x 5.7 m, ridge 6.1 m, eave underside 2.3 m, door 0.98 x 1.82 m. Nodes: Door (slides open toward -x by 0.9 m), DoorBar (lift away to unbar), BackpackFrame (the old frame; the same object is objects/backpack_frame). Thatch in three tiers with a 38 cm cut eave.",
    "anchors": {
     "door": [
      -0.87,
@@ -757,11 +757,11 @@
    "variants": {
     "far": "res://world3d/assets/buildings/hut/hut_far.tscn"
    },
-   "height": 5.89,
+   "height": 6.4,
    "size": [
-    7.35,
-    5.99,
-    5.75
+    7.38,
+    6.5,
+    5.77
    ],
    "scene": "res://world3d/assets/buildings/hut/hut.tscn"
   },

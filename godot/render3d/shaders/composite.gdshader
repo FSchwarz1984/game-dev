@@ -28,7 +28,7 @@ void fragment() {
 	c = mix(vec3(l), c, saturation);
 	c = lift + c * (gain - lift);
 	float l2 = dot(c, vec3(0.299, 0.587, 0.114));
-	c += shadow_tone * (1.0 - smoothstep(0.0, 0.5, l2)) + high_tone * smoothstep(0.45, 1.0, l2);
+	c += shadow_tone * (1.0 - smoothstep(0.0, 0.55, l2)) + high_tone * smoothstep(0.45, 1.0, l2);
 	// vignette in the visible frame
 	vec2 tex_size = vec2(textureSize(TEXTURE, 0));
 	vec2 p = (UV * tex_size - margin_px) / view_size - 0.5;

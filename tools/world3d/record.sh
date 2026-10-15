@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Records the art sample's route (hut -> shrine -> camphor -> lookout, さぢ following) with Godot's
-# Movie Maker, pixel for pixel, and encodes it.
+# Records the art sample's route (hut -> yard -> round the great camphor -> the old road, さぢ
+# following; sample.gd _make_route) with Godot's Movie Maker, pixel for pixel, and encodes it.
 #   bash tools/world3d/record.sh <out_dir> [WxH] [-- extra game args]
 # Movie Maker writes frames at the project's window size override (1280x720 in project.godot) and
 # resizes the window's image to it with a BILINEAR filter when the window differs: a 1920x1080
@@ -35,7 +35,10 @@ DISPLAY="$DISP" timeout "${TIMEOUT:-5400}" "$GODOT_BIN" --path "$VIEW" --renderi
 	--rendering-driver vulkan --resolution "$RES" --position 0,0 \
 	--write-movie "$OUT/frames/f.png" --fixed-fps 30 res://world3d/sample.tscn -- \
 	--route=walk --route_quit --route_log "${@:---hours=16.6}" > "$OUT/log.txt" 2>&1
+# the first frame is drawn before the shadow map and the camera have settled (a flash of flat light):
+# the recording starts two frames in
+for k in 0 1; do rm -f "$OUT/frames/$(printf 'f%08d.png' $k)"; done
 n=$(ls "$OUT"/frames/f*.png 2>/dev/null | wc -l)
 echo "frames: $n ($(awk "BEGIN{printf \"%.1f\", $n/30}") s)"
-ffmpeg -hide_banner -loglevel error -y -framerate 30 -i "$OUT/frames/f%08d.png" -c:v libx264 -crf 14 \
+ffmpeg -hide_banner -loglevel error -y -framerate 30 -start_number 2 -i "$OUT/frames/f%08d.png" -c:v libx264 -crf 14 \
 	-preset slow -pix_fmt yuv420p -movflags +faststart "$OUT/route_${RES}.mp4" && echo "$OUT/route_${RES}.mp4"

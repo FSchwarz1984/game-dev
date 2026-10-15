@@ -277,7 +277,9 @@ def build_card_plants(out):
     specs = {'big': [(LV.fern_clump, dict(W=int(22 + 2 * (i % 2)), H=int(16 + (i % 3)), seed=8901 + i)) for i in range(4)],
              'small': [(LV.fern_clump, dict(W=14, H=11, seed=8920 + i, n_fronds=6)) for i in range(4)]}
     atlas, rects, sets = FO.build_tiles(specs)
-    m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=1.2, cutaway=False),
+    # ferns are ground cover: drawn without the foliage outline (art sample round 2: with it every
+    # clump read as a sticker on the forest floor; the readability order puts plants last)
+    m_leaf = a.material('leaves', 'toon_foliage_noline.gdshader', params=FO.foliage_params(wind_px=1.2, cutaway=False),
                         textures={'leaf_tex': a.texture('leaves', atlas)})
     R = rng(8900)
     st = {}

@@ -4,7 +4,7 @@ earth plaster above; a sliding door (node Door) and its bar (node DoorBar), a la
 under the deep front eave: the old backpack frame leaning on the wall (node BackpackFrame, also
 objects/backpack_frame), firewood stacked, a water tub, straw sandals on a nail, a broom, a step
 stone. Origin at the hut marker; the front (+z) faces south, the door 3 m in front of the origin
-(the hut_door marker). The roof stipples away over her (cutaway)."""
+(the hut_door marker). When the hut hides her, the renderer draws her silhouette through it."""
 from __future__ import annotations
 
 import math
@@ -32,8 +32,9 @@ EAVE = 2.85                       # outer thatch height at the eave edge
 THICK = 0.38                      # thatch thickness seen at the eave (the cut face, 30-40 cm)
 TAN_F, TAN_E = 0.9, 1.35          # slope of the long sides and of the hip ends
 WALL_TOP = 2.35
-TIERS = (0.78, 1.62)              # runs (m in from the eave) where the thatch steps in: three tiers
-TIER_STEP = 0.13                  # how far each upper tier sits in (its own small cut face)
+TIERS = (0.72, 1.5)               # runs (m in from the eave) where a new course begins: three tiers
+TIER_STEP = 0.22                  # each upper course stands proud of the one below by this much: its
+                                  # trimmed lower edge is a cut face (about 3 px) facing down the slope
 
 
 def _soft_min(a, b, k):
@@ -55,10 +56,10 @@ def thatch_sdf(P, seed=8201):
     run = _soft_min(run_f, run_e, 0.5)
     ridge_run = HD - 0.12
     run = _soft_min(run, ridge_run, 0.35)
-    # three tiers of thatch: each upper course sits in a little, so a band of cut straw shows above
-    # each lower one (the stepped eaves of a kayabuki roof)
+    # three tiers of thatch (段葺き): each upper course is laid over the one below and trimmed, so its
+    # lower edge stands out as a band of cut straw facing down the slope (and toward us)
     steps = sum(_step(run, r) for r in TIERS) * TIER_STEP
-    h = EAVE + wob * 0.06 + TAN_F * run - steps
+    h = EAVE + wob * 0.06 + TAN_F * run + steps
     d_out = (y - h) / math.sqrt(1 + TAN_F ** 2)
     shell = np.maximum(d_out, -(d_out + THICK * 0.95))
     # the trimmed eave: vertical cut faces at the roof edge, corners rounded in plan, the line wavy
@@ -81,17 +82,21 @@ def thatch_shade(P, N):
     m *= (0.88 + 0.24 * streak)[:, None]
     top = np.clip(N[:, 1], 0, 1)[:, None]
     m = m * (1 - 0.25 * top) + np.array([0.86, 0.86, 0.84]) * 0.25 * top
+    # the slopes weather toward grey-brown (a third of the way to their own grey), so the golden cut
+    # ends of the courses stand out against them
+    m = m * (1 - top) + m * np.array([0.95, 0.98, 1.08]) * top
     moss = (fbm3(P[:, 0] * 1.2, P[:, 1] * 1.2, P[:, 2] * 1.2, octaves=3, seed=8206) > 0.55) & (y < EAVE + 0.9)
     moss &= N[:, 1] > 0.2
     m[moss] = m[moss] * np.array([0.84, 0.9, 0.8])
-    # the cut faces (the eave and the steps between the tiers): the ends of the straw, paler and
-    # warmer than the weathered slope (the renderer's thatch pattern speckles them)
+    # the cut faces (the eave and the steps between the tiers): the ends of the straw, pale golden,
+    # brighter than the weathered grey-brown slope even though they face away from the sun most of
+    # the day (the renderer's thatch pattern speckles them: stalk ends and the dark gaps between).
     cut = np.abs(N[:, 1]) < 0.5
-    m[cut] = np.array([1.22, 1.15, 1.0])
+    m[cut] = np.array([1.5, 1.44, 1.35])
     return m
 
 
-def cyl(p0, p1, r, colour, n=6, bevel=0.01, **kw):
+def cyl(p0, p1, r, colour, n=6, bevel=0.0, **kw):
     p0, p1 = np.asarray(p0, np.float64), np.asarray(p1, np.float64)
     d = p1 - p0
     L = np.linalg.norm(d)
@@ -154,14 +159,14 @@ def house_pieces(R):
         P.append(panel(a, b, -WZ, 1.0, WALL_TOP - 0.1, PLASTER * (1 + R.normal(0, 0.03)), 'plain', 0.2))
         if i == 1:            # the doorway (x -1.34 .. -0.4): the door is its own node
             P.append(panel(a, b, WZ, 2.13, WALL_TOP - 0.1, PLASTER, 'plain', 0.2))
-            P.append(_w(K.cbox((b - a + 0.16, 0.08, 0.16), POST, centre=((a + b) / 2, 2.13, WZ), bevel=0.012), 'bark', 0.3, sd()))
+            P.append(_w(K.cbox((b - a + 0.16, 0.08, 0.16), POST, centre=((a + b) / 2, 2.13, WZ), bevel=0.0), 'bark', 0.3, sd()))
             P.append(K.cbox((b - a, 1.82, 0.03), DARK, centre=((a + b) / 2, 0.34 + 0.9, WZ - 0.12), bevel=0.0, var=0.0))
         elif i == 3:          # the window (x 0.58 .. 1.82) with a lattice
             P.append(panel(a, b, WZ, 0.34, 1.0, BOARD, 'planks', 0.4))
             P.append(panel(a, b, WZ, 1.78, WALL_TOP - 0.1, PLASTER, 'plain', 0.2))
             P.append(K.cbox((b - a, 0.76, 0.03), DARK, centre=((a + b) / 2, 1.39, WZ - 0.1), bevel=0.0, var=0.0))
-            P.append(_w(K.cbox((b - a + 0.1, 0.07, 0.12), POST, centre=((a + b) / 2, 1.0, WZ), bevel=0.01), 'bark', 0.3, sd()))
-            P.append(_w(K.cbox((b - a + 0.1, 0.07, 0.12), POST, centre=((a + b) / 2, 1.78, WZ), bevel=0.01), 'bark', 0.3, sd()))
+            P.append(_w(K.cbox((b - a + 0.1, 0.07, 0.12), POST, centre=((a + b) / 2, 1.0, WZ), bevel=0.0), 'bark', 0.3, sd()))
+            P.append(_w(K.cbox((b - a + 0.1, 0.07, 0.12), POST, centre=((a + b) / 2, 1.78, WZ), bevel=0.0), 'bark', 0.3, sd()))
             for k in range(1, 8):
                 xx = a + (b - a) * k / 8
                 P.append(_w(K.cbox((0.035, 0.76, 0.04), WOOD_NEW * 0.8, centre=(xx, 1.39, WZ + 0.02), bevel=0.0), 'planks', 0.2, sd()))
@@ -189,12 +194,12 @@ def roof_height(x, z):
     run = float(K.smin(np.array(run_f), np.array(run_e), 0.5))
     run = float(K.smin(np.array(run), np.array(HD - 0.12), 0.35))
     steps = sum(float(_step(np.array(run), r)) for r in TIERS) * TIER_STEP
-    return EAVE + TAN_F * run - steps
+    return EAVE + TAN_F * run + steps
 
 
 def ridge_pieces(R):
     P = []
-    ridge_y = EAVE + TAN_F * (HD - 0.12) - 0.05 - len(TIERS) * TIER_STEP
+    ridge_y = EAVE + TAN_F * (HD - 0.12) - 0.05 + len(TIERS) * TIER_STEP
     L = HW - (HD - 0.12) * TAN_F / TAN_E
     # the ridge cap (棟): a thick roll of cedar bark over the ridge, tied down at five places
     cap = K.lathe([(0.0, -L - 0.32), (0.24, -L - 0.26), (0.34, -L + 0.05), (0.34, L - 0.05), (0.24, L + 0.26), (0.0, L + 0.32)],
@@ -203,14 +208,14 @@ def ridge_pieces(R):
     P.append(cap)
     for k in range(5):                        # rope ties around the cap
         x = -L + 0.1 + (2 * L - 0.2) * k / 4
-        P.append(K.lathe([(0.355, -0.04), (0.36, 0.0), (0.355, 0.04)], K.col('#3e3328'), n=10, R=K.rot_z(math.pi / 2),
+        P.append(K.lathe([(0.355, -0.04), (0.36, 0.0), (0.355, 0.04)], K.col('#3e3328'), n=7, R=K.rot_z(math.pi / 2),
                          base=(x, ridge_y + 0.14, 0), var=0.0, cap_top=False, cap_bottom=False))
     for k in range(6):                        # crossed sticks holding the ridge
         x = -L + (2 * L) * k / 5
         for s in (-1, 1):
             a = np.array([x, ridge_y + 0.68, s * 0.18])
             b = np.array([x, ridge_y - 0.1, -s * 0.6])
-            P.append(cyl(b, a, 0.035, K.col('#4e4136'), n=5, pattern='bark', amount=0.2, seed=8211 + k))
+            P.append(cyl(b, a, 0.035, K.col('#4e4136'), n=4, bevel=0.0, pattern='bark', amount=0.2, seed=8211 + k))
     # bamboo battens (竹押さえ) laid along the slopes below the ridge, holding the top course down,
     # front and back, each a little bowed and not quite level
     for zs in (1.0, -1.0):
@@ -224,7 +229,7 @@ def ridge_pieces(R):
                 x = -half + 2 * half * k / 8
                 y = roof_height(x, z) + 0.035 + 0.02 * math.sin(k * 1.3 + run)
                 pts.append([x, y, z + zs * 0.015 * math.sin(k * 0.9)])
-            P.append(K.rod(pts, 0.032, K.col('#8a7a4e'), n=5, cap=True, step=0.25, var=0.03, pattern='bark', amount=0.2,
+            P.append(K.rod(pts, 0.032, K.col('#8a7a4e'), n=3, cap=True, step=0.45, var=0.03, pattern='bark', amount=0.2,
                            seed=8215 + int(run * 10)))
     return P, ridge_y
 
@@ -232,12 +237,12 @@ def ridge_pieces(R):
 def door_piece():
     out = []
     W, H = 0.98, 1.82
-    out.append(_w(K.cbox((W, H, 0.05), BOARD * 1.05, centre=(0, H / 2, 0), bevel=0.012), 'planks', 0.5, 8220))
+    out.append(_w(K.cbox((W, H, 0.05), BOARD * 1.05, centre=(0, H / 2, 0), bevel=0.0), 'planks', 0.5, 8220))
     for y in (0.15, 0.9, 1.65):                # battens
-        out.append(_w(K.cbox((W - 0.06, 0.07, 0.03), POST, centre=(0, y, 0.035), bevel=0.006), 'bark', 0.3, 8221))
+        out.append(_w(K.cbox((W - 0.06, 0.07, 0.03), POST, centre=(0, y, 0.035), bevel=0.0), 'bark', 0.3, 8221))
     for x in (-W / 2 + 0.04, W / 2 - 0.04):
-        out.append(_w(K.cbox((0.06, H, 0.03), POST, centre=(x, H / 2, 0.035), bevel=0.006), 'bark', 0.3, 8222))
-    out.append(_w(K.cbox((0.05, 0.12, 0.03), K.col('#3a2e26'), centre=(W / 2 - 0.12, 1.0, 0.06), bevel=0.005), 'plain', 0.0, 8223))
+        out.append(_w(K.cbox((0.06, H, 0.03), POST, centre=(x, H / 2, 0.035), bevel=0.0), 'bark', 0.3, 8222))
+    out.append(_w(K.cbox((0.05, 0.12, 0.03), K.col('#3a2e26'), centre=(W / 2 - 0.12, 1.0, 0.06), bevel=0.0), 'plain', 0.0, 8223))
     return out
 
 
@@ -245,7 +250,7 @@ def bar_pieces():
     """閂: a bar across the door in two brackets."""
     out = [_w(K.beam((-0.62, 0, 0), (0.62, 0, 0), 0.07, 0.09, WOOD_NEW), 'bark', 0.3, 8230)]
     for x in (-0.5, 0.5):
-        out.append(_w(K.cbox((0.08, 0.16, 0.07), POST, centre=(x, 0, -0.03), bevel=0.008), 'bark', 0.3, 8231))
+        out.append(_w(K.cbox((0.08, 0.16, 0.07), POST, centre=(x, 0, -0.03), bevel=0.0), 'bark', 0.3, 8231))
     return out
 
 
@@ -257,7 +262,7 @@ def backpack_frame_pieces(R=None, seed=8240):
         out.append(_w(cyl((x, 0.0, 0.0), (x * 0.9, 1.05, -0.02), 0.028, w, n=5), 'bark', 0.3, seed))
     for y in (0.35, 0.62, 0.9):
         out.append(_w(cyl((-0.22, y, 0.0), (0.22, y, 0.0), 0.018, w * 0.9, n=4), 'bark', 0.3, seed + 1))
-    out.append(_w(K.cbox((0.5, 0.03, 0.22), w * 0.95, centre=(0, 0.12, 0.1), bevel=0.006), 'planks', 0.3, seed + 2))
+    out.append(_w(K.cbox((0.5, 0.03, 0.22), w * 0.95, centre=(0, 0.12, 0.1), bevel=0.0), 'planks', 0.3, seed + 2))
     for x in (-0.12, 0.12):
         out.append(K.rod([[x, 0.95, -0.03], [x * 1.1, 0.75, -0.13], [x * 1.1, 0.45, -0.12], [x, 0.3, -0.03]], 0.018,
                          K.col('#5a4636'), n=4, cap=True, step=0.12, var=0.0))
@@ -266,12 +271,12 @@ def backpack_frame_pieces(R=None, seed=8240):
 
 def tub_pieces():
     """桶: staves and two hoops, a ladle."""
-    out = [K.lathe([(0.0, 0.0), (0.2, 0.0), (0.23, 0.32), (0.21, 0.33), (0.18, 0.06), (0.0, 0.06)], K.col('#8a7458'), n=12,
+    out = [K.lathe([(0.0, 0.0), (0.2, 0.0), (0.23, 0.32), (0.21, 0.33), (0.18, 0.06), (0.0, 0.06)], K.col('#8a7458'), n=9,
                    pattern='planks', amount=0.3, var=0.05, seed=8250)]
     for y in (0.07, 0.25):
         out.append(K.lathe([(0.2 + y * 0.09, y), (0.215 + y * 0.09, y + 0.005), (0.215 + y * 0.09, y + 0.035),
-                            (0.2 + y * 0.09, y + 0.04)], K.col('#4a4038'), n=12, var=0.0, cap_top=False, cap_bottom=False))
-    out.append(K.lathe([(0.0, 0.0), (0.18, 0.0), (0.18, 0.005), (0.0, 0.005)], K.col('#4b5a5e'), n=10, base=(0, 0.26, 0),
+                            (0.2 + y * 0.09, y + 0.04)], K.col('#4a4038'), n=9, var=0.0, cap_top=False, cap_bottom=False))
+    out.append(K.lathe([(0.0, 0.0), (0.18, 0.0), (0.18, 0.005), (0.0, 0.005)], K.col('#4b5a5e'), n=9, base=(0, 0.26, 0),
                        var=0.0, ao=False))       # water
     out.append(cyl((0.05, 0.3, 0.0), (0.32, 0.55, 0.05), 0.012, K.col('#7a6650'), n=4))
     return out
@@ -287,7 +292,7 @@ def firewood_pieces(R):
             y = 0.09 + row * 0.15
             r = 0.075 + R.normal(0, 0.008)
             c = LOG_END * (1 + R.normal(0, 0.05))
-            out.append(_w(cyl((x, y, -0.22), (x, y, 0.2 + R.normal(0, 0.03)), r, c, n=6, bevel=0.0), 'bark', 0.4,
+            out.append(_w(cyl((x, y, -0.22), (x, y, 0.2 + R.normal(0, 0.03)), r, c, n=5, bevel=0.0), 'bark', 0.4,
                           int(R.integers(0, 1 << 20))))
     return out
 
@@ -302,7 +307,7 @@ def broom_pieces():
 def sandals_pieces():
     out = []
     for dx in (-0.06, 0.06):
-        out.append(_w(K.cbox((0.09, 0.22, 0.02), STRAW * 0.95, centre=(dx, -0.12, 0.0), bevel=0.008), 'thatch', 0.3, 8270))
+        out.append(_w(K.cbox((0.09, 0.22, 0.02), STRAW * 0.95, centre=(dx, -0.12, 0.0), bevel=0.0), 'thatch', 0.3, 8270))
     out.append(K.rod([[-0.06, 0.0, 0.01], [0.0, 0.04, 0.02], [0.06, 0.0, 0.01]], 0.007, K.col('#8a3a2c'), n=3, cap=True, step=0.03,
                      var=0.0, dirt=False))
     return out
@@ -312,7 +317,7 @@ def build(out):
     R = rng(8200)
     pieces = house_pieces(R)
     thatch = K.sdf_piece(thatch_sdf, (-HW - 0.2, EAVE - THICK - 0.2, -HD - 0.2),
-                         (HW + 0.2, EAVE + TAN_F * HD + 0.3, HD + 0.2), THATCH, h=0.045, tris=2300, pattern='thatch',
+                         (HW + 0.2, EAVE + TAN_F * HD + 0.3 + len(TIERS) * TIER_STEP, HD + 0.2), THATCH, h=0.045, tris=2300, pattern='thatch',
                          amount=0.5, var=0.04, seed=8201, mat='roof', shade=thatch_shade, dirt=False)
     pieces.append(thatch)
     rp, ridge_y = ridge_pieces(R)
@@ -349,8 +354,8 @@ def build(out):
            'tags': ['building', 'interact', 'home'],
            'notes': 'Thatched hut, Q proportion: walls 5.6 x 3.8 m, roof 7.3 x 5.7 m, ridge %.1f m, eave underside 2.3 m, '
                     'door 0.98 x 1.82 m. Nodes: Door (slides open toward -x by 0.9 m), DoorBar (lift away to unbar), '
-                    'BackpackFrame (the old frame; the same object is objects/backpack_frame). The roof material stipples '
-                    'away over her.' % (ridge_y + 0.4),
+                    'BackpackFrame (the old frame; the same object is objects/backpack_frame). Thatch in three tiers with '
+                    'a 38 cm cut eave.' % (ridge_y + 0.4),
            'anchors': {'door': [-0.87, 0.0, 3.0], 'interact': [-0.87, 0.0, 2.9], 'door_open_offset': [-0.9, 0.0, 0.0],
                        'firewood': [2.25, 0.4, WZ + 0.3], 'tub': [-0.05, 0.3, WZ + 0.45], 'backpack_frame': list(bp_pos)}}
     st = {'hut': export_prop(out, 'hut', 'buildings', prop, cat, porosity=0.85, cutaway=False, extras=extras, budget=6000)}

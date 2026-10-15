@@ -111,7 +111,9 @@ vec2 w3_wind_px(vec3 anchor, float flex, float amp_px) {
 
 // ------------------------------------------------------------------------------------------------
 // the canopy / roof cut-away around her: true when this fragment hides her and should be stippled out
-bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
+// keep_px > 0: whatever lies more than keep_px above her on screen stays (a great crown overhead
+// frames the top of the view with its lowest boughs instead of vanishing whole)
+bool w3_cutaway_k(vec3 wp, vec2 cell, float scale, float keep_px) {
 	if (w3_player.w <= 0.0) return false;
 	vec3 d = wp - w3_player.xyz;
 	float toward = dot(d, w3_cam_back());           // > 0: this surface is between her and the camera
@@ -121,8 +123,14 @@ bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
 	float R = w3_player.w * scale;
 	float ring = min(12.0, R * 0.35);                 // a stippled edge, clear inside
 	float k = clamp((R - r) / ring, 0.0, 1.0) * smoothstep(0.3, 1.2, toward);
+	if (keep_px > 0.0) {
+		k *= 1.0 - clamp((ds.y - keep_px) / 14.0, 0.0, 1.0);
+	}
 	// scattered, not ordered (an ordered dither reads as a printed screen)
 	return w3_hash(cell * 1.11 + 2.9) * 0.75 + w3_vnoise(cell / 1.7) * 0.25 < k;
+}
+bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
+	return w3_cutaway_k(wp, cell, scale, 0.0);
 }
 bool w3_cutaway(vec3 wp, vec2 cell) {
 	return w3_cutaway_r(wp, cell, 1.0);
@@ -171,6 +179,9 @@ vec3 w3_shadow_hue(vec3 albedo, float turn) {
 	// quiet colours (packed earth, stone, wood) turn only a little: their shade stays their own
 	// colour, a touch cooler, instead of going red-violet
 	turn *= smoothstep(0.025, 0.075, C);
+	// right across from blue-violet (yellows and straw near 85 degrees) the turn has no side to take:
+	// two near-identical yellows would shade one rust-red, the other lime. It fades out there.
+	turn *= 1.0 - smoothstep(0.82 * W3_PI, 0.97 * W3_PI, abs(d));
 	h += clamp(d, -turn, turn);
 	vec2 ab = vec2(cos(h), sin(h)) * (C * 1.15 + 0.006) + vec2(cos(TARGET), sin(TARGET)) * 0.005;
 	return max(w3_oklab_to_lin(vec3(lab.x, ab)), vec3(0.0));
@@ -287,7 +298,7 @@ vec3 w3_pattern(vec3 col, float id, float amount, vec3 wp, vec3 wn, vec2 cell) {
 			// a cut face (the eave, the steps between the courses): the ends of the straw, a dense
 			// speckle of pale stalk ends with dark gaps between, in loose layers
 			float lay = w3_vnoise(vec2(cell.x / 9.0, floor(cell.y / 3.0)));
-			col *= (r > 0.6 ? 1.2 : (r < 0.16 ? 0.62 : 0.95)) * (0.9 + lay * 0.2);
+			col *= (r > 0.58 ? 1.16 : (r < 0.1 ? 0.66 : 0.96)) * (0.9 + lay * 0.2);
 		} else {
 			// the slope: straw strands down the fall line, broken, a few darker combed gaps
 			float strand = w3_hash(vec2(cell.x, floor(cell.y / 5.0)));

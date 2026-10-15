@@ -2,7 +2,8 @@ class_name W3Atmosphere
 extends Node3D
 ## Life in the air of the art sample: motes drifting in the light by day, fireflies over the grass
 ## and the water at night, will-o'-wisps (鬼火) by the nameless graves at night, light shafts under
-## the great camphor, rain. Driven by the time of day (W3Env) and her position (spawn near view).
+## the great camphor and old leaves coming down from its crown, rain. Driven by the time of day
+## (W3Env) and her position (spawn near view).
 
 var env: W3Env
 var terrain: Terrain3D
@@ -16,6 +17,13 @@ var _fly_acc := 0.0
 var _rain_acc := 0.0
 var glints: Array = []          # [position, phase] from the dressing: small things that catch the light
 var lamps: W3Lamps              # the renderer's lamps (the wisps light the graves a cold blue)
+var camphor := Vector3.INF      # the great camphor's foot: old leaves come down under its crown
+const CAMPHOR_REACH := 15.5     # m from the trunk where its leaves fall
+var _leaf_acc := 0.0
+var _leaf_light := 1.0          # daylight on the leaves (they are unlit pixels)
+# the camphor's old leaves (it sheds them through the year): red, rust, ochre, a few still green
+# (sRGB as painted; turned linear for the unlit particle pixels)
+const LEAF_COLS := [Color("#c4643a"), Color("#d08a3c"), Color("#d6b04e"), Color("#a84a32"), Color("#8a9a4a")]
 
 
 func setup(e: W3Env, t: Terrain3D) -> void:
@@ -105,6 +113,26 @@ func _step(p: Array, dt: float) -> void:
 		c.a = clampf(1.0 - t / life, 0.0, 1.0) * 0.8
 	elif kind == 6:      # glint: a short sparkle, up and down once
 		c.a = sin(clampf(t / life, 0.0, 1.0) * PI)
+	elif kind == 7:      # a falling leaf: it sways down, turning (edge-on it is one pixel, flat two)
+		var gy := terrain.height_at(p[0].x, p[0].z)
+		var ph: float = p[8]
+		if p[0].y > gy + 0.02:
+			p[1] = Vector3(sin(t * 2.1 + ph) * 0.6 + env.wind * 0.12, -0.8 - 0.25 * sin(t * 4.2 + ph), cos(t * 1.7 + ph) * 0.15)
+			var turn := sin(t * 4.4 + ph * 3.0)
+			p[5] = Vector2(3, 2) if turn > 0.35 else (Vector2(2, 1) if turn > -0.55 else Vector2(1, 1))
+			# the lit face now and then (the shade of the crown otherwise)
+			var lit := 1.0 if turn > 0.75 else 0.0
+			var base: Color = (LEAF_COLS[int(float(p[9]) * LEAF_COLS.size()) % LEAF_COLS.size()] as Color).srgb_to_linear()
+			var k := (0.62 + 0.38 * lit) * _leaf_light
+			c = Color(base.r * k, base.g * k, base.b * k, c.a)
+		else:
+			# on the ground: it lies a while, then the litter takes it
+			p[1] = Vector3.ZERO
+			p[0].y = gy + 0.02
+			p[5] = Vector2(2, 1)
+			if float(p[2]) - t > 3.0:
+				p[2] = t + 3.0
+		c.a = clampf((float(p[2]) - t) / 1.0, 0.0, 1.0) * clampf(t / 0.4, 0.0, 1.0)
 	elif kind == 4:      # rain: falls; dies on the ground
 		var gy := terrain.height_at(p[0].x, p[0].z)
 		if p[0].y <= gy:
@@ -131,6 +159,25 @@ func update(dt: float, at: Vector3) -> void:
 			var warm := Color(1.0, 0.92, 0.7) * (0.9 + 0.3 * (1.0 - lowsun))
 			warm.a = 1.0
 			particles.spawn(p, Vector3.ZERO, rng.randf_range(4.0, 8.0), warm, Vector2(1, 1), 0.0, 1, rng.randf_range(0.45, 0.85))
+	# old leaves coming down under the great camphor (by day). Each starts just above the top of the
+	# view, so it drifts in from the crown overhead and never appears out of nothing: a point's height
+	# on screen is 0.574 m per metre of height (particles do not lean) less 0.819 m per metre south
+	# of the camera's focus (her chest, 0.47 m north of her feet), and the top edge is 6.75 m up
+	_leaf_light = clampf(1.0 - maxf(absf(env.hours - 12.0) - 5.0, 0.0) / 2.5, 0.45, 1.0) * (1.0 - 0.3 * env.rain)
+	if camphor != Vector3.INF and not is_night:
+		var dc := Vector2(at.x - camphor.x, at.z - camphor.z).length()
+		if dc < CAMPHOR_REACH + 8.0:
+			_leaf_acc += dt * 2.0
+			while _leaf_acc > 1.0:
+				_leaf_acc -= 1.0
+				var lp := at + Vector3(rng.randf_range(-12.0, 12.0), 0, rng.randf_range(-5.0, 4.0))
+				if Vector2(lp.x - camphor.x, lp.z - camphor.z).length() > CAMPHOR_REACH:
+					continue
+				var dz := lp.z - at.z
+				lp.y = at.y + 0.9 + (6.9 + 0.819 * (dz + 0.47)) / 0.574 + rng.randf_range(0.0, 1.5)
+				if lp.y < terrain.height_at(lp.x, lp.z) + 4.0:
+					continue
+				particles.spawn(lp, Vector3.ZERO, 45.0, Color(0.6, 0.3, 0.15, 1.0), Vector2(2, 1), 0.0, 7, rng.randf())
 	# fireflies at night over grass and water
 	if is_night and env.rain < 0.3:
 		_fly_acc += dt * 7.0

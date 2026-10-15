@@ -6,15 +6,17 @@ extends Node
 ##   --at=x,z           start / camera focus (default: her spawn by the hut door)
 ##   --shot=path.png    save the low-res frame and the window after --frames frames, then quit
 ##   --shots=dir:x,z,h;x,z,h;...   several views
-##   --route=walk       she walks the sample route (hut -> shrine -> camphor -> lookout) by pressing
-##                      the same movement keys a player would (Input events), for recordings
+##   --route=walk       she walks the sample route (hut -> yard -> round the great camphor -> the
+##                      old road) by pressing the same movement keys a player would (Input events),
+##                      for recordings; --route=night: the night walk past the lanterns
+##   --vista            the view from the lookout (out of the sample this round; kept for its rebuild)
 ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
 ##   --pitch=deg        camera pitch (evidence renders)
-##   --route_quit, --route_log, --log_pos, --perf, --quit_after=n, and debugging switches
+##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, and debugging switches
 ##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
-##   --camrange): docs/knowledge/21-3d-pixel-render.md §12
+##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse): docs/knowledge/21 §12
 ## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
-## does not run here). On the lookout A/D turn her head, W/S come back. F2 toggles the time of day (debug).
+## does not run here). With --vista, on the lookout A/D turn her head and W/S come back.
 
 const CHARS_JSON := "res://world3d/sprites/characters.json"
 const CATALOG := "res://world3d/assets/catalog.json"
@@ -106,6 +108,8 @@ func _ready() -> void:
 	atmos.name = "Atmosphere"
 	pv.world_root.add_child(atmos)
 	atmos.lamps = lamps
+	var cm := terrain.marker("camphor")
+	atmos.camphor = Vector3(cm.x, terrain.height_at(cm.x, cm.z), cm.z)
 	atmos.setup(env, terrain)
 	atmos.glints = dressing.glints
 	vista = W3Vista.new()
@@ -134,6 +138,9 @@ func _ready() -> void:
 		env.sun.shadow_blur = float(args["sblur"])
 	if args.has("nolamps"):
 		lamps.enabled = false                       # debugging: the night without its lanterns
+	if args.has("noxray"):
+		her.sprite.xray.visible = false             # debugging: no silhouettes through what covers them
+		saji.sprite.xray.visible = false
 	if args.has("hide_props"):
 		# debugging: hide placed props whose node name contains one of these (camphor, hut, sugi, ...)
 		var subs := String(args["hide_props"]).split(",")
@@ -141,6 +148,15 @@ func _ready() -> void:
 			for sub in subs:
 				if String(c.name).to_lower().contains(sub):
 					(c as Node3D).visible = false
+	if args.has("noline"):
+		# comparison: the foliage of the props whose names contain these (fern, take, ...) drawn with
+		# the outline-less foliage class
+		var nl := load("res://render3d/shaders/toon_foliage_noline.gdshader")
+		var keys := String(args["noline"]).split(",")
+		for c in props_root.get_children():
+			for k in keys:
+				if String(c.name).to_lower().contains(k):
+					_set_foliage_shader(c, nl)
 	if args.has("camrange"):
 		var cr := String(args["camrange"]).split(",")  # debugging: the camera's near, far (m)
 		pv.cam.near = float(cr[0])
@@ -153,6 +169,8 @@ func _ready() -> void:
 				(node as Node3D).visible = false
 	if args.get("route", "") == "walk":
 		_make_route()
+	elif args.get("route", "") == "night":
+		_make_route(NIGHT_ROUTE)
 
 
 func _cam_target() -> Vector3:
@@ -240,7 +258,7 @@ func _place_props() -> void:
 		elif kind != "camphor":
 			_scale_cutaway(inst, 1.8)
 		if kind == "camphor":
-			_scale_cutaway(inst, 5.0, true)
+			_scale_cutaway(inst, float(args.get("camphor_cut", "3.8")), true)
 			# the trunk and limbs only open where they really cover her (a wide hole would eat the
 			# trunk above her head and the front of the shimenawa)
 			_solid_cutaway(inst, 1.3)
@@ -427,6 +445,9 @@ func _scale_cutaway(n: Node, k: float, dense := false) -> void:
 			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("foliage"):
 				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
 				if dense:
+					# under the great crown the view keeps its lowest boughs along the top edge (she
+					# stands under a roof of leaves; everything nearer to her than that opens)
+					(m as ShaderMaterial).set_shader_parameter("cutaway_keep_px", 96.0)
 					# the great evergreen crown: a deep shade in its heart (the crown proxy), dappled
 					# toward its rim where the leaf masses part (the cards cast a little larger than
 					# drawn, and let a few texels through); other trees keep their own lacy shade
@@ -436,6 +457,17 @@ func _scale_cutaway(n: Node, k: float, dense := false) -> void:
 					(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.42)
 	for c in n.get_children():
 		_scale_cutaway(c, k, dense)
+
+
+func _set_foliage_shader(n: Node, sh: Shader) -> void:
+	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
+		var mi := n as MeshInstance3D
+		for si in mi.mesh.get_surface_count():
+			var m := mi.get_active_material(si)
+			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).ends_with("toon_foliage.gdshader"):
+				(m as ShaderMaterial).shader = sh
+	for c in n.get_children():
+		_set_foliage_shader(c, sh)
 
 
 ## The great tree's limbs and trunk also thin out around her when they stand between her and us.
@@ -544,14 +576,24 @@ func _follow_saji(dt: float) -> void:
 # ------------------------------------------------------------------------------------------------
 # route driver for recordings: presses the movement keys toward the next waypoint
 
-func _make_route() -> void:
-	# out of the hut's door, across the yard, past the shrine's steps up to the great camphor's roots
-	# (the trunk and its rope fill the top of the view), back past the yard and down the spur to the
-	# lookout (about 60 m: with the look out the recording stays near 30 s)
+## The night walk: out of the yard by the lanterns at the hut, along the front path past the bon
+## lanterns over the graves (about 24 m, near 12 s)
+const NIGHT_ROUTE := [Vector2(-16.6, 15.5), Vector2(-14.2, 15.2), Vector2(-13.1, 13.6), Vector2(-12.9, 10.8),
+	Vector2(-11.0, 10.0), Vector2(-6.5, 10.0), Vector2(-2.0, 10.3), Vector2(2.5, 10.4), Vector2(5.5, 10.3)]
+
+
+func _make_route(night: Array = []) -> void:
+	# Round the great camphor: out of the hut's door and across the yard, up the west side of the tree
+	# between its trunk and the shrine's terrace; round the north side under the limbs and the crown
+	# (she walks in a clearing in the leaves, the limbs reaching out over her); onto the old road and
+	# south under the east limb that arches over it, to stop where the trunk and its rope are in view
+	# (about 52 m, near 24 s)
 	var pts := [Vector2(-17.6, 15.3), Vector2(-14.2, 15.2), Vector2(-13.1, 13.6), Vector2(-13.0, 10.8),
-		Vector2(-11.2, 10.0), Vector2(-6.5, 10.0), Vector2(-3.2, 7.6), Vector2(-5.5, 11.0), Vector2(-7.6, 13.6),
-		Vector2(-11.0, 16.2), Vector2(-16.2, 17.2), Vector2(-19.0, 19.6), Vector2(-19.6, 23.0),
-		Vector2(-20.4, 28.0), Vector2(-21.8, 33.5), Vector2(-22.8, 38.0), Vector2(-23.4, 41.3)]
+		Vector2(-11.2, 10.0), Vector2(-8.0, 9.9), Vector2(-6.4, 8.6), Vector2(-5.6, 5.0), Vector2(-6.0, 2.5),
+		Vector2(-6.2, -1.0), Vector2(-5.5, -4.5), Vector2(-2.0, -7.0), Vector2(2.0, -6.9), Vector2(5.0, -5.4),
+		Vector2(5.7, -3.0), Vector2(7.0, -0.5), Vector2(9.4, 1.0), Vector2(9.3, 4.0)]
+	if not night.is_empty():
+		pts = night
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))
@@ -565,6 +607,10 @@ func _drive_route() -> void:
 	for k in [KEY_W, KEY_A, KEY_S, KEY_D]:
 		keys_down[k] = false
 	if route_i >= route.size():
+		# she has arrived: hold a moment on the last view, then end the recording
+		_route_done_t = maxf(_route_done_t, 0.0) + get_process_delta_time()
+		if args.has("route_quit") and _route_done_t > 1.6:
+			get_tree().quit()
 		return
 	var t := route[route_i]
 	var d := t - Vector2(her.pos.x, her.pos.z)
@@ -620,6 +666,10 @@ func _set_view(i: int) -> void:
 ## The lookout: standing still on it for a moment she looks out (W3Vista). A/D turn her head, W/S
 ## (or walking keys after a turn) bring the top-down view back.
 func _update_vista(dt: float, dir: Vector2) -> void:
+	# The view from the lookout is out of the sample this round (art sample round 2: it is not yet at
+	# the quality of the rest; docs/knowledge/21 §10). It is kept for its rebuild: --vista turns it on.
+	if not args.has("vista") and not args.has("vshots"):
+		return
 	var lk := terrain.marker("lookout")
 	var near := Vector2(her.pos.x - lk.x, her.pos.z - lk.z).length() < 1.9
 	if not vista.active:
@@ -703,7 +753,7 @@ func _save_shot(base: String) -> void:
 func _process(dt: float) -> void:
 	frame += 1
 	env.tick(dt)
-	# time passing (verification of the evening, F2-style): hours per second
+	# time passing (verification of the evening): hours per second
 	if args.has("timelapse"):
 		_set_hours(fposmod(env.hours + float(args["timelapse"]) * dt, 24.0), false)
 	for i in range(_lit_wait.size() - 1, -1, -1):
@@ -721,7 +771,7 @@ func _process(dt: float) -> void:
 		print("PERF f=%d fps=%.1f draws=%d prims=%d objects=%d vram_mb=%.0f" % [frame, Performance.get_monitor(Performance.TIME_FPS),
 			Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME), Performance.get_monitor(Performance.RENDER_TOTAL_PRIMITIVES_IN_FRAME),
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0])
-	if args.has("log_pos") and frame % 8 == 0:
+	if args.has("log_pos") and frame % maxi(int(args["log_pos"]), 1) == 0:
 		print("POS f=%d her=(%.2f, %.2f) saji=(%.2f, %.2f) facing=%d vista=%s yaw=%.1f" % [frame, her.pos.x, her.pos.z, saji.pos.x, saji.pos.z, her.facing, str(vista.active), vista.yaw_target])
 	_update_vista(dt, dir)
 	if vista.active or vista.amount > 0.0:

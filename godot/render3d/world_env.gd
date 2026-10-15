@@ -26,10 +26,10 @@ const KEYS := [
 	[5.4,  Color(0.85, 0.55, 0.55), 0.35, Color(0.20, 0.19, 0.30), Color(0.06, 0.05, 0.06), Color(0.42, 0.36, 0.46), Color(0.02, 0.01, 0.04), Color(1.02, 0.98, 1.02), 0.86, Color(-0.005, 0.0, 0.02), Color(0.02, 0.01, 0.0), 0.6],
 	[6.4, Color(1.0, 0.74, 0.50), 1.30, Color(0.42, 0.43, 0.56), Color(0.140, 0.110, 0.095), Color(0.88, 0.72, 0.60), Color(0.012, 0.006, 0.022), Color(1.08, 1.04, 1.00), 1.0, Color(-0.012, 0.0, 0.024), Color(0.035, 0.02, 0.0), 0.0],
 	[8.0, Color(1.0, 0.90, 0.72), 1.65, Color(0.70, 0.78, 0.97), Color(0.20, 0.175, 0.14), Color(0.86, 0.80, 0.72), Color(0.012, 0.012, 0.03), Color(1.06, 1.04, 1.01), 1.0, Color(-0.012, 0.0, 0.022), Color(0.03, 0.018, 0.0), 0.0],
-	[12.0, Color(1.0, 0.96, 0.88), 1.72, Color(0.70, 0.80, 1.0), Color(0.20, 0.18, 0.15), Color(0.78, 0.82, 0.86), Color(0.012, 0.012, 0.03), Color(1.07, 1.05, 1.02), 1.05, Color(-0.014, 0.0, 0.022), Color(0.025, 0.015, 0.0), 0.0],
+	[12.0, Color(1.0, 0.96, 0.88), 1.72, Color(0.70, 0.80, 1.0), Color(0.20, 0.18, 0.15), Color(0.78, 0.82, 0.86), Color(0.012, 0.012, 0.03), Color(1.07, 1.05, 1.02), 1.08, Color(-0.014, 0.0, 0.022), Color(0.025, 0.015, 0.0), 0.0],
 	[15.5, Color(1.0, 0.87, 0.62), 1.75, Color(0.71, 0.76, 0.96), Color(0.21, 0.175, 0.14), Color(0.80, 0.75, 0.70), Color(0.014, 0.01, 0.03), Color(1.07, 1.04, 1.0), 1.0, Color(-0.012, 0.0, 0.022), Color(0.035, 0.018, 0.0), 0.0],
-	[17.4, Color(1.0, 0.85, 0.57), 1.55, Color(0.45, 0.48, 0.71), Color(0.17, 0.145, 0.11), Color(0.82, 0.74, 0.62), Color(0.010, 0.008, 0.026), Color(1.04, 1.03, 0.97), 1.02, Color(-0.012, -0.002, 0.032), Color(0.03, 0.026, 0.0), 0.0],
-	[18.4, Color(1.0, 0.72, 0.44), 0.80, Color(0.25, 0.26, 0.42), Color(0.09, 0.075, 0.06), Color(0.50, 0.45, 0.48), Color(0.014, 0.01, 0.034), Color(1.02, 1.0, 0.98), 0.95, Color(-0.008, -0.002, 0.03), Color(0.026, 0.02, 0.0), 0.5],
+	[17.4, Color(1.0, 0.86, 0.60), 1.8, Color(0.45, 0.48, 0.71), Color(0.17, 0.145, 0.11), Color(0.82, 0.74, 0.62), Color(0.010, 0.008, 0.026), Color(1.05, 1.03, 0.97), 1.07, Color(-0.024, -0.004, 0.066), Color(0.03, 0.026, 0.0), 0.0],
+	[18.4, Color(1.0, 0.70, 0.42), 1.05, Color(0.27, 0.28, 0.44), Color(0.09, 0.075, 0.06), Color(0.50, 0.45, 0.48), Color(0.014, 0.01, 0.034), Color(1.03, 1.0, 0.97), 1.06, Color(-0.022, -0.004, 0.06), Color(0.026, 0.02, 0.0), 0.5],
 	[19.6, Color(0.52, 0.62, 0.95), 0.50, Color(0.060, 0.075, 0.125), Color(0.020, 0.020, 0.030), Color(0.07, 0.085, 0.14), Color(0.006, 0.010, 0.026), Color(0.98, 1.0, 1.07), 0.82, Color(-0.004, 0.0, 0.016), Color(0.0, 0.0, 0.0), 1.0],
 	[24.0, Color(0.52, 0.62, 0.95), 0.50, Color(0.060, 0.075, 0.125), Color(0.020, 0.020, 0.030), Color(0.07, 0.085, 0.14), Color(0.006, 0.010, 0.026), Color(0.98, 1.0, 1.07), 0.82, Color(-0.004, 0.0, 0.016), Color(0.0, 0.0, 0.0), 1.0],
 ]
@@ -139,7 +139,9 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_fog_col", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("w3_night", night)
 	RenderingServer.global_shader_parameter_set("w3_wet", wet)
-	RenderingServer.global_shader_parameter_set("w3_shade_tint", Vector3(0.95, 0.98, 1.05).lerp(Vector3(0.95, 0.98, 1.05), night))
+	# the golden hour: what the low sun does not reach is lit by the blue-violet sky (long cool shadows)
+	var golden := clampf(1.0 - absf(hours - 17.7) / 1.3, 0.0, 1.0) * (1.0 - night)
+	RenderingServer.global_shader_parameter_set("w3_shade_tint", Vector3(0.95, 0.98, 1.05).lerp(Vector3(0.93, 0.94, 1.14), golden))
 	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.03, 1.0, 0.96).lerp(Vector3(0.95, 1.0, 1.06), night))
 	environment.background_color = fog
 	# valley mist: thick in the early morning, thin at noon, back at dusk and at night

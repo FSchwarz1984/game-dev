@@ -8,13 +8,15 @@ LIT = (1.0, 0.70, 0.40)          # lamp light colour (paper lit from inside), sR
 
 
 def materials(a, porosity=0.7, cutaway=False, lit_energy=2.4, keys=('solid',)):
-    """Material res paths by key: solid, roof (stipples away over her), noline (no outline: tiny
-    bits), lit (emissive at dusk and night), paper (unlit lamp paper)."""
+    """Material res paths by key: solid, roof (thatch: porous), noline (no outline: tiny bits), lit
+    (emissive at dusk and night), paper (unlit lamp paper). A roof no longer stipples away over her:
+    a hole in it showed the hut's inside but not her, behind its back wall; the renderer draws her
+    silhouette through whatever covers her instead (render3d/shaders/sprite_xray.gdshader)."""
     m = {}
     if 'solid' in keys:
         m['solid'] = a.material('solid', 'toon_solid.gdshader', {'albedo_mode': 0, 'porosity': porosity, 'cutaway': cutaway})
     if 'roof' in keys:
-        m['roof'] = a.material('roof', 'toon_solid.gdshader', {'albedo_mode': 0, 'porosity': 0.9, 'cutaway': True})
+        m['roof'] = a.material('roof', 'toon_solid.gdshader', {'albedo_mode': 0, 'porosity': 0.9, 'cutaway': False})
     if 'noline' in keys:
         m['noline'] = a.material('noline', 'toon_solid_noline.gdshader', {'albedo_mode': 0, 'porosity': porosity})
     if 'lit' in keys:

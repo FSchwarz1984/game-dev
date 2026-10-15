@@ -25,6 +25,7 @@ uniform float porosity : hint_range(0.0, 1.0) = 0.5;
 uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // sunlit rim band (lighter, warmer)
 uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
+uniform float cutaway_keep_px = 0.0;              // > 0: what lies this far above her stays (the top of the view)
 uniform float shadow_shrink = 1.08;               // cards cast slightly smaller shadows (sun flecks)
 uniform float shadow_sieve = 0.03;                // and let this share of their texels through
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;
@@ -38,6 +39,7 @@ varying vec3 v_wp;
 varying vec3 v_wu;      // where the leaf really is (before lean and card layout): lamps light that
 varying vec3 v_wn;
 varying vec3 v_alb;
+varying vec3 v_alb_sun;
 varying vec2 v_cell;
 varying float v_fill;
 
@@ -86,7 +88,7 @@ void fragment() {
 		}
 	}
 	// (never in the shadow pass: the cut-away is for the eye, the shadow stays whole)
-	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_r(v_wp, cell, cutaway_scale)) {
+	if (cutaway && !IN_SHADOW_PASS && w3_cutaway_k(v_wp, cell, cutaway_scale, cutaway_keep_px)) {
 		discard;
 	}
 	// cards are rebuilt facing the camera whatever their winding: undo the engine's back-face flip
@@ -99,13 +101,23 @@ void fragment() {
 	// olive greens, knowledge/17 §3); reds and golds (the maples, the persimmons) keep theirs
 	vec3 lab0 = w3_lin_to_oklab(alb);
 	if (lab0.y < 0.0) {
-		alb = max(w3_oklab_to_lin(vec3(lab0.x, lab0.yz * 0.84)), vec3(0.0));
+		// x0.8, and the vivid yellow-greens (bamboo, young leaves) compressed above a knee: a whole
+		// grove in strong sun must stay under the large-area chroma limit (knowledge/17 §3)
+		float c0 = length(lab0.yz);
+		float c1 = c0 * 0.8;
+		c1 = c1 > 0.06 ? 0.06 + (c1 - 0.06) * 0.35 : c1;
+		alb = max(w3_oklab_to_lin(vec3(lab0.x, lab0.yz * (c1 / max(c0, 1e-5)))), vec3(0.0));
 	}
 	alb *= (w3_hash(cell) < 0.08 ? 0.94 : 1.0);
 	alb = w3_wetten(alb, porosity);
 	alb = w3_far(alb, far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
 	v_alb = alb * w3_far_light(far);
+	// sun on leaves: a little of it goes through them and the sheen of the sky washes the lit side,
+	// so its green is quieter and it is not as bright as a surface (a sunlit wood would otherwise read
+	// lime; knowledge/17 §3)
+	vec3 lab_s = w3_lin_to_oklab(v_alb);
+	v_alb_sun = lab_s.y < 0.0 ? max(w3_oklab_to_lin(vec3(lab_s.x, lab_s.yz * 0.72)), vec3(0.0)) * 0.88 : v_alb;
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
 	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + w3_lamp_light(alb, v_wu, wn, cell, 1.0) * (1.0 - far * 0.6);
@@ -116,10 +128,10 @@ void fragment() {
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
-		vec3 c = w3_sun_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);
+		vec3 c = w3_sun_light(v_alb_sun, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);
 		float ndl = dot(NORMAL, LIGHT);
 		if (hi_band > 0.0 && ndl > 0.8 && ATTENUATION > 0.5) {
-			c *= mix(vec3(1.0), vec3(1.22, 1.18, 1.02), hi_band);
+			c *= mix(vec3(1.0), vec3(1.13, 1.12, 1.06), hi_band);
 		}
 		// the fill where the sun does not reach (its own shade or the crown's shadow): the masses keep
 		// a hierarchy (tops lighter, undersides darker) instead of one dark lid

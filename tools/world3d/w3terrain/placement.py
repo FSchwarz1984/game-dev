@@ -139,8 +139,19 @@ def place(L, ctx, rng):
     # bamboo clumps on the east shoulder
     def bamboo_ok(x, z):
         return ctx["in_zone"]("bamboo", x, z) and ctx["slope_deg"](x, z) < 36 and keep_clear(x, z, 1.8) and clear_view(x, z, "bamboo", 1.6)
+    grove = []
     for p in poisson(rng, (30.0, -28.0, 72.0, 18.0), 1.9, bamboo_ok):
-        out.append({"kind": "bamboo", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.15)), "variant": int(rng.integers(0, 8))})
+        grove.append({"kind": "bamboo", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.15)), "variant": int(rng.integers(0, 8))})
+    # thinned (art sample round 2: the grove was a wall): clumps at least 2.8 m apart, and glades
+    # where the light comes down to the floor. Done after the draws, so the random stream (and every
+    # placement after this one) stays as it was.
+    kept = []
+    for clump in grove:
+        if noise.fbm(np.array(clump["x"] / 11.0), np.array(clump["z"] / 11.0), 2, 31) < 0.38:
+            continue
+        if all(np.hypot(clump["x"] - k["x"], clump["z"] - k["z"]) >= 2.8 for k in kept):
+            kept.append(clump)
+    out.extend(kept)
 
     # shrubs along edges (azalea, hydrangea), ferns in the shade, boulders where the ground is rough
     def shrub_ok(x, z):

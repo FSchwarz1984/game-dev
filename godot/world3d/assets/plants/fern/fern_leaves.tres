@@ -1,6 +1,6 @@
 [gd_resource type="ShaderMaterial" format=3]
 
-[ext_resource type="Shader" path="res://render3d/shaders/toon_foliage.gdshader" id="1"]
+[ext_resource type="Shader" path="res://render3d/shaders/toon_foliage_noline.gdshader" id="1"]
 [ext_resource type="Texture2D" path="res://world3d/assets/plants/fern/fern_leaves.png" id="2"]
 
 [resource]
@@ -15,6 +15,9 @@ shader_parameter/porosity = 0.5
 shader_parameter/hi_band = 1.0
 shader_parameter/cutaway = false
 shader_parameter/cutaway_scale = null
+shader_parameter/cutaway_keep_px = null
 shader_parameter/shadow_shrink = null
 shader_parameter/shadow_sieve = null
 shader_parameter/vertex_ao = null
+shader_parameter/far = null
+shader_parameter/shade_fill = null

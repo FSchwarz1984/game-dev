@@ -15,8 +15,15 @@ uniform vec4 frame_rect = vec4(0.0, 0.0, 64.0, 64.0);   // px in the sheet: x, y
 uniform bool flip_h = false;
 uniform vec3 line_col : source_color = vec3(1.0, 0.86, 0.56);   // her colour (sRGB)
 uniform float fill = 0.3;                                      // share of her pixels shown inside
+// around her feet what covers her must stand clearly in front of her: the grass at her feet and the
+// ground her card dips into are not "something in the way" (they would ring her feet whenever she
+// walks in grass); above her knees anything counts (a wall she stands right behind)
+uniform float min_gap = 0.6;                                   // m along the view
+uniform float gap_below_px = 9.0;                              // native px above her feet
+uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 
 varying vec3 v_wp;
+varying float v_up;
 
 void vertex() {
 	vec3 anchor = MODEL_MATRIX[3].xyz;
@@ -25,6 +32,7 @@ void vertex() {
 	vec3 wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
 	VERTEX = wp;
 	v_wp = wp;
+	v_up = off.y;
 }
 
 float alpha_at(ivec2 t) {
@@ -41,6 +49,10 @@ void fragment() {
 	ivec2 ti = ivec2(clamp(floor(tp), frame_rect.xy, frame_rect.xy + frame_rect.zw - 1.0));
 	vec4 c = texelFetch(sheet, ti, 0);
 	if (c.a < 0.5) {
+		discard;
+	}
+	vec4 sv = INV_PROJECTION_MATRIX * vec4(SCREEN_UV * 2.0 - 1.0, texture(depth_tex, SCREEN_UV).r, 1.0);
+	if (v_up < gap_below_px && -sv.z / sv.w > -VERTEX.z - min_gap) {
 		discard;
 	}
 	bool edge = alpha_at(ti + ivec2(1, 0)) < 0.5 || alpha_at(ti - ivec2(1, 0)) < 0.5
