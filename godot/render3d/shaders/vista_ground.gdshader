@@ -10,6 +10,8 @@ render_mode world_vertex_coords, ambient_light_disabled, specular_disabled, fog_
 
 uniform sampler2D m0 : filter_linear, repeat_disable;      // the region's splats (Terrain3D)
 uniform sampler2D m1 : filter_linear, repeat_disable;
+uniform sampler2D m2 : filter_linear, repeat_disable;      // ao, puddle, wear, flowers
+uniform sampler2D m3 : filter_linear, repeat_disable;      // litter kind, dryness, tufts, canopy
 uniform sampler2D palette : filter_nearest;
 uniform vec4 splat_frame = vec4(-80.0, -96.0, 0.25, 0.0);    // origin x, z, cell
 uniform vec2 splat_size = vec2(641.0, 833.0);
@@ -19,6 +21,9 @@ uniform vec3 eye = vec3(0.0);
 varying vec3 v_wp;
 varying vec3 v_n;
 varying vec3 v_alb;
+varying float v_shade;      // under the sea of clouds (no sun)
+varying float v_river;
+varying float v_town;       // the villages' density on the plain (their lamplit streets at night)
 
 void vertex() {
 	vec2 xz = VERTEX.xz;
@@ -31,6 +36,7 @@ void vertex() {
 	VERTEX = vec3(xz.x, h, xz.y);
 	v_wp = VERTEX;
 	NORMAL = v_n;
+	POSITION = v_project(VERTEX, eye, PROJECTION_MATRIX);
 }
 
 vec3 pal(float row, float tone) {
@@ -44,31 +50,94 @@ void fragment() {
 	vec3 wp = v_wp;
 	vec2 xz = wp.xz;
 	float dist = length(wp - eye);
-	// texture cell: about a pixel and a half wide at this distance (fine grain near, never blocks)
-	float tc = max(0.02, dist * 0.0028);
-	vec2 cell = floor(xz / tc);
-	float n1 = w3_hash(cell);
-	float clump = w3_vnoise(xz / max(3.0, dist * 0.02));
+	v_shade = 0.0;
+	v_river = 0.0;
+	v_town = 0.0;
 	vec3 n = normalize(v_n);
+	// texture cell: about a pixel and a half wide at this distance (fine grain near, never blocks).
+	// On steep faces the cells lie in the face (along it and down its fall line), not in the map:
+	// map cells seen on a face that turns toward the eye stretch into vertical streaks.
+	float tc = max(0.02, dist * 0.0028);
+	vec2 pl = xz;
+	if (n.y < 0.74 + (w3_hash(floor(xz / tc) * 0.37) - 0.5) * 0.08) {
+		vec2 th = normalize(vec2(-n.z, n.x) + vec2(1e-4));
+		pl = vec2(dot(xz, th), wp.y / max(0.45, sqrt(1.0 - n.y * n.y)));
+	}
+	vec2 cell = floor(pl / tc);
+	float n1 = w3_hash(cell);
+	float clump = w3_vnoise(pl / max(3.0, dist * 0.02));
 	float slope = degrees(acos(clamp(n.y, 0.0, 1.0)));
 	vec3 alb;
 	bool water = false;
 	bool local = xz.x > local_bounds.x && xz.x < local_bounds.z && xz.y > local_bounds.y && xz.y < local_bounds.w;
 	if (local) {
-		// the walkable region: its dominant ground material and palette tone
+		// the walkable region, as the top-down ground paints it (toon_terrain): its dominant ground
+		// material through a jittered lookup on the pixel lattice (ragged, pixel-scale borders), one
+		// system of large soft patches stepped in whole tones, and each material's own grain: blades
+		// in the grass, dry grass where the map says, pebbles along the path's edges, gravel in pairs,
+		// strata on the rock, cushions of moss, the bank's earth in layers where it is steep
+		vec2 pc = v_dir_cell(wp, eye);
 		vec2 uv = (xz - splat_frame.xy) / splat_frame.z / splat_size;
 		vec4 a = texture(m0, uv);
 		vec4 b = texture(m1, uv);
+		vec4 e2 = texture(m2, uv);
+		vec4 e3 = texture(m3, uv);
 		float w[8] = float[8](a.r, a.g, a.b, a.a, b.r, b.g, b.b, b.a);
 		int best = 0;
 		float bw = -1.0;
 		for (int k = 0; k < 8; k++) {
-			float wk = w[k] + (w3_hash(cell + float(k) * 3.1) - 0.5) * 0.2;
+			float wk = w[k];
+			if (wk > 0.01) {
+				float fine = w3_vnoise(pc / 2.3 + float(k) * 7.7) * 0.65 + w3_hash(pc + float(k) * 3.1) * 0.35;
+				wk += (fine - 0.5) * 0.28;
+			}
 			if (wk > bw) { bw = wk; best = k; }
 		}
-		float rows[8] = float[8](0.0, 2.0, 3.0, 4.0, 5.0, 6.0, 9.0, 10.0);
-		float tone = 3.5 + floor((clump - 0.5) * 2.4 + 0.5) + (n1 < 0.12 ? -1.0 : (n1 > 0.9 ? 1.0 : 0.0));
-		alb = pal(rows[best], tone);
+		float macro = w3_fbm(xz / 7.5) * 2.6 - 1.3;
+		float stip = w3_hash(pc * 1.37 + 0.5) * 0.65 + w3_vnoise(pc / 1.8) * 0.35;
+		float mstep = floor(macro + 0.5 + (stip - 0.5) * 0.3);
+		float row;
+		float tone;
+		if (best == 0) {
+			float dry = e3.g + (w3_fbm(xz / 3.0 + 7.0) - 0.5) * 0.25;
+			row = dry > 0.5 + (stip - 0.5) * 0.2 ? 1.0 : 0.0;
+			float gr = w3_hash(pc * 0.73 + 17.0);
+			tone = 3.6 + mstep + (gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0));
+		} else if (best == 1) {
+			row = 2.0;
+			tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + 0.3 + (stip - 0.5) * 0.25);
+			if (w3_hash(pc * 0.61 + 9.0) < 0.06 * (1.0 - e2.b)) tone -= 1.5;      // a pebble's shade
+			else if (w3_hash(pc * 0.43 + 2.0) > 0.93) tone += 1.0;                 // a lit grain
+		} else if (best == 2) {
+			row = 3.0;
+			tone = 3.5 + mstep * 0.5 + (w3_hash(floor(pc / 2.0)) - 0.5) * 2.2;
+		} else if (best == 3) {
+			row = 4.0;
+			float band = floor(wp.y * 1.4 + w3_vnoise(pc / 11.0) * 1.6);
+			float bk = smoothstep(0.85, 0.6, n.y);
+			tone = 3.4 + mstep * 0.5 + floor((w3_hash(vec2(band, 7.0)) - 0.5) * 2.0 * bk + 0.5) + floor(n.y * 1.2);
+		} else if (best == 4) {
+			row = 5.0;
+			float cush = w3_vnoise(pc / 4.2);
+			tone = 3.4 + mstep * 0.5 + (cush > 0.62 ? 1.0 : (cush < 0.3 ? -1.0 : 0.0));
+		} else if (best == 5) {
+			row = e3.r > 0.75 ? 8.0 : (e3.r > 0.25 ? 7.0 : 6.0);
+			tone = 3.2 + mstep * 0.8 + (w3_hash(pc * 0.83) < 0.15 ? -1.0 : 0.0);
+		} else if (best == 6) {
+			row = 9.0;
+			float layer = floor(wp.y * 1.55 + w3_vnoise(pc / 8.0) * 1.2);
+			float lk = smoothstep(0.85, 0.6, n.y);
+			tone = 3.2 + mstep * 0.5 + floor((w3_hash(vec2(layer, 3.0)) - 0.5) * 1.6 * lk + 0.5);
+			// the earth's grain: crumbs and small stones, darker hollows (seen closer than from above)
+			float gq = w3_hash(pc * 0.71 + 12.0);
+			tone += gq < 0.12 ? -1.0 : (gq > 0.92 ? 1.0 : 0.0);
+			// roots and stones in the cut earth, in short runs along the layers
+			if (lk > 0.5 && w3_hash(vec2(floor(pc.x / 3.0), pc.y) * 0.57 + 4.0) < 0.06) tone -= 1.5;
+		} else {
+			row = 10.0;
+			tone = 3.0 + mstep * 0.5;
+		}
+		alb = pal(row, tone);
 		// the terraces' paddies: water holding the sky, young rice in sparse rows across it
 		if (best == 7) {
 			water = true;
@@ -83,66 +152,138 @@ void fragment() {
 		float cult = mt.r * mw;
 		float road = mt.g * mw;
 		float rock = max(mt.b * mw, smoothstep(44.0, 56.0, slope));
-		bool plain = wp.y < -280.0 && slope < 6.0;
+		bool plain = wp.y < -270.0 && slope < 9.0 && v_mist_e(xz) > 1.08;
 		// grass and scrub as the base
 		float tone = 3.4 + floor((clump - 0.5) * 2.6 + 0.5) + (n1 < 0.14 ? -1.0 : (n1 > 0.9 ? 1.0 : 0.0));
 		alb = pal(n1 > 0.55 && clump > 0.6 ? 1.0 : 0.0, tone);
 		if (plain) {
-			// the plain: a mosaic of paddies and dry fields, dark lines of hedges and lanes
-			vec2 fc = floor(xz / vec2(46.0, 34.0));
-			float fh = w3_hash(fc + 7.0);
-			vec2 ff = fract(xz / vec2(46.0, 34.0));
-			vec3 c0 = fh < 0.45 ? srgb(vec3(0.43, 0.52, 0.27)) : (fh < 0.7 ? srgb(vec3(0.52, 0.55, 0.3)) : (fh < 0.85 ? srgb(vec3(0.56, 0.5, 0.33)) : srgb(vec3(0.36, 0.43, 0.25))));
-			alb = c0;
-			if (min(min(ff.x, ff.y), min(1.0 - ff.x, 1.0 - ff.y)) < tc / 40.0) alb *= 0.7;
-			if (w3_hash(floor(xz / 420.0)) > 0.8 && w3_vnoise(xz / 60.0) > 0.7) alb = srgb(vec3(0.32, 0.3, 0.27));   // a village
+			// the plain in early summer: blocks of paddies in strips (young rice, a few still flooded
+			// and holding the sky), dry fields and fallow, groves round the villages, lanes, the river
+			vec4 pm = v_plain_data(xz);
+			float d_river = pm.r * 255.0;
+			float d_road = pm.g * 127.5;
+			float dens = pm.b;
+			v_town = dens;
+			float pxm = dist * 0.0027;                     // metres per pixel here
+			// (the paddies follow an old grid that turns slowly across the plain)
+			float ang = (w3_vnoise(xz / 2600.0 + 3.0) - 0.5) * 0.9;
+			vec2 ax = vec2(cos(ang), sin(ang));
+			vec2 uv = vec2(dot(xz, ax), dot(xz, vec2(-ax.y, ax.x)));
+			vec2 bc = floor(uv / vec2(240.0, 180.0));
+			float bh = w3_hash(bc + 3.3);
+			float sw = mix(16.0, 28.0, w3_hash(bc + 9.1));
+			float along = uv.y;
+			float si = floor(along / sw);
+			float sh = w3_hash(vec2(si, floor(uv.x / 110.0) + floor(bh * 97.0)));
+			float kind = mix(sh, w3_vnoise(uv / 500.0), 0.45);   // fields of a kind in groups
+			if (kind < 0.5) alb = pal(0.0, 4.6 + floor(sh * 4.0) * 0.5);           // young rice
+			else if (kind < 0.66) alb = pal(5.0, 5.2);                           // rice further on
+			else if (kind < 0.74) { water = true; }                              // still flooded
+			else if (kind < 0.87) alb = pal(6.0, 4.4 + floor(sh * 9.0) * 0.3);     // dry fields
+			else alb = pal(8.0, 4.0);                                            // fallow
+			// the levees between the strips, where the pixel can hold them
+			if (pxm < sw * 0.4 && fract(along / sw) < max(0.06, pxm * 0.5 / sw)) alb = pal(0.0, 3.0);
+			// groves and gardens round the villages, a tree line along the lanes
+			if (dens > 0.18 + w3_hash(cell * 0.7) * 0.3) {
+				float g = w3_vnoise(xz / max(6.0, pxm * 2.0));
+				alb = g > 0.5 ? srgb(vec3(0.21, 0.29, 0.16)) : srgb(vec3(0.16, 0.23, 0.13));
+				water = false;
+			}
+			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; }
+			else if (d_road < max(5.0, pxm * 1.1) && w3_hash(floor(xz / 9.0)) > 0.55) { alb = srgb(vec3(0.19, 0.27, 0.15)); water = false; }
+			if (d_river < 34.0 + w3_vnoise(xz / 90.0) * 10.0) { water = true; v_river = 1.0; }
+			else if (d_river < 44.0) { alb = pal(9.0, 3.0); water = false; }        // its banks
 		}
 		if (cult > 0.5) {
-			// terraces and fields: bright young rice, flooded strips catching the sky
-			float row = floor((wp.y + w3_vnoise(xz / 30.0) * 2.0) / 1.6);
-			float rh = w3_hash(vec2(row, 3.0));
-			alb = rh < 0.3 ? srgb(vec3(0.5, 0.6, 0.3)) : srgb(vec3(0.45, 0.56, 0.28));
-			if (rh > 0.78) { water = true; }
+			// the lower layer's terraces: young rice in muted greens, a few strips still flooded
+			float rowf = (wp.y + w3_vnoise(xz / 30.0) * 2.0) / 1.6;
+			float rh = w3_hash(vec2(floor(rowf), 3.0));
+			alb = pal(rh < 0.3 ? 5.0 : 0.0, rh < 0.3 ? 5.4 : 4.8);
+			if (rh > 0.72) { water = true; }
 			// the risers: grass banks, darker
-			if (fract((wp.y + w3_vnoise(xz / 30.0) * 2.0) / 1.6) < 0.18) alb = pal(0.0, 2.5);
+			if (fract(rowf) < 0.18) { alb = pal(0.0, 2.5); water = false; }
 		}
+		bool far_hill = !plain && dist > 2600.0;
 		if (forest > 0.4 && !plain) {
 			// canopy seen from above: dark clumps, lit crowns
-			float k = w3_vnoise(xz / max(4.0, dist * 0.012) + 3.0);
+			float k = w3_vnoise(pl / max(4.0, dist * 0.012) + 3.0);
 			alb = k > 0.62 ? srgb(vec3(0.27, 0.36, 0.19)) : (k > 0.35 ? srgb(vec3(0.2, 0.29, 0.16)) : srgb(vec3(0.13, 0.2, 0.12)));
 		}
-		if (rock > 0.5) {
+		if (rock > 0.5 && !far_hill) {
 			// rock faces: bands along the height (strata), in clusters, not salt and pepper
 			float k = w3_vnoise(vec2((xz.x + xz.y) / max(6.0, dist * 0.03), wp.y / max(1.2, dist * 0.006)));
 			alb = pal(4.0, 2.6 + floor((k - 0.5) * 2.2 + 0.5));
 		}
+		if (far_hill) {
+			// far mountains: masses, not texture: woods dark, open slopes and crags lighter, in a few
+			// large patches (the light's bands and the haze give them their form)
+			float k = w3_vnoise(xz / 520.0 + 7.0);
+			alb = forest > 0.4 ? (k > 0.5 ? srgb(vec3(0.22, 0.3, 0.18)) : srgb(vec3(0.18, 0.25, 0.16)))
+				: (slope > 38.0 ? pal(4.0, 4.0) : pal(0.0, k > 0.55 ? 5.0 : 4.0));
+		}
 		if (road > 0.5) {
 			alb = pal(2.0, 4.0 + (n1 < 0.2 ? -1.0 : 0.0));
 		}
-		if (wat > 0.5) {
+		if (mt.a * mw > 0.5) {
+			// a dry-stone wall (the temple's terrace): courses of grey stones, dark joints
+			float course = floor(wp.y / 0.55);
+			float blk = floor((pl.x + w3_hash(vec2(course, 1.0)) * 1.3) / 1.1);
+			alb = pal(3.0, 4.6 + (w3_hash(vec2(course, blk)) - 0.5) * 2.0);
+			if (fract(wp.y / 0.55) < 0.2 && dist < 900.0) alb = pal(3.0, 2.2);
+		}
+		if (wat > 0.5 && !plain) {
 			water = true;
 		}
+		// the shade of the sea of clouds on the land below it
+		v_shade = wp.y < sea_base ? v_cloud_shade(wp) : 0.0;
 	}
 	if (water) {
-		// water: the sky's colour, a lighter line here and there where the wind ruffles it
-		// (a calm, dim mirror: young rice and the mud under the shallow water darken it)
-		vec3 sky = mix(haze_col, w3_sky * 1.6, 0.35);
-		alb = mix(sky * 0.5, pal(0.0, 3.0), 0.3);
-		if (w3_vnoise(vec2(xz.x * 0.4, xz.y * 2.0) + TIME * 0.05) > 0.82) alb = sky * 0.72;
+		// water: the sky's colour (brighter toward the horizon, where it mirrors the low sky), a
+		// lighter line here and there where the wind ruffles it; the river sparkles toward the sun
+		vec3 v = normalize(eye - wp);
+		// (the region's own paddies are shallow and full of young rice: they hold less of the sky)
+		float graze = (1.0 - clamp(v.y * 4.0, 0.0, 1.0)) * (local ? 0.35 : 1.0);
+		vec3 sky = mix(mix(haze_col, w3_sky * 1.6, 0.35), haze_col * 1.05, graze);
+		alb = mix(sky * mix(0.5, 0.86, graze), pal(0.0, 3.0), 0.3 * (1.0 - graze));
+		vec2 rq = vec2(xz.x * 0.4, xz.y * 2.0) / max(1.0, dist * 0.004) + cloud_time * 0.05;
+		float ruffle = w3_vnoise(rq);
+		// (a ruffled line only where it is a few pixels long: far off it would be streaks)
+		if (ruffle > 0.8 && (v_river > 0.5 || dist < 700.0)) alb = sky * mix(0.72, 0.98, graze);
+		vec3 sd = normalize(w3_sun_dir);
+		vec3 rv = vec3(-v.x, v.y, -v.z);
+		float glint = dot(rv, sd);
+		if (v_river > 0.5 && sd.y > 0.0 && glint > 0.9 - 0.06 * ruffle && w3_hash(floor(xz / max(2.0, dist * 0.0027))) > 0.55) {
+			alb = w3_sun * 0.34 * (1.0 - v_shade);
+		}
+		alb *= 1.0 - v_shade * 0.35;
 		v_alb = alb;
 		ALBEDO = vec3(0.0);
 		EMISSION = v_air(alb, wp, eye, FRAGCOORD.xy);
+		// (in the white water holds no sky: the flooded fields are paper like the rest, the river
+		// a faint line winding on into it)
+		if (v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_paper(v_river > 0.5 ? 0.55 : 0.1);
 	} else {
 		v_alb = alb;
 		ALBEDO = vec3(1.0);
-		EMISSION = v_air(w3_ambient(alb, n, 1.0), wp, eye, FRAGCOORD.xy);
+		EMISSION = v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy);
+		// the home's lanterns light their pools on the ground at night (the same lamps as the
+		// top-down world: render3d/lamps.gd)
+		if (local) {
+			EMISSION += w3_lamp_light(alb, wp, n, cell, 1.0) * v_air_keep(wp, eye, FRAGCOORD.xy);
+		}
 	}
+	// at night the villages' streets glow warm between their lit windows (the drained ones do not)
+	if (w3_night > 0.3 && v_town > 0.05) {
+		float t = floor(min(v_town * 1.6, 1.0) * 3.0 + 0.5 + (w3_hash(v_dir_cell(wp, eye) * 0.9) - 0.5) * 0.6) / 3.0;
+		EMISSION += vec3(1.0, 0.5, 0.16) * 0.13 * t * w3_night * (1.0 - step(0.9, v_drain(xz, wp.y)));
+	}
+	// (the 遠化's edge, a line of light where the white meets the land, is drawn by vista_post)
 }
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
-		vec3 c = v_sun_bands(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, FRAGCOORD.xy);
-		// the sun's share fades with the same air as the rest
-		DIFFUSE_LIGHT += c * v_air_keep(v_wp, eye, FRAGCOORD.xy);
+		vec3 c = v_sun_bands(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_wp, eye);
+		// the sun's share fades with the same air as the rest, and under the clouds' shade
+		DIFFUSE_LIGHT += c * v_air_keep(v_wp, eye, FRAGCOORD.xy) * (1.0 - v_shade);
 	}
 }

@@ -1,7 +1,7 @@
 // Puffs in the view from the lookout (W3Vista): the kiln's smoke, the hot spring's steam, the mist
 // of the 裏見之瀑, the waterfall itself (kind 3: a falling sheet). Camera-facing quads; a round,
-// noise-edged body lit from the sun's side, its cover thinned with an ordered dither (no smooth
-// alpha), then the same air as the land. Values stay under 1 (no bloom), except the kiln's glow.
+// noise-edged body lit from the sun's side, thinned by wearing away at its edge (no halftone, no
+// smooth alpha), then the same air as the land. Values stay under 1 (no bloom), except the kiln's glow.
 // Instance: origin = centre; COLOR = colour (sRGB) and cover 0..1; INSTANCE_CUSTOM = (size m,
 // kind, seed, glow). kind: 0 smoke, 1 steam, 2 mist, 3 waterfall sheet (size = width, seed = height).
 shader_type spatial;
@@ -9,6 +9,7 @@ render_mode world_vertex_coords, unshaded, blend_mix, depth_draw_never, cull_dis
 #include "res://render3d/shaders/vista_common.gdshaderinc"
 
 uniform vec3 eye = vec3(0.0);
+uniform vec3 light_k = vec3(1.0);         // the hour's light on smoke and mist (dim and blue at night)
 
 varying vec3 v_wp;
 varying flat vec4 v_cus;
@@ -34,6 +35,7 @@ void vertex() {
 	v_cus = c;
 	v_col = COLOR;
 	v_uv = UV;
+	POSITION = v_project(wp, eye, PROJECTION_MATRIX);
 }
 
 void fragment() {
@@ -51,10 +53,11 @@ void fragment() {
 		col = mix(col * 0.78, col * 1.08, step(0.45, streak));
 		if (v_uv.y > 0.9) col = col * 1.1;
 	} else {
-		// a puff is a cluster of three round lumps, not a disc
+		// a puff is a cluster of three round lumps, not a disc; it thins by wearing away at its edge
+		// (cover: 1 whole .. 0 gone), never by a halftone
 		float r = min(length(q - vec2(-0.1, 0.06)) * 2.4, min(length(q - vec2(0.13, 0.02)) * 2.6, length(q - vec2(0.0, -0.12)) * 2.5));
 		r += (n - 0.5) * 0.35;
-		if (r > 1.0) discard;
+		if (r > mix(0.35, 1.0, cover)) discard;
 		// lit from the sun's side
 		vec3 sd = normalize(w3_sun_dir);
 		vec3 to_cam = normalize(eye - v_wp);
@@ -62,10 +65,10 @@ void fragment() {
 		float lit = dot(vec2(q.x, -q.y), normalize(vec2(dot(right, sd), sd.y) + 1e-4)) * 2.0 + (n - 0.5) * 0.4;
 		col *= lit > 0.1 ? 1.06 : (lit < -0.3 ? 0.72 : 0.88);
 	}
-	float cq = floor(cover * 4.0 + v_bayer8(FRAGCOORD.xy) * 0.999) / 4.0;
-	if (cq <= 0.0) discard;
+	if (cover <= 0.02) discard;
+	col *= light_k;
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);
 	c += col * v_cus.w;
 	ALBEDO = c;
-	ALPHA = min(cq, 1.0);
+	ALPHA = 1.0;
 }

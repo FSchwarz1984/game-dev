@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://en5rukyrjphu"
+path="res://.godot/imported/vista_plain.png-c4b1fb99e514acdde78463526737ba69.image"
+
+[deps]
+
+source_file="res://world3d/terrain/saddle/vista_plain.png"
+dest_files=["res://.godot/imported/vista_plain.png-c4b1fb99e514acdde78463526737ba69.image"]
+
+[params]
+

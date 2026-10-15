@@ -27,6 +27,8 @@ global uniform vec4 w3_player;      // xyz: her chest (world), w: cut-away radiu
 global uniform float w3_night;      // 0 day .. 1 night
 global uniform sampler2D w3_lamps;  // lamps (render3d/lamps.gd): row 0 xyz + reach, row 1 rgb * energy + on
 global uniform float w3_lamp_n;     // how many lamps are lit (texels in use)
+global uniform float w3_bake;       // 0 the game; impostor bake (render3d/dev/impostor_bake.gd):
+                                    // 1 albedo, 2 normal, 3 AO + class; no wind, no lean
 
 const float W3_PI = 3.14159265;
 
@@ -98,7 +100,7 @@ vec3 w3_lean(vec3 wp, float base_y, float amount) {
 // wind: a sway group (all vertices sharing one anchor) moves rigidly by whole native pixels, so
 // textures never swim and the image never shimmers. flex 0 = rigid (trunks), 1 = free tips.
 vec2 w3_wind_px(vec3 anchor, float flex, float amp_px) {
-	if (flex <= 0.0) return vec2(0.0);
+	if (flex <= 0.0 || w3_bake > 0.5) return vec2(0.0);
 	float ph = anchor.x * 0.37 + anchor.z * 0.23 + anchor.y * 0.11;
 	float t = w3_time;
 	float s = sin(t * 1.7 + ph) * 0.6 + sin(t * 2.9 + ph * 1.7) * 0.4;
@@ -142,6 +144,16 @@ vec3 w3_srgb_to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 }
 float w3_luma(vec3 c) { return dot(c, vec3(0.2126, 0.7152, 0.0722)); }
+
+// ------------------------------------------------------------------------------------------------
+// impostor bake output (w3_bake > 0): what the material is, not how it is lit. Written to EMISSION
+// with no lights in the bake world, so the viewport holds the value itself (sRGB-encoded on output:
+// the albedo comes out as its own sRGB; the data passes are pre-linearised to come out exact).
+vec3 w3_bake_out(vec3 albedo, vec3 world_n, float ao, float cls) {
+	if (w3_bake < 1.5) return albedo;
+	if (w3_bake < 2.5) return w3_srgb_to_linear(clamp(world_n * 0.5 + 0.5, 0.0, 1.0));
+	return w3_srgb_to_linear(vec3(clamp(ao, 0.0, 1.0), cls, 0.0));
+}
 
 // ------------------------------------------------------------------------------------------------
 // Oklab (Bjorn Ottosson, 2020), a perceptual colour space: used for the painter's shadow colour.

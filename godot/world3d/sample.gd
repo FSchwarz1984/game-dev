@@ -8,15 +8,18 @@ extends Node
 ##   --shots=dir:x,z,h;x,z,h;...   several views
 ##   --route=walk       she walks the sample route (hut -> yard -> round the great camphor -> the
 ##                      old road) by pressing the same movement keys a player would (Input events),
-##                      for recordings; --route=night: the night walk past the lanterns
-##   --vista            the view from the lookout (out of the sample this round; kept for its rebuild)
+##                      for recordings; --route=night: the night walk past the lanterns;
+##                      --route=lookout: down the spur to the lookout, where she looks out (the view
+##                      south, east, then back home), and the top-down view comes back
+##   --novista          she does not look out from the lookout (the view from the lookout, W3Vista, is on
+##                      by default: standing still on the rock for a moment she looks out)
 ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
 ##   --pitch=deg        camera pitch (evidence renders)
 ##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, and debugging switches
 ##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
 ##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse): docs/knowledge/21 §12
 ## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
-## does not run here). With --vista, on the lookout A/D turn her head and W/S come back.
+## does not run here). On the lookout, looking out, A/D turn her head and W/S come back.
 
 const CHARS_JSON := "res://world3d/sprites/characters.json"
 const CATALOG := "res://world3d/assets/catalog.json"
@@ -49,6 +52,7 @@ var _lit_on := -1                 # the lanterns' lit bodies: on (1), off (0), u
 var _lit_wait: Array = []         # [pair, seconds until it switches] while they light one by one
 var _still := 0.0                 # seconds she has stood still on the lookout
 var _route_done_t := -1.0         # route recordings: time since she reached the end
+var placed_props: Array = []      # [catalog name, position, yaw, scale, height m]: for the vista's impostors
 
 
 func _ready() -> void:
@@ -114,6 +118,8 @@ func _ready() -> void:
 	atmos.glints = dressing.glints
 	vista = W3Vista.new()
 	vista.name = "Vista"
+	vista.props = placed_props
+	vista.lamp_src = lamps
 	add_child(vista)
 	vista.setup(pv, env, terrain)
 	_spawn_characters()
@@ -171,6 +177,12 @@ func _ready() -> void:
 		_make_route()
 	elif args.get("route", "") == "night":
 		_make_route(NIGHT_ROUTE)
+	elif args.get("route", "") == "lookout":
+		args["vista"] = ""
+		_make_route(LOOKOUT_ROUTE)
+	if not route.is_empty():
+		# (the camera starts on her where the route starts, not swooping in from the spawn)
+		pv.follow(_cam_target, {"cut": true})
 
 
 func _cam_target() -> Vector3:
@@ -252,6 +264,7 @@ func _place_props() -> void:
 		if kind != "camphor":
 			inst.scale = Vector3.ONE * sc
 		props_root.add_child(inst)
+		placed_props.append([name, pos, inst.rotation.y, sc, float(a.get("height", 10.0)) * sc])
 		if kind == "bamboo":
 			# a grove is dense all the way down: open a wide hole around her, she reads first
 			_scale_cutaway(inst, 3.2)
@@ -328,6 +341,8 @@ func _place_marker_props() -> void:
 		base.position = p
 		base.rotation.y = float(sl[2])
 		props_root.add_child(base)
+		if nm in ["hut", "shrine", "graves"]:
+			placed_props.append([nm, p, float(sl[2]), 1.0, float(a.get("height", 3.0))])
 		var lit_path := String(a.get("variants", {}).get("lit", ""))
 		if lit_path != "":
 			var lit := _instance(lit_path)
@@ -345,7 +360,8 @@ func _place_marker_props() -> void:
 			dressing.glints.append([p + Vector3(gl[0], gl[1], float(gl[2]) - lean * float(gl[1])), 0.0])
 	# two red maples by the way down to the lookout and south of the road (v0.1's red maples were
 	# the accent the user liked); both stand where nothing she needs to see lies north of them
-	for mp in [["maple_red_a", Vector2(-22.5, 26.5), 0.7], ["maple_red_b", Vector2(-7.5, 22.0), 2.1]]:
+	# (and both stay out of the look back home from the lookout: W3Vista)
+	for mp in [["maple_red_a", Vector2(-38.6, 42.8), 0.7], ["maple_red_b", Vector2(6.0, 28.0), 2.1]]:
 		if not catalog.has(mp[0]):
 			continue
 		var tree := _instance(String(catalog[mp[0]]["scene"]))
@@ -355,6 +371,7 @@ func _place_marker_props() -> void:
 		tree.position = Vector3(at.x, t.height_at(at.x, at.y), at.y)
 		tree.rotation.y = float(mp[2])
 		props_root.add_child(tree)
+		placed_props.append([mp[0], tree.position, float(mp[2]), 1.0, float(catalog[mp[0]].get("height", 6.0))])
 		_scale_cutaway(tree, 1.8)
 		for fp in catalog[mp[0]].get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(mp[2]))
@@ -580,6 +597,8 @@ func _follow_saji(dt: float) -> void:
 ## lanterns over the graves (about 24 m, near 12 s)
 const NIGHT_ROUTE := [Vector2(-16.6, 15.5), Vector2(-14.2, 15.2), Vector2(-13.1, 13.6), Vector2(-12.9, 10.8),
 	Vector2(-11.0, 10.0), Vector2(-6.5, 10.0), Vector2(-2.0, 10.3), Vector2(2.5, 10.4), Vector2(5.5, 10.3)]
+## Down the spur to the lookout's rock (about 12 m), where she stands still and looks out (W3Vista)
+const LOOKOUT_ROUTE := [Vector2(-19.4, 30.6), Vector2(-20.8, 34.0), Vector2(-22.4, 38.2), Vector2(-23.5, 41.9)]
 
 
 func _make_route(night: Array = []) -> void:
@@ -607,9 +626,13 @@ func _drive_route() -> void:
 	for k in [KEY_W, KEY_A, KEY_S, KEY_D]:
 		keys_down[k] = false
 	if route_i >= route.size():
-		# she has arrived: hold a moment on the last view, then end the recording
+		# she has arrived: hold a moment on the last view (or, with the vista, until she has looked
+		# out and the top-down view is back), then end the recording
 		_route_done_t = maxf(_route_done_t, 0.0) + get_process_delta_time()
-		if args.has("route_quit") and _route_done_t > 1.6:
+		var vista_busy := args.has("vista") and (vista.active or vista.shown or vista.veil > 0.0 or _pan_done_t < 0.0)
+		if vista_busy:
+			_route_done_t = 0.0
+		if args.has("route_quit") and _route_done_t > (0.9 if args.has("vista") else 1.6):
 			get_tree().quit()
 		return
 	var t := route[route_i]
@@ -657,42 +680,41 @@ func _set_view(i: int) -> void:
 		env.rain = v[3]
 	_set_hours(v[2])
 	# stills of the top-down view: she does not look out from the lookout here
-	vista.active = false
-	vista.amount = 0.0
+	vista.hide_now()
 	_still = -1.0
 	pv.follow(_cam_target, {"cut": true})
 
 
-## The lookout: standing still on it for a moment she looks out (W3Vista). A/D turn her head, W/S
-## (or walking keys after a turn) bring the top-down view back.
+## The lookout: standing still on it for a moment she looks out (W3Vista). A/D turn her head (held
+## at the end of the range, she turns round: out over the land / back home); W/S (or walking keys)
+## bring the top-down view back.
 func _update_vista(dt: float, dir: Vector2) -> void:
-	# The view from the lookout is out of the sample this round (art sample round 2: it is not yet at
-	# the quality of the rest; docs/knowledge/21 §10). It is kept for its rebuild: --vista turns it on.
-	if not args.has("vista") and not args.has("vshots"):
+	if args.has("novista") and not args.has("vshots"):
 		return
 	var lk := terrain.marker("lookout")
 	var near := Vector2(her.pos.x - lk.x, her.pos.z - lk.z).length() < 1.9
 	if not vista.active:
-		if near and dir == Vector2.ZERO and her.speed < 0.05 and _still >= 0.0:
+		# (standing still: no movement key held and no real walking; the rocks round the lookout can
+		# nudge her by a hair every frame, which kept a finer test from ever passing)
+		if near and dir == Vector2.ZERO and her.speed < 0.3 and _still >= 0.0 and not vista.shown:
 			_still += dt
 			if _still > 0.8:
-				vista.active = true
+				vista.sector = 0
 				vista.yaw = 180.0
 				vista.yaw_target = 180.0
+				vista.active = true
+				_pan_t = 0.0
 				print("VISTA on f=%d" % frame)
 		elif not near:
 			_still = 0.0
 	else:
 		if not route.is_empty():
 			_autopan(dt)
-		else:
+		elif vista.shown:
 			if _key(KEY_A) or _key(KEY_LEFT):
-				vista.yaw_target -= 55.0 * dt
+				vista.turn(-1.0, dt)
 			if _key(KEY_D) or _key(KEY_RIGHT):
-				vista.yaw_target += 55.0 * dt
-			# she looks out over the open side of the spur (east by the kiln's smoke round to the
-			# west); behind her the hillside fills the view and the view stands behind her back
-			vista.yaw_target = clampf(vista.yaw_target, YAW_OPEN.x, YAW_OPEN.y)
+				vista.turn(1.0, dt)
 			if _key(KEY_W) or _key(KEY_S) or _key(KEY_UP) or _key(KEY_DOWN):
 				vista.active = false
 				_still = -1.0         # she has to step off before she looks out again
@@ -702,36 +724,46 @@ func _update_vista(dt: float, dir: Vector2) -> void:
 	vista.update(dt)
 
 
-## Recordings: once she looks out over the plain in the mist, her head turns east to the kiln's
-## smoke on the shoulder and rests there.
-const AUTOPAN := [[0.0, 180.0], [0.8, 180.0], [2.4, 114.0], [2.8, 114.0]]
-const YAW_OPEN := Vector2(100.0, 260.0)    # the bearings she can turn her head to on the lookout
+## Recordings: she looks out over the plain, turns her head east to the kiln's smoke, then turns
+## round and looks back home at the great camphor; then the top-down view comes back.
+## [seconds, place (0 out, 1 home), bearing]
+const AUTOPAN := [[0.0, 0, 180.0], [2.2, 0, 180.0], [4.9, 0, 100.0], [5.8, 0, 100.0], [5.8, 1, 50.0], [6.9, 1, 50.0],
+	[9.1, 1, 17.0], [11.6, 1, 17.0]]
 var _pan_t := 0.0
+var _pan_done_t := -1.0
 
 
 func _autopan(dt: float) -> void:
+	if not vista.shown and vista._trans == "":
+		return
 	_pan_t += dt
-	if args.has("route_quit") and _pan_t > float(AUTOPAN[-1][0]) + 0.2:
-		get_tree().quit()
+	var last: Array = AUTOPAN[-1]
+	if _pan_t >= float(last[0]):
+		vista.active = false
+		_still = -1.0               # (she does not look out again until she steps off)
+		_pan_done_t = 0.0
+		return
 	for i in AUTOPAN.size() - 1:
 		var a: Array = AUTOPAN[i]
 		var b: Array = AUTOPAN[i + 1]
-		if _pan_t >= float(a[0]) and _pan_t <= float(b[0]):
-			var t := smoothstep(float(a[0]), float(b[0]), _pan_t)
-			vista.yaw_target = lerpf(float(a[1]), float(b[1]), t)
-			vista.yaw = vista.yaw_target
+		if _pan_t >= float(a[0]) and _pan_t < float(b[0]):
+			if int(b[1]) != vista.sector:
+				vista.flip_to(int(b[1]), float(b[2]))
+			elif int(a[1]) == vista.sector:
+				var t := smoothstep(float(a[0]), float(b[0]), _pan_t)
+				vista.yaw_target = lerpf(float(a[2]), float(b[2]), t)
+				vista.yaw = vista.yaw_target
 			return
-	vista.yaw_target = float(AUTOPAN[-1][1])
 
 
 func _set_vview(i: int) -> void:
 	var v: Array = _shot_list[i]
 	env.rain = float(v[2])
 	_set_hours(float(v[1]))
-	vista.active = true
-	vista.amount = 1.0
-	vista.yaw = float(v[0])
-	vista.yaw_target = float(v[0])
+	var b := float(v[0])
+	# bearings round the north are the look back home
+	var sec := 1 if (b < 80.0 or b > 330.0) else 0
+	vista.show_now(sec, wrapf(b, -180.0, 180.0) if sec == 1 else b)
 
 
 ## A still: the window as shown (graded, at the window's size) and the native frame taken from it

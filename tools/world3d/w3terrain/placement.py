@@ -126,15 +126,34 @@ def place(L, ctx, rng):
         kind = "maple" if rng.uniform() < 0.3 else ("beech" if rng.uniform() < 0.5 else "broadleaf")
         out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.15)), "variant": int(rng.integers(0, 8))})
 
-    # red pines on the spur and the rocky rim above the ravine
+    # red pines on the spur and the rocky rim above the ravine. Looking back home from the lookout
+    # (the view from the lookout, godot/world3d/vista3d.gd: the camera 18.1 m out over the drop,
+    # bearing 202 from her, 4 m over her feet) the great camphor, the hut, the shrine and the graves
+    # must stand clear: no pine between that camera and them (bearings 6 to 48 degrees, nearer than
+    # the camphor). Two pines frame that view instead; the eastern one also frames the view south.
+    lk = M["lookout"]
+    home_cam = (lk[0] + np.sin(np.radians(202.0)) * 18.11, lk[1] - np.cos(np.radians(202.0)) * 18.11)
+
+    def in_home_view(x, z):
+        dx, dz = x - home_cam[0], z - home_cam[1]
+        b = np.degrees(np.arctan2(dx, -dz))
+        return 6.0 < b < 48.0 and np.hypot(dx, dz) < 64.0
+
     def pine_ok(x, z):
         sp = np.asarray(L["spur"]["axis"])
         d = min(np.hypot(x - q[0], z - q[1]) for q in sp)
         if d > 7.0 or ctx["slope_deg"](x, z) > 40 or not keep_clear(x, z, 1.6) or not clear_view(x, z, "pine", 5.0):
             return False
-        return np.hypot(x - M["lookout"][0], z - M["lookout"][1]) > 4.0
+        return np.hypot(x - lk[0], z - lk[1]) > 4.0
+    # (the corridor is cleared after sampling, with the same random draws, so that everything
+    # placed later stays exactly where it was)
     for p in poisson(rng, (-34.0, 8.0, -8.0, 46.0), 5.5, pine_ok)[:7]:
-        out.append({"kind": "pine", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.1)), "variant": int(rng.integers(0, 8))})
+        e = {"kind": "pine", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.1)), "variant": int(rng.integers(0, 8))}
+        if not in_home_view(e["x"], e["z"]):
+            out.append(e)
+    frame_pines = [{"kind": "pine", "x": x, "z": z, "rot": r, "scale": sc, "variant": var}
+                   for (x, z, r, sc, var) in ((-15.1, 46.3, 2.2, 1.05, 2), (-32.5, 37.5, 4.9, 1.0, 5), (-35.5, 27.5, 0.8, 0.9, 3))
+                   if ctx["slope_deg"](x, z) < 42 and keep_clear(x, z, 1.4)]
 
     # bamboo clumps on the east shoulder
     def bamboo_ok(x, z):
@@ -211,7 +230,7 @@ def place(L, ctx, rng):
     for k in range(5):
         out.append({"kind": "boulder", "x": float(-3.4 + k * 0.75 + rng.uniform(-0.1, 0.1)), "z": float(-39.4 + k * 0.05 + rng.uniform(-0.25, 0.25)),
                     "rot": float(rng.uniform(0, 6.28)), "scale": 0.55, "sink": 0.55, "variant": int(rng.integers(0, 16))})
-    return out
+    return out + frame_pines
 
 
 CANOPY_R = {"camphor": 13.0, "cedar": 2.6, "maple": 3.4, "beech": 3.6, "broadleaf": 3.4, "pine": 3.0,

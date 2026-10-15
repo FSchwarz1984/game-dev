@@ -72,10 +72,19 @@ func _try_move(d: Vector3) -> float:
 	if d.length() < 1e-5:
 		return 0.0
 	var start := pos
-	for attempt in [d, Vector3(d.x, 0, 0), Vector3(0, 0, d.z)]:
-		var np: Vector3 = pos + attempt
-		if _free(np):
-			pos = Vector3(np.x, terrain.height_at(np.x, np.z), np.z)
+	# in steps of at most 5 cm: at a low frame rate one long step would stop her a whole step short
+	# of a rock or a wall (and short of the lookout, where she has to stand at the rock's edge)
+	var n := maxi(1, ceili(d.length() / 0.05))
+	var sd := d / float(n)
+	for i in n:
+		var went := false
+		for attempt in [sd, Vector3(sd.x, 0, 0), Vector3(0, 0, sd.z)]:
+			var np: Vector3 = pos + attempt
+			if _free(np):
+				pos = Vector3(np.x, terrain.height_at(np.x, np.z), np.z)
+				went = true
+				break
+		if not went:
 			break
 	return Vector2(pos.x - start.x, pos.z - start.z).length()
 

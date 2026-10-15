@@ -67,6 +67,10 @@ void fragment() {
 	ALBEDO = vec3(1.0);
 	vec3 em = emission_color * emission_energy * mix(1.0, w3_night, emission_at_night) * (1.0 - far);
 	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + em + w3_lamp_light(alb, v_wu, wn, cell, dither) * (1.0 - far * 0.6);
+	if (w3_bake > 0.5) {
+		ALBEDO = vec3(0.0);
+		EMISSION = w3_bake_out(alb, wn, ao, 0.0);
+	}
 }
 
 void light() {

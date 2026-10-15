@@ -121,6 +121,10 @@ void fragment() {
 	v_cell = cell;
 	ALBEDO = vec3(1.0);
 	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + w3_lamp_light(alb, v_wu, wn, cell, 1.0) * (1.0 - far * 0.6);
+	if (w3_bake > 0.5) {
+		ALBEDO = vec3(0.0);
+		EMISSION = w3_bake_out(alb, wn, ao, 1.0);
+	}
 	// for the fill in light(): how much the card faces the sky, in three steps, times its AO
 	v_fill = floor((wn.y * 0.5 + 0.5) * 3.0 + 0.5) / 3.0 * 0.55 + 0.45;
 	v_fill *= ao;

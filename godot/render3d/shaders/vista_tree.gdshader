@@ -31,9 +31,8 @@ void vertex() {
 	v_cus = c;
 	v_right = right;
 	NORMAL = normalize(vec3(to_cam.x, 0.0, to_cam.z));
-	vec4 a = PROJECTION_MATRIX * VIEW_MATRIX * vec4(o, 1.0);
-	vec4 b = PROJECTION_MATRIX * VIEW_MATRIX * vec4(o + vec3(0.0, h, 0.0), 1.0);
-	v_pxh = abs(b.y / b.w - a.y / a.w) * 0.5 * VIEWPORT_SIZE.y;
+	v_pxh = abs(v_px_of(o + vec3(0.0, h, 0.0), eye).y - v_px_of(o, eye).y);
+	POSITION = v_project(wp, eye, PROJECTION_MATRIX);
 }
 
 float sd_circle(vec2 p, vec2 c, float r) { return length(p - c) - r; }
