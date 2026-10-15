@@ -9,7 +9,8 @@
 # C: the yard at night (21:30): hold D 1.5 s toward the front path and its lanterns.
 # D: the lookout: walk S onto the rock and stand still (the view from the lookout comes in
 #    through the mist's white), hold D 1.0 s (she turns her head west), hold A 4.5 s (back east and,
-#    held against the end, round to the look back home), then W (the top-down view comes back).
+#    held against the end, round to the look back home), then W 1.2 s (the top-down view comes back,
+#    she walks on north).
 # Screens: <out>/A_*.png, <out>/B_*.png, <out>/C_*.png (import -window root); logs: <out>/?.log.
 set -uo pipefail
 GODOT_BIN="${GODOT_BIN:-/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64}"
@@ -73,14 +74,14 @@ if [[ "$CASES" == *D* ]]; then
 # ---- D: the view from the lookout
 run_case D --at=-23.4,38.6 --hours=16.5
 shot D_0_start
-hold 1.4 s
+hold 2.5 s
 # (standing still she looks out; under software rendering at a few frames a second that can take
 # several seconds: wait for the game to say so, then for the white to clear)
 for _ in $(seq 1 200); do grep -q "VISTA on" "$OUT/D.log" 2>/dev/null && break; sleep 0.1; done
 sleep 2.5; shot D_1_looking_out
 hold 1.0 d; sleep 0.8; shot D_2_after_D
 hold 4.5 a; sleep 2.0; shot D_3_after_A_home
-hold 0.4 w; sleep 2.0; shot D_4_after_W
+hold 1.2 w; sleep 2.0; shot D_4_after_W
 finish
 fi
 for c in A B C; do [ -f "$OUT/$c.log" ] && grep -h "POS" "$OUT/$c.log" | head -60 > "$OUT/${c}_pos.txt"; done
