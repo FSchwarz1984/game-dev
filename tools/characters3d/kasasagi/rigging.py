@@ -56,10 +56,10 @@ def bone_defs():
         s0, s1, s2 = tamoto_chain_points(side)
         d.append(('sleeve_%s_0' % sx, s0, s1, 'forearm_' + sx))
         d.append(('sleeve_%s_1' % sx, s1, s2, 'sleeve_%s_0' % sx))
-    # long hair: five chains down the back, from the nape to the tips
-    for i, fx in enumerate(HAIR_LANES):
+    # long hair: one chain down each of its three bunches (her right, the middle, her left)
+    for i in range(len(HAIR_CHAIN_Z)):
         par = 'head'
-        pts = hair_chain_points(fx)
+        pts = hair_chain_points(i)
         for k in range(len(pts) - 1):
             n = 'hair_%d_%d' % (i, k)
             d.append((n, pts[k], pts[k + 1], par))
@@ -95,19 +95,23 @@ def tamoto_chain_points(side):
     return top, top.lerp(bot, 0.5), bot
 
 
-HAIR_LANES = [-0.75, -0.38, 0.0, 0.38, 0.75]      # lane f (-1 her right .. 1 her left)
+# the long hair's chains, one per bunch (model.HAIR_BUNCHES: her right, the middle, her left), from
+# the nape to the bunch's tip: each bunch swings as one piece, the outer two apart from the middle
+HAIR_CHAIN_Z = [(1.03, 0.33), (1.03, 0.64), (1.03, 0.33)]
 COAT_PANELS = {'FL': 0.62, 'FR': -0.62, 'BL': 2.2, 'BR': -2.2, 'SL': 1.45, 'SR': -1.45}   # angle from the front, + to her left
 
 
-def hair_chain_points(f):
-    from kasasagi.model import coat_back_y
-    x = lambda z, s: f * s
-    zs = [1.03, 0.86, 0.68, 0.50, 0.36]
-    sx = [0.20, 0.232, 0.25, 0.262, 0.27]
+def hair_chain_points(i):
+    """Five points down bunch i's centre line (model._bunch_centre), behind her back."""
+    from kasasagi.model import coat_back_y, HAIR_BUNCHES, _bunch_centre
+    cf, hw, n, z_end, x_end = HAIR_BUNCHES[i]
+    z0, z1 = HAIR_CHAIN_Z[i]
     pts = []
-    for z, s in zip(zs, sx):
-        y = coat_back_y(z) * (1 - 0.45 * f * f) + 0.06
-        pts.append(Vector((f * s, y, z)))
+    for k in range(5):
+        z = z0 + (z1 - z0) * k / 4
+        x = _bunch_centre(cf, z, x_end, z_end)
+        y = coat_back_y(min(max(z, 0.2), 0.982)) * (1 - 0.45 * cf * cf) + 0.06
+        pts.append(Vector((x, y, z)))
     return pts
 
 
@@ -222,17 +226,25 @@ def weights_for(p, tag):
         f = tag.get('x', 0.0)
         if p.z > 1.12:
             return {'head': 1.0}
-        # lanes: share between the two nearest chains
-        lanes = HAIR_LANES
-        fx = max(lanes[0], min(lanes[-1], f * 1.0))
-        i = 0
-        while i < len(lanes) - 2 and fx > lanes[i + 1]:
-            i += 1
-        a = (fx - lanes[i]) / (lanes[i + 1] - lanes[i])
-        t = max(0.0, min(1.0, (1.03 - p.z) / (1.03 - 0.36)))
-        w0 = _chain('hair_%d_' % i, 4, t)
-        w1 = _chain('hair_%d_' % (i + 1), 4, t)
-        w = _blend(w0, w1, smooth(a))
+
+        def on_chain(i):
+            z0, z1 = HAIR_CHAIN_Z[i]
+            return _chain('hair_%d_' % i, 4, max(0.0, min(1.0, (z0 - p.z) / (z0 - z1))))
+        bunch = tag.get('bunch', -1)
+        if bunch >= 0:
+            # a bunch's clumps hang on its own chain only: the bunches part when they swing
+            w = on_chain(bunch)
+        else:
+            # the dark inner layer (behind the head and shoulders) shares the chains by its place
+            right = smooth((-f - 0.15) / 0.45)
+            left = smooth((f - 0.15) / 0.45)
+            mid = max(0.0, 1.0 - right - left)
+            tot = right + mid + left
+            w = {}
+            for i, k in ((0, right), (1, mid), (2, left)):
+                if k > 0:
+                    for bn, v in on_chain(i).items():
+                        w[bn] = w.get(bn, 0.0) + v * k / tot
         return _blend(w, {'head': 1.0}, smooth((p.z - 0.99) / 0.12))
     if seg in ('torso', 'bow'):
         if seg == 'torso' and p.z > 0.90 and abs(p.x) > 0.09:

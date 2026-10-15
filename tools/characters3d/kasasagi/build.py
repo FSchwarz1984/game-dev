@@ -114,6 +114,9 @@ HAT_TILT_AWAY_DEG = 24.0
 HAT_ROLL_DEG = 12.0
 # in profile her head turns this far toward the camera (godot/characters/head_turn_modifier.gd)
 HEAD_TURN_BIAS_DEG = 20.0
+# the hat's brim in the hat bone's space (model.hat(): the rim's mid-thickness below the seat, and its
+# radius) and the arm that reaches for it (godot/characters/hat_reach_modifier.gd)
+HAT_BRIM = {'y': -0.124, 'r': 0.50, 'arm': ['upper_arm_R', 'forearm_R', 'hand_R'], 'hand_len': 0.062}
 
 # secondary motion (SpringBoneSimulator3D in the game; VRM-style verlet: stiffness pulls back to the
 # animated pose, drag damps, gravity in m/s^2-ish units of the solver)
@@ -122,10 +125,14 @@ HAIR_COLLIDE = ['col_head', 'col_chest', 'col_spine', 'col_hips', 'col_thigh_L',
 
 def spring_chains():
     out = []
-    for i in range(5):
-        out.append({'name': 'hair_%d' % i, 'root': 'hair_%d_0' % i, 'end': 'hair_%d_3' % i, 'stiffness': 1.6,
-                    'drag': 0.55, 'gravity': 0.4, 'radius': 0.035, 'tip': 0.06, 'collide': HAIR_COLLIDE,
-                    'wind': 0.25})
+    # the long hair's three bunches: the middle one steady, the two tails free (the lead, round 3: they
+    # part and swing when she walks, runs and turns, and the white robe flashes between them)
+    for i in range(3):
+        outer = i != 1
+        out.append({'name': 'hair_%d' % i, 'root': 'hair_%d_0' % i, 'end': 'hair_%d_3' % i,
+                    'stiffness': 0.95 if outer else 1.6, 'drag': 0.40 if outer else 0.55,
+                    'gravity': 0.55 if outer else 0.4, 'radius': 0.035, 'tip': 0.06, 'collide': HAIR_COLLIDE,
+                    'wind': 0.26 if outer else 0.2})
     for sx in ('L', 'R'):
         out.append({'name': 'lock_' + sx, 'root': 'lock_%s_0' % sx, 'end': 'lock_%s_2' % sx, 'stiffness': 2.0,
                     'drag': 0.55, 'gravity': 0.3, 'radius': 0.02, 'tip': 0.03, 'collide': ['col_chest', 'col_head'],
@@ -172,7 +179,7 @@ def export(built, path):
         clips[a.name].setdefault('loop', False)
     meta = {'note': 'landmarks: model space, bind pose, Godot axes (x east, y up, z toward the camera)',
             'landmarks': lm, 'clips': clips, 'hat_tilt_deg': HAT_TILT_DEG, 'hat_tilt_away_deg': HAT_TILT_AWAY_DEG,
-            'hat_roll_deg': HAT_ROLL_DEG, 'head_turn_bias_deg': HEAD_TURN_BIAS_DEG,
+            'hat_roll_deg': HAT_ROLL_DEG, 'head_turn_bias_deg': HEAD_TURN_BIAS_DEG, 'hat_brim': HAT_BRIM,
             'springs': spring_chains(), 'colliders': colliders()}
     with open(os.path.join(os.path.dirname(path), 'rig.json'), 'w') as f:
         json.dump(meta, f, indent=1)

@@ -79,9 +79,20 @@ def init_poses(arm):
     # cheering: arms flung up and out (a V)
     P['arms_up'] = arms(arm, [('upper_arm', (0.62, -0.15, 0.80)), ('forearm', (0.42, -0.18, 1.0)),
                               ('hand', (0.35, -0.12, 1.0))])
-    # her right hand up to the hat's brim, the left still at her waist
-    P['hat_touch'] = arms(arm, right=[('upper_arm', (-0.62, -0.62, 0.22)), ('forearm', (0.22, -0.30, 1.0)),
-                                      ('hand', (0.30, -0.40, 0.9))])
+    # her right hand up to the hat's brim (up and out to her side, as in the art A_07, A_08: the game's
+    # HatReachModifier puts the hand on the brim itself), the left arm hanging relaxed
+    P['hat_touch'] = arms(arm, left=[('upper_arm', (0.30, 0.04, -1)), ('forearm', (0.16, -0.20, -1)),
+                                     ('hand', (0.10, -0.25, -1))],
+                          right=[('upper_arm', (-0.62, -0.22, 0.75)), ('forearm', (-0.40, -0.25, 0.88)),
+                                 ('hand', (-0.25, -0.30, 0.92))])
+    # startled (ビクッ): arms gone stiff, straight down and a little out from her sides (hands up in
+    # front of her broke into a scatter of navy and cream pixels at native size)
+    P['startle'] = arms(arm, [('upper_arm', (0.45, 0.05, -0.89)), ('forearm', (0.40, -0.05, -0.92)),
+                              ('hand', (0.38, -0.05, -0.93))])
+    # crying: fists up beside the eyes (the anime sob), elbows in front of the chest; the eyes and their
+    # tears stay clear of the hands
+    P['sob'] = arms(arm, [('upper_arm', (0.30, -0.90, 0.30)), ('forearm', (-0.05, -0.30, 0.95)),
+                          ('hand', (-0.10, -0.15, 0.98))])
     # a wave with her right hand
     P['wave'] = arms(arm, right=[('upper_arm', (-0.95, -0.30, 0.12)), ('forearm', (-0.50, -0.30, 0.85)),
                                  ('hand', (-0.45, -0.28, 0.9))])
@@ -128,6 +139,19 @@ def legs_walk(t, heavy=0.0, stride=19.0):
     return p
 
 
+def hair_swing(t, splay, open_amp, sway_amp, back=0.0):
+    """The long hair's two tails in a gait, as targets for their springs (which add the lag): spread
+    apart by `splay`, opening and closing with each step (`open_amp`, twice a cycle), swinging together
+    with the hips' sway (`sway_amp`, once a cycle), streaming behind her by `back` (degrees). The lead,
+    round 3: they must part and swing visibly, the white robe flashing between them. (Hanging bones:
+    +Z swings toward her left, +X forward.)"""
+    op = splay + open_amp * math.cos(2 * TAU * (t - 0.1))
+    sw = sway_amp * math.sin(TAU * (t - 0.15))
+    return {'hair_2_0': (-back, 0, op + sw), 'hair_0_0': (-back, 0, -op + sw),
+            'hair_2_1': (-back * 0.5, 0, 0.4 * (op + sw)), 'hair_0_1': (-back * 0.5, 0, 0.4 * (-op + sw)),
+            'hair_1_0': (-back * 0.6, 0, 0.5 * sw)}
+
+
 def walk_pose(t, heavy=0.0):
     c = math.cos(TAU * t)
     p = legs_walk(t, heavy, stride=19.0 * (1 - 0.35 * heavy))
@@ -149,6 +173,7 @@ def walk_pose(t, heavy=0.0):
     p['chest'] = (1.0 + 6.0 * heavy, 4.0 * c, 0)
     p['neck'] = (-1.0, -2.0 * c, 0)
     p['head'] = (-2.0 - 6.0 * heavy - 2.0 * math.cos(2 * TAU * (t - 0.3)), 0, -1.5 * math.sin(TAU * t))
+    p.update(hair_swing(t, 9.0 * (1 - 0.5 * heavy), 6.0, 7.0 * (1 - 0.4 * heavy), 4.0))
     return p
 
 
@@ -177,6 +202,7 @@ def run_pose(t):
     p['chest'] = (4.0, 6.0 * c, 0)
     p['neck'] = (-4.0, -3.0 * c, 0)
     p['head'] = (-6.0 - 3.0 * math.cos(2 * TAU * (t - 0.45)), 0, 0)
+    p.update(hair_swing(t, 16.0, 8.0, 9.0, 18.0))
     return p
 
 
@@ -243,6 +269,8 @@ def turn_step_pose(t):
         p['shin_' + side] = (-40.0 * lift, 0, 0)
         p['foot_' + side] = (10.0 * lift, 0, 0)
     p['hips@loc'] = (0.0, 0.0, -0.01 * (bump(t, 0.0, 0.2) + bump(t, 0.5, 0.2)))
+    # turning on the spot flings the two tails out
+    p.update(hair_swing(t, 18.0, 5.0, 0.0, 0.0))
     return p
 
 
@@ -304,11 +332,11 @@ def clip_hat(arm):
     """摸笠沿: her right hand goes up to the brim and tips it up; she peers up from under it, grins,
     and lets it go (2.6 s). (The hat's own tilt is the game's; the 'hat' bone here is a small extra
     tip on top of it.)"""
-    up = A.add_pose(P['hat_touch'], stance())
+    up = A.add_pose(P['hat_touch'], stance(), {'shoulder_R': (0, 0, -10)})
     k = [(0, standing()),
          (10, A.add_pose(up, {'head': (-8, 6, 2), 'chest': (-3, 4, 0)})),
-         (16, A.add_pose(up, {'head': (-10, 8, -2), 'chest': (-4, 4, 0), 'hat': (-6, 0, 0)})),
-         (52, A.add_pose(up, {'head': (-9, 10, -4), 'chest': (-4, 5, 0), 'hat': (-6, 0, 0)})),
+         (16, A.add_pose(up, {'head': (-10, 8, -2), 'chest': (-4, 4, 0)})),
+         (52, A.add_pose(up, {'head': (-9, 10, -4), 'chest': (-4, 5, 0)})),
          (64, standing({'head': (-4, 2, 0)})),
          (78, standing())]
     return _keys(arm, 'idle_hat', 78, k)
@@ -373,6 +401,36 @@ def clip_wave(arm):
         keys.append((f, A.add_pose(base, {'forearm_R': (0, 0, 16 if k % 2 == 0 else -16)})))
     keys.append((48, standing()))
     return _keys(arm, 'wave', 48, keys)
+
+
+def clip_startle(arm):
+    """驚く (1.3 s): a jolt, a tiny hop, the arms gone stiff at her sides, the shoulders up, the head
+    back; she stays wide-eyed a moment and settles (the face: surprised)."""
+    jolt = A.add_pose(P['startle'], stance(), {
+        'hips@loc': (0.0, 0.012, 0.018), 'spine': (-7, 0, 0), 'chest': (-6, 0, 0), 'neck': (-3, 0, 0),
+        'head': (-9, 0, 0), 'shoulder_L': (0, 0, 7), 'shoulder_R': (0, 0, -7)})
+    held = A.add_pose(P['startle'], stance(), {
+        'hips@loc': (0.0, 0.008, 0.0), 'spine': (-4, 0, 0), 'chest': (-3, 0, 0), 'head': (-5, 0, 4),
+        'shoulder_L': (0, 0, 4), 'shoulder_R': (0, 0, -4)})
+    k = [(0, standing()), (3, jolt), (7, held), (26, held), (39, standing())]
+    return _keys(arm, 'startle', 39, k)
+
+
+def clip_sob(arm):
+    """泣く (2.6 s): fists up beside the eyes, the head up and tipped, the shoulders hitching with each
+    sob (three), then the hands come down (the face: cry, its tears alternating)."""
+    def fn(t):
+        f = t * 78.0
+        up = ease(f / 8.0) * (1.0 - ease((f - 66.0) / 12.0))
+        hitch = math.sin(TAU * 3.0 * t) * up
+        # the head stays up (bowed, the hat came down over her face and hid the tears)
+        sob = A.lerp_pose(standing(), A.add_pose(P['sob'], stance(), {
+            'spine': (3, 0, 0), 'chest': (2, 0, 0), 'head': (-3, 0, -7)}), up)
+        return A.add_pose(sob, {'shoulder_L': (0, 0, 4.0 * hitch), 'shoulder_R': (0, 0, -4.0 * hitch),
+                                'chest@loc': (0.0, 0.0, 0.012 * max(0.0, hitch))})
+    c = A.Clip(arm, 'sob', 78)
+    c.sample(fn, step=2)
+    return c.finish()
 
 
 def clip_jump(arm):
@@ -467,6 +525,8 @@ def build_all(arm):
     clip_cheer(arm)
     clip_sigh(arm)
     clip_wave(arm)
+    clip_startle(arm)
+    clip_sob(arm)
     clip_jump(arm)
     clip_climb(arm)
     clip_sit(arm)
@@ -477,6 +537,9 @@ CLIP_INFO = {
     'idle': {'loop': True}, 'walk': {'loop': True, 'speed': WALK_SPEED}, 'run': {'loop': True, 'speed': RUN_SPEED},
     'heavy_walk': {'loop': True, 'speed': HEAVY_SPEED}, 'turn_step': {'loop': True}, 'idle_sway': {'loop': True},
     'jump_air': {'loop': True}, 'climb': {'loop': True, 'rise': 0.5}, 'sit_idle': {'loop': True},
+    # the hand on the hat's brim (godot/characters/hat_reach_modifier.gd): frames where the reach
+    # fades in (from, to) and out (from, to)
+    'idle_hat': {'loop': False, 'reach': [8, 15, 50, 60]},
 }
 
 

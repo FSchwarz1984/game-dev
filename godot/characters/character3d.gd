@@ -2,10 +2,11 @@ class_name Character3D
 extends Node3D
 ## A 3D character drawn in the pixel world (docs/knowledge/24-3d-characters.md): the skinned model
 ## from tools/characters3d (glTF + rig.json + face atlas), the character material
-## (shaders/char_toon.gdshader: soft cel light, lean, pixel snap, face stamps; x-ray next pass),
+## (shaders/char_toon.gdshader: cel light in two or three tones, lean, pixel snap, face stamps; x-ray next pass),
 ## continuous facing, an AnimationTree (gait locked to the ground speed, idle variants, actions,
 ## one-shot emotes), spring bones for hair / sleeves / haori / sash, the hat convention
-## (hat_tilt_modifier.gd) and the face (pixel stamps placed on the screen lattice every frame).
+## (hat_tilt_modifier.gd), the hand on the brim (hat_reach_modifier.gd) and the face (pixel stamps
+## placed on the screen lattice every frame).
 ##
 ## The node's position is her feet (the logical ground point); the caller moves it. Interface:
 ##   setup(id)                       load a character (res://characters/<id>/)
@@ -13,7 +14,9 @@ extends Node3D
 ##   face_angle(yaw, instant)        turn to a yaw (radians; 0 toward the camera / south, +pi/2 east)
 ##   set_expression(name, hold)      the face (face.json "expressions"); hold > 0: seconds, then back
 ##   set_talking(on)                 the mouth moves as she talks
-##   play_emote(name)                one-shot acts: tilt, pout, cheer, sigh, wave, stop (its face too)
+##   play_emote(name)                one-shot acts: tilt, pout, cheer, sigh, wave, stop, startle (驚く),
+##                                   sob (泣く), idle_hat (摸笠沿, her signature gesture: the hand on the
+##                                   brim); each with its face
 ##   stop_emote()                    end a one-shot at once (a cut)
 ##   jump(), land()                  the jump's start and landing (the caller moves her through the air,
 ##                                   lifting `position` above `ground_y`)
@@ -37,8 +40,8 @@ const FACE_SIDE := 0.10
 const TURN_RATE := 640.0           # deg/s, the fastest she turns
 const IDLE_VARIANTS := ["idle_look", "idle_sway", "idle_hat"]
 const EMOTE_FACE := {"tilt": "curious", "pout": "pout", "cheer": "happy", "sigh": "sleepy", "idle_hat": "mischief",
-	"idle_look": "neutral", "idle_sway": "smile", "wave": "grin", "stop": ""}
-const EMOTES := ["tilt", "pout", "cheer", "sigh", "wave", "stop"]
+	"idle_look": "neutral", "idle_sway": "smile", "wave": "grin", "stop": "", "startle": "surprised", "sob": "cry"}
+const EMOTES := ["tilt", "pout", "cheer", "sigh", "wave", "stop", "startle", "sob", "idle_hat"]
 
 var char_id := "kasasagi"
 var model: Node3D
@@ -47,6 +50,7 @@ var anim_player: AnimationPlayer
 var tree: AnimationTree
 var springs: SpringBoneSimulator3D
 var hat_mod: HatTiltModifier
+var hat_reach: HatReachModifier
 var head_snap: HeadSnapModifier
 var head_turn: HeadTurnModifier
 var meshes: Array[MeshInstance3D] = []
@@ -83,6 +87,7 @@ var _idle_next := 6.0
 var _idle_variant := ""
 var _variant_left := 0.0
 var _emote := ""
+var _reach_t := -1.0               # seconds into the hand-on-the-brim clip (-1: not playing)
 var _was_moving := false
 var _clip_len := {}
 
@@ -190,6 +195,8 @@ func _setup_animation() -> void:
 	# idle and its variants
 	var idle_x := AnimationNodeTransition.new()
 	idle_x.xfade_time = 0.4
+	# asking for the variant that plays starts it again (a scene repeating a gesture; lab stills)
+	idle_x.allow_transition_to_self = true
 	var idles: Array = ["idle"] + IDLE_VARIANTS
 	for n in idles:
 		idle_x.add_input(n)
@@ -336,6 +343,21 @@ func _setup_hat() -> void:
 	skel.add_child(hat_mod)
 	# the hat turns before the springs run
 	skel.move_child(hat_mod, 0)
+	# the hand on the brim: after the hat's tilt (it reads the tilted brim), before the springs (the
+	# sleeve hangs from the raised arm)
+	var brim: Dictionary = rig_meta.get("hat_brim", {})
+	var arm_bones: Array = brim.get("arm", ["upper_arm_R", "forearm_R", "hand_R"])
+	hat_reach = HatReachModifier.new()
+	hat_reach.name = "HatReach"
+	hat_reach.hat = hb
+	hat_reach.upper = skel.find_bone(String(arm_bones[0]))
+	hat_reach.fore = skel.find_bone(String(arm_bones[1]))
+	hat_reach.hand = skel.find_bone(String(arm_bones[2]))
+	hat_reach.brim_y = float(brim.get("y", -0.124))
+	hat_reach.brim_r = float(brim.get("r", 0.5))
+	hat_reach.hand_len = float(brim.get("hand_len", 0.062))
+	skel.add_child(hat_reach)
+	skel.move_child(hat_reach, 1)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -383,6 +405,8 @@ func play_emote(name: String) -> void:
 	(tree.tree_root.get_node("a_emote") as AnimationNodeAnimation).animation = name
 	tree.set("parameters/emote/request", AnimationNodeOneShot.ONE_SHOT_REQUEST_FIRE)
 	_emote = name
+	if name == "idle_hat":
+		_reach_t = 0.0
 	var f: String = EMOTE_FACE.get(name, "")
 	if f != "":
 		set_expression(f, _clip_len[name] * 0.9)
@@ -458,6 +482,8 @@ func hold_anim(name: String, t := 0.0) -> void:
 		_start_act(name)
 	elif name in IDLE_VARIANTS or name == "idle":
 		tree.set("parameters/idle_x/transition_request", name)
+		if name == "idle_hat":
+			_reach_t = 0.0
 	elif name in EMOTES:
 		play_emote(name)
 
@@ -556,6 +582,8 @@ func _update_motion(dt: float) -> void:
 		elif _idle_t > _idle_next:
 			_idle_variant = IDLE_VARIANTS[randi() % IDLE_VARIANTS.size()]
 			tree.set("parameters/idle_x/transition_request", _idle_variant)
+			if _idle_variant == "idle_hat":
+				_reach_t = 0.0
 			_variant_left = float(_clip_len.get(_idle_variant, 3.0)) * (2.0 if _idle_variant == "idle_sway" else 1.0)
 			var f: String = EMOTE_FACE.get(_idle_variant, "")
 			if f != "":
@@ -579,6 +607,18 @@ func _update_motion(dt: float) -> void:
 			_act = ""
 	_act_k = move_toward(_act_k, 1.0 if _act != "" else 0.0, dt * 8.0)
 	_set_blend("act", _act_k)
+	# the hand on the brim, by the clip's frames (rig.json clips.idle_hat.reach); walking off ends it
+	if hat_reach != null:
+		var want := 0.0
+		if _reach_t >= 0.0:
+			_reach_t += dt
+			var r: Array = rig_meta.get("clips", {}).get("idle_hat", {}).get("reach", [8, 15, 50, 60])
+			var f := _reach_t * 30.0
+			want = smoothstep(float(r[0]), float(r[1]), f) * (1.0 - smoothstep(float(r[2]), float(r[3]), f))
+			want *= 1.0 - _move
+			if f > float(r[3]) or (_move > 0.5 and _emote != "idle_hat"):
+				_reach_t = -1.0
+		hat_reach.weight = want
 	if _emote != "" and not bool(tree.get("parameters/emote/active")):
 		var e := _emote
 		_emote = ""
@@ -608,8 +648,11 @@ var wind := Vector3.ZERO
 func _update_wind() -> void:
 	if springs == null:
 		return
-	# one force for the simulator (Godot 4.7 has a single external force per simulator)
-	springs.external_force = (-_vel + wind) * 0.22
+	# one force for the simulator (Godot 4.7 has a single external force per simulator). The air of
+	# her own speed is barely felt at a walk (her hair swings on its own keys, it does not stream: at
+	# a walk a constant share stood her hair out behind her like a board) and streams it behind a run
+	var k := 0.05 + 0.13 * smoothstep(1.6, 3.6, _vel.length())
+	springs.external_force = -_vel * k + wind * 0.22
 
 
 ## The anchor and lean base every material reads (instance uniforms).

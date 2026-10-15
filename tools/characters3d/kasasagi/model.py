@@ -325,7 +325,9 @@ def coat_back_y(z):
 # left, middle and right, each shaded as its own rounded mass with the darker inner layer showing
 # in the gaps; the middle one ends at the waist, the two outer ones go on to mid-thigh as two tails
 # that swing apart when she walks. (centre f, half width in f, clumps, tip height, tip x)
-HAIR_BUNCHES = [(-0.70, 0.24, 4, 0.30, -0.185), (0.0, 0.17, 3, 0.58, 0.0), (0.70, 0.24, 4, 0.30, 0.185)]
+# The lead, 2026-10-15 (round 3): the two tails further apart and the middle shorter, so the white robe
+# flashes between them as they swing; each bunch hangs on its own spring chain (rigging.HAIR_CHAINS).
+HAIR_BUNCHES = [(-0.70, 0.24, 4, 0.30, -0.205), (0.0, 0.17, 3, 0.62, 0.0), (0.70, 0.24, 4, 0.30, 0.205)]
 
 
 def _bunch_path(cf, f, l, z_end, x_end, off):
@@ -339,7 +341,7 @@ def _bunch_path(cf, f, l, z_end, x_end, off):
     x2 = f * 0.205
     y2 = max(head_point(0.05, t, grow=0.0).y + 0.05, coat_back_y(z2) * (1 - 0.55 * f * f) + off + 0.03)
     z3 = 0.80
-    x3 = f * 0.232
+    x3 = f * 0.222
     y3 = coat_back_y(z3) * (1 - 0.45 * f * f) + off + 0.02
     if z_end < 0.5:
         # the outer bunches: gathered below the waist into a tail
@@ -360,9 +362,9 @@ def _bunch_path(cf, f, l, z_end, x_end, off):
 def _bunch_centre(cf, z, x_end, z_end):
     """x of a bunch's centre line at height z (for its shading)."""
     if z_end < 0.5:
-        table = [(0.30, x_end), (0.56, x_end * 1.02), (0.80, cf * 0.232), (1.02, cf * 0.205), (1.4, cf * 0.15)]
+        table = [(0.30, x_end), (0.56, x_end * 1.02), (0.80, cf * 0.222), (1.02, cf * 0.205), (1.4, cf * 0.15)]
     else:
-        table = [(0.40, cf * 0.2), (0.80, cf * 0.232), (1.02, cf * 0.205), (1.4, cf * 0.15)]
+        table = [(0.40, cf * 0.2), (0.80, cf * 0.222), (1.02, cf * 0.205), (1.4, cf * 0.15)]
     return interp(table, z)
 
 
@@ -393,7 +395,8 @@ def back_hair():
 
         out = Vector((math.cos(t), -math.sin(t), 0.0)).normalized()
         _strand(part, pts, width, thick, nu=18, nv=10, tip='point', up=out, col=lambda u, v: C.HAIR_DEEP,
-                tagf=lambda u, v, f=f: {'seg': 'hair_back', 'u': u, 'x': f, 'inner': True}, aux_extra=0.5)
+                tagf=lambda u, v, f=f: {'seg': 'hair_back', 'u': u, 'x': f, 'inner': True, 'bunch': -1},
+                aux_extra=0.5)
     n_inner = len(part.v)
     owners = []
     for bi, (cf, hw, n, z_end, x_end) in enumerate(HAIR_BUNCHES):
@@ -412,7 +415,8 @@ def back_hair():
             out = Vector((math.cos(t), -math.sin(t), 0.0)).normalized()
             n0 = len(part.v)
             _strand(part, pts, width, thick, nu=18, nv=10, tip='point', up=out, col=lambda u, v: C.HAIR,
-                    tagf=lambda u, v, f=f: {'seg': 'hair_back', 'u': u, 'x': f, 'inner': False},
+                    tagf=lambda u, v, f=f, bi=bi: {'seg': 'hair_back', 'u': u, 'x': f, 'inner': False,
+                                                   'bunch': bi},
                     aux_extra=0.2)
             owners.append((n0, len(part.v), cf, z_end, x_end))
     # shading: each bunch as one rounded mass round its own centre line (the bunches part in light and

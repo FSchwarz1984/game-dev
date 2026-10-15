@@ -7,8 +7,8 @@
 //     from the key; cast shadows (tree dapple, eaves) dim her only to `shadow_dim`;
 //   * the face's features are pixel-art stamps on the screen lattice (char_common.gdshaderinc).
 // Mesh data (tools/characters3d): COLOR.rgb sRGB albedo, COLOR.a AO; UV2.x material id, UV2.y
-// extra (cloth: 1 navy lining / 2 deep cream lining on the back faces; hair: 0.5 inner layer);
-// UV per part (hat: radius fraction, angle fraction).
+// extra (cloth: 1 navy lining / 2 deep cream lining on the back faces; hair: 0.5 inner layer, 0.2
+// long hair); UV per part (hat: radius fraction, angle fraction).
 shader_type spatial;
 render_mode world_vertex_coords, ambient_light_disabled, specular_disabled, fog_disabled, cull_disabled;
 stencil_mode write, compare_always, 3;
@@ -31,7 +31,6 @@ uniform float white_point = 0.62;      // the most light (linear) her brightest 
                                        // composite's S-curve and gain lift the lights ~20 % after this
 uniform float ink_day = 1.25;          // the face's light in full day: the stamps show their own colour there
 uniform float hair_sheen = 1.0;        // the highlight band on the hair
-uniform float self_shadow_dim = 0.9;   // a cast shadow on a surface turned from the real sun (her own)
 uniform int c3_debug = 0;              // 1: the cel tone in grey; 2: the shadow map (lab checks)
 
 // the face (character3d.gd): stamps from an 8x8-cell atlas, placed on the screen lattice
@@ -51,17 +50,6 @@ varying float v_face;
 varying vec3 v_key;     // the key light (view space)
 
 const int CELL = 8;
-
-// The key light (world): the sun's (moon's) east-west side and its height, mirrored onto the camera's
-// side of her. The camera looks north and the sun stands in the north through most of the day; the
-// first key kept the sun's height on the screen, which left every surface facing the camera in the
-// half tone and her whites the colour of the packed earth (her back read as one dark column).
-// Mirrored, she is lit like a sprite: what faces the camera and the sky is lit, the side away from
-// the sun's east or west a half tone, the undersides (the hat's brim, the chin) shade.
-vec3 c3_key_world() {
-	vec3 s = w3_sun_dir;
-	return normalize(vec3(s.x, max(s.y, 0.2), abs(s.z) + 0.35));
-}
 
 // Cel tones (the lead, 2026-10-15: two or three tones per material, like a sprite; the "no stepped
 // light" rule is the scene's light fall-off, not her shading): the face two (nearly all lit), the
@@ -124,8 +112,10 @@ void fragment() {
 	if (mat == CM_HAT_TOP) {
 		alb = hat_top(alb, UV);
 	} else if (mat == CM_HAIR && extra > 0.35) {
-		alb *= 0.55;                      // the inner layer of the long hair: the partings between
-		                                  // the bunches, a clear step darker
+		// the inner layer of the long hair: the partings between the bunches, a clear step darker
+		// below the shoulders; up on the head the gaps keep the hair's own colour (dark slits there
+		// read as holes, or eyes in the back of her head)
+		alb *= mix(0.55, 1.0, smoothstep(0.92, 1.06, v_wu.y - c3_base_y));
 	}
 	// the sheen: the crown's (cap and bangs, extra 0) where the hair turns to the light, and on the
 	// long hair (extra 0.2) a band across the bunches just under the hat, which the partings break
@@ -136,7 +126,8 @@ void fragment() {
 		// the anime highlight band (天使の輪): a pale violet sheen across the hair where it turns
 		// toward the light and up toward the camera; one or two pixels wide on her head
 		vec3 nvh = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
-		vec3 kh = normalize((VIEW_MATRIX * vec4(c3_key_world(), 0.0)).xyz);
+		vec3 svh = normalize((VIEW_MATRIX * vec4(w3_sun_dir, 0.0)).xyz);
+		vec3 kh = normalize(vec3(svh.x, svh.y, abs(svh.z) * 0.55 + 0.5));
 		float facing_key = dot(nvh, normalize(kh + vec3(0.0, 0.0, 1.0)));
 		float band = step(0.82, facing_key) * (1.0 - step(0.95, facing_key));
 		alb = mix(alb, alb * vec3(1.9, 1.8, 2.15) + vec3(0.012, 0.010, 0.020), band * hair_sheen * (1.0 - w3_night * 0.6));
@@ -184,8 +175,9 @@ void fragment() {
 
 	vec3 nv = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	NORMAL = nv;
-	// the key light: the sun's (moon's) side and height, on the camera's side of her
-	vec3 key = normalize((VIEW_MATRIX * vec4(c3_key_world(), 0.0)).xyz);
+	// the key light: the sun's (moon's) side and height, brought round to the front
+	vec3 sv = normalize((VIEW_MATRIX * vec4(w3_sun_dir, 0.0)).xyz);
+	vec3 key = normalize(vec3(sv.x, sv.y, abs(sv.z) * 0.55 + 0.5));
 	v_key = key;
 
 	// ambient: the sky and the ground bounce, continuous; painted shade (hue turned cool, chroma kept)
@@ -248,12 +240,7 @@ void light() {
 		vec3 key = v_key;
 		float ndl = dot(NORMAL, key);
 		float lit = cel(ndl, v_face);
-		// cast shadows: on a surface turned from the real sun the shadow map always reports her own
-		// body (the camera mostly sees that side: the sun stands in the north), so there it dims her
-		// only a little; surfaces toward the sun (the hat's crown, her shoulders) take the world's
-		// shadows in full (the tree's dapple on the hat)
-		float dim = mix(self_shadow_dim, shadow_dim, step(0.1, dot(NORMAL, LIGHT)));
-		float sh = mix(dim, 1.0, ATTENUATION);
+		float sh = mix(shadow_dim, 1.0, ATTENUATION);
 		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * lit * sh * key_gain;
 		if (c3_debug == 2) {
 			DIFFUSE_LIGHT = vec3(0.1 + 0.6 * ATTENUATION) * step(0.0, dot(NORMAL, LIGHT) + 2.0);

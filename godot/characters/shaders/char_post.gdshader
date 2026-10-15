@@ -7,6 +7,11 @@
 //     same rule as the world's outline (post_body.gdshaderinc), drawn on her edge pixels;
 //   * inner lines: where one part of her stands in front of another (a sleeve over the coat, the
 //     hair over the shoulders), a lighter line, so the parts read as drawn shapes;
+//   * the seam: where one of her light pieces lies a little in front of another (a sleeve over the
+//     robe's hem: both light, a few centimetres apart), the one behind gets a one-pixel line a tone
+//     darker along the edge of the one in front (the lead, round 3: in profile the sleeve and the hem
+//     read as one shape). Colour and depth only: the normal-roughness buffer cannot carry an id (the
+//     engine's roughness limiter rewrites it);
 //   * fog: a third of it (character protection: she reads first, in the morning mist too).
 shader_type spatial;
 render_mode unshaded, depth_draw_never, depth_test_disabled, cull_disabled, skip_vertex_transform, fog_disabled, blend_mix, shadows_disabled;
@@ -21,6 +26,10 @@ uniform float inner_gap = 0.07;      // m: a part of her this far behind another
 uniform float sil_amount = 1.0;
 uniform float inner_amount = 0.55;
 uniform float fog_share = 0.33;
+uniform float seam_amount = 0.5;     // the seam: this share of the outline colour (one tone darker)
+uniform float seam_gap = 0.012;      // m: a light neighbour this far in front starts a seam
+uniform float seam_luma = 0.16;      // linear luma above which a pixel of hers counts as light (cream, skin)
+uniform int debug_lines = 0;        // 1: show the seams (checks)
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -66,10 +75,29 @@ void fragment() {
 			inner = 1.0;
 		}
 	}
+	float seam = 0.0;
+	if (sil < 0.5 && inner < 0.5 && w3_luma(col) > seam_luma) {
+		for (int i = 0; i < 4; i++) {
+			vec2 o = dirs[i] * px;
+			float nd = view_depth(uv + o, ip);
+			// a step, not a slope: the neighbour lies in front by more than the surface turns on the
+			// other side (a slope toward the camera, like the hat's top, changes depth every pixel)
+			float jump = c - nd;
+			float slope = abs(c - view_depth(uv - o, ip));
+			if (jump > seam_gap + 1.5 * slope && jump < sil_gap && w3_luma(texture(screen_tex, uv + o).rgb) > seam_luma) {
+				seam = 1.0;
+			}
+		}
+	}
 	if (sil > 0.5) {
 		col = mix(col, line_of(col), sil_amount);
 	} else if (inner > 0.5) {
 		col = mix(col, line_of(col), inner_amount);
+	} else if (seam > 0.5) {
+		col = mix(col, line_of(col), seam_amount);
+	}
+	if (debug_lines == 1) {
+		col = seam > 0.5 ? vec3(1.0, 1.0, 0.0) : (inner > 0.5 ? vec3(0.0, 1.0, 1.0) : col * 0.5);
 	}
 	float raw = texture(depth_tex, uv).r;
 	vec4 vp = ip * vec4(uv * 2.0 - 1.0, raw, 1.0);

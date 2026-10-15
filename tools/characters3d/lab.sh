@@ -6,7 +6,7 @@
 # Log: <out_dir>/log.txt. See docs/knowledge/24-3d-characters.md §verify for the options.
 set -uo pipefail
 GODOT_BIN="${GODOT_BIN:-/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64}"
-PROJ="$(cd "$(dirname "$0")/../../godot" && pwd)"
+PROJ="${C3D_PROJ:-$(cd "$(dirname "$0")/../../godot" && pwd)}"   # C3D_PROJ: another project view
 OUT="${1:?out dir}"; RES="${2:-1920x1080}"
 shift 2 2>/dev/null || shift $#
 [ "${1:-}" = "--" ] && shift

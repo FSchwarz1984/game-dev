@@ -208,7 +208,8 @@ def coat():
         t = (math.pi / 2 + g) + v * (TAU - 2 * g)
         return {'seg': 'coat', 'u': u, 'v': v, 'z': z, 't': t}
 
-    grid(part, nu, nv, pos, close_v=False, col=col, auxf=lambda u, v: (M_CLOTH, LINED_CREAM), tagf=tag)
+    grid(part, nu, nv, pos, close_v=False, col=col, auxf=lambda u, v: (M_CLOTH, LINED_CREAM),
+         tagf=tag)
     # (no navy bands on the front edges: the art's panels are white to the edge; navy there joined
     # the trousers into one dark column down her middle)
     return part
@@ -227,8 +228,10 @@ def tamoto_corners(side):
     # side, beyond the long hair from behind): the outer edge 0.40 m from her middle
     top_o = el + Vector((side * 0.070, 0.016, -0.010))
     top_i = wr + Vector((side * 0.004, -0.006, -0.040))
-    bot_o = Vector((side * 0.400, 0.000, 0.385))
-    bot_i = Vector((side * 0.140, -0.120, 0.415))
+    # the lower corners flare: the outer one out, the inner one forward past the robe's front (the
+    # lead, round 3: in profile the sleeve's mouth must stand out of the hem, a flag, not a panel of it)
+    bot_o = Vector((side * 0.415, 0.030, 0.385))
+    bot_i = Vector((side * 0.140, -0.235, 0.425))
     return top_o, top_i, bot_o, bot_i
 
 
@@ -308,8 +311,8 @@ def sleeve(side):
         x = 0.5 - 0.5 * math.cos(a)
         return {'seg': 'tamoto', 'side': side, 'u': u, 'x': x}
 
-    rows = grid(flag, 14, 28, fpos, close_v=True, col=lambda u, v: C.CREAM, auxf=lambda u, v: (M_CLOTH, LINED),
-                tagf=ftag)
+    rows = grid(flag, 14, 28, fpos, close_v=True, col=lambda u, v: C.CREAM,
+                auxf=lambda u, v: (M_CLOTH, LINED), tagf=ftag)
     # close the bag's bottom
     bc = sum((flag.v[i] for i in rows[-1]), Vector()) / len(rows[-1])
     cap(flag, rows[-1], bc, col=C.CREAM_EDGE, aux=(M_CLOTH, LINED), flip=False)

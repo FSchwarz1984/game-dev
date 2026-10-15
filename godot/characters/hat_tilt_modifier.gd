@@ -39,7 +39,8 @@ func _process_modification() -> void:
 	var face_cam := 0.5 + 0.5 * fwd.z
 	# looking up tips the hat further back while she faces the camera; facing away it keeps its tilt
 	# (tipped toward the camera it would cover her back as a full disc)
-	var t := clampf(lerpf(tilt_away, tilt, face_cam) + look_up * pitch_share * maxf(fwd.z, 0.0),
+	# (looking down never brings the brim down over her face: crying, bowing, she must still be read)
+	var t := clampf(lerpf(tilt_away, tilt, face_cam) + maxf(look_up, 0.0) * pitch_share * maxf(fwd.z, 0.0),
 			deg_to_rad(8.0), deg_to_rad(68.0))
 	last_t = t
 	last_fwd = fwd

@@ -43,6 +43,13 @@ const SHOWS := {
 		[0.0, "expr", "neutral"], [1.6, "variant", "idle_look"], [4.6, "variant", "idle"], [4.8, "emote", "tilt"],
 		[6.4, "emote", "pout"], [8.4, "emote", "cheer"], [10.2, "emote", "wave"], [11.8, "variant", "idle_hat"],
 		[14.6, "variant", "idle"], [15.0, "end"]],
+	# the lead's round-3 list in one take (15 s): idle while talking, the mischief, surprise, crying,
+	# the wave, the hand on the brim
+	"acts": [
+		[0.0, "expr", "neutral"], [0.3, "talk", true], [2.8, "talk", false],
+		[3.0, "emote", "tilt"], [3.0, "hold_expr", "mischief", 1.9],
+		[5.2, "emote", "startle"], [7.0, "emote", "sob"], [10.0, "expr", "neutral"],
+		[10.2, "emote", "wave"], [12.2, "emote", "idle_hat"], [15.2, "end"]],
 	# the tails of "emotes" and "moves" as their own short takes
 	"emotes2": [
 		[0.0, "expr", "neutral"], [0.2, "talk", true], [2.2, "talk", false], [2.4, "variant", "idle_hat"],
@@ -111,6 +118,8 @@ func _ready() -> void:
 	ch.name = "Character"
 	pv.world_root.add_child(ch)
 	ch.setup(String(args.get("char", "kasasagi")))
+	if ch.skel != null:
+		print("BONES %d CLIPS %d" % [ch.skel.get_bone_count(), ch._clip_len.size()])
 	if args.has("nosprings") and ch.springs != null:
 		ch.springs.active = false
 	if args.has("spring_test") and ch.springs != null:
@@ -129,6 +138,14 @@ func _ready() -> void:
 			var nv := kv.split(":")
 			var v: Variant = int(nv[1]) if nv[0] == "c3_debug" else float(nv[1])
 			ch.mat.set_shader_parameter(nv[0], v)
+	if args.has("post"):
+		# --post=name:value,...: the characters' outline pass (char_post.gdshader) uniforms (checks)
+		for q in pv._post_quads:
+			if String(q.name) == "Post_post_char":
+				for kv in String(args["post"]).split(","):
+					var nv := kv.split(":")
+					var v: Variant = int(nv[1]) if nv[0].begins_with("debug") else float(nv[1])
+					(q.material_override as ShaderMaterial).set_shader_parameter(nv[0], v)
 	if args.has("hat") and ch.hat_mod != null:
 		# --hat=tilt[,tilt_away[,roll]] degrees: try the hat convention's numbers
 		var hp := String(args["hat"]).split(",")
@@ -184,8 +201,11 @@ func _plan() -> void:
 	if args.has("turn"):
 		var tp := String(args["turn"]).split(":")
 		var hours := float(tp[1]) if tp.size() > 1 else env.hours
-		for k in 24:
-			_queue.append(["still", tp[0], "%d,%s" % [k * 15, String.num(hours, 2)]])
+		# --turn_step=deg: the stills' spacing (15); --spin_only: the continuous turn alone
+		var step := int(args.get("turn_step", "15"))
+		if not args.has("spin_only"):
+			for k in 360 / step:
+				_queue.append(["still", tp[0], "%d,%s" % [k * step, String.num(hours, 2)]])
 		_queue.append(["spin", tp[0], hours])
 	if args.has("exprs"):
 		var ep := String(args["exprs"]).split(":")
@@ -271,6 +291,8 @@ func _do_still(dir: String, spec: String) -> void:
 	print("STILL ", _pending_still)
 	if ch.hat_mod != null:
 		print("  hat t=%.1f fwd=%s look_up=%.1f" % [rad_to_deg(ch.hat_mod.last_t), ch.hat_mod.last_fwd, rad_to_deg(ch.hat_mod.last_look_up)])
+	if ch.hat_reach != null and ch.hat_reach.weight > 0.0:
+		print("  reach w=%.2f tip=%.1f miss=%.3f" % [ch.hat_reach.weight, rad_to_deg(ch.hat_reach.last_tip), ch.hat_reach.last_miss])
 	_pending_still = ""
 
 
