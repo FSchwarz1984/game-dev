@@ -45,7 +45,7 @@ func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> vo
 	var piv := Vector2i(meta["pivot"][0], meta["pivot"][1])
 	var file: String = sheet["file"]
 	var mid: String = MODELS.get(id, "")
-	if mid != "" and ResourceLoader.exists(PixelView3D.CHAR3D) and ResourceLoader.exists("res://characters/%s" % mid) \
+	if mid != "" and ResourceLoader.exists(PixelView3D.CHAR3D) and FileAccess.file_exists("res://characters/%s/rig.json" % mid) \
 			and not OS.get_cmdline_user_args().has("--sprites"):
 		model = (load(PixelView3D.CHAR3D) as GDScript).new()
 		model.name = "Model_" + mid

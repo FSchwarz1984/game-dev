@@ -1924,7 +1924,7 @@
     "life",
     "bridge"
    ],
-   "notes": "A plank bridge 2.8 x 1.25 m over a small stream (long axis z); place with hang ~0.5 so the deck (0.17 m over the origin) sits on the banks.",
+   "notes": "A plank bridge 3.6 x 1.25 m over a small stream (long axis z); place with hang ~0.7 so the deck (0.17 m over the origin) sits on the banks.",
    "anchors": {
     "perch": [
      [
@@ -1942,9 +1942,9 @@
    "category": "props",
    "height": 0.32,
    "size": [
-    1.45,
+    1.42,
     0.82,
-    2.82
+    3.67
    ],
    "scene": "res://world3d/assets/props/itabashi/itabashi.tscn"
   },

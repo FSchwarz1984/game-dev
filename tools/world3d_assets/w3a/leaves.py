@@ -566,3 +566,20 @@ def pine_tufts(W, H, seed, n=None):
                 v = TOP if t > 0.6 and math.sin(a) < -0.3 else (BODY if t > 0.2 else SEP)
                 c.put(px, py, v, i + t * 0.1)
     return c.finish()
+
+
+def calm(tile, k_l=0.74, k_c=0.9):
+    """Compress a tile's value range about its mean (CIELAB L*) and a little of its chroma: vegetation
+    stays under the characters and interactables in contrast (reading order, CLAUDE.md §3)."""
+    from skimage import color
+    t = tile.copy()
+    a = t[..., 3] > 0
+    if a.sum() < 2:
+        return t
+    lab = color.rgb2lab(t[..., :3].astype(np.float64) / 255.0)
+    Lm = float(lab[..., 0][a].mean())
+    lab[..., 0] = np.where(a, Lm + (lab[..., 0] - Lm) * k_l, lab[..., 0])
+    lab[..., 1:] = np.where(a[..., None], lab[..., 1:] * k_c, lab[..., 1:])
+    rgb = np.clip(color.lab2rgb(lab), 0, 1)
+    t[..., :3] = np.where(a[..., None], np.round(rgb * 255), t[..., :3]).astype(np.uint8)
+    return t

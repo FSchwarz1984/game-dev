@@ -4,6 +4,8 @@ extends Node3D
 ## plantain, dwarf bamboo, pampas grass and the late-summer flowers, as pixel-art cards baked by the
 ## terrain generator (tools/world3d/w3terrain/cover.py: plant communities, species clumped by noise
 ## and mixing along their edges, every clump its own tile, size, mirror, tint and wind phase).
+## Round 4b: laid out in clumps with open ground between (成団、留白), weeds along the feet of walls,
+## fences and posts; cover.bin is gzip-compressed (read_blob inflates it, stonework.gd uses it too).
 ## Loaded here from terrain/<name>/cover.bin, one mesh per 16 m chunk and layer, drawn with the
 ## renderer's outline-less foliage material in card mode (lean 0: the cards stand on the ground at
 ## their root). The 'low' layer casts no shadow; the 'tall' layer (pampas grass, ferns, dwarf

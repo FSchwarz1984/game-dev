@@ -28,7 +28,7 @@ const KEYS := [
 	[0.0, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[4.4, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[5.4, Color(0.95, 0.62, 0.58), 0.35, Color(0.22, 0.24, 0.36), Color(0.07, 0.07, 0.07), Color(0.45, 0.42, 0.52), Color(0.02, 0.012, 0.04), Color(1.02, 0.99, 1.02), 0.92, Color(-0.004, 0.002, 0.02), Color(0.02, 0.01, 0.0), 0.6],
-	[6.4, Color(1.0, 0.80, 0.60), 1.6, Color(0.60, 0.67, 0.77), Color(0.15, 0.17, 0.11), Color(0.80, 0.78, 0.74), Color(0.010, 0.012, 0.016), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
+	[6.4, Color(1.0, 0.80, 0.60), 2.0, Color(0.60, 0.67, 0.77), Color(0.15, 0.17, 0.11), Color(0.80, 0.78, 0.74), Color(0.010, 0.012, 0.016), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
 	[8.0, Color(1.0, 0.92, 0.80), 1.75, Color(0.52, 0.66, 0.88), Color(0.16, 0.20, 0.12), Color(0.80, 0.84, 0.86), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.01), 1.03, Color(-0.012, 0.004, 0.02), Color(0.018, 0.012, 0.0), 0.0],
 	[12.0, Color(1.0, 0.95, 0.88), 1.8, Color(0.54, 0.68, 0.87), Color(0.17, 0.21, 0.12), Color(0.78, 0.85, 0.90), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.02), 1.04, Color(-0.012, 0.005, 0.02), Color(0.012, 0.010, 0.0), 0.0],
 	[15.5, Color(1.0, 0.92, 0.80), 1.8, Color(0.54, 0.65, 0.86), Color(0.17, 0.20, 0.12), Color(0.80, 0.80, 0.80), Color(0.012, 0.010, 0.022), Color(1.03, 1.02, 1.0), 1.03, Color(-0.012, 0.004, 0.022), Color(0.02, 0.012, 0.0), 0.0],
@@ -275,7 +275,8 @@ func set_time(h: float) -> void:
 	c.set_shader_parameter("contrast", lerpf(0.16, 0.08, night) * (1.0 - 0.5 * rk))
 	# exposure: a low sun lights the ground at a grazing angle; the eye (and a camera) open up for it
 	var el_k := 1.0 - smoothstep(0.25, 0.75, maxf(dir.y, 0.0))
-	c.set_shader_parameter("exposure", (1.0 + 0.6 * el_k * (1.0 - night)) * (1.0 + 0.12 * rk))
+	# (the night and the rain open up a little too: the eye adapts; what she must see stays readable)
+	c.set_shader_parameter("exposure", (1.0 + 0.6 * el_k * (1.0 - night)) * (1.0 + 0.12 * rk) * (1.0 + 0.25 * night) * (1.0 + 0.15 * rain))
 
 
 ## Where she stands, in the barrier's terms (0 outside .. 1 inside): the frame's look follows.

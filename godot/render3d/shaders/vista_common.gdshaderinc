@@ -295,10 +295,10 @@ bool v_past(vec3 wp, vec3 cam, vec2 frag) {
 
 // the toon sun of the vista: three bands, the painted shade of pixel_toon (w3_ambient); the band
 // seams scattered on cells fixed to the world (about a pixel there)
+// (the name is old: since round 4 the sun on the vista's land is continuous, a wrapped Lambert, and
+// its shadows soft-edged, like the top-down world's)
 vec3 v_sun_bands(vec3 alb, vec3 n, vec3 l, vec3 light_col, float att, vec3 wp, vec3 cam) {
-	float ndl = dot(n, l);
-	vec2 cell = v_dir_cell(wp, cam);
-	float th = (w3_hash(cell * 1.13 + 7.1) - 0.5) * 0.05;
-	float lvl = ndl > 0.62 + th ? 1.0 : (ndl > 0.3 + th ? 0.78 : (ndl > 0.04 + th ? 0.52 : 0.0));
-	return alb * w3_lit_tint * light_col / W3_PI * lvl * step(0.5, att);
+	// (about the old bands' levels on average: 0.6 at a third lit, 0.9 at two thirds, 1 facing it)
+	float lvl = smoothstep(-0.25, 0.75, dot(n, l));
+	return alb * w3_lit_tint * light_col / W3_PI * lvl * att;
 }

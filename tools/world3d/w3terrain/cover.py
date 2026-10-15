@@ -94,21 +94,7 @@ CARDS_PER_M2 = {"fern": 7.0, "sasa": 8.0, "susuki": 5.0, "long": 9.0, "moss": 12
 CARDS_PER_M2_DEFAULT = 13.0
 
 
-def calm(tile, k_l=0.74, k_c=0.9):
-    """Compress a tile's value range about its mean (CIELAB L*) and a little of its chroma: vegetation
-    stays under the characters and interactables in contrast (reading order, CLAUDE.md §3)."""
-    from skimage import color
-    t = tile.copy()
-    a = t[..., 3] > 0
-    if a.sum() < 2:
-        return t
-    lab = color.rgb2lab(t[..., :3].astype(np.float64) / 255.0)
-    Lm = float(lab[..., 0][a].mean())
-    lab[..., 0] = np.where(a, Lm + (lab[..., 0] - Lm) * k_l, lab[..., 0])
-    lab[..., 1:] = np.where(a[..., None], lab[..., 1:] * k_c, lab[..., 1:])
-    rgb = np.clip(color.lab2rgb(lab), 0, 1)
-    t[..., :3] = np.where(a[..., None], np.round(rgb * 255), t[..., :3]).astype(np.uint8)
-    return t
+calm = LV.calm
 
 
 FLOWER_SPECIES = ("kikyo", "ominaeshi", "hagi", "nadeshiko", "tsuyukusa", "tanpopo")

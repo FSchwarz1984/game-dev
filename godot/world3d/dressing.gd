@@ -87,8 +87,8 @@ func _prop(e: Dictionary) -> void:
 	placed[String(e.get("id", nm))] = [Vector3(pos.x, gy, pos.z), yaw]
 	if e.has("light"):
 		var l: Array = e["light"]
+		# (the lamps light the real, un-leaned place: no lean correction here)
 		var lp := pos + Vector3(0.0, float(l[0]), 0.0)
-		lp.z -= lean_k * maxf(lp.y - gy, 0.0) * 0.0
 		_light(lp + Vector3(0, 0, 0.2), Color(1.0, 0.68, 0.36), float(l[1]), float(l[2]))
 		_lamp_count += 1
 	if nm == "offering_box" or a.get("anchors", {}).has("glint"):

@@ -320,7 +320,7 @@ def itabashi(out):
     so it sits on the banks over the stream bed)."""
     R = rng(8381)
     P = []
-    L_, W_ = 2.8, 1.25
+    L_, W_ = 3.6, 1.25
     for x in (-0.5, 0.5):
         pc = cyl((x, 0.0, -L_ / 2), (x + R.normal(0, 0.02), 0.01, L_ / 2), 0.13, BARK, n=7)
         pc.pattern, pc.amount, pc.seed = K.PAT['bark'], 0.6, int(R.integers(0, 1 << 20))
@@ -345,7 +345,7 @@ def itabashi(out):
             P.append(cyl((x, -0.5, zz), (x + R.normal(0, 0.02), 0.32, zz), 0.045, WOOD, n=5))
     prop = K.Prop('itabashi', 8381).add(P)
     cat = {'footprint': [], 'tags': ['life', 'bridge'],
-           'notes': 'A plank bridge 2.8 x 1.25 m over a small stream (long axis z); place with hang ~0.5 so the deck '
+           'notes': 'A plank bridge 3.6 x 1.25 m over a small stream (long axis z); place with hang ~0.7 so the deck '
                     '(0.17 m over the origin) sits on the banks.',
            'anchors': {'perch': [[-0.66, 0.34, -1.3], [0.66, 0.34, 1.3]]}}
     return export_prop(out, 'itabashi', 'props', prop, cat, porosity=0.9, far=False, budget=1600)

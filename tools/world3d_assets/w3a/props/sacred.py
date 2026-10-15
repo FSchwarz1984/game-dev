@@ -131,7 +131,7 @@ def waraji(seed, L=1.9, W=0.82):
         w = W / 2 * (0.86 + 0.14 * np.clip((q[..., 1] + L / 2) / L, 0, 1))
         d = K.sd_box(np.stack([q[..., 0] * (W / 2) / np.maximum(w, 1e-3), q[..., 1], q[..., 2]], -1), (W / 2, L / 2, T / 2), r=0.11)
         return d + (fbm3(Q[..., 0] * 9, Q[..., 1] * 9, Q[..., 2] * 9, 2, seed) - 0.5) * 0.012
-    pc = K.sdf_piece(sole, (-W / 2 - 0.03, -L - 0.03, -T / 2 - 0.03), (W / 2 + 0.03, 0.03, T / 2 + 0.03), straw, h=0.03, tris=520,
+    pc = K.sdf_piece(sole, (-W / 2 - 0.03, -L - 0.03, -T / 2 - 0.03), (W / 2 + 0.03, 0.03, T / 2 + 0.03), straw * 0.86, h=0.03, tris=360,
                      pattern='plain', amount=0.0, var=0.05, seed=seed + 1)
 
     def weave(P_, N_):
@@ -146,15 +146,29 @@ def waraji(seed, L=1.9, W=0.82):
     pc.shade = weave
     P = [pc]
     rope_c = K.col('#9c8752')
+    # the weft as real ribs across the sole's face (the toon light draws each one lit on top, dark
+    # underneath: woven straw reads at 30 px per metre; vertex shading could not)
+    y = -0.1
+    k = 0
+    while y > -L + 0.08:
+        t = (-y) / L
+        hw = W / 2 * (0.86 + 0.14 * (1 - t)) - 0.04
+        rib = K.rod([[-hw, y, T / 2 + 0.004], [0.0, y - 0.006, T / 2 + 0.02], [hw, y, T / 2 + 0.004]], 0.024,
+                    straw * (0.92 if k % 2 else 1.04), n=4, cap=False, step=0.3, var=0.04, seed=seed + 30 + k)
+        rib.pattern, rib.amount = K.PAT['thatch'], 0.2
+        P.append(rib)
+        y -= 0.1
+        k += 1
     # the toe loop (前緒) at the top and the side loops (乳), the tying cords hanging loose
     P.append(rope([[0.0, -0.05, T / 2 + 0.02], [-0.07, -0.18, T / 2 + 0.07], [0.0, -0.3, T / 2 + 0.05], [0.07, -0.18, T / 2 + 0.07],
                    [0.0, -0.05, T / 2 + 0.02]], 0.03, seed + 2, rope_c))
     for sgn in (-1, 1):
-        for y in (-0.55, -0.95):
+        for y in (-0.5, -0.95):
             x0 = sgn * (W / 2 - 0.02)
-            P.append(rope([[x0, y + 0.06, 0.0], [x0 + sgn * 0.08, y, 0.05], [x0, y - 0.06, 0.0]], 0.022, seed + 3, rope_c))
-        P.append(rope([[sgn * (W / 2 - 0.02), -0.55, 0.04], [sgn * (W / 2 + 0.1), -0.9, 0.1], [sgn * (W / 2 + 0.05), -1.35, 0.08],
-                       [sgn * (W / 2 - 0.05), -1.6, 0.06]], 0.018, seed + 4, rope_c))
+            P.append(rope([[x0, y + 0.1, 0.0], [x0 + sgn * 0.16, y, 0.05], [x0, y - 0.1, 0.0]], 0.032, seed + 3, rope_c))
+        # the long tying cords hang loose past the heel
+        P.append(rope([[sgn * (W / 2 + 0.1), -0.5, 0.06], [sgn * (W / 2 + 0.2), -1.0, 0.12], [sgn * (W / 2 + 0.12), -1.6, 0.1],
+                       [sgn * (W / 2 - 0.02), -2.15, 0.08]], 0.03, seed + 4, rope_c))
     return P
 
 

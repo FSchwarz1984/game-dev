@@ -68,7 +68,9 @@ void fragment() {
 	v_alb = alb;
 	// leaves in the sun: quieter, a little darker than a surface (the world's foliage, v1.4)
 	vec3 lab = w3_lin_to_oklab(alb);
-	v_alb_sun = (leaf > 0.5 && lab.y < 0.0) ? max(w3_oklab_to_lin(vec3(lab.x, lab.yz * 0.72)), vec3(0.0)) * 0.88 : alb;
+	// (round 4: the baked leaves now carry their painted colour, lighter than before the sRGB fix;
+	// in the sun they are held a little lower and quieter so a sunlit hillside never goes lime)
+	v_alb_sun = (leaf > 0.5 && lab.y < 0.0) ? max(w3_oklab_to_lin(vec3(lab.x * 0.97, lab.yz * 0.66)), vec3(0.0)) * 0.8 : alb;
 	v_leaf = leaf;
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	ALBEDO = vec3(1.0);
@@ -78,11 +80,12 @@ void fragment() {
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
+		// continuous (round 4): a wrapped light, the leaves facing the sun a touch brighter
 		float ndl = dot(NORMAL, LIGHT);
-		float band = ndl > 0.42 ? 1.0 : (ndl > 0.06 ? 0.62 : 0.0);
+		float band = w3_wrap(ndl, 0.25);
 		vec3 c = v_alb_sun * w3_lit_tint * LIGHT_COLOR / W3_PI * band;
-		if (v_leaf > 0.5 && ndl > 0.8) {
-			c *= vec3(1.13, 1.12, 1.06);
+		if (v_leaf > 0.5) {
+			c *= mix(vec3(1.0), vec3(1.13, 1.12, 1.06), smoothstep(0.65, 0.95, ndl));
 		}
 		DIFFUSE_LIGHT += c * v_air_keep(v_wp, eye, FRAGCOORD.xy);
 	}

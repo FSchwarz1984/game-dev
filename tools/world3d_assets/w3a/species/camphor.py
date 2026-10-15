@@ -597,7 +597,11 @@ def leaf_tiles():
     for d in range(8):
         specs[f'spray{d}'] = [(LV.spray, dict(W=18, seed=S + 400 + d * 10, direction=-d * math.pi / 4, n_twigs=3,
                                                gloss=0.15, reach=0.46))]
-    return FO.build_tiles(specs)
+    atlas, rects, sets = FO.build_tiles(specs)
+    # calmer leaf tiles (round 4b): the clumps carry the light and shade, the tiles' own detail stays
+    # quiet (the crown top read as noise by day)
+    atlas = LV.calm(atlas, 0.78, 0.95)
+    return atlas, rects, sets
 
 
 def _tint(hexcol, body=LV.BODY):
