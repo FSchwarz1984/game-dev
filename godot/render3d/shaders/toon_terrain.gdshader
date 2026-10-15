@@ -37,13 +37,15 @@ uniform vec2 g_litter = vec2(65.0, 11.0);
 uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
-uniform float lush : hint_range(0.0, 1.0) = 0.45;            // fresh greens over the palette (w3_lush)
+uniform float lush : hint_range(0.0, 1.0) = 0.2;             // fresh greens over the palette (w3_lush)
 uniform float dry_bias = 0.12;                              // raises the dry-grass threshold (fewer withered patches)
+uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;    // how much of the painted detail the shade drops
 
 varying vec3 v_wp;
 varying vec3 v_wn;
 varying vec2 v_cell;
 varying float v_fleck;
+varying vec3 v_detail;      // detailed albedo / the shade's flattened albedo (light() restores the detail)
 
 const float GC = 7.0;      // glyph cell, native px
 
@@ -136,11 +138,13 @@ void fragment() {
 	float mstep = floor(macro + 0.5 + (stip - 0.5) * 0.3);
 	float row;
 	float tone;
+	float base_tone = -100.0;     // the tone before the painted grain (grass): the shade keeps only this
 	float porous = 0.8;
 	if (mat == 0) {
 		float dry = e3.g + (w3_fbm(v_wp.xz / 3.0 + 7.0) - 0.5) * 0.25;
 		row = dry > 0.5 + dry_bias + (stip - 0.5) * 0.2 ? 1.0 : 0.0;   // dry grass, stippled edge
 		tone = 3.6 + mstep;
+		base_tone = tone;
 		// painted grain: single darker blades and a few lit ones scattered through the sward
 		float gr = w3_hash(cell * 0.73 + 17.0);
 		tone += gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0);
@@ -219,15 +223,20 @@ void fragment() {
 			g_acc = int(gt.g * 255.0 + 0.5) - 1;
 		}
 	}
+	// the flat colour of the ground here (its macro tone, without the grain and the glyphs): what
+	// the shade shows (big masses of light and shade, detail in the light; G5R2 review)
+	vec3 flat_alb = pal(row, base_tone > -50.0 ? base_tone : tone);
 	if (hit && g_acc >= 0) {
 		alb = accent(g_acc);
 	} else {
 		float t = tone + (hit ? g_tone : 0.0);
 		alb = pal(row, t);
-		// grass, dry grass and moss: fresh greens (w3_lush)
-		if (row < 1.5 || abs(row - 5.0) < 0.5) {
-			alb = w3_lush(alb, row > 0.5 && row < 1.5 ? lush * 0.7 : lush);
-		}
+	}
+	// grass, dry grass and moss: fresh greens (w3_lush)
+	if (row < 1.5 || abs(row - 5.0) < 0.5) {
+		float lk = row > 0.5 && row < 1.5 ? lush * 0.7 : lush;
+		if (!(hit && g_acc >= 0)) alb = w3_lush(alb, lk);
+		flat_alb = w3_lush(flat_alb, lk);
 	}
 
 	// ---- under water: wet, dark, a little green (the stream bed, the pool's floor)
@@ -269,8 +278,13 @@ void fragment() {
 		v_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
 	}
 	v_cell = cell;
-	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times this albedo and AO
-	ALBEDO = alb;
+	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times ALBEDO and AO: the shade
+	// gets the flattened colour (shade_flatten of the detail removed); light() puts the detail back
+	// into the direct light (v_detail = detailed / flattened), so detail shows where the sun falls
+	flat_alb = w3_wetten(flat_alb, porous);
+	vec3 a_shade = mix(alb, flat_alb, shade_flatten);
+	v_detail = alb / max(a_shade, vec3(1e-4));
+	ALBEDO = a_shade;
 	AO = ao;
 	AO_LIGHT_AFFECT = 0.0;
 }
@@ -278,8 +292,8 @@ void fragment() {
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		float sh = max(ATTENUATION, v_fleck * 0.85);
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, sh, 0.15);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, sh, 0.15) * v_detail;
 	} else {
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail;
 	}
 }

@@ -26,3 +26,8 @@ tools/world3d_assets/out/
 
 # 3D terrain generator intermediates (rebuilt by tools/world3d); finished data lives in godot/world3d
 tools/world3d/out/
+
+# Large generated terrain data (cover cards and road meshes, about 35 MB), rebuilt by tools/world3d.
+# Kept out of git until the scene agent makes them compact or generated at build time (lead, 2026-10-15).
+godot/world3d/terrain/saddle/cover.bin
+godot/world3d/terrain/saddle/roads.bin
