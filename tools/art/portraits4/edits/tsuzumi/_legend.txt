@@ -1,0 +1,28 @@
+# Edit keys for Kasasagi (id tsuzumi). Lower case = face keys shared by all three (same meaning, own colours).
+# Skin and lines are her measured palette (build.py measure_palette); tears, blush and marks are added colours.
+s $fee7d7  skin light
+t $fddfcd  skin
+u $f1c8b7  skin shade
+U $e6b2a1  skin deep shade
+q $8a4a4c  mouth / skin line
+Q $c98f86  soft line (mouth ends)
+m $5a2430  mouth inside
+n $d9707c  tongue
+y $fff8f2  teeth
+k $201111  lash ink
+K $443536  lash, lighter
+w $fbede4  eye white
+v $cdbfbe  eye white in shadow
+E $4f4757  iris dark
+e $7b7385  iris
+i $a69fae  iris light
+l $ffffff  glint
+c $eef9ff  tear light
+C $a8d9f2  tear
+z $5f9fd0  tear edge
+b $f5a3a0  blush
+p $e57683  blush hatch
+x $e23b4e  anger mark
+X $931f35  anger mark dark
+h $4a3c51  hair (bangs) mid
+H $2a202d  hair dark

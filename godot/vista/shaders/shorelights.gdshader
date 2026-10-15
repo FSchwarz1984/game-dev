@@ -1,5 +1,5 @@
 // The sky shore's lights (src/vista/south.js shoreGen + drawShoreLights), all faint pale jade:
-//   0 its town lamps and lit windows (still)        1 glints running up its rivers (away from us)
+//   0 its town lamps and lit windows (still)        1 glints running down its rivers, toward the gate
 //   2 the dance ring, dancers passing the lanterns   3 the yagura at its centre   4 lantern strings
 //   5 the gate's mouth: brighter with what goes in (inflow), and here also a flash for every light
 //     that arrives (one at a time, then more and more), pushed into HDR so it blooms
@@ -34,8 +34,13 @@ void vertex() {
 		a = pa * smoothj(haze_edge + 2.0, haze_edge - 10.0, pos.y) * (1.0 - smoothj(30.0, 75.0, pb) * 0.5);
 		if (a < 0.03) a = 0.0;
 	} else if (type < 1.5) {
-		// river glints: pa = u, pb = river index, pc = Z
-		float k = sin(pa * 0.9 - t * 1.6 + pb * 2.1);
+		// river glints: pa = u (along the river from the gate's foot, u = 0, out to its far ranges), pb =
+		// river index, pc = Z. That land's gravity pulls away from us, so its high ground is what hangs
+		// furthest down toward us: its far ranges (depth 2.6-7.5 at the rivers' far ends) above the
+		// lowland under the gate (0.06-0.17). Its rivers run from the ranges down to that lowland, toward
+		// u = 0: on screen, up toward its ground. The crests move to smaller u (JS HEAD ran them away from
+		// the gate, down the screen, the way our own water falls: reversed, G5R2-4; knowledge/14 §7.9).
+		float k = sin(pa * 0.9 + t * 1.6 + pb * 2.1);
 		a = k < 0.82 ? 0.0 : (k - 0.82) / 0.18 * (1.0 - smoothj(30.0, 70.0, pc) * 0.6);
 	} else if (type < 2.5) {
 		a = 0.6 + 0.4 * sin(pa * 2.0 - t * 1.3);

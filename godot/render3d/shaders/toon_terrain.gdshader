@@ -4,10 +4,11 @@
 // ragged, pixel-scale borders), takes a clustered tone from its material's palette ramp, and may be
 // covered by a hand-drawn glyph (tuft, pebble, leaf, crack, flower) anchored on the screen-texel
 // lattice and chosen by its anchor's material, so tufts overhang a path's edge like painted sprites.
-// The light model has four sun bands (relief reads through slope shading) with world-anchored
-// dithered seams, crisp cast shadows, quantised lanterns and a hemisphere ambient with AO.
+// The light is continuous (round 4): a wrapped sun (relief reads through slope shading), crisp cast
+// shadows with sun flecks in the canopy's shade, the engine's ambient (sky colour, VoxelGI, SSAO)
+// with the splat's AO, the lanterns as engine lights.
 shader_type spatial;
-render_mode world_vertex_coords, ambient_light_disabled, specular_disabled, fog_disabled, cull_back;
+render_mode world_vertex_coords, specular_disabled, cull_back;
 stencil_mode write, compare_always, 1;
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
@@ -36,10 +37,11 @@ uniform vec2 g_litter = vec2(65.0, 11.0);
 uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
+uniform float lush : hint_range(0.0, 1.0) = 0.65;            // fresh greens over the palette (w3_lush)
+uniform float dry_bias = 0.12;                              // raises the dry-grass threshold (fewer withered patches)
 
 varying vec3 v_wp;
 varying vec3 v_wn;
-varying vec3 v_alb;
 varying vec2 v_cell;
 varying float v_fleck;
 
@@ -137,7 +139,7 @@ void fragment() {
 	float porous = 0.8;
 	if (mat == 0) {
 		float dry = e3.g + (w3_fbm(v_wp.xz / 3.0 + 7.0) - 0.5) * 0.25;
-		row = dry > 0.5 + (stip - 0.5) * 0.2 ? 1.0 : 0.0;   // dry grass, stippled edge
+		row = dry > 0.5 + dry_bias + (stip - 0.5) * 0.2 ? 1.0 : 0.0;   // dry grass, stippled edge
 		tone = 3.6 + mstep;
 		// painted grain: single darker blades and a few lit ones scattered through the sward
 		float gr = w3_hash(cell * 0.73 + 17.0);
@@ -222,6 +224,10 @@ void fragment() {
 	} else {
 		float t = tone + (hit ? g_tone : 0.0);
 		alb = pal(row, t);
+		// grass, dry grass and moss: fresh greens (w3_lush)
+		if (row < 1.5 || abs(row - 5.0) < 0.5) {
+			alb = w3_lush(alb, row > 0.5 && row < 1.5 ? lush * 0.7 : lush);
+		}
 	}
 
 	// ---- under water: wet, dark, a little green (the stream bed, the pool's floor)
@@ -235,7 +241,6 @@ void fragment() {
 	// ---- wetness and puddles
 	alb = w3_wetten(alb, porous);
 	float ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));
-	ao = floor(ao * 4.0 + 0.5 + (w3_hash(cell * 0.91 + 3.3) - 0.5) * 0.35) / 4.0;
 	// puddles in the ruts and the low spots of paths: a darker mirror of the overcast sky with
 	// rings where the drops fall (only the deepest spots, so they stay small)
 	if (w3_wet > 0.25 && e2.g > 0.62 && (mat == 1 || mat == 2)) {
@@ -263,21 +268,18 @@ void fragment() {
 		// toward the rim of a crown (thinner canopy) the flecks are many and larger; in its heart few
 		v_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
 	}
-	v_alb = alb;
 	v_cell = cell;
-	ALBEDO = vec3(1.0);
-	EMISSION = w3_ambient(alb, wn, ao) + w3_lamp_light(alb, v_wp, wn, cell, 1.0);
+	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times this albedo and AO
+	ALBEDO = alb;
+	AO = ao;
+	AO_LIGHT_AFFECT = 0.0;
 }
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
-		float ndl = dot(NORMAL, LIGHT);
-		float th = (w3_hash(v_cell * 1.13 + 7.1) - 0.5) * 0.06;
-		float lvl = ndl > 0.80 + th ? 1.0 : (ndl > 0.58 + th ? 0.86 : (ndl > 0.30 + th ? 0.68 : (ndl > 0.04 + th ? 0.5 : 0.0)));
-		float sh = step(0.5, ATTENUATION);
-		sh = max(sh, v_fleck * 0.85);
-		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * lvl * sh;
+		float sh = max(ATTENUATION, v_fleck * 0.85);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, sh, 0.15);
 	} else {
-		DIFFUSE_LIGHT += w3_point_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4);
 	}
 }

@@ -1,0 +1,45 @@
+# Kasasagi, cry. Source A_23 ("含泪克制悲伤": the illustration only has wet eyes), so the tears are added by hand:
+# tears well on both lower lids and run down the cheeks (light core c, body C, edge z at the drop), the cheeks
+# flush (b with hatching p), and the mouth opens in a small downturned arch.
+# near eye: welled lid, stream to the jaw
+@ 43 55
+cCc
+@ 44 56
+Cc
+Cc
+Cc
+Cc
+CCc
+.Cc
+.Cc
+.Cc
+.Cc
+.CCc
+..Cc
+..Cc
+..Cc
+.zCc
+.zCCz
+..zz
+# far eye: welled lid, short stream along the cheek
+@ 71 64
+cCc
+@ 72 65
+Cc
+Cc
+Cc
+CCz
+.z
+# flush
+@ 37 58
+bbpbbpb
+bpbbpbb
+.bbbbb.
+@ 66 65
+bpb
+pbb
+# mouth: small open arch, corners down
+@ 50 72
+.qqq.
+qmmmq
+q...q

@@ -4,16 +4,16 @@
 //   * the screen-texel lattice ("ptex"): the native pixel a world point lands on, independent of the
 //     camera (the camera only ever moves by whole texels), so procedural detail and dithering stay
 //     glued to the world and never crawl,
-//   * lean-back for upright objects (verticals read at 20 px per metre, A Link Between Worlds style),
+//   * lean-back for upright objects (verticals read at w3_view.x px per metre, A Link Between Worlds style),
 //   * whole-pixel wind sway, the canopy cut-away around her,
-//   * the toon light model (banded sun, quantised lanterns, hemisphere ambient with warm/cool shift).
+//   * the light model (continuous: wrapped diffuse, transmission through leaves; the engine's ambient).
 // Axes (Godot): X east, Y up, Z south (toward the camera). Units: metres. The camera looks north (-Z)
 // and down at the pitch held in w3_view. Colours are linear unless a name says srgb.
 //
 // Declared in godot/project.godot [shader_globals]; the time-of-day controller
 // (render3d/world_env.gd) writes them every frame.
 
-global uniform vec4 w3_view;        // x: native px per metre (20), y: sin(pitch), z: cos(pitch), w: lean k = tan(pitch/2)
+global uniform vec4 w3_view;        // x: native px per metre (30), y: sin(pitch), z: cos(pitch), w: lean k = tan(pitch/2)
 global uniform float w3_time;       // world clock, seconds (animation; deterministic in captures)
 global uniform vec3 w3_sun_dir;     // unit vector toward the sun (or moon at night), world space
 global uniform vec3 w3_sun;         // sun colour * intensity (linear), for effects outside light()
@@ -53,13 +53,6 @@ float w3_vnoise(vec2 p) {
 float w3_fbm(vec2 p) {
 	return w3_vnoise(p) * 0.55 + w3_vnoise(p * 2.07 + 7.3) * 0.3 + w3_vnoise(p * 4.3 + 1.7) * 0.15;
 }
-// 4x4 ordered dither threshold in (0,1), keyed on a texel cell (never on FRAGCOORD: that would crawl)
-float w3_bayer4(vec2 cell) {
-	ivec2 i = ivec2(mod(cell, 4.0));
-	int k = i.x + i.y * 4;
-	float m[16] = float[16](0., 8., 2., 10., 12., 4., 14., 6., 3., 11., 1., 9., 15., 7., 13., 5.);
-	return (m[k] + 0.5) / 16.0;
-}
 
 // ------------------------------------------------------------------------------------------------
 // the screen-texel lattice
@@ -88,7 +81,7 @@ vec3 w3_snap(vec3 anchor_wp) {
 
 // ------------------------------------------------------------------------------------------------
 // lean-back: upright objects are sheared north by k * height above their base, so that a vertical
-// metre reads 20 px tall like a horizontal one (k = tan(pitch / 2)). The terrain, water, paths,
+// metre reads as many px tall as a horizontal one (k = tan(pitch / 2)). The terrain, water, paths,
 // steps and retaining walls do not lean. Shadows are cast by the upright geometry (the shadow pass
 // skips the lean), and lighting uses the upright normals.
 vec3 w3_lean(vec3 wp, float base_y, float amount) {
@@ -199,74 +192,90 @@ vec3 w3_shadow_hue(vec3 albedo, float turn) {
 	return max(w3_oklab_to_lin(vec3(lab.x, ab)), vec3(0.0));
 }
 
+// Lush: the ground's greens made fresh (round 4, G5R2-1: "饱满自然的绿", not withered olive): chroma
+// raised and the hue turned toward a clear green. k 0 .. 1 (the renderer's knob over the palette the
+// terrain generator paints; it can be turned down as the palette itself gets greener).
+vec3 w3_lush(vec3 c, float k) {
+	if (k <= 0.0) return c;
+	vec3 lab = w3_lin_to_oklab(c);
+	float C = length(lab.yz);
+	float h = atan(lab.z, lab.y);
+	h += (2.48 - h) * 0.3 * k;
+	C = C * (1.0 + 1.4 * k) + 0.01 * k;
+	return max(w3_oklab_to_lin(vec3(lab.x * (1.0 + 0.04 * k), cos(h) * C, sin(h) * C)), vec3(0.0));
+}
+
 // ------------------------------------------------------------------------------------------------
-// toon light model
-// Ambient (goes to EMISSION in fragment): hemisphere sky/ground by the world normal, quantised to
-// three steps so rounded forms stay flat-shaded. The shade is painted, not physically filtered: the
-// ambient's brightness, only a third of its colour (a blue sky multiplied into a warm albedo would
-// grey it), and a hue turn toward the cool side that keeps chroma (w3_shadow_hue), plus the global
-// w3_shade_tint.
+// light (round 4, decision-log G5R2-1: no bands, no rings). Every light falls off continuously and
+// the terminator is a soft gradient: a little wrap, so forms read round and the shade side is never a
+// cut-out. The pixel-art clarity comes from the low resolution, the whole-pixel camera, the palette,
+// the grade and the outlines, not from cutting the light into steps.
+//
+// The world's materials take the engine's ambient (the time of day's sky colour, the VoxelGI bounce,
+// SSAO; render3d/world_env.gd): their ALBEDO is the real albedo, and light() adds only the direct
+// light without it (the engine multiplies the diffuse and the ambient by ALBEDO).
+
+// wrapped Lambert: wrap 0 = Lambert; 0.3 solids; 0.5 leaves (light scatters through a crown)
+float w3_wrap(float ndl, float wrap) {
+	return clamp((ndl + wrap) / (1.0 + wrap), 0.0, 1.0);
+}
+// direct light of the sun, the moon or a lamp (call in light()); lit surfaces lean a little warm
+vec3 w3_direct(vec3 n, vec3 l, vec3 light_col, float atten, float wrap) {
+	float d = w3_wrap(dot(n, l), wrap);
+	return light_col * mix(vec3(1.0), w3_lit_tint, d) * (d * atten / W3_PI);
+}
+// light through thin things (leaves, paper, petals) seen against the light: what reaches the back of
+// the surface, tinted by the material (call in light(); color = how much and what colour gets through)
+vec3 w3_transmit(vec3 n, vec3 l, vec3 v, vec3 light_col, float atten, vec3 color) {
+	float back = clamp(-dot(n, l) * 0.6 + 0.4, 0.0, 1.0);
+	// strongest when the light is behind the leaf as seen from the camera (sun low, ahead of us)
+	float toward = pow(clamp(dot(-v, l) * 0.5 + 0.5, 0.0, 1.0), 2.0);
+	return light_col * color * (back * (0.35 + 0.65 * toward) * atten / W3_PI);
+}
+
+// The painted ambient for materials outside the engine's light (the view from the lookout, its own
+// world): a hemisphere sky/ground by the world normal, continuous; the shade's hue turns cool while
+// keeping chroma (w3_shadow_hue). Goes to EMISSION.
 vec3 w3_ambient(vec3 albedo, vec3 world_n, float ao) {
 	float up = world_n.y * 0.5 + 0.5;
-	up = floor(up * 3.0 + 0.5) / 3.0;
 	vec3 amb = mix(w3_ground, w3_sky, up);
 	float lum = max(w3_luma(amb), 1e-4);
 	vec3 amb_tint = mix(vec3(1.0), amb / lum, 0.2) * w3_shade_tint;
 	return w3_shadow_hue(albedo, 0.38) * lum * amb_tint * ao;
 }
-// Sun / moon (call in light() for LIGHT_IS_DIRECTIONAL): two lit bands and a crisp shadow edge.
-// dither: 0 for characters and painted cards, 1 lets the band edges dither on world-anchored cells.
+// Sun / moon with the albedo folded in (materials whose ALBEDO is 1: the lookout's), continuous.
+// (cell and dither are kept for the callers; nothing is dithered any more)
 vec3 w3_sun_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuation, vec2 cell, float dither) {
-	float ndl = dot(n, l);
-	float th = (w3_bayer4(cell) - 0.5) * 0.04 * dither;
-	float band = ndl > 0.42 + th ? 1.0 : (ndl > 0.06 + th ? 0.62 : 0.0);
-	float sh = step(0.5, attenuation);
-	return albedo * w3_lit_tint * light_col / W3_PI * band * sh;
+	return albedo * w3_direct(n, l, light_col, attenuation, 0.25);
 }
-// Lanterns and fire (call in light() for the other lights): falloff quantised to four steps with a
-// world-anchored dither, so a lantern draws pixel-art rings of light.
+// Point lights with the albedo folded in, continuous.
 vec3 w3_point_light(vec3 albedo, vec3 n, vec3 l, vec3 light_col, float attenuation, vec2 cell, float dither) {
 	float ndl = max(dot(n, l), 0.0) * 0.6 + 0.4;
-	float a = attenuation * ndl;
-	// rings in whole steps; the dither lives only in a narrow seam at each step and is scattered,
-	// not ordered (an ordered dither over a slow falloff draws wide checkered bands)
-	float sc = w3_hash(cell * 1.31 + 2.7) * 0.7 + w3_vnoise(cell / 1.9) * 0.3;
-	// the outer rim is where the falloff is slowest: a seam as wide there spreads into a band of
-	// loose dots 5-8 px wide, so the rim gets a narrower seam (2-3 px)
-	float seam = a < 0.375 ? 0.14 : 0.32;
-	float q = floor(a * 4.0 + 0.5 + (sc - 0.5) * seam * dither) / 4.0;
-	return albedo * light_col / W3_PI * q;
+	return albedo * light_col / W3_PI * attenuation * ndl;
 }
-// Lanterns and fires, lit by the renderer (render3d/lamps.gd): each lamp's light in four steps of
-// its own: a warm core (about 2700 K), then rings that fall off steeply and turn orange, the last
-// one only a breath above the dark (no visible edge). Surfaces facing the lamp take more of it.
-// Lamps combine by the brightest (not by adding), so a row of lanterns stays a row of pools with
-// darker gaps. Add the result to EMISSION in fragment(). dither 0: no seam stipple (characters).
+// Lanterns and fires from the renderer's own list (render3d/lamps.gd, the global w3_lamps): used by
+// the view from the lookout, which is a world of its own (the main world has real OmniLight3D lamps).
+// A smooth pool: a warm core that falls off softly and turns orange toward its edge, which meets the
+// dark with no visible line; lamps add up (softly limited). Add the result to EMISSION.
 vec3 w3_lamp_light(vec3 albedo, vec3 wp, vec3 n, vec2 cell, float dither) {
 	int cnt = int(w3_lamp_n + 0.5);
 	if (cnt <= 0) return vec3(0.0);
-	vec3 best = vec3(0.0);
-	float sc = w3_hash(cell * 1.17 + 6.1) * 0.7 + w3_vnoise(cell / 2.1 + 2.0) * 0.3;
+	vec3 sum = vec3(0.0);
 	for (int i = 0; i < cnt; i++) {
 		vec4 a = texelFetch(w3_lamps, ivec2(i, 0), 0);
 		vec3 d = a.xyz - wp;
-		// the pool spreads on the ground under a lamp that hangs or stands above it: height counts
-		// for less than distance along the ground
 		float dist = length(d * vec3(1.0, 0.4, 1.0));
 		if (dist >= a.w) continue;
 		vec4 c = texelFetch(w3_lamps, ivec2(i, 1), 0);
 		float f = 1.0 - dist / a.w;
 		float face = clamp(dot(n, normalize(d)) * 0.7 + 0.3, 0.0, 1.0);
-		// a little over 1 at the lamp, so the ground right under it gets the warm core
-		float v = min(f * 1.22, 1.0) * mix(1.0, face, 0.8);
-		// steps 1 (core), 0.75, 0.5, 0.25 (rim); a narrow scattered seam between them
-		float q = floor(v * 4.0 + 0.5 + (sc - 0.5) * 0.3 * dither) / 4.0;
-		if (q <= 0.0) continue;
-		float inten = q * q * q;                                    // 1, 0.42, 0.125, 0.016
-		vec3 lamp_tint = mix(vec3(1.0, 0.45, 0.16), vec3(1.0, 0.80, 0.56), q * q);
-		best = max(best, c.rgb * lamp_tint * inten);
+		float v = f * f * mix(1.0, face, 0.8);
+		vec3 lamp_tint = mix(vec3(1.0, 0.45, 0.16), vec3(1.0, 0.80, 0.56), clamp(f * 1.3, 0.0, 1.0));
+		sum += c.rgb * lamp_tint * v;
 	}
-	return albedo * best;
+	// several pools overlapping do not burn white
+	sum = sum / (1.0 + max(max(sum.r, sum.g), sum.b) * 0.35);
+	return albedo * sum;
 }
 // 遠化 (far, 0..1): a thing that has lost its qualities looks far: pale, nearly grey, a little cool,
 // lifted toward the haze. Materials also flatten their light by the same amount (w3_far_light).

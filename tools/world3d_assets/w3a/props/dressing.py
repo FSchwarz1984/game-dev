@@ -314,17 +314,14 @@ def signpost(out, name, kind, seed):
 
 
 def build(out):
+    # round 4: the bamboo fence, baskets and straw are rebuilt in yard.py under new names, the signs
+    # here are renamed (the assembly placed the round-3 names at fixed spots of the old layout)
     st = {}
     st['woodpile'] = woodpile(out)
     st['stump_axe'] = stump_axe(out)
     st['fallen_branch'] = fallen_branch(out)
-    st['fence_bamboo'] = fence(out, 'fence_bamboo', 'bamboo', 8331)
     st['fence_rail'] = fence(out, 'fence_rail', 'rail', 8335)
     st['kakehi'] = kakehi(out)
-    st['basket_tall'] = basket(out, 'basket_tall', 'tall', 8351)
-    st['basket_flat'] = basket(out, 'basket_flat', 'flat', 8355)
-    st['straw_sheaves'] = straw(out, 'straw_sheaves', 'sheaf', 8361)
-    st['straw_heap'] = straw(out, 'straw_heap', 'heap', 8365)
-    st['signpost'] = signpost(out, 'signpost', 'wood', 8371)
-    st['waymark'] = signpost(out, 'waymark', 'stone', 8375)
+    st['signpost_a'] = signpost(out, 'signpost_a', 'wood', 8371)
+    st['waymark_a'] = signpost(out, 'waymark_a', 'stone', 8375)
     return st

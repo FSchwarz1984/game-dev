@@ -45,6 +45,16 @@ var _point := Vector2.ZERO
 var _mode := "point"
 var _focus := Vector3.ZERO          # world point the camera looks at (sets the depth range)
 var _post_quads: Array[MeshInstance3D] = []
+## How far the camera stands back from the focus. The depth range is near..far around it; a nearer
+## camera gives the volumetric fog (froxels measured from the camera) its resolution where the
+## world is. set_camera_distance() keeps near/far around the same slab of world.
+var cam_distance := 120.0
+
+
+func set_camera_distance(d: float) -> void:
+	cam_distance = d
+	cam.near = maxf(d - 60.0, 0.5)
+	cam.far = d + 70.0
 
 
 func _init() -> void:
@@ -62,6 +72,10 @@ func _init() -> void:
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	vp.gui_disable_input = true
 	vp.handle_input_locally = false
+	# float, linear: the grade and the final dither work on the full precision (no banding in slow
+	# dark gradients); composite.gdshader converts to display values
+	vp.use_hdr_2d = true
+	# the lanterns are engine lights since round 4 (no shadows of their own for now)
 	vp.positional_shadow_atlas_size = 0
 	add_child(vp)
 
@@ -109,6 +123,7 @@ func _init() -> void:
 	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	composite = ShaderMaterial.new()
 	composite.shader = load("res://render3d/shaders/composite.gdshader")
+	composite.set_shader_parameter("blue_noise", load("res://render3d/textures/blue_noise64.png"))
 	view.material = composite
 	add_child(view)
 
@@ -262,9 +277,10 @@ func apply_camera() -> void:
 	var si := cam_px.round() + half
 	var frac := cam_px - cam_px.round()
 	render_px = si
+	composite.set_shader_parameter("cam_cell", si.floor())
 	# a world point on the view axis whose screen position is si; the camera stands back from it
 	var centre := px_to_world(si) + cam_back() * _focus.dot(cam_back())
-	cam.position = centre + cam_back() * 120.0
+	cam.position = centre + cam_back() * cam_distance
 	# the image content sits frac px away from where it should; move the image back (window px)
 	var off := (frac * scale_factor).round() / float(scale_factor)
 	view.position = -Vector2.ONE - Vector2(off.x, -off.y)

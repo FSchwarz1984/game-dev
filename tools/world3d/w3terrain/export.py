@@ -83,6 +83,30 @@ def write(L, out: Path, tmp: Path, D):
         "terraces": L["terraces"],
         "zones": L["zones"],
     }
+    # ---- roads and paths as geometry (roads.py): per 16 m chunk and layer, one blob
+    rc = D.get("road_chunks") or []
+    blob = bytearray()
+    chunks = []
+    for c in rc:
+        P = c["p"].astype(np.float32)
+        N = c["n"].astype(np.float32)
+        C = c["c"].astype(np.float32)
+        U = c["u"].astype(np.float32)
+        I = c["i"].astype(np.uint32)
+        lo = P.min(axis=0)
+        hi = P.max(axis=0)
+        e = {"chunk": [int(c["key"][0]), int(c["key"][1])], "layer": c["key"][2], "offset": len(blob), "vertices": int(len(P)),
+             "triangles": int(len(I)), "aabb": [[round(float(v), 3) for v in lo], [round(float(v), 3) for v in (hi - lo)]]}
+        for arr in (P, N, C, U, I):
+            blob += np.ascontiguousarray(arr).tobytes()
+        chunks.append(e)
+    (out / "roads.bin").write_bytes(bytes(blob))
+    info["roads"] = {"file": "roads.bin", "layout": "per chunk: pos f32x3, normal f32x3, colour f32x4 (sRGB + AO), uv2 f32x2 "
+                     "(pattern, amount), index u32x3", "chunks": chunks, "stats": D.get("road_stats", {})}
+    info["cover"] = D.get("cover", {})
+    info["props"] = L.get("props", [])
+    info["routes"] = L.get("routes", {})
+    info["perches"] = L.get("perches", {})
     (out / "terrain.json").write_text(json.dumps(info, ensure_ascii=False, indent=1))
 
     # ---- previews for checking (not shipped)

@@ -1,0 +1,28 @@
+# Edit keys for Shione. Lower case = face keys shared by all three (same meaning, own colours).
+s $feeddf  skin light
+t $fadacb  skin
+u $efc4b5  skin shade
+U $eca99e  skin deep shade
+q $95504f  mouth / skin line
+Q $d0948c  soft line (mouth ends)
+m $5e1d2d  mouth inside
+n $de6f7c  tongue
+y $fffaf5  teeth
+k $311a1d  lash ink
+K $572a30  lash, lighter
+w $faeade  eye white
+v $e3c6bd  eye white in shadow
+E $7e3a48  iris dark
+e $b45d66  iris
+i $e2928f  iris light
+l $ffffff  glint
+c $eef9ff  tear light
+C $a8d9f2  tear
+z $5f9fd0  tear edge
+b $f5a3a0  blush
+p $e57683  blush hatch
+x $e23b4e  anger mark
+X $931f35  anger mark dark
+r $c4505f  red mark (朱痕)
+h $bfa8bb  hair mid
+H $867087  hair dark

@@ -62,7 +62,7 @@ class Piece:
     """One part of a prop: geometry (p, n, idx; counter-clockwise outward) and its look."""
 
     def __init__(self, p, n, idx, colour, pattern='plain', amount=0.3, mat='solid', var=0.05, seed=0,
-                 ao=True, dirt=True, emissive=False, shade=None):
+                 ao=True, dirt=True, emissive=False, shade=None, sway=None):
         self.p = np.asarray(p, np.float64)
         self.n = np.asarray(n, np.float64)
         self.idx = np.asarray(idx, np.int64)
@@ -76,12 +76,24 @@ class Piece:
         self.dirt = dirt
         self.emissive = emissive
         self.shade = shade              # optional fn(P, N) -> per-vertex colour multiplier (n, 3)
+        # wind: (anchor xyz in prop space, flex 0..1) for pieces drawn with the foliage material in
+        # mesh mode (mat 'sway' / 'swaynl'): the piece moves rigidly by whole pixels around its anchor
+        self.sway = None if sway is None else (np.asarray(sway[0], np.float64), float(sway[1]))
 
     def moved(self, R=None, t=(0, 0, 0)):
         R = np.eye(3) if R is None else np.asarray(R, np.float64)
+        sw = None
+        if self.sway is not None:
+            sw = (self.sway[0] @ R.T + np.asarray(t, np.float64), self.sway[1])
         q = Piece(self.p @ R.T + np.asarray(t, np.float64), self.n @ R.T, self.idx, self.colour, self.pattern,
-                  self.amount, self.mat, self.var, self.seed, self.ao, self.dirt, self.emissive, self.shade)
+                  self.amount, self.mat, self.var, self.seed, self.ao, self.dirt, self.emissive, self.shade, sw)
         return q
+
+    def swaying(self, anchor, flex, mat='sway'):
+        """This piece hangs from `anchor` and moves with the wind (flex 0 rigid .. 1 free)."""
+        self.sway = (np.asarray(anchor, np.float64), float(flex))
+        self.mat = mat
+        return self
 
     @property
     def tris(self):
@@ -356,7 +368,12 @@ class Prop:
             C = np.concatenate([np.clip(c, 0, 1), np.clip(ao, 0.15, 1)[:, None]], axis=1)
             uv2 = np.tile([float(pc.pattern), float(pc.amount)], (len(P), 1))
             md = out.setdefault(pc.mat, MeshData())
-            md.add(P, N, np.zeros((len(P), 2)), pc.idx, uv2=uv2, col=C)
+            cus = None
+            if pc.sway is not None:
+                cus = np.tile(np.concatenate([pc.sway[0], [pc.sway[1]]]), (len(P), 1))
+            elif pc.mat in ('sway', 'swaynl'):
+                cus = np.tile(np.concatenate([P.mean(axis=0), [0.0]]), (len(P), 1))
+            md.add(P, N, np.zeros((len(P), 2)), pc.idx, uv2=uv2, col=C, cus=cus)
         return out
 
 

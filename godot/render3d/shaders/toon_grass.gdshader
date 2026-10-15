@@ -8,17 +8,17 @@
 // INSTANCE_CUSTOM = (atlas cell, palette row, tone bias, flex).
 // Mesh: one quad, UV 0..1 (v up), UV2 = corner offset in px from the anchor.
 shader_type spatial;
-render_mode world_vertex_coords, ambient_light_disabled, specular_disabled, fog_disabled, cull_disabled, shadows_disabled;
+render_mode world_vertex_coords, specular_disabled, cull_disabled, shadows_disabled;
 stencil_mode write, compare_always, 5;
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
 uniform sampler2D tufts : filter_nearest;
 uniform sampler2D palette : filter_nearest;
+uniform float lush : hint_range(0.0, 1.0) = 0.65;   // fresh greens over the palette (w3_lush)
 
 varying vec3 v_wp;
 varying vec3 v_n;
 varying flat vec4 v_inst;
-varying vec3 v_alb;
 varying vec2 v_cell;
 
 void vertex() {
@@ -64,19 +64,22 @@ void fragment() {
 		float tone = clamp(floor(3.6 + v_inst.z + t.r * 255.0 - 4.0 + 0.5), 0.0, 7.0);
 		alb = w3_srgb_to_linear(texelFetch(palette, ivec2(int(tone), int(v_inst.y + 0.5)), 0).rgb);
 	}
+	int prow = int(v_inst.y + 0.5);
+	if (acc < 0 && (prow <= 1 || prow == 5)) {
+		alb = w3_lush(alb, prow == 1 ? lush * 0.7 : lush);
+	}
 	alb = w3_wetten(alb, 0.6);
-	v_alb = alb;
 	v_cell = cell;
-	ALBEDO = vec3(1.0);
-	EMISSION = w3_ambient(alb, v_n, 1.0) + w3_lamp_light(alb, v_wp, v_n, cell, 1.0);
+	ALBEDO = alb;
 }
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
-		float ndl = dot(NORMAL, LIGHT);
-		float lvl = ndl > 0.80 ? 1.0 : (ndl > 0.58 ? 0.86 : (ndl > 0.30 ? 0.68 : (ndl > 0.04 ? 0.5 : 0.0)));
-		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * lvl * step(0.5, ATTENUATION);
+		// grass blades: a wide wrap, and the light through them when they are seen against it
+		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5);
+		c += w3_transmit(NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, vec3(0.8, 1.0, 0.5) * 0.4);
+		DIFFUSE_LIGHT += c;
 	} else {
-		DIFFUSE_LIGHT += w3_point_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5);
 	}
 }

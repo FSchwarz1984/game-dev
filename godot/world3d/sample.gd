@@ -99,6 +99,7 @@ func _ready() -> void:
 	print("GRASS tufts=", grass.count, " ms=", Time.get_ticks_msec() - g0)
 	lamps = W3Lamps.new()
 	lamps.name = "Lamps"
+	lamps.world = pv.world_root
 	add_child(lamps)
 	dressing = W3Dressing.new()
 	dressing.name = "Dressing"
@@ -132,6 +133,11 @@ func _ready() -> void:
 	if args.has("nowater"):
 		for wm in terrain.water_meshes:
 			wm.visible = false
+	_setup_gi()
+	if args.has("camdist"):
+		pv.set_camera_distance(float(args["camdist"]))
+	if args.has("vfog"):
+		env.use_volumetric_fog(float(args["vfog"]))
 	if args.has("noshadow"):
 		env.sun.shadow_enabled = false     # debugging: tell shadow-map artefacts from shading ones
 	if args.has("sbias"):
@@ -376,6 +382,40 @@ func _place_marker_props() -> void:
 		for fp in catalog[mp[0]].get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(mp[2]))
 			blockers.append([tree.position + off, float(fp[2])])
+
+
+## Global illumination (round 4, Forward+): a VoxelGI over the sample region, baked once when the
+## world is built (SDFGI does not work with the orthogonal camera: its cascades follow the camera,
+## 120 m away, and band across the ground). The sun, the moon and the lanterns light it every frame,
+## so the bounce follows the time of day. --gi=none turns it off (comparisons).
+var gi: VoxelGI
+var _gi_bake_at := -1
+
+
+func _setup_gi() -> void:
+	if args.get("gi", "voxel") == "none":
+		return
+	gi = VoxelGI.new()
+	gi.name = "GI"
+	# the terrain's frame: 160 x 208 m, heights -44 .. 84 m (the voxels: about 0.8 m)
+	var o: Vector2 = terrain.origin
+	var size := Vector2(float(terrain.nx - 1), float(terrain.nz - 1)) * terrain.cell
+	gi.size = Vector3(size.x, 96.0, size.y)
+	gi.position = Vector3(o.x + size.x * 0.5, 10.0, o.y + size.y * 0.5)
+	gi.subdiv = VoxelGI.SUBDIV_256 if args.get("gi_subdiv", "256") == "256" else VoxelGI.SUBDIV_512
+	pv.world_root.add_child(gi)
+	_gi_bake_at = 2          # once the world is in the tree and has drawn (the shaders compiled)
+
+
+func _bake_gi() -> void:
+	var t0 := Time.get_ticks_msec()
+	gi.bake()
+	if gi.data:
+		gi.data.energy = float(args.get("gi_energy", "1.0"))
+		gi.data.propagation = 0.7
+		gi.data.use_two_bounces = true
+		gi.data.interior = false
+	print("GI baked ms=", Time.get_ticks_msec() - t0)
 
 
 func _instance(path: String) -> Node3D:
@@ -784,6 +824,8 @@ func _save_shot(base: String) -> void:
 
 func _process(dt: float) -> void:
 	frame += 1
+	if frame == _gi_bake_at:
+		_bake_gi()
 	env.tick(dt)
 	# time passing (verification of the evening): hours per second
 	if args.has("timelapse"):

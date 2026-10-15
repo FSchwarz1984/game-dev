@@ -1,5 +1,5 @@
 // Characters (and anything drawn as a 2D sprite that must stand in the 3D world): outline class 3.
-// The sprite is a leaned card (verticals 20 px per metre like every upright object), texel for
+// The sprite is a leaned card (verticals w3_view.x px per metre like every upright object), texel for
 // pixel, anchored at the feet on the pixel lattice. Lit with its normal map through the toon model,
 // but with the character protection of the charter: the key light follows the 2D convention (upper
 // left, a little in front) instead of the real sun, so she is never back-lit; a brightness floor;
@@ -85,8 +85,6 @@ void fragment() {
 	vec3 em = alb * lum;
 	em += rimk * alb * (w3_sky * 1.6 + vec3(0.04)) ;
 	em += (edge_u < 0.5 ? 1.0 : 0.0) * alb * w3_sky * 0.35 * rim;
-	// lanterns (render3d/lamps.gd): the same stepped light as the world, no seam stipple on her
-	em += w3_lamp_light(alb, v_wu, nw, w3_ptex(v_wp), 0.0);
 	v_alb = alb;
 	ALBEDO = vec3(1.0);
 	EMISSION = em;
@@ -95,12 +93,13 @@ void fragment() {
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		vec3 key = normalize(key_dir_view);
-		float ndl = dot(NORMAL, key);
-		float band = ndl > 0.38 ? 1.0 : (ndl > 0.0 ? 0.68 : 0.42);
-		float sh = mix(shadow_dim, 1.0, step(0.5, ATTENUATION));
-		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * band * sh;
+		// continuous (round 4): the key wraps round her, never darker than 0.42 of it
+		float k = mix(0.42, 1.0, smoothstep(-0.25, 0.65, dot(NORMAL, key)));
+		float sh = mix(shadow_dim, 1.0, ATTENUATION);
+		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * k * sh;
 	} else {
+		// lanterns: engine lights, continuous falloff
 		float a = ATTENUATION * (max(dot(NORMAL, LIGHT), 0.0) * 0.5 + 0.5);
-		DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * floor(a * 4.0 + 0.5) / 4.0;
+		DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * a;
 	}
 }

@@ -68,7 +68,10 @@ def place(L, ctx, rng):
         return ctx["path_dist"](x, z) > clear and ctx["pad_dist"](x, z) > 1.5 and ctx["water_dist"](x, z) > 1.2
 
     def far_from_markers(x, z, r):
-        for k in ("camphor", "hut", "shrine", "graves", "lookout", "dosojin", "spring", "kiln", "persimmon", "woodpile"):
+        for k in ("camphor", "hut", "shrine", "graves", "lookout", "dosojin", "spring", "kiln", "persimmon", "woodpile",
+                  "gate_main", "iwakura", "garden", "chozubachi", "jizo"):
+            if k not in M:
+                continue
             m = M[k]
             rr = 15.0 if k == "camphor" else r
             if np.hypot(x - m[0], z - m[1]) < rr:
@@ -88,6 +91,12 @@ def place(L, ctx, rng):
     keep_areas.append((sp[0] - 4.0, sp[0] + 4.0, sp[1] + 2.0))
     dj = M["dosojin"]
     keep_areas.append((dj[0] - 2.5, dj[0] + 2.5, dj[1] + 1.2))     # the dosojin (0.8 m tall: easily lost)
+    if "gate_main" in M:
+        g = M["gate_main"]
+        keep_areas.append((g[0] - 3.5, g[0] + 3.5, g[1] + 1.5))    # the approach: the gate, its steps and the tree
+    if "garden" in M:
+        g = M["garden"]
+        keep_areas.append((g[0] - 3.6, g[0] + 3.6, g[1] + 2.4))
     TREE_H = {"cedar": 18.0, "pine": 11.0, "maple": 7.0, "beech": 9.0, "broadleaf": 8.0, "bamboo": 9.0}
 
     def clear_view(x, z, kind, r=3.0):
@@ -183,6 +192,27 @@ def place(L, ctx, rng):
     for p in poisson(rng, (b[0], -40.0, b[2], 100.0), 3.0, shrub_ok):
         kind = "hydrangea" if (p[1] < 10 and rng.uniform() < 0.5) else ("azalea" if rng.uniform() < 0.6 else "shrub")
         out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.2)), "variant": int(rng.integers(0, 8))})
+
+    # the sacred grove between the home and the old road (zones.chinju, chinju_south): camellias,
+    # hydrangeas and azaleas close together, a few maples on its southern end; nothing tall where it
+    # would hide the approach or the graves
+    def belt_ok(x, z):
+        inz = ("chinju" in L["zones"] and ctx["in_zone"]("chinju", x, z)) or ("chinju_south" in L["zones"] and ctx["in_zone"]("chinju_south", x, z))
+        return inz and ctx["slope_deg"](x, z) < 34 and keep_clear(x, z, 1.3) and far_from_markers(x, z, 2.5)
+    for p in poisson(rng, (2.0, -14.0, 16.0, 21.0), 1.55, belt_ok):
+        r = rng.uniform()
+        kind = "shrub" if r < 0.42 else ("hydrangea" if r < 0.72 else ("azalea" if r < 0.9 else "fern"))
+        if p[1] > 15.5 and rng.uniform() < 0.12 and clear_view(float(p[0]), float(p[1]), "maple", 3.0):
+            kind = "maple"
+        out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.15)), "variant": int(rng.integers(0, 8))})
+    # inside the barrier: hydrangeas along the approach and round the shrine's terrace
+    def sanct_flowers(x, z):
+        if "oku" not in L["zones"] or not (ctx["in_zone"]("oku", x, z) or ctx["in_zone"]("home", x, z)):
+            return False
+        pd = ctx["path_dist"](x, z)
+        return 0.9 < pd < 2.6 and ctx["pad_dist"](x, z) > 0.6 and ctx["slope_deg"](x, z) < 30 and far_from_markers(x, z, 2.2) and np.hypot(x, z) > 6.0
+    for p in poisson(rng, (-28.0, -12.0, 12.0, 22.0), 1.8, sanct_flowers)[:60]:
+        out.append({"kind": "hydrangea", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.75, 1.05)), "variant": int(rng.integers(0, 8))})
 
     def fern_ok(x, z):
         shade = ctx["in_zone"]("cedar", x, z) or ctx["water_dist"](x, z) < 6.0 or np.hypot(x, z) < 13.0

@@ -50,9 +50,15 @@ GENERATORS = [
     'w3a.props.graves',
     'w3a.props.dosojin',
     'w3a.props.shrine',
-    'w3a.props.hut',
     'w3a.props.dressing',
+    'w3a.props.minka',
+    'w3a.props.yard',
+    'w3a.props.sacred',
 ]
+
+# assets of earlier rounds that no longer exist (removed from the catalog and the assets folder on
+# every build): the round-3 hut became the house 'hut' of minka.py; fixed-position props renamed
+RETIRED = ['minka', 'fence_bamboo', 'signpost', 'waymark', 'basket_tall', 'basket_flat', 'straw_sheaves', 'straw_heap']
 
 
 def run_generators(only, out_dir):
@@ -89,6 +95,8 @@ def write_catalog(out, dst_root, only):
             e = dict(ve)
             e.setdefault('category', a.category)
             cat['assets'][vname] = e
+    for r in RETIRED:
+        cat['assets'].pop(r, None)
     cat['assets'] = dict(sorted(cat['assets'].items()))
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(cat, f, indent=1, ensure_ascii=False)
@@ -106,6 +114,11 @@ def pack(out, out_dir, only):
         shutil.rmtree(dst)
     if only and os.path.exists(ASSETS):
         shutil.copytree(ASSETS, dst)
+        for r in RETIRED:
+            for cat_dir in os.listdir(dst):
+                d = os.path.join(dst, cat_dir, r)
+                if os.path.isdir(d):
+                    shutil.rmtree(d)
     os.makedirs(dst, exist_ok=True)
     for a in out.assets:
         d = os.path.join(dst, a.category, a.name)

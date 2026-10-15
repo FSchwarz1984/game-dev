@@ -2,7 +2,7 @@
 // whole native pixels, positioned on the screen-texel lattice so they step pixel by pixel and never
 // blur. Drawn after the screen post with the shared fog. Emissive values above 1 bloom (fireflies,
 // will-o'-wisps); everything else stays under 1.
-// Instance: origin = world position; COLOR = rgba (alpha is quantised and dithered on the lattice);
+// Instance: origin = world position; COLOR = rgba;
 // INSTANCE_CUSTOM = (width px, height px, shape, glow halo px).
 shader_type spatial;
 render_mode world_vertex_coords, unshaded, blend_mix, depth_draw_never, cull_disabled, fog_disabled, shadows_disabled;
@@ -41,9 +41,9 @@ void fragment() {
 		if (dq.x > 0.0 && dq.y > 0.0) discard;
 		a *= 0.35;
 	}
-	// quantised, dithered transparency (no smooth alpha in pixel art)
-	float aq = floor(a * 4.0 + w3_bayer4(cell)) / 4.0;
-	if (aq <= 0.0) discard;
+	// (continuous transparency since round 4: no ordered dither)
+	float aq = a;
+	if (aq <= 0.01) discard;
 	vec3 col = v_col.rgb;
 	col = w3_apply_fog(col, v_wp, cell);
 	ALBEDO = col;

@@ -1,7 +1,7 @@
 {
  "format": "tengan-world3d-layout/1",
  "name": "saddle",
- "note": "Art sample: the summit saddle of the Tsuzura-ori pass. Origin = the great camphor's trunk. x east, z south, heights in metres relative to the saddle crown. The home (hut, shrine, graves) sits under the camphor's crown; the land falls south to the plain with the ninety-nine bends, a rock spur (the lookout) over a ravine head, rice terraces on the gentler south-east bench; north of the saddle a gully with a spring at the foot of a south-facing rock face and a stream running east; cedars on the far side of the gully; bamboo on the east shoulder.",
+ "note": "Art sample (round 4): the summit saddle of the Tsuzura-ori pass. Origin = the great camphor's trunk. x east, z south, heights in metres relative to the saddle crown. The home (the house, the shrine, the graves, the garden) lies under the camphor's crown inside a ring of sacred woods (the barrier, zones.sanctum) with three gates: the main one (two standing stones and a rope) at the foot of the stone steps of the approach (sando) south of the tree, the north one on the way down to the spring, the south-west one at the yard's gate. The old road passes outside, east of the ring; paved with stones over the pass and on the hairpins of the ninety-nine bends, earth elsewhere, with stone-step shortcuts down the inside of two hairpins.",
  "bounds": [
   -80.0,
   -96.0,
@@ -271,18 +271,18 @@
   {
    "id": "hut_yard",
    "centre": [
-    -18.0,
-    13.0
+    -19.4,
+    13.2
    ],
    "size": [
-    10.5,
-    8.0
+    13.8,
+    12.0
    ],
-   "angle": 4.0,
-   "feather": 2.0,
+   "angle": 0.0,
+   "feather": 1.6,
    "wall": "auto",
-   "corner": 2.56,
-   "height_rel": -0.15
+   "corner": 2.2,
+   "height_rel": -0.1
   },
   {
    "id": "shrine_terrace",
@@ -304,18 +304,18 @@
   {
    "id": "graves_bench",
    "centre": [
-    1.0,
+    6.2,
     12.6
    ],
    "size": [
-    12.0,
-    3.2
+    9.2,
+    3.0
    ],
    "angle": 2.0,
    "feather": 1.6,
    "corner": 1.024,
    "wall": "auto",
-   "height_rel": -0.35
+   "height_rel": -0.3
   },
   {
    "id": "lookout_top",
@@ -331,6 +331,22 @@
    "height": -7.0,
    "feather": 1.0,
    "corner": 1.1520000000000001
+  },
+  {
+   "id": "garden",
+   "centre": [
+    -23.2,
+    21.8
+   ],
+   "size": [
+    7.2,
+    4.4
+   ],
+   "angle": -4.0,
+   "feather": 1.0,
+   "corner": 1.2,
+   "wall": "auto",
+   "height_rel": -0.15
   }
  ],
  "steps": [
@@ -338,14 +354,15 @@
    "id": "shrine_steps",
    "from": [
     -10.0,
-    9.0
+    9.2
    ],
    "to": [
     -10.0,
     6.8
    ],
    "width": 1.6,
-   "count": 4
+   "count": 4,
+   "kind": "cut"
   }
  ],
  "road": {
@@ -371,20 +388,28 @@
     -22
    ],
    [
-    6.5,
-    -14
+    5.5,
+    -15.8
    ],
    [
-    9.5,
-    -2
+    12.0,
+    -11.0
    ],
    [
-    9.0,
-    9
+    16.0,
+    -3.5
    ],
    [
-    8.0,
-    18
+    17.2,
+    4.5
+   ],
+   [
+    17.0,
+    12.0
+   ],
+   [
+    18.4,
+    18.6
    ],
    [
     24,
@@ -450,6 +475,103 @@
     4,
     112
    ]
+  ],
+  "segments": [
+   {
+    "from_pt": 0,
+    "to_pt": 4,
+    "kind": "trail",
+    "stones": 1.4
+   },
+   {
+    "from_pt": 4,
+    "to_pt": 10,
+    "kind": "ishidatami",
+    "gutter": -1,
+    "from_off": -2.0,
+    "to_off": 1.5
+   },
+   {
+    "from_pt": 10,
+    "to_pt": 11,
+    "kind": "trail",
+    "from_off": 1.5,
+    "to_off": -3.0
+   },
+   {
+    "from_pt": 11,
+    "to_pt": 12,
+    "kind": "ishidatami",
+    "gutter": 1,
+    "from_off": -3.0,
+    "to_off": 3.0
+   },
+   {
+    "from_pt": 12,
+    "to_pt": 13,
+    "kind": "trail",
+    "from_off": 3.0,
+    "to_off": -3.0
+   },
+   {
+    "from_pt": 13,
+    "to_pt": 15,
+    "kind": "ishidatami",
+    "gutter": -1,
+    "from_off": -3.0,
+    "to_off": 3.0
+   },
+   {
+    "from_pt": 15,
+    "to_pt": 16,
+    "kind": "trail",
+    "from_off": 3.0,
+    "to_off": -3.0
+   },
+   {
+    "from_pt": 16,
+    "to_pt": 18,
+    "kind": "ishidatami",
+    "gutter": 1,
+    "from_off": -3.0,
+    "to_off": 3.0
+   },
+   {
+    "from_pt": 18,
+    "to_pt": 19,
+    "kind": "trail",
+    "from_off": 3.0,
+    "to_off": -3.0
+   },
+   {
+    "from_pt": 19,
+    "to_pt": 21,
+    "kind": "ishidatami",
+    "gutter": -1,
+    "from_off": -3.0,
+    "to_off": 3.0
+   },
+   {
+    "from_pt": 21,
+    "to_pt": 22,
+    "kind": "trail",
+    "from_off": 3.0,
+    "to_off": -3.0
+   },
+   {
+    "from_pt": 22,
+    "to_pt": 24,
+    "kind": "ishidatami",
+    "gutter": 1,
+    "from_off": -3.0,
+    "to_off": 3.0
+   },
+   {
+    "from_pt": 24,
+    "to_pt": 25,
+    "kind": "trail",
+    "from_off": 3.0
+   }
   ]
  },
  "paths": [
@@ -481,72 +603,180 @@
      -14,
      -96
     ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "trail"
+    }
    ]
   },
   {
-   "id": "yard_to_shrine",
-   "width": 1.3,
+   "id": "sando_lane",
+   "width": 1.5,
    "points": [
     [
-     -14.5,
-     10.2
+     18.6,
+     17.2
     ],
     [
-     -12.2,
-     9.4
+     14.0,
+     19.6
     ],
     [
-     -10.0,
-     9.6
+     8.5,
+     21.2
+    ],
+    [
+     3.5,
+     21.6
+    ],
+    [
+     0.0,
+     21.2
     ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "stepping"
+    }
    ]
   },
   {
-   "id": "front_of_tree",
+   "id": "sando",
+   "width": 2.2,
+   "points": [
+    [
+     0.0,
+     21.4
+    ],
+    [
+     0.0,
+     19.6
+    ],
+    [
+     0.0,
+     15.0
+    ],
+    [
+     0.0,
+     11.5
+    ],
+    [
+     0.2,
+     8.4
+    ]
+   ],
+   "segments": [
+    {
+     "from": 0.4,
+     "to": 6.4,
+     "kind": "steps_cut",
+     "count": 8
+    },
+    {
+     "from": 6.6,
+     "to": 11.2,
+     "kind": "ishidatami",
+     "drains": false,
+     "worn": 0.6
+    },
+    {
+     "from": 11.2,
+     "to": -0.01,
+     "kind": "stepping"
+    }
+   ]
+  },
+  {
+   "id": "forecourt_west",
    "width": 1.3,
    "points": [
     [
-     -10.0,
-     9.6
+     -1.6,
+     9.0
     ],
     [
      -5.0,
-     10.0
+     9.5
     ],
     [
-     1.0,
-     10.4
+     -8.0,
+     9.7
     ],
     [
-     6.5,
-     10.2
-    ],
-    [
-     10.4,
-     9.2
+     -9.2,
+     9.7
     ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "stepping"
+    }
    ]
   },
   {
-   "id": "yard_to_road",
-   "width": 1.4,
+   "id": "yard_lane",
+   "width": 1.3,
    "points": [
     [
+     -11.0,
+     9.9
+    ],
+    [
+     -12.6,
+     11.0
+    ],
+    [
      -14.0,
-     16.4
+     12.6
     ],
     [
-     -6.0,
-     16.6
-    ],
-    [
-     2.0,
-     16.4
-    ],
-    [
-     9.0,
-     15.6
+     -15.6,
+     14.0
     ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "trail",
+     "stones": 0.6
+    }
+   ]
+  },
+  {
+   "id": "graves_walk",
+   "width": 1.0,
+   "points": [
+    [
+     1.2,
+     15.0
+    ],
+    [
+     4.0,
+     15.1
+    ],
+    [
+     8.0,
+     15.0
+    ],
+    [
+     10.6,
+     14.7
+    ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "stepping"
+    }
    ]
   },
   {
@@ -554,12 +784,12 @@
    "width": 1.2,
    "points": [
     [
-     -19.5,
-     17.6
+     -19.6,
+     19.4
     ],
     [
-     -19.2,
-     22.0
+     -19.4,
+     22.4
     ],
     [
      -20.4,
@@ -577,6 +807,28 @@
      -23.5,
      41.4
     ]
+   ],
+   "segments": [
+    {
+     "from": 0.2,
+     "to": 4.2,
+     "kind": "steps_log"
+    },
+    {
+     "from": 4.2,
+     "to": 15.0,
+     "kind": "trail"
+    },
+    {
+     "from": 15.0,
+     "to": 19.5,
+     "kind": "steps_log"
+    },
+    {
+     "from": 19.5,
+     "to": -0.01,
+     "kind": "trail"
+    }
    ]
   },
   {
@@ -584,16 +836,24 @@
    "width": 1.0,
    "points": [
     [
-     -12.5,
-     1.0
+     -12.6,
+     1.2
     ],
     [
-     -15.0,
-     -8.0
+     -14.2,
+     -5.0
     ],
     [
-     -17.0,
-     -18.0
+     -15.2,
+     -10.0
+    ],
+    [
+     -16.6,
+     -16.0
+    ],
+    [
+     -17.6,
+     -21.0
     ],
     [
      -18.6,
@@ -603,20 +863,87 @@
      -19.6,
      -30.6
     ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": 15.0,
+     "kind": "trail",
+     "stones": 0.8
+    },
+    {
+     "from": 15.0,
+     "to": 21.5,
+     "kind": "steps_stone"
+    },
+    {
+     "from": 21.5,
+     "to": 26.5,
+     "kind": "trail"
+    },
+    {
+     "from": 26.5,
+     "to": -0.3,
+     "kind": "steps_stone"
+    }
    ]
   },
   {
-   "id": "graves_path",
+   "id": "shortcut_a",
    "width": 0.9,
    "points": [
     [
-     -4.5,
-     11.0
+     25.4,
+     27.4
     ],
     [
-     6.5,
-     11.4
+     25.6,
+     30.0
+    ],
+    [
+     25.0,
+     32.6
+    ],
+    [
+     24.6,
+     34.6
     ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "steps_stone"
+    }
+   ]
+  },
+  {
+   "id": "shortcut_b",
+   "width": 0.9,
+   "points": [
+    [
+     2.6,
+     45.2
+    ],
+    [
+     2.0,
+     46.8
+    ],
+    [
+     2.2,
+     48.6
+    ],
+    [
+     3.0,
+     50.2
+    ]
+   ],
+   "segments": [
+    {
+     "from": 0,
+     "to": -0.01,
+     "kind": "steps_stone"
+    }
    ]
   }
  ],
@@ -814,20 +1141,164 @@
   ],
   "home": [
    [
-    -28,
-    -6
+    -31,
+    -12
    ],
    [
-    18,
-    -6
+    12,
+    -12
    ],
    [
-    18,
-    24
+    13,
+    -2
    ],
    [
-    -28,
-    24
+    13.5,
+    10
+   ],
+   [
+    12,
+    18
+   ],
+   [
+    4,
+    22.5
+   ],
+   [
+    -8,
+    23.5
+   ],
+   [
+    -18,
+    26
+   ],
+   [
+    -29,
+    25.5
+   ],
+   [
+    -32,
+    10
+   ]
+  ],
+  "sanctum": [
+   [
+    -31,
+    -12
+   ],
+   [
+    12,
+    -12
+   ],
+   [
+    13,
+    -2
+   ],
+   [
+    13.5,
+    10
+   ],
+   [
+    12,
+    18
+   ],
+   [
+    4,
+    22.5
+   ],
+   [
+    -8,
+    23.5
+   ],
+   [
+    -18,
+    26
+   ],
+   [
+    -29,
+    25.5
+   ],
+   [
+    -32,
+    10
+   ]
+  ],
+  "oku": [
+   [
+    -14,
+    -8
+   ],
+   [
+    8,
+    -8
+   ],
+   [
+    9,
+    6
+   ],
+   [
+    3,
+    10.5
+   ],
+   [
+    -14,
+    9
+   ]
+  ],
+  "chinju": [
+   [
+    8.5,
+    -13
+   ],
+   [
+    13.6,
+    -12.5
+   ],
+   [
+    14.2,
+    -2
+   ],
+   [
+    14.4,
+    9
+   ],
+   [
+    13.4,
+    16.6
+   ],
+   [
+    11.6,
+    18.2
+   ],
+   [
+    11.0,
+    8
+   ],
+   [
+    10.0,
+    -2
+   ]
+  ],
+  "chinju_south": [
+   [
+    3.2,
+    16.8
+   ],
+   [
+    11.2,
+    16.6
+   ],
+   [
+    12.4,
+    18.8
+   ],
+   [
+    8.0,
+    20.0
+   ],
+   [
+    3.4,
+    20.2
    ]
   ]
  },
@@ -837,12 +1308,12 @@
    0.0
   ],
   "hut": [
-   -18.0,
-   11.6
+   -19.0,
+   10.4
   ],
   "hut_door": [
-   -18.9,
-   14.7
+   -16.15,
+   13.5
   ],
   "shrine": [
    -10.0,
@@ -853,12 +1324,12 @@
    6.4
   ],
   "graves": [
-   1.0,
-   12.2
+   6.2,
+   12.4
   ],
   "dosojin": [
-   11.2,
-   17.6
+   16.2,
+   19.4
   ],
   "lookout": [
    -23.6,
@@ -873,24 +1344,498 @@
    24.0
   ],
   "persimmon": [
-   -25.5,
-   9.0
+   -28.5,
+   6.5
   ],
   "woodpile": [
-   -21.9,
-   15.3
+   -25.9,
+   16.9
   ],
   "choppable_tree": [
-   -27.0,
-   15.0
+   -29.0,
+   17.4
   ],
   "fallen_branch": [
    -20.6,
    28.4
   ],
   "spawn": [
-   -18.9,
-   15.6
+   -16.6,
+   14.6
+  ],
+  "gate_main": [
+   0.0,
+   20.5
+  ],
+  "gate_north": [
+   -15.2,
+   -11.0
+  ],
+  "gate_sw": [
+   -19.6,
+   19.6
+  ],
+  "iwakura": [
+   -8.8,
+   -3.4
+  ],
+  "chozubachi": [
+   -12.4,
+   9.1
+  ],
+  "jizo": [
+   17.2,
+   20.6
+  ],
+  "garden": [
+   -23.2,
+   21.8
+  ]
+ },
+ "routes": {
+  "walk": [
+   [
+    -16.6,
+    14.6
+   ],
+   [
+    -14.2,
+    14.2
+   ],
+   [
+    -13.1,
+    12.9
+   ],
+   [
+    -13.0,
+    10.8
+   ],
+   [
+    -11.2,
+    10.0
+   ],
+   [
+    -8.0,
+    9.9
+   ],
+   [
+    -6.4,
+    8.6
+   ],
+   [
+    -5.6,
+    5.0
+   ],
+   [
+    -6.0,
+    2.5
+   ],
+   [
+    -6.2,
+    -1.0
+   ],
+   [
+    -5.5,
+    -4.5
+   ],
+   [
+    -2.0,
+    -7.0
+   ],
+   [
+    2.0,
+    -6.9
+   ],
+   [
+    5.0,
+    -5.4
+   ],
+   [
+    5.7,
+    -3.0
+   ],
+   [
+    7.0,
+    -0.5
+   ],
+   [
+    8.6,
+    1.5
+   ],
+   [
+    8.0,
+    5.5
+   ],
+   [
+    4.0,
+    8.2
+   ],
+   [
+    1.2,
+    9.6
+   ],
+   [
+    0.2,
+    12.0
+   ]
+  ],
+  "night": [
+   [
+    -16.6,
+    14.6
+   ],
+   [
+    -14.2,
+    14.2
+   ],
+   [
+    -13.1,
+    12.9
+   ],
+   [
+    -12.9,
+    10.8
+   ],
+   [
+    -11.0,
+    10.0
+   ],
+   [
+    -6.5,
+    9.7
+   ],
+   [
+    -2.0,
+    9.8
+   ],
+   [
+    0.6,
+    12.0
+   ],
+   [
+    2.4,
+    14.9
+   ],
+   [
+    6.0,
+    15.0
+   ]
+  ],
+  "lookout": [
+   [
+    -19.4,
+    30.6
+   ],
+   [
+    -20.8,
+    34.0
+   ],
+   [
+    -22.4,
+    38.2
+   ],
+   [
+    -23.5,
+    41.9
+   ]
+  ]
+ },
+ "props": [
+  {
+   "name": "gate_stones",
+   "x": 0.0,
+   "z": 20.5,
+   "yaw": 0.0
+  },
+  {
+   "name": "stone_lantern_old",
+   "x": -2.9,
+   "z": 21.3,
+   "yaw": 8,
+   "light": [
+    1.0,
+    1.4,
+    4.5
+   ]
+  },
+  {
+   "name": "stone_lantern_old",
+   "x": 2.9,
+   "z": 21.3,
+   "yaw": -6,
+   "light": [
+    1.0,
+    1.4,
+    4.5
+   ]
+  },
+  {
+   "name": "stone_lantern",
+   "x": -1.75,
+   "z": 14.3,
+   "yaw": 0,
+   "light": [
+    1.0,
+    1.7,
+    5.5
+   ]
+  },
+  {
+   "name": "stone_lantern",
+   "x": 1.75,
+   "z": 14.3,
+   "yaw": 0,
+   "light": [
+    1.0,
+    1.7,
+    5.5
+   ]
+  },
+  {
+   "name": "stone_lantern",
+   "x": -11.7,
+   "z": 9.0,
+   "yaw": 0,
+   "light": [
+    1.0,
+    1.7,
+    5.5
+   ]
+  },
+  {
+   "name": "stone_lantern",
+   "x": -8.3,
+   "z": 9.0,
+   "yaw": 0,
+   "light": [
+    1.0,
+    1.7,
+    5.5
+   ]
+  },
+  {
+   "name": "chozubachi",
+   "x": -13.4,
+   "z": 8.3,
+   "yaw": 18
+  },
+  {
+   "name": "ema_kake",
+   "x": -6.9,
+   "z": 8.2,
+   "yaw": -12
+  },
+  {
+   "name": "massha",
+   "x": -3.4,
+   "z": 8.1,
+   "yaw": 8
+  },
+  {
+   "name": "iwakura",
+   "x": -8.8,
+   "z": -3.4,
+   "yaw": 25
+  },
+  {
+   "name": "sekimori",
+   "x": -15.3,
+   "z": -11.2,
+   "yaw": 0.0
+  },
+  {
+   "name": "sekimori",
+   "x": -19.5,
+   "z": 20.1,
+   "yaw": 0.0
+  },
+  {
+   "name": "jizo",
+   "x": 17.3,
+   "z": 20.9,
+   "yaw": -15
+  },
+  {
+   "name": "waymark_a",
+   "x": 19.9,
+   "z": 16.4,
+   "yaw": 10
+  },
+  {
+   "name": "endai",
+   "x": 19.8,
+   "z": 6.2,
+   "yaw": 90
+  },
+  {
+   "name": "signpost_a",
+   "x": -18.6,
+   "z": 22.9,
+   "yaw": -20
+  },
+  {
+   "name": "fence_yotsume_c",
+   "x": -25.15,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "fence_yotsume_b",
+   "x": -23.15,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "fence_yotsume_a",
+   "x": -21.15,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "shiorido",
+   "x": -19.6,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "fence_yotsume_a",
+   "x": -18.05,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "fence_yotsume_b",
+   "x": -16.05,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "fence_yotsume_c",
+   "x": -14.05,
+   "z": 18.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "monohoshi",
+   "x": -14.9,
+   "z": 16.4,
+   "yaw": 0.0
+  },
+  {
+   "name": "kakehi_yard",
+   "x": -23.6,
+   "z": 14.7,
+   "yaw": 0.0
+  },
+  {
+   "name": "mizugame",
+   "x": -24.7,
+   "z": 13.25,
+   "yaw": 0.0
+  },
+  {
+   "name": "kago_tall",
+   "x": -23.1,
+   "z": 13.0,
+   "yaw": 20
+  },
+  {
+   "name": "endai",
+   "x": -17.2,
+   "z": 17.5,
+   "yaw": 0.0
+  },
+  {
+   "name": "zaru",
+   "x": -16.7,
+   "z": 17.5,
+   "yaw": 0,
+   "hang": 0.44
+  },
+  {
+   "name": "nougu",
+   "x": -24.3,
+   "z": 18.55,
+   "yaw": 0.0
+  },
+  {
+   "name": "wara_heap",
+   "x": -26.4,
+   "z": 18.0,
+   "yaw": -20
+  },
+  {
+   "name": "wara_sheaves",
+   "x": -27.6,
+   "z": 20.8,
+   "yaw": 30
+  },
+  {
+   "name": "hatake",
+   "x": -23.2,
+   "z": 21.8,
+   "yaw": -4
+  },
+  {
+   "name": "kakashi",
+   "x": -20.4,
+   "z": 23.0,
+   "yaw": -10
+  },
+  {
+   "name": "neko",
+   "x": 0,
+   "z": 0,
+   "yaw": 12,
+   "anchor": [
+    "hut",
+    "cat"
+   ]
+  },
+  {
+   "name": "lantern_paper",
+   "x": 0,
+   "z": 0,
+   "yaw": 0,
+   "hang": 1.72,
+   "light": [
+    0.25,
+    1.9,
+    6.5
+   ],
+   "anchor": [
+    "hut",
+    "light_door"
+   ]
+  }
+ ],
+ "perches": {
+  "firefly": [
+   [
+    -13.4,
+    0.6,
+    8.6
+   ],
+   [
+    -23.6,
+    0.5,
+    14.9
+   ],
+   [
+    -20.5,
+    0.4,
+    -32.0
+   ],
+   [
+    -18.8,
+    0.4,
+    -31.0
+   ],
+   [
+    -22.0,
+    0.4,
+    -33.6
+   ]
   ]
  }
 }

@@ -1,17 +1,25 @@
 class_name W3Stonework
 extends Node3D
-## The stonework people built where the land needed holding: dry-stone retaining walls (野面積み)
-## along the yards that were cut into or built out from the slope, the shrine terrace's stone face
-## and its steps. Walls come from the terrain generator's real pad edges (terrain.json "walls"),
-## so they hold exactly the step the terrain has. Stones are small faceted rocks (W3Rocks shapes,
-## flattened), stacked in irregular courses with a slight batter; MultiMesh per shape.
+## The stonework people built where the land needed holding, and the roads they laid (round 4):
+##   * dry-stone retaining walls (野面積み) along the yards cut into or built out from the slope and
+##     the shrine terrace's stone face: from the terrain generator's real pad edges (terrain.json
+##     "walls"), so they hold exactly the step the terrain has; small faceted stones (W3Rocks
+##     shapes, flattened) in irregular courses with a slight batter, MultiMesh per shape;
+##   * the roads and paths as real geometry (tools/world3d/w3terrain/roads.py, terrain.json "roads"
+##     and roads.bin): stone paving with kerbs, gutters and cross drains, natural-stone, log and
+##     cut-stone steps, stepping stones, half-buried stones and roots, per 16 m chunk. The 'flat'
+##     layer (paving, stepping stones) casts no shadow; the 'solid' layer (steps, kerbs, logs) does.
+## Materials: the renderer's toon_solid, not leaned (ground-hugging, docs/knowledge/21 §2.1).
 
 const SHAPES := 8
 
 var terrain: Terrain3D
 var mat := ShaderMaterial.new()
+var road_mat := ShaderMaterial.new()
 var per_shape := []
 var rng := RandomNumberGenerator.new()
+var road_tris := 0
+var road_meshes := 0
 
 
 func build(t: Terrain3D, rocks: W3Rocks) -> void:
@@ -21,6 +29,9 @@ func build(t: Terrain3D, rocks: W3Rocks) -> void:
 	mat.set_shader_parameter("lean", 0.0)
 	mat.set_shader_parameter("porosity", 0.55)
 	mat.set_shader_parameter("tint", Color(1.04, 1.0, 0.94))
+	road_mat.shader = load("res://render3d/shaders/toon_solid.gdshader")
+	road_mat.set_shader_parameter("lean", 0.0)
+	road_mat.set_shader_parameter("porosity", 0.6)
 	var shapes: Array[ArrayMesh] = []
 	for i in SHAPES:
 		# wall stones are 6-10 px across: 80 triangles each is plenty (1,280 made the walls 1.7 M
@@ -29,8 +40,6 @@ func build(t: Terrain3D, rocks: W3Rocks) -> void:
 		per_shape.append([])
 	for w in terrain.info.get("walls", []):
 		_wall(w)
-	for st in terrain.info.get("steps", []):
-		_steps(st)
 	for i in SHAPES:
 		var list: Array = per_shape[i]
 		if list.is_empty():
@@ -46,6 +55,46 @@ func build(t: Terrain3D, rocks: W3Rocks) -> void:
 		mi.multimesh = mm
 		mi.material_override = mat
 		add_child(mi)
+	_roads()
+
+
+## The road and path geometry baked by the terrain generator.
+func _roads() -> void:
+	var info: Dictionary = terrain.info.get("roads", {})
+	if info.is_empty():
+		return
+	var dir := "res://world3d/terrain/" + String(terrain.info.get("name", "saddle"))
+	var f := FileAccess.open(dir.path_join(String(info.get("file", "roads.bin"))), FileAccess.READ)
+	if f == null:
+		push_warning("W3Stonework: no road geometry (%s)" % info.get("file", ""))
+		return
+	for c in info.get("chunks", []):
+		var n := int(c["vertices"])
+		var t := int(c["triangles"])
+		f.seek(int(c["offset"]))
+		var verts := f.get_buffer(n * 12).to_vector3_array()
+		var norms := f.get_buffer(n * 12).to_vector3_array()
+		var cols := f.get_buffer(n * 16).to_color_array()
+		var uvs := f.get_buffer(n * 8).to_vector2_array()
+		var idx := f.get_buffer(t * 12).to_int32_array()
+		var arr := []
+		arr.resize(Mesh.ARRAY_MAX)
+		arr[Mesh.ARRAY_VERTEX] = verts
+		arr[Mesh.ARRAY_NORMAL] = norms
+		arr[Mesh.ARRAY_COLOR] = cols
+		arr[Mesh.ARRAY_TEX_UV2] = uvs
+		arr[Mesh.ARRAY_INDEX] = idx
+		var m := ArrayMesh.new()
+		m.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arr)
+		var mi := MeshInstance3D.new()
+		mi.name = "Road_%d_%d_%s" % [int(c["chunk"][0]), int(c["chunk"][1]), String(c["layer"])]
+		mi.mesh = m
+		mi.material_override = road_mat
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if String(c["layer"]) == "solid" else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		add_child(mi)
+		road_tris += t
+		road_meshes += 1
+	print("ROADS meshes=%d tris=%d" % [road_meshes, road_tris])
 
 
 func _stone(origin: Vector3, face: Vector3, w: float, h: float, d: float, tilt := 0.0) -> void:
@@ -65,9 +114,6 @@ func _wall(w: Dictionary) -> void:
 	var bot: Array = w["bottom"]
 	var cut: Array = w["cut"]
 	# walk along the wall in stone-width steps, laying courses from the foot to the top
-	var acc := 0.0
-	var i := 0
-	var along := 0.0
 	var total := 0.0
 	for k in pts.size() - 1:
 		total += Vector2(pts[k + 1][0] - pts[k][0], pts[k + 1][1] - pts[k][1]).length()
@@ -102,27 +148,3 @@ func _wall(w: Dictionary) -> void:
 			y += sh * 0.92
 			course += 1
 		s += sw * 0.88
-
-
-func _steps(st: Dictionary) -> void:
-	var a := Vector2(st["from"][0], st["from"][1])
-	var b := Vector2(st["to"][0], st["to"][1])
-	var ha := terrain.height_at(a.x, a.y)
-	var hb := terrain.height_at(b.x, b.y)
-	var n := int(st.get("count", 4))
-	var dir := (b - a).normalized()
-	var face := Vector3(-dir.x, 0, -dir.y)       # the risers look back down the steps
-	var width := float(st["width"])
-	for i in n:
-		var t0 := float(i) / n
-		var t1 := float(i + 1) / n
-		var p := a.lerp(b, (t0 + t1) * 0.5)
-		var y_top := lerpf(ha, hb, t1)
-		var depth := (b - a).length() / n
-		# each tread is two or three stones side by side
-		var parts := 2 if i % 2 == 0 else 3
-		for j in parts:
-			var off := (float(j) + 0.5) / parts - 0.5
-			var side := Vector3(face.z, 0, -face.x) * off * width
-			var c := Vector3(p.x, y_top - 0.12, p.y) + side
-			_stone(c, face, width / parts * 1.05, 0.3, depth * 1.15, 0.0)

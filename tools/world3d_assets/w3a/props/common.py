@@ -25,16 +25,29 @@ def materials(a, porosity=0.7, cutaway=False, lit_energy=2.4, keys=('solid',)):
                                                                'emission_at_night': 0.8})
     if 'paper' in keys:
         m['paper'] = a.material('paper', 'toon_solid.gdshader', {'albedo_mode': 0, 'porosity': 0.4})
+    if 'shoji' in keys:
+        # paper screens lit from inside after dusk: warm, below the bloom threshold (the renderer may
+        # retune it for its continuous light; knowledge/25)
+        m['shoji'] = a.material('shoji', 'toon_solid.gdshader', {'albedo_mode': 0, 'porosity': 0.4, 'emission_color': [1.0, 0.74, 0.42],
+                                                                   'emission_energy': 0.9, 'emission_at_night': 1.0})
+    if 'sway' in keys:
+        # cloth, paper strips, hanging things: the foliage material in mesh mode, each piece a sway group
+        m['sway'] = a.material('sway', 'toon_foliage.gdshader', {'foliage_mode': 0, 'wind_px': 1.5, 'porosity': 0.7,
+                                                                 'cutaway': False, 'transmit': 0.25})
+    if 'swaynl' in keys:
+        m['swaynl'] = a.material('swaynl', 'toon_foliage_noline.gdshader', {'foliage_mode': 0, 'wind_px': 1.5, 'porosity': 0.7,
+                                                                            'cutaway': False, 'transmit': 0.25})
     return m
 
 
 def export_prop(out, name, category, prop, catalog, porosity=0.7, cutaway=False, far=True, markers=None,
-                variants=None, meta=None, lit_energy=2.4, budget=2000, ground=True, script=None, extras=None):
+                variants=None, meta=None, lit_energy=2.4, budget=2000, ground=True, script=None, extras=None,
+                cards=None, asset=None):
     """prop: kit.Prop. variants: {key: kit.Prop} extra scenes <name>_<key>.tscn sharing the materials
     (e.g. 'lit'). extras: {node name: (kit.Prop, pos)} separate meshes as their own nodes (things the
     story moves or takes: the dango, a beam), with their faded twins in the far scene. Material keys
     used by pieces: solid / roof / noline / lit / paper. Returns stats."""
-    a = out.asset(name, category)
+    a = asset if asset is not None else out.asset(name, category)
     keys = {pc.mat for pc in prop.pieces}
     for v in (variants or {}).values():
         keys |= {pc.mat for pc in v.pieces}
@@ -44,14 +57,18 @@ def export_prop(out, name, category, prop, catalog, porosity=0.7, cutaway=False,
         keys.add('solid')
     mats = materials(a, porosity=porosity, cutaway=cutaway, lit_energy=lit_energy, keys=tuple(sorted(keys)))
 
-    def mesh_of(p, key, pale=False):
+    def mesh_of(p, key, pale=False, with_cards=False):
         parts = p.finish(pale=pale, ground=ground)
         surfaces = []
         for k in sorted(parts):
             mk = k
-            if pale and k == 'lit':          # a faded lamp does not glow
+            if pale and k in ('lit', 'shoji'):          # a faded lamp does not glow
                 mk = 'paper' if 'paper' in mats else 'solid'
+                if mk not in mats:
+                    mats[mk] = materials(a, porosity=porosity, keys=(mk,))[mk]
             surfaces.append((mats[mk], parts[k]))
+        if with_cards and cards:
+            surfaces += list(cards)
         return a.mesh(key, surfaces)
 
     extra_mesh = {}
@@ -79,14 +96,14 @@ def export_prop(out, name, category, prop, catalog, porosity=0.7, cutaway=False,
         return nd
     base_meta = {'w3a_kind': category}
     base_meta.update(meta or {})
-    m0 = mesh_of(prop, 'mesh')
+    m0 = mesh_of(prop, 'mesh', with_cards=True)
     a.scene(nodes_for(m0), meta=base_meta, script=script)
-    tris = {'': prop.tris}
+    tris = {'': prop.tris + sum(len(md.arrays()['idx']) for _, md in (cards or []))}
     if far:
         mf = mesh_of(prop, 'far_mesh', pale=True)
         a.scene(nodes_for(mf, pale=True), meta=dict(base_meta, w3a_far=True), key='far', script=script)
     for key, vp in (variants or {}).items():
-        mv = mesh_of(vp, key + '_mesh')
+        mv = mesh_of(vp, key + '_mesh', with_cards=True)
         a.scene(nodes_for(mv, variant=key), meta=dict(base_meta, w3a_variant=key), key=key, script=script)
         tris[key] = vp.tris
         if far and key != 'lit':

@@ -1,0 +1,27 @@
+# Edit keys for Saji. Lower case = face keys shared by all three (same meaning, own colours).
+s $fee1ca  skin light
+t $f9cdb5  skin
+u $efae96  skin shade
+U $e0957e  skin deep shade
+q $8a3b3a  mouth / skin line
+Q $cf8c7c  soft line (mouth ends)
+m $5e1d2d  mouth inside
+n $de6f7c  tongue
+y $fffaf5  teeth
+k $1c0f0d  lash ink
+K $552925  lash, lighter
+w $f7ede5  eye white
+v $c5b4ab  eye white in shadow
+E $223338  iris dark
+e $3f676b  iris
+i $6fa6a2  iris light
+l $ffffff  glint
+c $eef9ff  tear light
+C $a8d9f2  tear
+z $5f9fd0  tear edge
+b $f59a98  blush
+p $e5707c  blush hatch
+x $e23b4e  anger mark
+X $931f35  anger mark dark
+h $d43d3c  hair mid
+H $822127  hair dark

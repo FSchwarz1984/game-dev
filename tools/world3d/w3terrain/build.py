@@ -145,6 +145,11 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
         p["y"] = ctx["height"](p["x"], p["z"])
     log("placements", len(plc), f"{time.time() - t0:.1f}s")
 
+    # ---------------- roads and paths as geometry (stones, steps, logs: roads.py)
+    from . import roads as RO
+    road_chunks, road_stats = RO.build(L, h, x0, z0, cell, plc, int(L["seed"]))
+    log("roads", road_stats, f"{time.time() - t0:.1f}s")
+
     # ---------------- materials on the splat grid
     cs = float(L["splat_cell"])
     sx = x0 + np.arange(int(round((x1 - x0) / cs)) + 1) * cs
@@ -164,6 +169,53 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     # outer side of the road's bends (gravel thrown out by feet and rain)
     F["road_outer"] = geom.smoothstep(0.5, 1.3, up(road_d) - R["width"] * 0.25)
     F["paths"] = [(up(d), P["width"] * 0.5) for P, pts, d in path_fields]
+    # where each kind of surface lies (crisp edges; knowledge/25): worn earth of the trails, the paved
+    # strips (stone joints show moss), the stepping-stone and step paths (grass and moss between)
+    trail_k = np.zeros_like(Hs)
+    pave_k = np.zeros_like(Hs)
+    stone_k = np.zeros_like(Hs)
+    gutter_k = np.zeros_like(Hs)
+    seed_i = int(L["seed"])
+
+    def footprint(route, ranges, width):
+        d, arc, k = RO.kinds_on_grid(route, ranges, Xs, Zs, width)
+        hw = width * 0.5
+        wob = (noise.fbm(arc / 4.5, np.full(arc.shape, 3.7), 2, seed_i + 71) - 0.5) * 0.22 * width
+        fine = (noise.fbm(Xs / 0.7, Zs / 0.7, 2, seed_i + 72) - 0.5) * 0.08
+        for idx, (a, b, sg) in enumerate(ranges):
+            sel = k == idx
+            if not sel.any():
+                continue
+            kind = sg["kind"]
+            if kind == "trail":
+                v = geom.smoothstep(hw + 0.07, hw - 0.12, d - wob - fine)
+                trail_k[sel] = np.maximum(trail_k[sel], v[sel])
+            elif kind == "ishidatami":
+                v = geom.smoothstep(hw + 0.04, hw - 0.04, d)
+                pave_k[sel] = np.maximum(pave_k[sel], v[sel])
+                if sg.get("gutter", 0):
+                    g = geom.smoothstep(0.22, 0.08, np.abs(d - (hw + 0.25)))
+                    gutter_k[sel] = np.maximum(gutter_k[sel], g[sel])
+            else:
+                v = geom.smoothstep(hw + 0.35, hw - 0.1, d - fine * 2)
+                stone_k[sel] = np.maximum(stone_k[sel], v[sel])
+                if kind.startswith("steps"):
+                    trail_k[sel] = np.maximum(trail_k[sel], geom.smoothstep(hw + 0.05, hw - 0.15, d)[sel] * 0.9)
+    road_route = RO.Route(R["points"], 10)
+    footprint(road_route, RO.resolve(road_route, R["points"], R.get("segments", [])), R["width"])
+    for P_ in L["paths"]:
+        if P_.get("segments"):
+            rt = RO.Route(P_["points"], 8)
+            footprint(rt, RO.resolve(rt, P_["points"], P_["segments"]), P_["width"])
+    for st in L.get("steps", []):
+        rt = RO.Route([st["from"], st["to"]], 0)
+        footprint(rt, [(0.0, rt.length, {"kind": "steps_cut"})], st["width"])
+    F["trail_k"] = trail_k
+    F["pave_k"] = pave_k
+    F["stone_k"] = stone_k
+    F["gutter_k"] = gutter_k
+    F["sanctum"] = up((geom.polygon_sdf(X, Z, L["zones"]["sanctum"]) < 0).astype(float)) if "sanctum" in L["zones"] else np.zeros_like(Hs)
+    F["oku"] = up((geom.polygon_sdf(X, Z, L["zones"]["oku"]) < 0).astype(float)) if "oku" in L["zones"] else np.zeros_like(Hs)
     pw = np.zeros_like(Hs)
     for d, hw in F["paths"]:
         pw = np.maximum(pw, geom.smoothstep(hw * 0.9, 0.0, d))
@@ -216,6 +268,13 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     mats = materials.compute(L, F, Xs, Zs, Hs, cs, plc)
     log("materials", f"{time.time() - t0:.1f}s")
 
+    # ---------------- ground cover: plant communities as pixel-art cards (cover.py)
+    from . import cover as CV
+    cover_cards, cover_counts, atlas_size = CV.build(L, mats["W"], F, Xs, Zs, Hs, cs, h, x0, z0, cell, int(L["seed"]), out_godot.parent / "common")
+    cover_info = CV.write(cover_cards, atlas_size, out_godot)
+    cover_info["species"] = cover_counts
+    log("cover", sum(cover_counts.values()), "cards", f"{time.time() - t0:.1f}s")
+
     # ---------------- stonework: retaining walls along the walled sides of pads (their real edges)
     from skimage import measure
     walls = []
@@ -266,7 +325,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     info = export.write(L, out_godot, out_tmp, dict(
         h=h, X=X, Z=Z, x0=x0, z0=z0, cell=cell, nx=nx, nz=nz, walk=walk, water_h=water_h, water_k=water_k,
         flow=flow, mats=mats, cs=cs, Hs=Hs, placements=plc, road=(RP, rprof), paths=path_fields, walls=walls,
-        steps=step_info, pool_surf=pool_surf, stream=(SP, sfloor), slope=slope))
+        steps=step_info, pool_surf=pool_surf, stream=(SP, sfloor), slope=slope, road_chunks=road_chunks, road_stats=road_stats, cover=cover_info))
     log("exported", f"{time.time() - t0:.1f}s", info)
     # ---------------- the land around the region, for the view from the lookout
     from . import vista

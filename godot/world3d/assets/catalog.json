@@ -111,54 +111,6 @@
    ],
    "scene": "res://world3d/assets/objects/backpack_frame/backpack_frame.tscn"
   },
-  "basket_flat": {
-   "footprint": [
-    [
-     0.0,
-     0.0,
-     0.3
-    ]
-   ],
-   "tags": [
-    "pickup"
-   ],
-   "notes": "Flat basket (笊) with a few greens.",
-   "category": "props",
-   "variants": {
-    "far": "res://world3d/assets/props/basket_flat/basket_flat_far.tscn"
-   },
-   "height": 0.13,
-   "size": [
-    0.66,
-    0.13,
-    0.66
-   ],
-   "scene": "res://world3d/assets/props/basket_flat/basket_flat.tscn"
-  },
-  "basket_tall": {
-   "footprint": [
-    [
-     0.0,
-     0.0,
-     0.3
-    ]
-   ],
-   "tags": [
-    "interact"
-   ],
-   "notes": "Carrying basket (背負い籠), 0.62 m.",
-   "category": "props",
-   "variants": {
-    "far": "res://world3d/assets/props/basket_tall/basket_tall_far.tscn"
-   },
-   "height": 0.63,
-   "size": [
-    0.54,
-    0.63,
-    0.61
-   ],
-   "scene": "res://world3d/assets/props/basket_tall/basket_tall.tscn"
-  },
   "buna_a": {
    "category": "tree",
    "species": "beech",
@@ -370,6 +322,53 @@
    "notes": "御神木. Trunk 6.5 m across; buttress roots fitted to the ground of the saddle terrain at marker 'camphor' (0.0, 0.0), origin height 0.106 (do not rotate; rebuild after the terrain changes); low limbs reach 16.5 m. Shimenawa at 2.45 m.",
    "scene": "res://world3d/assets/trees/camphor_great/camphor_great.tscn"
   },
+  "chozubachi": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.6
+    ]
+   ],
+   "tags": [
+    "sacred",
+    "water",
+    "interact"
+   ],
+   "notes": "The water basin (手水鉢) before the shrine steps: a hollowed natural stone 1.2 m, a bamboo spout on a stand behind (the water falls into the bowl), three ladles on a bamboo rest, a flat stone in front.",
+   "anchors": {
+    "interact": [
+     0.05,
+     0.0,
+     0.95
+    ],
+    "water": [
+     0.0,
+     0.56,
+     0.0
+    ],
+    "firefly": [
+     [
+      0.3,
+      0.7,
+      0.3
+     ],
+     [
+      -0.4,
+      0.5,
+      0.2
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 0.99,
+   "size": [
+    1.24,
+    1.09,
+    2.09
+   ],
+   "scene": "res://world3d/assets/props/chozubachi/chozubachi.tscn"
+  },
   "dosojin": {
    "footprint": [
     [
@@ -430,6 +429,76 @@
    ],
    "scene": "res://world3d/assets/props/dosojin/dosojin.tscn"
   },
+  "ema_kake": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "tags": [
+    "sacred",
+    "interact"
+   ],
+   "notes": "A small roofed rack (1.3 m) with thirteen votive plaques (絵馬) on two rails.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.6
+    ]
+   },
+   "category": "props",
+   "height": 1.42,
+   "size": [
+    1.66,
+    1.52,
+    0.64
+   ],
+   "scene": "res://world3d/assets/props/ema_kake/ema_kake.tscn"
+  },
+  "endai": {
+   "footprint": [
+    [
+     -0.4,
+     0.0,
+     0.3
+    ],
+    [
+     0.4,
+     0.0,
+     0.3
+    ]
+   ],
+   "tags": [
+    "interact",
+    "life"
+   ],
+   "notes": "A low bench (縁台) with a tray, two cups and a round fan.",
+   "anchors": {
+    "sit": [
+     0.0,
+     0.42,
+     0.0
+    ],
+    "perch": [
+     [
+      0.7,
+      0.44,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 0.51,
+   "size": [
+    1.6,
+    0.51,
+    0.47
+   ],
+   "scene": "res://world3d/assets/props/endai/endai.tscn"
+  },
   "fallen_branch": {
    "footprint": [],
    "tags": [
@@ -455,40 +524,6 @@
     0.89
    ],
    "scene": "res://world3d/assets/props/fallen_branch/fallen_branch.tscn"
-  },
-  "fence_bamboo": {
-   "footprint": [
-    [
-     -1.0,
-     0.0,
-     0.12
-    ],
-    [
-     0.0,
-     0.0,
-     0.12
-    ],
-    [
-     1.0,
-     0.0,
-     0.12
-    ]
-   ],
-   "tags": [
-    "fence"
-   ],
-   "notes": "Bamboo lattice fence (四つ目垣), 2 m segment along x; segments join end to end.",
-   "category": "props",
-   "variants": {
-    "far": "res://world3d/assets/props/fence_bamboo/fence_bamboo_far.tscn"
-   },
-   "height": 1.05,
-   "size": [
-    2.16,
-    1.2,
-    0.1
-   ],
-   "scene": "res://world3d/assets/props/fence_bamboo/fence_bamboo.tscn"
   },
   "fence_rail": {
    "footprint": [
@@ -523,6 +558,141 @@
     0.16
    ],
    "scene": "res://world3d/assets/props/fence_rail/fence_rail.tscn"
+  },
+  "fence_yotsume_a": {
+   "footprint": [
+    [
+     -0.67,
+     0.0,
+     0.14
+    ],
+    [
+     0.0,
+     0.0,
+     0.14
+    ],
+    [
+     0.67,
+     0.0,
+     0.14
+    ]
+   ],
+   "tags": [
+    "fence"
+   ],
+   "notes": "Bamboo lattice fence (四つ目垣), 2 m along x, with asagao vines; segments join end to end.",
+   "anchors": {
+    "perch": [
+     [
+      -1.0,
+      1.16,
+      0.0
+     ],
+     [
+      1.0,
+      1.16,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.15,
+   "size": [
+    2.16,
+    1.3,
+    0.1
+   ],
+   "scene": "res://world3d/assets/props/fence_yotsume_a/fence_yotsume_a.tscn"
+  },
+  "fence_yotsume_b": {
+   "footprint": [
+    [
+     -0.67,
+     0.0,
+     0.14
+    ],
+    [
+     0.0,
+     0.0,
+     0.14
+    ],
+    [
+     0.67,
+     0.0,
+     0.14
+    ]
+   ],
+   "tags": [
+    "fence"
+   ],
+   "notes": "Bamboo lattice fence (四つ目垣), 2 m along x, with gourd vines; segments join end to end.",
+   "anchors": {
+    "perch": [
+     [
+      -1.0,
+      1.16,
+      0.0
+     ],
+     [
+      1.0,
+      1.16,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.15,
+   "size": [
+    2.16,
+    1.3,
+    0.1
+   ],
+   "scene": "res://world3d/assets/props/fence_yotsume_b/fence_yotsume_b.tscn"
+  },
+  "fence_yotsume_c": {
+   "footprint": [
+    [
+     -0.67,
+     0.0,
+     0.14
+    ],
+    [
+     0.0,
+     0.0,
+     0.14
+    ],
+    [
+     0.67,
+     0.0,
+     0.14
+    ]
+   ],
+   "tags": [
+    "fence"
+   ],
+   "notes": "Bamboo lattice fence (四つ目垣), 2 m along x, with few vines; segments join end to end.",
+   "anchors": {
+    "perch": [
+     [
+      -1.0,
+      1.16,
+      0.0
+     ],
+     [
+      1.0,
+      1.16,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.15,
+   "size": [
+    2.16,
+    1.3,
+    0.1
+   ],
+   "scene": "res://world3d/assets/props/fence_yotsume_c/fence_yotsume_c.tscn"
   },
   "fern_a": {
    "category": "plant",
@@ -571,6 +741,53 @@
    "anchors": {},
    "notes": "羊歯 clump (card sprites).",
    "scene": "res://world3d/assets/plants/fern/fern_d.tscn"
+  },
+  "gate_stones": {
+   "footprint": [
+    [
+     -1.65,
+     0.0,
+     0.42
+    ],
+    [
+     1.62,
+     0.0,
+     0.38
+    ]
+   ],
+   "tags": [
+    "sacred",
+    "gate",
+    "landmark"
+   ],
+   "notes": "The main gate of the barrier: two old standing stones (1.7 and 1.45 m) 3.3 m apart, a thick rope slung between them (lowest 0.95 m), four paper streamers and three straw tassels that swing; the path passes between.",
+   "anchors": {
+    "gate": [
+     0.0,
+     0.0,
+     0.0
+    ],
+    "perch": [
+     [
+      -1.65,
+      1.77,
+      0.0
+     ],
+     [
+      1.62,
+      1.5,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.75,
+   "size": [
+    4.1,
+    1.88,
+    0.77
+   ],
+   "scene": "res://world3d/assets/props/gate_stones/gate_stones.tscn"
   },
   "graves": {
    "footprint": [
@@ -692,27 +909,133 @@
    ],
    "scene": "res://world3d/assets/props/graves/graves.tscn"
   },
+  "hatake": {
+   "footprint": [
+    [
+     -2.1,
+     0.0,
+     1.0
+    ],
+    [
+     0.0,
+     0.0,
+     1.0
+    ],
+    [
+     2.1,
+     0.0,
+     1.0
+    ],
+    [
+     -2.1,
+     -1.2,
+     0.8
+    ],
+    [
+     0.0,
+     -1.2,
+     0.8
+    ],
+    [
+     2.1,
+     -1.2,
+     0.8
+    ]
+   ],
+   "tags": [
+    "garden",
+    "interact"
+   ],
+   "notes": "The vegetable garden (畑), 6.2 x 3.6 m: four ridges along x (from the back: cucumbers on a bamboo frame, eggplants, ground cherries with green onions, young greens), stones along the front edge.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     2.2
+    ],
+    "perch": [
+     [
+      -2.6,
+      1.5,
+      -1.35
+     ],
+     [
+      2.6,
+      1.5,
+      -1.35
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.5,
+   "size": [
+    6.2,
+    1.64,
+    3.77
+   ],
+   "scene": "res://world3d/assets/props/hatake/hatake.tscn"
+  },
   "hut": {
    "footprint": [
     [
-     -1.4,
+     -2.85,
      0.0,
-     2.0
+     2.2
+    ],
+    [
+     -0.95,
+     0.0,
+     2.2
+    ],
+    [
+     0.95,
+     0.0,
+     2.2
+    ],
+    [
+     2.85,
+     0.0,
+     2.2
+    ],
+    [
+     -4.9,
+     0.0,
+     1.7
+    ],
+    [
+     -3.4,
+     2.7,
+     0.5
+    ],
+    [
+     -2.6,
+     2.7,
+     0.5
+    ],
+    [
+     -1.8,
+     2.7,
+     0.5
+    ],
+    [
+     -1.0,
+     2.7,
+     0.5
+    ],
+    [
+     -0.2,
+     2.7,
+     0.5
+    ],
+    [
+     0.6,
+     2.7,
+     0.5
     ],
     [
      1.4,
-     0.0,
-     2.0
-    ],
-    [
-     0.0,
-     -0.6,
-     2.0
-    ],
-    [
-     2.25,
-     2.2,
-     0.55
+     2.7,
+     0.5
     ]
    ],
    "tags": [
@@ -720,50 +1043,176 @@
     "interact",
     "home"
    ],
-   "notes": "Thatched hut, Q proportion: walls 5.6 x 3.8 m, roof 7.3 x 5.7 m, ridge 6.1 m, eave underside 2.3 m, door 0.98 x 1.82 m. Nodes: Door (slides open toward -x by 0.9 m), DoorBar (lift away to unbar), BackpackFrame (the old frame; the same object is objects/backpack_frame). Thatch in three tiers with a 38 cm cut eave.",
+   "notes": "The home (母屋), round 4: main house walls 7.6 x 4.4 m, thatch 9.8 x 6.6 m in three courses with a 0.6 m cut eave, ridge 6.8 m with a turf ridge (grass, iris, lilies), engawa along three bays, shoji (material minka_shoji: lit from inside after dusk), the doma door with a noren (east bay), a board-roofed lean-to on the west with the kitchen chimney. Node Door: the doma sliding door. anchors: door (where she stands to go in), smoke (chimney top), light (the brazier inside), cat (on the engawa), light_door (a lantern hook by the doma).",
    "anchors": {
     "door": [
-     -0.87,
+     2.85,
      0.0,
-     3.0
+     3.1
     ],
     "interact": [
-     -0.87,
+     2.85,
      0.0,
-     2.9
+     3.1
     ],
-    "door_open_offset": [
-     -0.9,
+    "smoke": [
+     -5.3,
+     4.1000000000000005,
+     -0.55
+    ],
+    "light": [
+     -0.62,
+     0.85,
+     1.6500000000000001
+    ],
+    "cat": [
+     -2.75,
+     0.5,
+     2.62
+    ],
+    "light_door": [
+     3.95,
+     2.3,
+     2.5500000000000003
+    ],
+    "engawa": [
+     -1.0,
+     0.5,
+     2.8499999999999996
+    ],
+    "tub_spot": [
+     -4.2,
      0.0,
-     0.0
-    ],
-    "firewood": [
-     2.25,
-     0.4,
-     2.1999999999999997
-    ],
-    "tub": [
-     -0.05,
-     0.3,
-     2.35
-    ],
-    "backpack_frame": [
-     -2.2,
-     0.0,
-     2.28
+     2.85
     ]
    },
    "category": "buildings",
-   "variants": {
-    "far": "res://world3d/assets/buildings/hut/hut_far.tscn"
-   },
-   "height": 6.4,
+   "height": 7.4,
    "size": [
-    7.38,
-    6.5,
-    5.77
+    11.34,
+    7.48,
+    7.02
    ],
    "scene": "res://world3d/assets/buildings/hut/hut.tscn"
+  },
+  "iwakura": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     1.25
+    ]
+   ],
+   "tags": [
+    "sacred",
+    "landmark"
+   ],
+   "notes": "A great rock held sacred (磐座), 2.7 x 1.9 m, mossy on top, a rope round its girth with four streamers.",
+   "anchors": {
+    "perch": [
+     [
+      0.0,
+      1.85,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.69,
+   "size": [
+    2.89,
+    1.85,
+    2.25
+   ],
+   "scene": "res://world3d/assets/props/iwakura/iwakura.tscn"
+  },
+  "jizo": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.25
+    ]
+   ],
+   "tags": [
+    "sacred",
+    "interact"
+   ],
+   "notes": "A roadside Jizo (0.7 m) with a red bib and cap on a little stone base, a flower in a bamboo cup.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.5
+    ]
+   },
+   "category": "props",
+   "height": 0.72,
+   "size": [
+    0.41,
+    0.72,
+    0.4
+   ],
+   "scene": "res://world3d/assets/props/jizo/jizo.tscn"
+  },
+  "kago_tall": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.3
+    ]
+   ],
+   "tags": [
+    "interact"
+   ],
+   "notes": "Carrying basket (背負い籠), 0.62 m.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/kago_tall/kago_tall_far.tscn"
+   },
+   "height": 0.63,
+   "size": [
+    0.54,
+    0.63,
+    0.61
+   ],
+   "scene": "res://world3d/assets/props/kago_tall/kago_tall.tscn"
+  },
+  "kakashi": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.15
+    ]
+   ],
+   "tags": [
+    "life"
+   ],
+   "notes": "A scarecrow (案山子) in an old patched kimono and a sedge hat.",
+   "anchors": {
+    "perch": [
+     [
+      0.02,
+      1.68,
+      0.03
+     ],
+     [
+      0.6,
+      1.17,
+      0.02
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.67,
+   "size": [
+    1.24,
+    1.97,
+    0.57
+   ],
+   "scene": "res://world3d/assets/props/kakashi/kakashi.tscn"
   },
   "kakehi": {
    "footprint": [
@@ -806,6 +1255,58 @@
     2.71
    ],
    "scene": "res://world3d/assets/props/kakehi/kakehi.tscn"
+  },
+  "kakehi_yard": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.48
+    ],
+    [
+     0.78,
+     0.08,
+     0.36
+    ]
+   ],
+   "tags": [
+    "interact",
+    "water",
+    "life"
+   ],
+   "notes": "Split-bamboo pipes from the hill (3.4 m toward -x) into a stone trough; a tub of spring water beside it with a watermelon, cucumbers and tomatoes cooling. Rotate so the pipe points uphill.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.7
+    ],
+    "spout": [
+     -0.16,
+     0.8,
+     0.0
+    ],
+    "water": [
+     0.0,
+     0.4,
+     0.0
+    ],
+    "firefly": [
+     [
+      0.0,
+      0.5,
+      0.2
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.06,
+   "size": [
+    4.52,
+    1.22,
+    0.7
+   ],
+   "scene": "res://world3d/assets/props/kakehi_yard/kakehi_yard.tscn"
   },
   "kaki_a": {
    "category": "tree",
@@ -1584,6 +2085,146 @@
    "notes": "イロハモミジ, red (accent)",
    "scene": "res://world3d/assets/trees/maple/maple_red_b.tscn"
   },
+  "massha": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.42
+    ]
+   ],
+   "tags": [
+    "sacred",
+    "interact"
+   ],
+   "notes": "A little side shrine (末社, 0.95 m) on a stone, its rope and two streamers, a sake cup and a flask.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.7
+    ]
+   },
+   "category": "props",
+   "height": 0.92,
+   "size": [
+    0.74,
+    0.93,
+    0.61
+   ],
+   "scene": "res://world3d/assets/props/massha/massha.tscn"
+  },
+  "mizugame": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.38
+    ]
+   ],
+   "tags": [
+    "interact",
+    "water"
+   ],
+   "notes": "A big glazed water jar (水甕) with a board lid and a ladle.",
+   "anchors": {
+    "interact": [
+     0.0,
+     0.0,
+     0.6
+    ]
+   },
+   "category": "props",
+   "height": 0.87,
+   "size": [
+    0.72,
+    0.87,
+    0.72
+   ],
+   "scene": "res://world3d/assets/props/mizugame/mizugame.tscn"
+  },
+  "monohoshi": {
+   "footprint": [
+    [
+     -1.8,
+     0.0,
+     0.12
+    ],
+    [
+     1.8,
+     0.0,
+     0.12
+    ]
+   ],
+   "tags": [
+    "life"
+   ],
+   "notes": "Laundry pole on two forked posts (3.6 m), an indigo kimono through its sleeves, two tenugui, a red cloth; the cloth swings with the wind (foliage material, mesh mode).",
+   "anchors": {
+    "perch": [
+     [
+      -1.8,
+      2.04,
+      0.0
+     ],
+     [
+      1.8,
+      2.04,
+      0.0
+     ],
+     [
+      0.1,
+      1.95,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 2.03,
+   "size": [
+    4.1,
+    2.28,
+    0.09
+   ],
+   "scene": "res://world3d/assets/props/monohoshi/monohoshi.tscn"
+  },
+  "neko": {
+   "footprint": [],
+   "tags": [
+    "life",
+    "animal"
+   ],
+   "notes": "A calico cat (三毛猫) asleep, curled up, 0.5 m long; place on the engawa.",
+   "category": "props",
+   "height": 0.2,
+   "size": [
+    0.4,
+    0.21,
+    0.32
+   ],
+   "scene": "res://world3d/assets/props/neko/neko.tscn"
+  },
+  "nougu": {
+   "footprint": [
+    [
+     0.0,
+     0.1,
+     0.35
+    ]
+   ],
+   "tags": [
+    "life"
+   ],
+   "notes": "Farm tools leaning on a fence: a hoe, a winnowing basket, a sickle on the rail (place against a fence, the fence 0.1 m behind).",
+   "category": "props",
+   "height": 1.3,
+   "size": [
+    1.12,
+    1.31,
+    0.42
+   ],
+   "scene": "res://world3d/assets/props/nougu/nougu.tscn"
+  },
   "offering_box": {
    "footprint": [
     [
@@ -1732,6 +2373,63 @@
    "notes": "赤松 8 m, layered plates.",
    "scene": "res://world3d/assets/trees/pine/pine_d.tscn"
   },
+  "sekimori": {
+   "footprint": [],
+   "tags": [
+    "sacred",
+    "gate"
+   ],
+   "notes": "A boundary stone (関守石): a round stone tied with a black cross of rope, set on a path: go no further.",
+   "category": "props",
+   "height": 0.27,
+   "size": [
+    0.32,
+    0.28,
+    0.3
+   ],
+   "scene": "res://world3d/assets/props/sekimori/sekimori.tscn"
+  },
+  "shiorido": {
+   "footprint": [
+    [
+     -0.56,
+     0.0,
+     0.1
+    ],
+    [
+     0.56,
+     0.0,
+     0.1
+    ]
+   ],
+   "tags": [
+    "gate",
+    "sacred"
+   ],
+   "notes": "The yard's brushwood gate (枝折戸), 1 m wide, the leaf swung open; between two posts (x +-0.56).",
+   "anchors": {
+    "perch": [
+     [
+      -0.56,
+      1.28,
+      0.0
+     ],
+     [
+      0.56,
+      1.28,
+      0.0
+     ]
+    ]
+   },
+   "category": "props",
+   "height": 1.25,
+   "size": [
+    1.22,
+    1.45,
+    0.6
+   ],
+   "scene": "res://world3d/assets/props/shiorido/shiorido.tscn"
+  },
   "shrine": {
    "footprint": [
     [
@@ -1801,7 +2499,7 @@
    ],
    "scene": "res://world3d/assets/objects/shrine_beam/shrine_beam.tscn"
   },
-  "signpost": {
+  "signpost_a": {
    "footprint": [
     [
      0.0,
@@ -1816,7 +2514,7 @@
    "notes": "Wooden signpost with two blank arms (no text).",
    "category": "props",
    "variants": {
-    "far": "res://world3d/assets/props/signpost/signpost_far.tscn"
+    "far": "res://world3d/assets/props/signpost_a/signpost_a_far.tscn"
    },
    "height": 1.72,
    "size": [
@@ -1824,7 +2522,7 @@
     1.86,
     0.38
    ],
-   "scene": "res://world3d/assets/props/signpost/signpost.tscn"
+   "scene": "res://world3d/assets/props/signpost_a/signpost_a.tscn"
   },
   "stone_lantern": {
    "footprint": [
@@ -1891,54 +2589,6 @@
     0.82
    ],
    "scene": "res://world3d/assets/lights/stone_lantern_old/stone_lantern_old.tscn"
-  },
-  "straw_heap": {
-   "footprint": [
-    [
-     0.0,
-     0.0,
-     0.4
-    ]
-   ],
-   "tags": [
-    "pickup"
-   ],
-   "notes": "Straw bundles lying in a heap.",
-   "category": "props",
-   "variants": {
-    "far": "res://world3d/assets/props/straw_heap/straw_heap_far.tscn"
-   },
-   "height": 0.3,
-   "size": [
-    1.27,
-    0.29,
-    0.6
-   ],
-   "scene": "res://world3d/assets/props/straw_heap/straw_heap.tscn"
-  },
-  "straw_sheaves": {
-   "footprint": [
-    [
-     0.0,
-     0.0,
-     0.4
-    ]
-   ],
-   "tags": [
-    "pickup"
-   ],
-   "notes": "Three standing straw sheaves (藁束).",
-   "category": "props",
-   "variants": {
-    "far": "res://world3d/assets/props/straw_sheaves/straw_sheaves_far.tscn"
-   },
-   "height": 0.97,
-   "size": [
-    1.3,
-    1.0,
-    0.6
-   ],
-   "scene": "res://world3d/assets/props/straw_sheaves/straw_sheaves.tscn"
   },
   "stump_axe": {
    "footprint": [
@@ -2446,7 +3096,55 @@
    "notes": "つつじ mound (summer green).",
    "scene": "res://world3d/assets/trees/tsutsuji/tsutsuji_c.tscn"
   },
-  "waymark": {
+  "wara_heap": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "tags": [
+    "pickup"
+   ],
+   "notes": "Straw bundles lying in a heap.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/wara_heap/wara_heap_far.tscn"
+   },
+   "height": 0.3,
+   "size": [
+    1.27,
+    0.29,
+    0.6
+   ],
+   "scene": "res://world3d/assets/props/wara_heap/wara_heap.tscn"
+  },
+  "wara_sheaves": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.4
+    ]
+   ],
+   "tags": [
+    "pickup"
+   ],
+   "notes": "Three standing straw sheaves (藁束).",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/wara_sheaves/wara_sheaves_far.tscn"
+   },
+   "height": 0.97,
+   "size": [
+    1.3,
+    1.0,
+    0.6
+   ],
+   "scene": "res://world3d/assets/props/wara_sheaves/wara_sheaves.tscn"
+  },
+  "waymark_a": {
    "footprint": [
     [
      0.0,
@@ -2461,7 +3159,7 @@
    "notes": "Stone waymark (道しるべ), blank, leaning.",
    "category": "props",
    "variants": {
-    "far": "res://world3d/assets/props/waymark/waymark_far.tscn"
+    "far": "res://world3d/assets/props/waymark_a/waymark_a_far.tscn"
    },
    "height": 1.0,
    "size": [
@@ -2469,7 +3167,7 @@
     1.05,
     0.24
    ],
-   "scene": "res://world3d/assets/props/waymark/waymark.tscn"
+   "scene": "res://world3d/assets/props/waymark_a/waymark_a.tscn"
   },
   "woodpile": {
    "footprint": [
@@ -2507,6 +3205,30 @@
     0.7
    ],
    "scene": "res://world3d/assets/props/woodpile/woodpile.tscn"
+  },
+  "zaru": {
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.3
+    ]
+   ],
+   "tags": [
+    "pickup"
+   ],
+   "notes": "Flat basket (笊) with a few greens.",
+   "category": "props",
+   "variants": {
+    "far": "res://world3d/assets/props/zaru/zaru_far.tscn"
+   },
+   "height": 0.13,
+   "size": [
+    0.66,
+    0.13,
+    0.66
+   ],
+   "scene": "res://world3d/assets/props/zaru/zaru.tscn"
   }
  }
 }

@@ -8,19 +8,15 @@ global uniform vec4 w3_haze;        // x: focus height (m), y: depth below focus
 float w3_fog_amount(vec3 wp, vec2 cell) {
 	float m = smoothstep(w3_mist.x, w3_mist.y, wp.y) * w3_mist.z;
 	if (m > 0.0) {
-		// banks of mist drifting east, broken up, quantised and dithered on world cells
+		// banks of mist drifting east, broken up
 		vec2 q = wp.xz * 0.045 + vec2(w3_time * w3_mist.w, w3_time * w3_mist.w * 0.3);
 		float n = w3_fbm(q) * 0.7 + w3_fbm(q * 2.3 + 4.1) * 0.3;
 		m *= smoothstep(0.25, 0.75, n);
 	}
 	float below = w3_haze.x - wp.y;
 	float h = smoothstep(w3_haze.y, w3_haze.z, below) * w3_haze.w;
-	float f = clamp(max(m, h), 0.0, 1.0);
-	// whole steps; a scattered stipple only in the narrow seam between steps (an ordered dither over
-	// the slow gradient of the mist drew stripes and checkers on the stream banks)
-	float sc = w3_hash(cell * 1.73 + 5.1) * 0.7 + w3_vnoise(cell / 2.1 + 3.0) * 0.3;
-	f = floor(f * 8.0 + 0.5 + (sc - 0.5) * 0.3) / 8.0;
-	return f;
+	// continuous (round 4: no steps; the buffers are float, so a slow gradient does not band)
+	return clamp(max(m, h), 0.0, 1.0);
 }
 vec3 w3_apply_fog(vec3 col, vec3 wp, vec2 cell) {
 	return mix(col, w3_fog_col, w3_fog_amount(wp, cell));

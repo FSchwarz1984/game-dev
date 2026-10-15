@@ -3,8 +3,9 @@ value noise, hue-shifted colour ramps.
 
 The view contract is docs/knowledge/21-3d-pixel-render.md (the renderer agent's): world axes X east,
 Y up, Z south (toward the camera), metres; orthographic camera looking north and down at PITCH;
-20 native px per metre on the camera plane; upright objects lean back by k = tan(PITCH / 2) per
-metre of height so that a vertical metre also reads 20 px; textures at 20 texels per metre.
+30 native px per metre on the camera plane (round 4: native 640x360; it was 20 at 480x270);
+upright objects lean back by k = tan(PITCH / 2) per metre of height so that a vertical metre also
+reads 30 px; textures at 30 texels per metre.
 Every generator reads these numbers from here.
 """
 from __future__ import annotations
@@ -15,9 +16,10 @@ import numpy as np
 
 # ---------------------------------------------------------------------------------------------
 # the view contract (see the module docstring)
-PPM = 20.0            # native px per metre on the camera plane (contract section 1)
+PPM = 30.0            # native px per metre on the camera plane (contract section 1; round 4)
 PITCH = 55.0          # camera pitch below the horizon, degrees (contract: provisional, 50-60)
-TEXEL_PER_M = 20.0    # texture density on surfaces (contract section 2.3)
+TEXEL_PER_M = 30.0    # texture density on surfaces (contract section 2.3; follows PPM)
+PX = 1.0 / PPM        # one native pixel in metres (bars one pixel wide: lattices, slats)
 LEAN_K = math.tan(math.radians(PITCH) / 2)   # upright objects: z -= k * height (shader does it)
 
 

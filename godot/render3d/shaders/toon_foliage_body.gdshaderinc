@@ -22,7 +22,9 @@ uniform vec4 tint : source_color = vec4(1.0);
 uniform float lean : hint_range(0.0, 1.0) = 1.0;
 uniform float wind_px = 1.0;                     // sway at flex 1, native px (keep 1-2)
 uniform float porosity : hint_range(0.0, 1.0) = 0.5;
-uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // sunlit rim band (lighter, warmer)
+uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // (unused since round 4: the light is continuous)
+uniform float transmit : hint_range(0.0, 2.0) = 0.6; // light through the leaves when they are seen against it
+uniform float lush : hint_range(0.0, 1.0) = 0.65;    // fresh greens (round 4)
 uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
 uniform float cutaway_keep_px = 0.0;              // > 0: what lies this far above her stays (the top of the view)
@@ -38,8 +40,6 @@ uniform float shade_fill : hint_range(0.0, 1.0) = 0.0;
 varying vec3 v_wp;
 varying vec3 v_wu;      // where the leaf really is (before lean and card layout): lamps light that
 varying vec3 v_wn;
-varying vec3 v_alb;
-varying vec3 v_alb_sun;
 varying vec2 v_cell;
 varying float v_fill;
 
@@ -97,53 +97,52 @@ void fragment() {
 	}
 	vec3 wn = normalize(v_wn);
 	vec3 alb = w3_srgb_to_linear(COLOR.rgb * tx.rgb) * tint.rgb;
-	// leaves read a touch quieter than they were painted (strong sun lifts their chroma; v0.1's
-	// olive greens, knowledge/17 §3); reds and golds (the maples, the persimmons) keep theirs
+	// round 4 (G5R2-1): rich natural greens, not olive. Only the most vivid yellow-greens (bamboo,
+	// young leaves) are held under a knee, so a whole grove in sun never turns lime (the G3 lesson:
+	// fluorescent green); reds and golds (the maples, the persimmons) keep theirs
 	vec3 lab0 = w3_lin_to_oklab(alb);
 	if (lab0.y < 0.0) {
-		// x0.8, and the vivid yellow-greens (bamboo, young leaves) compressed above a knee: a whole
-		// grove in strong sun must stay under the large-area chroma limit (knowledge/17 §3)
 		float c0 = length(lab0.yz);
-		float c1 = c0 * 0.8;
-		c1 = c1 > 0.06 ? 0.06 + (c1 - 0.06) * 0.35 : c1;
-		alb = max(w3_oklab_to_lin(vec3(lab0.x, lab0.yz * (c1 / max(c0, 1e-5)))), vec3(0.0));
+		float c1 = c0 > 0.11 ? 0.11 + (c0 - 0.11) * 0.4 : c0;
+		float h0 = atan(lab0.z, lab0.y);
+		// the olive leaves turn a little toward a clear green
+		float h1 = h0 + (2.48 - h0) * 0.2 * lush;
+		c1 *= 1.0 + 0.25 * lush;
+		alb = max(w3_oklab_to_lin(vec3(lab0.x, vec2(cos(h1), sin(h1)) * c1)), vec3(0.0));
 	}
 	alb *= (w3_hash(cell) < 0.08 ? 0.94 : 1.0);
 	alb = w3_wetten(alb, porosity);
 	alb = w3_far(alb, far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
-	v_alb = alb * w3_far_light(far);
-	// sun on leaves: a little of it goes through them and the sheen of the sky washes the lit side,
-	// so its green is quieter and it is not as bright as a surface (a sunlit wood would otherwise read
-	// lime; knowledge/17 §3)
-	vec3 lab_s = w3_lin_to_oklab(v_alb);
-	v_alb_sun = lab_s.y < 0.0 ? max(w3_oklab_to_lin(vec3(lab_s.x, lab_s.yz * 0.72)), vec3(0.0)) * 0.88 : v_alb;
 	v_cell = cell;
-	ALBEDO = vec3(1.0);
-	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + w3_lamp_light(alb, v_wu, wn, cell, 1.0) * (1.0 - far * 0.6);
+	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times this albedo and AO
+	ALBEDO = alb;
+	AO = ao;
+	AO_LIGHT_AFFECT = 0.0;
+	EMISSION = alb * w3_sky * 0.35 * far;
 	if (w3_bake > 0.5) {
 		ALBEDO = vec3(0.0);
 		EMISSION = w3_bake_out(alb, wn, ao, 1.0);
 	}
-	// for the fill in light(): how much the card faces the sky, in three steps, times its AO
-	v_fill = floor((wn.y * 0.5 + 0.5) * 3.0 + 0.5) / 3.0 * 0.55 + 0.45;
-	v_fill *= ao;
+	// for the fill in light(): how much the leaf faces the sky, times its AO (continuous)
+	v_fill = ((wn.y * 0.5 + 0.5) * 0.55 + 0.45) * ao;
 }
 
 void light() {
+	float k = w3_far_light(far);
 	if (LIGHT_IS_DIRECTIONAL) {
-		vec3 c = w3_sun_light(v_alb_sun, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);
-		float ndl = dot(NORMAL, LIGHT);
-		if (hi_band > 0.0 && ndl > 0.8 && ATTENUATION > 0.5) {
-			c *= mix(vec3(1.0), vec3(1.13, 1.12, 1.06), hi_band);
+		// light scatters through a crown: a wide wrap, and the leaves seen against the light glow
+		// yellow-green (it passes through them: the engine multiplies by the albedo again)
+		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5);
+		c += w3_transmit(NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, vec3(0.9, 1.0, 0.6) * transmit);
+		// big crowns: what reaches the shaded side anyway (sky through the gaps, bounce), so a crown
+		// seen from its shaded side keeps its masses instead of turning into a dark lid
+		if (shade_fill > 0.0) {
+			float lit = w3_wrap(dot(NORMAL, LIGHT), 0.5) * ATTENUATION;
+			c += LIGHT_COLOR / W3_PI * shade_fill * v_fill * (1.0 - lit);
 		}
-		// the fill where the sun does not reach (its own shade or the crown's shadow): the masses keep
-		// a hierarchy (tops lighter, undersides darker) instead of one dark lid
-		if (shade_fill > 0.0 && (ndl < 0.06 || ATTENUATION < 0.5)) {
-			c += v_alb * LIGHT_COLOR / W3_PI * shade_fill * v_fill;
-		}
-		DIFFUSE_LIGHT += c;
+		DIFFUSE_LIGHT += c * k;
 	} else {
-		DIFFUSE_LIGHT += w3_point_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, 1.0);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5) * k;
 	}
 }

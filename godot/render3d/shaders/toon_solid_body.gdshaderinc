@@ -13,7 +13,7 @@ uniform sampler2D albedo_tex : source_color, filter_nearest, hint_default_white;
 uniform vec2 screen_origin_px = vec2(0.0);
 uniform float lean : hint_range(0.0, 1.0) = 1.0;       // 1 upright object (leans back), 0 ground-hugging
 uniform float porosity : hint_range(0.0, 1.0) = 0.7;   // how much rain darkens it
-uniform float dither : hint_range(0.0, 1.0) = 1.0;     // dithered band edges (world-anchored)
+uniform float dither : hint_range(0.0, 1.0) = 1.0;     // (unused since round 4: the light is continuous)
 uniform float vertex_ao : hint_range(0.0, 1.0) = 1.0;  // use COLOR.a as ambient occlusion
 uniform vec3 emission_color : source_color = vec3(0.0);
 uniform float emission_energy = 0.0;                    // > 1 blooms (only light sources)
@@ -27,7 +27,6 @@ varying vec3 v_wp;
 varying vec3 v_wu;      // upright (un-leaned) world position: lamps light the real place
 varying vec3 v_wn;
 varying flat vec2 v_origin_px;
-varying vec3 v_alb;
 varying vec2 v_cell;
 
 void vertex() {
@@ -62,11 +61,14 @@ void fragment() {
 	alb = w3_wetten(alb, porosity);
 	alb = w3_far(alb, far);
 	float ao = mix(1.0, COLOR.a, vertex_ao);
-	v_alb = alb * w3_far_light(far);
 	v_cell = cell;
-	ALBEDO = vec3(1.0);
+	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times this albedo and AO
+	ALBEDO = alb;
+	AO = ao;
+	AO_LIGHT_AFFECT = 0.0;
 	vec3 em = emission_color * emission_energy * mix(1.0, w3_night, emission_at_night) * (1.0 - far);
-	EMISSION = w3_ambient(alb, wn, ao) * w3_far_fill(far) + em + w3_lamp_light(alb, v_wu, wn, cell, dither) * (1.0 - far * 0.6);
+	// a faded thing's light flattens: its shade is lifted toward the haze
+	EMISSION = em + alb * w3_sky * 0.35 * far;
 	if (w3_bake > 0.5) {
 		ALBEDO = vec3(0.0);
 		EMISSION = w3_bake_out(alb, wn, ao, 0.0);
@@ -74,12 +76,16 @@ void fragment() {
 }
 
 void light() {
+	float k = w3_far_light(far);
 	if (LIGHT_IS_DIRECTIONAL) {
-		DIFFUSE_LIGHT += w3_sun_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, dither);
-		if (shade_fill > 0.0 && (dot(NORMAL, LIGHT) < 0.06 || ATTENUATION < 0.5)) {
-			DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * shade_fill;
+		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.3);
+		// big trunks under a crown: a share of the light reaches their shade anyway (continuous)
+		if (shade_fill > 0.0) {
+			float lit = w3_wrap(dot(NORMAL, LIGHT), 0.3) * ATTENUATION;
+			c += LIGHT_COLOR / W3_PI * shade_fill * (1.0 - lit);
 		}
+		DIFFUSE_LIGHT += c * k;
 	} else {
-		DIFFUSE_LIGHT += w3_point_light(v_alb, NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, v_cell, dither);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * k;
 	}
 }

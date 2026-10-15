@@ -1,0 +1,23 @@
+[gd_resource type="ShaderMaterial" format=3]
+
+[ext_resource type="Shader" path="res://render3d/shaders/toon_foliage.gdshader" id="1"]
+
+[resource]
+render_priority = 0
+shader = ExtResource("1")
+shader_parameter/foliage_mode = 0
+shader_parameter/tint = null
+shader_parameter/lean = null
+shader_parameter/wind_px = 1.5
+shader_parameter/porosity = 0.7
+shader_parameter/hi_band = null
+shader_parameter/transmit = 0.25
+shader_parameter/lush = null
+shader_parameter/cutaway = false
+shader_parameter/cutaway_scale = null
+shader_parameter/cutaway_keep_px = null
+shader_parameter/shadow_shrink = null
+shader_parameter/shadow_sieve = null
+shader_parameter/vertex_ao = null
+shader_parameter/far = null
+shader_parameter/shade_fill = null

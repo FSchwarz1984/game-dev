@@ -42,37 +42,43 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     bank = np.maximum(bank, F["terrace_bank"])
     W["bank"] = bank
 
-    # --- worn dirt: the road, the footpaths, the yard; grass creeps in at ragged edges
-    edge_n = (n1 - 0.5) * 0.7 + (n2 - 0.5) * 0.4
-    road = geom.smoothstep(0.55 + edge_n * 0.6, -0.1, F["road_d"] - F["road_hw"])
+    # --- worn dirt: the trails and the earth stretches of the road, the yard. Crisp edges (round 4:
+    # the soft noisy edge read as a band painted on the ground); only a low-frequency wobble along
+    # the way and the shader's per-texel jitter break them
+    sanct = F.get("sanctum", np.zeros_like(Hs))
+    road = F["trail_k"]
     paths = np.zeros_like(Hs)
-    for d, hw in F["paths"]:
-        paths = np.maximum(paths, geom.smoothstep(0.35 + edge_n * 0.5, -0.15, d - hw * (0.75 + 0.35 * n2)))
-    yard = geom.smoothstep(0.6 + edge_n, -0.3, F["yard_sdf"]) * (0.55 + 0.45 * geom.smoothstep(0.35, 0.65, n2))
-    dirt = np.maximum(np.maximum(road, paths), yard)
+    yard = geom.smoothstep(0.22, -0.3, F["yard_sdf"] + (n1 - 0.5) * 0.4) * (0.78 + 0.22 * geom.smoothstep(0.35, 0.65, n2))
+    dirt = np.maximum(road, yard)
     W["dirt"] = dirt * (1.0 - rock * 0.8)
 
-    # --- gravel: the shrine terrace and its steps, the dosojin, the stream bed, outer bends
-    gravel = np.maximum(F["shrine_sdf_k"], F["dosojin_k"])
+    # --- gravel: the shrine terrace, the dosojin, the stream bed, the paved road's gutter
+    gravel = np.maximum(F["shrine_sdf_k"] * 0.85, F["dosojin_k"])
     gravel = np.maximum(gravel, F["stream_bed"] * 0.9)
     gravel = np.maximum(gravel, F["graves_k"] * geom.smoothstep(0.3, 0.6, n1))
-    gravel = np.maximum(gravel, road * F["road_outer"] * geom.smoothstep(0.45, 0.6, n1))
+    gravel = np.maximum(gravel, F.get("gutter_k", 0.0) * 0.95)
     W["gravel"] = gravel * (1.0 - rock * 0.7)
 
-    # --- moss: wet and shaded ground
+    # --- moss: wet and shaded ground; in the joints of the paving and between stepping stones; and
+    # inside the barrier (zones.sanctum) the moss is thick, around the great tree and the shrine (oku)
+    # a carpet
     wet = geom.smoothstep(5.0, 0.8, F["water_d"])
     moss = np.maximum(wet * (0.55 + 0.45 * n2), faces_north * geom.smoothstep(0.42, 0.62, n2) * 0.8)
     moss = np.maximum(moss, F["cedar"] * geom.smoothstep(0.42, 0.6, n2) * 0.75)
     moss = np.maximum(moss, F["graves_k"] * geom.smoothstep(0.55, 0.7, n2))
     moss = np.maximum(moss, rock * faces_north * geom.smoothstep(0.5, 0.65, n1) * 0.7)
-    moss = np.maximum(moss, F["camphor_roots"] * geom.smoothstep(0.45, 0.62, n2) * 0.6)
+    moss = np.maximum(moss, F["camphor_roots"] * geom.smoothstep(0.38, 0.55, n2) * 0.8)
+    moss = np.maximum(moss, sanct * geom.smoothstep(0.5, 0.66, n2 + (n1 - 0.5) * 0.3) * 0.75)
+    moss = np.maximum(moss, F.get("oku", 0.0) * geom.smoothstep(0.3, 0.5, n2 + (n0x := noise.fbm(Xs / 1.6, Zs / 1.6, 2, seed + 109) - 0.5) * 0.4) * 0.9)
+    moss = np.maximum(moss, F.get("pave_k", 0.0) * 0.95)
+    moss = np.maximum(moss, F.get("stone_k", 0.0) * (0.55 + 0.4 * geom.smoothstep(0.4, 0.6, n1)))
     W["moss"] = moss * (1.0 - dirt * 0.85) * (1.0 - W["gravel"] * 0.6)
 
     # --- leaf litter under the canopies (camphor leaves, cedar needles, bamboo leaves)
     canopy = F["canopy"]
     n0 = noise.fbm(Xs / 0.9, Zs / 0.9, 2, seed + 100)
     litter = geom.smoothstep(0.42, 1.1, canopy + (n1 - 0.5) * 0.7 + (n0 - 0.5) * 0.45 + (n2 - 0.5) * 0.35)
-    W["litter"] = 0.66 * litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.3)
+    W["litter"] = 0.66 * litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.45) * (1.0 - F.get("pave_k", 0.0))
     # under the canopy the grass thins and moss creeps in among the leaves
     W["moss"] = np.maximum(W["moss"], canopy * geom.smoothstep(0.5, 0.68, n1) * 0.55 * (1.0 - dirt))
 
@@ -80,7 +86,7 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
 
     # --- grass: whatever is left, and it is everywhere else
     other = np.maximum.reduce([W[k] for k in ORDER if k != "grass"])
-    W["grass"] = np.clip(1.0 - other, 0.0, 1.0) * (1.0 - F["water_core"])
+    W["grass"] = np.clip(1.0 - other, 0.0, 1.0) * (1.0 - F["water_core"]) * (1.0 - F.get("pave_k", 0.0))
 
     # normalise
     S = sum(W[k] for k in ORDER) + 1e-6
@@ -107,13 +113,16 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     hb2 = ndimage.gaussian_filter(Hs, 1.2 / cell_s)
     puddle = geom.smoothstep(0.015, 0.06, hb2 - Hs) * np.maximum(W["dirt"], W["gravel"]) * geom.smoothstep(12.0, 6.0, slope)
     puddle = np.maximum(puddle, F["paddy"] * 0.0)
-    wear = np.maximum(F["road_wear"], F["path_wear"]) * np.maximum(W["dirt"], 0.0)
+    wear = geom.smoothstep(0.3, 0.9, F["trail_k"]) * np.maximum(W["dirt"], 0.0) * (0.5 + 0.5 * n1)
     open_meadow = W["grass"] * (1.0 - geom.smoothstep(0.1, 0.4, canopy)) * geom.smoothstep(26.0, 14.0, slope)
-    flowers = open_meadow * geom.smoothstep(0.5, 0.75, noise.fbm(Xs / 5.5, Zs / 5.5, 3, seed + 105))
+    flowers = open_meadow * geom.smoothstep(0.5 - 0.12 * sanct, 0.75 - 0.12 * sanct, noise.fbm(Xs / 5.5, Zs / 5.5, 3, seed + 105))
     litter_kind = F["litter_kind"]
-    dryness = np.clip(geom.smoothstep(0.35, 0.75, n3) * 0.7 + (1.0 - faces_north) * 0.15 - wet * 0.5 + geom.smoothstep(18, 30, slope) * 0.2, 0, 1)
+    # dry grass only where the sun bakes a steep south face or the soil is thin by the rock; never a
+    # broad yellow field (round 4: the "withered yellow" of round 3 came from here)
+    dryness = np.clip(geom.smoothstep(0.58, 0.85, n3) * 0.45 + (1.0 - faces_north) * 0.08 - wet * 0.6
+                      + geom.smoothstep(22, 34, slope) * 0.35 + rock * 0.3 - sanct * 0.7, 0, 1)
     tufts = W["grass"] * (0.35 + 0.65 * geom.smoothstep(0.3, 0.7, n2)) * (1.0 - geom.smoothstep(0.3, 0.7, canopy) * 0.6)
-    tufts *= 1.0 - np.maximum(road, paths) * 0.9
+    tufts *= 1.0 - np.maximum(np.maximum(road, F.get("pave_k", 0.0)), F.get("stone_k", 0.0)) * 0.9
 
     m0 = np.stack([W["grass"], W["dirt"], W["gravel"], W["rock"]], -1)
     m1 = np.stack([W["moss"], W["litter"], W["bank"], W["paddy"]], -1)

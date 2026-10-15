@@ -1,0 +1,44 @@
+# Shione, cry. Source B_23 ("含泪克制悲伤"), tears added by hand; the near stream runs just right of the two red
+# marks (one pixel apart) so they stay readable.
+# near eye: welled lid, stream down the cheek
+@ 65 59
+cCc
+@ 66 60
+Cc
+Cc
+Cc
+Cc
+Cc
+CCc
+.Cc
+.Cc
+.Cc
+.Cc
+.Cc
+.Cc
+.CCc
+.zCCz
+..zz
+# far eye: welled lid, short stream
+@ 85 65
+cCc
+@ 86 66
+Cc
+Cc
+Cc
+Cc
+CCz
+.z
+# flush beside the nose and under the far eye
+@ 69 62
+bpbbp
+pbbpb
+.bbb.
+@ 81 67
+bpbp
+pbb.
+# mouth: small open arch, corners down
+@ 70 75
+.qqq.
+qmmmq
+q...q
