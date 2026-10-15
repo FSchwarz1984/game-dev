@@ -36,5 +36,5 @@
 | [controls-v2-draft.md](controls-v2-draft.md) | 操作 v2：先指后做，鼠标、手柄、触屏的精确指向 | 已批准（G5R2-7）；触屏随安卓一起放弃 |
 | [map-v3-natural-draft.md](map-v3-natural-draft.md) | 地图 v3（自然地形）：好奇点三层、不靠镜头的引导、迷雾小地图 | 基本通过（G5R2-8）；加：自然地爬上大楠、神社一带的结界（G5R2-1） |
 | [script-03-draft.md](script-03-draft.md) | 开场剧本第三版（含场景事实表、症状结构、盲审对照） | 仍有 AI 味、缺幽默（G5R2-9），要写第四版 |
-| [script-04-draft.md](script-04-draft.md) | 开场剧本第四版：七十岁的婆婆、乌鸦和收音机、谈钱三次而第三次翻过来、追乌鸦爬树 | 草案，盲审中，进下一轮评审页 |
-| [realm-and-climb-draft.md](realm-and-climb-draft.md) | 结界怎么进（推荐提灯）、烂柯先做成看得见的东西、序章追乌鸦爬上大楠 | 草案，进下一轮评审页 |
+| [script-04-draft.md](script-04-draft.md) | 开场剧本第四版：七十岁的婆婆、乌鸦和收音机、团子与饭团两条线、乌鸦回窝引她上树 | 草案（盲审后修订），进第三轮评审页 |
+| [realm-and-climb-draft.md](realm-and-climb-draft.md) | 结界只认盂兰盆的灯、里面的光走得慢（烂柯）、乌鸦叼团子回树顶的窝 | 草案（盲审后修订），进第三轮评审页 |
