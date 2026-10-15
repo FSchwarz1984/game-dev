@@ -146,9 +146,10 @@ float v_mist_e(vec2 xz) {
 // (composed for the lookout's view south: banks on either hand and near, a lane open down the middle
 // toward the plain's river and town, closing again before the 遠化 front)
 const vec2 V_LOOKOUT = vec2(-23.6, 42.4);
+uniform float cloud_thin = 0.08;             // round 4: more gaps between the banks (the plain shows through)
 float v_cover(vec2 p) {
 	vec2 q = p / 1400.0 + vec2(3.0 + cloud_time * 0.0004, 0.5 + cloud_time * 0.00015);
-	float c = w3_vnoise(q) * 0.62 + w3_vnoise(q * 2.7 + 5.0) * 0.38;
+	float c = w3_vnoise(q) * 0.62 + w3_vnoise(q * 2.7 + 5.0) * 0.38 - cloud_thin;
 	vec2 d = p - V_LOOKOUT;
 	float r = length(d);
 	float a = degrees(atan(d.x, -d.y));
@@ -243,40 +244,38 @@ float v_drain(vec2 xz, float y) {
 	return (0.03 + 0.3 * f * f) * hk;
 }
 
-// haze (air) and drain (遠化) amounts at a point, in whole steps; the seams scattered on cells fixed
-// to the world (about a pixel at that distance), so a pan carries them with the land
+// haze (air) and drain (遠化) amounts at a point. Round 4: continuous (the aerial perspective is a
+// slow gradient; the HDR view and the display's blue-noise dither keep it from banding)
 vec2 v_air_k(vec3 wp, vec3 cam, vec2 frag) {
 	float d = length(wp - cam);
 	// the air thins with height: far peaks stay legible above the lowland's haze
 	float thin = mix(1.0, 0.35, smoothstep(-100.0, 700.0, wp.y));
 	float h = 1.0 - exp(-d / haze_dist * thin);
 	float m = v_drain(wp.xz, wp.y) * mist_max;
-	vec2 cell = v_dir_cell(wp, cam);
-	float dz = w3_hash(cell * 1.31 + 2.7) * 0.7 + w3_vnoise(cell / 1.9) * 0.3 - 0.5;
-	return vec2(clamp(floor(h * 10.0 + 0.5 + dz * 0.45) / 10.0, 0.0, 1.0),
-		m > 0.99 ? 1.0 : clamp(floor(m * 8.0 + 0.5 + dz * 0.45) / 8.0, 0.0, 1.0));
+	return vec2(clamp(h, 0.0, 1.0), m > 0.99 ? 1.0 : clamp(m, 0.0, 1.0));
 }
-// the 遠化's white with the land's drawing in it: ink 0 the paper, 1 the darkest line
+// the far land in the air (round 4, lead: "the beige band reads as a beach"): past the 遠化 front the
+// land sinks into the blue-grey of the distance, low in contrast, its drawing (ridges, woods, roofs)
+// a faint darker line. far_white is set from the hour's horizon (vista3d.gd): blue-grey by day.
 vec3 v_paper(float ink) {
-	return far_white * (1.0 - 0.17 * ink);
+	return far_white * (1.0 - 0.12 * ink);
 }
-// haze and the 遠化 over a colour: paler and greyer toward the front, past it the flat white
+// haze and the 遠化 over a colour: farther, bluer and greyer and lower in contrast, layer on layer
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
 	vec2 k = v_air_k(wp, cam, frag);
 	float l0 = dot(col, vec3(0.299, 0.587, 0.114));
 	if (k.y >= 1.0) {
-		// past the front: paper white with the land's drawing left in it, like a print faded in the
-		// sun: what was dark (woods, the groves round the villages, roofs, the river's banks, the
-		// viaduct) a faint warm grey, everything light the paper itself. Dark marks on white, never
-		// light flecks on a darker ground (those read as the glitter of water).
+		// past the front: the air's colour with the land's own lightness left in it, faintly (dark
+		// woods and roofs a little darker): far land in haze, not a flat sheet
 		// (col is the land's ambient light here: the sun is added later, and not past the front; so
 		// divided by the ambient it is about the land's own lightness, at every hour)
 		float la = max(dot(w3_sky + w3_ground, vec3(0.299, 0.587, 0.114)), 0.01);
-		return v_paper(1.0 - smoothstep(0.02, 0.08, l0 / la));
+		return v_paper(1.0 - smoothstep(0.02, 0.09, l0 / la));
 	}
 	col = mix(col, haze_col, k.x);
 	float l = dot(col, vec3(0.299, 0.587, 0.114));
-	vec3 pale = mix(vec3(l), col, 0.45) * 0.55 + mist_col * 0.5;
+	// toward the front the land greys and blues into the air (not toward a warm white)
+	vec3 pale = mix(vec3(l), col, 0.5) * 0.45 + mix(haze_col, far_white, 0.5) * 0.55;
 	return mix(col, pale, clamp(k.y * 1.3, 0.0, 1.0));
 }
 // the clouds and the sky: haze only (weather is not drained)

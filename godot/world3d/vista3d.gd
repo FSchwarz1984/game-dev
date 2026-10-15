@@ -1554,9 +1554,10 @@ func update(dt: float) -> void:
 	# (the world's grade lifts and clips the light end: about 0.85 sRGB is the last value that keeps
 	# its difference from its neighbours, so the white sits just under it and only its edge clips)
 	# (a warm paper white, like a print faded in the sun: a cool white beside the haze read as water)
-	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.105, 0.11, 0.15), night)
-	if env.hours > 16.5 and env.hours < 19.5:
-		fw = fw.lerp(Color(0.68, 0.6, 0.52), clampf(1.0 - absf(env.hours - 17.8) / 1.3, 0.0, 1.0) * (1.0 - night))
+	# (round 4, lead: the far land is aerial perspective, not a warm white band: the horizon's own
+	# blue-grey, a little lighter, so the far plain and the ranges fade into the air layer by layer)
+	var hz: Color = (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7)
+	var fw := hz.lerp(Color(0.58, 0.64, 0.74), 0.35 * (1.0 - night)) * 0.94
 	for m in mats:
 		m.set_shader_parameter("haze_col", (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7))
 		m.set_shader_parameter("mist_col", k[3])

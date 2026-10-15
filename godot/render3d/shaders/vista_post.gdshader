@@ -128,7 +128,9 @@ void fragment() {
 				vec3 wn = world_at(uv + o, ip, VIEWPORT_SIZE);
 				if (v_drain(wn.xz, wn.y) < 0.99) edge = true;
 			}
-			if (edge) col = far_white * 1.3;
+			// (round 4: no line of light along the front any more: with the far land in the air's
+			// blue-grey it read as surf on a beach)
+			if (edge) col = mix(col, far_white, 0.0);
 		}
 	}
 
