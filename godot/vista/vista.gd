@@ -116,8 +116,10 @@ func _environment() -> Environment:
 	# (the renderer since 2026-10-15) thresholds the glow after its first blur pass, where a lamp of a
 	# pixel or two is averaged with the dark around it; Mobile thresholds a 4x4 average. With the same
 	# numbers the halos come out much weaker on Forward+ (the open gate's 2-20 px rings 12-26 / 255
-	# darker). These bring Forward+ back to the Mobile look: within ~5 / 255 on those rings, 0.05-0.13 / 255
-	# over the frame (knowledge/14 §7.9). Painted colours (her hat included) still stay under it.
+	# darker). These bring Forward+ back to the Mobile look in steady states (those rings within -5..+2 /
+	# 255, 0.03-0.13 / 255 over the frame); the gate's flashes as the lights arrive come out a little
+	# brighter (+9 / 255 on average in its 5-10 px ring, +24 at the brightest), as the two glows answer a
+	# flash differently (knowledge/14 §7.9). Painted colours (her hat included) still stay under it.
 	if RenderingServer.get_current_rendering_method() == "forward_plus":
 		e.glow_hdr_threshold = 0.7
 		e.glow_hdr_scale = 0.75

@@ -4,8 +4,10 @@
 # since 2026-10-15; VISTA_RENDERER=mobile for the earlier one).
 #   bash tools/vista/record.sh OUTDIR [WxH window, default 1280x720] [fps, default 30] [record.gd args...]
 #   e.g. bash tools/vista/record.sh /tmp/rec 1280x720 30 --shot=prologue --grab=/tmp/rec/native
-# Movie Maker writes OUTDIR/f00000000.png ... at the project window size (1280x720); --grab=DIR also
-# writes each frame at one pixel per native pixel (record.gd). MOVIE=0 skips Movie Maker (grab only).
+# Movie Maker writes OUTDIR/f00000000.png ... at the project window size (1280x720) whatever the window
+# is (a 1920x1080 run comes out resampled to 1280x720); --grab=DIR also writes each frame at one pixel
+# per native pixel (record.gd), which is what the window shows at its integer scale: for a 1920x1080
+# video, scale those 4x (nearest). MOVIE=0 skips Movie Maker (grab only).
 set -euo pipefail
 . "$(dirname "$0")/../godot/common.sh"
 OUT="$1"; RES="${2:-1280x720}"; FPS="${3:-30}"

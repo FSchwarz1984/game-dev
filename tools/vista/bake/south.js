@@ -481,7 +481,7 @@ function* canopyFront(Wc, ox, oyC, CHc, ext, RX) {
 // through the bottom of the layer. The layer (hL rows) reaches below the frame for the whole crane on
 // every view, so no end of a branch is ever in view; the sprays keep the rows of the JS layer (h).
 function* nearLeaves(Wc, ox, h, hL, R, RX, ext) {
-  const W = REF_W, clumps = [], limbs = [], sideLimbs = [], sideClumps = [], twigs = [];
+  const W = REF_W, clumps = [], limbs = [], sideLimbs = [], sideClumps = [];
   const sprays = [[0.08, 0.35], [0.3, 0.75], [0.55, 0.3], [0.8, 0.62], [0.97, 0.2], [0.42, 1.0], [0.7, 0.98]];
   const extra = ext ? [[-0.12, 0.55], [-0.3, 0.25], [-0.46, 0.8], [1.12, 0.45], [1.28, 0.85], [1.45, 0.3]] : [];
   for (const [fx, fy] of [...sprays, ...extra]) {
@@ -489,14 +489,12 @@ function* nearLeaves(Wc, ox, h, hL, R, RX, ext) {
     const x0 = ox + W * fx, y0 = h * fy, dir = Rr() < 0.5 ? -1 : 1, len = 40 + Rr() * 40;
     const pts = [];
     for (let k = 0; k <= 4; k++) pts.push([x0 + dir * len * k / 4, y0 + h * 0.12 - k * 9 - Math.sin(k) * 4, lerp(3, 1, k / 4)]);
-    const limb = { pts, z: 0.2, dark: 1 };
-    limbs.push(limb);
-    twigs.push(limb);
+    limbs.push({ pts, z: 0.2, dark: 1 });
     for (let k = 1; k <= 4; k++) clumps.push({ x: pts[k][0] + (Rr() - 0.5) * 10, y: pts[k][1] - 4 + (Rr() - 0.5) * 8, rx: 16 + Rr() * 10, ry: 11 + Rr() * 6, z: 0.5 + Rr() * 0.4, ao: 1, glint: false, dark: true });
   }
   // the stems: each twig's own, ending under the layer; stems that would end near each other end at the
   // same place, so they meet below as the forks of one branch
-  const ends = twigs.map(t => stemEnd(t.pts, hL));
+  const ends = limbs.map(t => stemEnd(t.pts, hL));
   const order = ends.map((e, i) => i).filter(i => ends[i] != null).sort((a, b) => ends[a] - ends[b]);
   const trunkX = new Map();
   for (let i = 0; i < order.length;) {
@@ -506,7 +504,7 @@ function* nearLeaves(Wc, ox, h, hL, R, RX, ext) {
     for (const k of order.slice(i, j)) trunkX.set(k, mx);
     i = j;
   }
-  twigs.forEach((t, i) => {
+  limbs.forEach((t, i) => {
     const stem = stemBelow(t.pts, hL, trunkX.get(i));
     t.pts = [...stem, ...t.pts];
     stemLeaves(stem, t.pts.slice(stem.length), hL, sideLimbs, sideClumps);
@@ -515,7 +513,7 @@ function* nearLeaves(Wc, ox, h, hL, R, RX, ext) {
   // sprays keep their shapes (the painter draws its random lobes item by item)
   const L = yield* paintCanopyGen(Wc, hL, { clumps: [...clumps, ...sideClumps], limbs: [...limbs, ...sideLimbs], light: [0.72, -0.42, 0.45], cell: 4.6, cellSeed: 5 }, 47);
   dropSpecks(L.idx, Wc, hL, 6);        // a stray leaf-edge pixel off a spray would hang alone in the air
-  L.spec = { clumps, limbs, sideClumps, sideLimbs };
+  L.spec = { clumps, limbs, sideClumps, sideLimbs };   // the geometry, for checks (not exported)
   return L;
 }
 
