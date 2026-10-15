@@ -122,6 +122,27 @@ static func South_yh(h: int) -> int:
 	return VistaSouth.yh_of(h)
 
 
+## The stage's canvas is 640x360-based since 2026-10-15; the vista keeps the canvas of the rule it was
+## drawn for (round(h / 270)) and its integer scale in window pixels, centred, covering the window.
+func test_the_vista_keeps_its_own_canvas_on_the_640x360_stage() -> void:
+	var expect := {Vector2i(1280, 720): [Vector2i(426, 240), 3], Vector2i(1920, 1080): [Vector2i(480, 270), 4],
+		Vector2i(2560, 1440): [Vector2i(512, 288), 5], Vector2i(3840, 2160): [Vector2i(480, 270), 8],
+		Vector2i(1366, 768): [Vector2i(455, 256), 3], Vector2i(2560, 1080): [Vector2i(640, 270), 4]}
+	for win in expect:
+		var ss := PixelStage.scale_for(Vector2(win))
+		var logical := Vector2i(floori(win.x / float(ss)), floori(win.y / float(ss)))
+		var f := Vista.legacy_fit(Vector2(win), logical)
+		eq(f["view"], expect[win][0], "the vista's canvas at %s" % win)
+		var px := float(f["scale"]) * ss                       # window pixels per vista pixel
+		near(px, float(expect[win][1]), 1e-6, "a vista pixel is a whole number of window pixels at %s" % win)
+		var o: Vector2 = f["origin"] * ss + ((Vector2(win) - Vector2(logical) * ss) * 0.5).round()
+		check(is_equal_approx(o.x, roundf(o.x)) and is_equal_approx(o.y, roundf(o.y)), "it sits on whole window pixels at %s (%s)" % [win, o])
+		# with its 1-pixel border it covers the whole window
+		var lo := o - Vector2(px, px)
+		var hi := o + (Vector2(f["view"]) + Vector2.ONE) * px
+		check(lo.x <= 0.0 and lo.y <= 0.0 and hi.x >= win.x and hi.y >= win.y, "it covers the window at %s (%s .. %s)" % [win, lo, hi])
+
+
 ## G5R2-4 (1): the close leaves the camera rises past are twigs of branches that come up from below the
 ## frame. Every leaf and twig of the near layer hangs together with its bottom row (no piece floats
 ## free), and on every size that bottom row stays below the view for the whole crane, so no end of a
