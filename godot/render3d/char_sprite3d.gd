@@ -62,7 +62,7 @@ func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i,
 	var nrm := PackedVector3Array()
 	for i in 4:
 		var c: Vector2 = corners[i]
-		verts.append(Vector3(c.x, c.y, 0.0) / 20.0)
+		verts.append(Vector3(c.x, c.y, 0.0) / PixelView3D.PPM)
 		uv.append(uvs[i])
 		uv2.append(c)
 		nrm.append(Vector3(0, 0, 1))

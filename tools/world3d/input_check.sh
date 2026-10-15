@@ -24,7 +24,7 @@ run_case() {
 	Xvfb "$disp" -screen 0 "${RES}x24" -nolisten tcp >/dev/null 2>&1 &
 	local xp=$!
 	for _ in $(seq 1 50); do DISPLAY="$disp" xdpyinfo >/dev/null 2>&1 && break; sleep 0.1; done
-	DISPLAY="$disp" "$GODOT_BIN" --path "$PROJ" --rendering-method mobile --rendering-driver vulkan \
+	DISPLAY="$disp" "$GODOT_BIN" --path "$PROJ" --rendering-method "${METHOD:-forward_plus}" --rendering-driver vulkan \
 		--resolution "$RES" --position 0,0 res://world3d/sample.tscn -- --log_pos=2 "$@" > "$OUT/$name.log" 2>&1 &
 	local gp=$!
 	# wait for the window and for the world to be built (the log says so)

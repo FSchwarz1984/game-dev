@@ -1,14 +1,16 @@
 class_name PixelStage
 extends Control
-## The pixel-perfect stage. The window is filled at an integer scale s = round(h / 270), lowered
+## The pixel-perfect stage. The window is filled at an integer scale s = round(h / 360), lowered
 ## while the logical width would fall under MIN_W, and the logical (native-pixel) canvas fills the
-## window: content_scale_size = (w / s, h / s). The native height therefore stays near 270 on every
-## screen (1280x720 -> 426x240 at x3, 1920x1080 -> 480x270 at x4, 2560x1440 -> 512x288 at x5,
-## 1200x540 -> 600x270 at x2), so framing and on-screen size are consistent across devices, and
-## there are no black bars (at most s - 1 stray window pixels at odd sizes). Lead decision
-## 2026-10-14: the earlier floor(min(w/480, h/270)) showed 640x360 at 720p, which made everything
-## a third smaller than the framing the user approved in the JS version (427x240 at x3). Stretch mode is canvas_items with integer scaling (project
-## settings): everything is laid out in native pixels and drawn at s times.
+## window: content_scale_size = (w / s, h / s). The native height therefore stays near 360 on every
+## screen (1280x720 -> 640x360 at x2, 1920x1080 -> 640x360 at x3, 2560x1440 -> 640x360 at x4,
+## 3840x2160 -> 640x360 at x6, 1366x768 -> 683x384 at x2, 2560x1080 -> 853x360 at x3), so framing
+## and on-screen size are consistent across screens, and there are no black bars (at most s - 1
+## stray window pixels at odd sizes). Lead decision 2026-10-15 (decision-log, after G5R2): native
+## 640x360, Windows only; it replaces the 480x270 rule of 2026-10-14 (round(h / 270)), which is
+## kept as legacy_canvas() for the 2D prologue vista, drawn for 480x270. Stretch mode is
+## canvas_items with integer scaling (project settings): everything is laid out in native pixels
+## and drawn at s times.
 ##
 ## The world renders into its own SubViewport at native resolution plus a 1-pixel border, with
 ## pixel snapping and nearest filtering, so it is pixel-perfect; it is shown upscaled by s, offset by
@@ -22,9 +24,11 @@ extends Control
 
 signal logical_resized(size: Vector2)
 
-const BASE := Vector2(480, 270)
+const BASE := Vector2(640, 360)
 ## The narrowest logical canvas the UI is laid out for (the dialogue box shrinks to fit).
 const MIN_W := 400.0
+## The rule before 2026-10-15 (the 2D prologue vista is drawn for it).
+const LEGACY_BASE := Vector2(480, 270)
 
 var world_vp: SubViewport
 var world_root: Node2D
@@ -91,15 +95,30 @@ func _ready() -> void:
 	fit()
 
 
+## The integer scale for a window: round(h / base height), lowered while the canvas would be
+## narrower than MIN_W.
+static func scale_for(win: Vector2, base: Vector2 = BASE) -> int:
+	var s := maxi(1, roundi(win.y / base.y))
+	while s > 1 and win.x / s < MIN_W:
+		s -= 1
+	return s
+
+
+## The canvas (native px) and its integer scale for a window under the rule before 2026-10-15
+## (round(h / 270)): what the 2D prologue vista, drawn for 480x270, renders at. Shown at that scale
+## it fills the same window as the 640x360 canvas does.
+static func legacy_canvas(win: Vector2) -> Dictionary:
+	var s := scale_for(win, LEGACY_BASE)
+	return {"size": Vector2i(floori(win.x / s), floori(win.y / s)), "scale": s}
+
+
 ## Recomputes the integer scale and the logical canvas from the window size.
 func fit() -> void:
 	var win := get_window()
 	var size := Vector2(win.size)
 	if size.x < 1 or size.y < 1:
 		return
-	var s := maxi(1, roundi(size.y / BASE.y))
-	while s > 1 and size.x / s < MIN_W:
-		s -= 1
+	var s := scale_for(size)
 	var cs := Vector2i(floori(size.x / s), floori(size.y / s))
 	scale_factor = s
 	if win.content_scale_size != cs:

@@ -31,7 +31,7 @@ Xvfb "$DISP" -screen 0 "${RES}x24" -nolisten tcp >/dev/null 2>&1 &
 XP=$!
 trap 'kill $XP 2>/dev/null' EXIT
 for _ in $(seq 1 50); do DISPLAY="$DISP" xdpyinfo >/dev/null 2>&1 && break; sleep 0.1; done
-DISPLAY="$DISP" timeout "${TIMEOUT:-5400}" "$GODOT_BIN" --path "$VIEW" --rendering-method mobile \
+DISPLAY="$DISP" timeout "${TIMEOUT:-5400}" "$GODOT_BIN" --path "$VIEW" --rendering-method "${METHOD:-forward_plus}" \
 	--rendering-driver vulkan --resolution "$RES" --position 0,0 \
 	--write-movie "$OUT/frames/f.png" --fixed-fps 30 res://world3d/sample.tscn -- \
 	--route=walk --route_quit --route_log "${@:---hours=16.6}" > "$OUT/log.txt" 2>&1

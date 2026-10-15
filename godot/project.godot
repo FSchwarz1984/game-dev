@@ -7,7 +7,7 @@ config_version=5
 config/name="天岸"
 config/description="天岸 (working title). Godot 4.7.2 port, P1 foundation."
 run/main_scene="res://main.tscn"
-config/features=PackedStringArray("4.7", "Mobile")
+config/features=PackedStringArray("4.7", "Forward Plus")
 config/icon="res://icon.png"
 boot_splash/show_image=false
 boot_splash/bg_color=Color(0.039, 0.035, 0.05, 1)
@@ -28,8 +28,8 @@ DebugBridge="*res://core/debug_bridge.gd"
 
 [display]
 
-window/size/viewport_width=480
-window/size/viewport_height=270
+window/size/viewport_width=640
+window/size/viewport_height=360
 window/size/window_width_override=1280
 window/size/window_height_override=720
 window/stretch/mode="canvas_items"
@@ -52,8 +52,7 @@ locale/line_breaking_strictness=3
 
 [rendering]
 
-renderer/rendering_method="mobile"
-renderer/rendering_method.mobile="mobile"
+renderer/rendering_method="forward_plus"
 textures/canvas_textures/default_texture_filter=0
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.039, 0.035, 0.05, 1)
@@ -65,7 +64,7 @@ lights_and_shadows/directional_shadow/16_bits=false
 
 w3_view={
 "type": "vec4",
-"value": Vector4(20, 0.819152, 0.573576, 0.520567)
+"value": Vector4(30, 0.819152, 0.573576, 0.520567)
 }
 w3_time={
 "type": "float",

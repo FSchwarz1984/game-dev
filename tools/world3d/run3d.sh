@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Runs a scene of the Godot project in a real X11 window on Xvfb (Mesa lavapipe, Mobile renderer).
+# Runs a scene of the Godot project in a real X11 window on Xvfb (Mesa lavapipe; Forward+, or METHOD=...).
 #   bash tools/world3d/run3d.sh <res://scene.tscn> <out_dir> [WxH] [-- game args...]
 # Logs to <out_dir>/log.txt. Extra args after -- go to the game (OS.get_cmdline_user_args()).
 set -uo pipefail
@@ -14,7 +14,7 @@ Xvfb "$DISP" -screen 0 "${RES}x24" -nolisten tcp >/dev/null 2>&1 &
 XP=$!
 trap 'kill $XP 2>/dev/null' EXIT
 for _ in $(seq 1 50); do DISPLAY="$DISP" xdpyinfo >/dev/null 2>&1 && break; sleep 0.1; done
-DISPLAY="$DISP" timeout "${TIMEOUT:-300}" "$GODOT_BIN" --path "$PROJ" --rendering-method mobile \
+DISPLAY="$DISP" timeout "${TIMEOUT:-300}" "$GODOT_BIN" --path "$PROJ" --rendering-method "${METHOD:-forward_plus}" \
   --rendering-driver vulkan --resolution "$RES" --position 0,0 ${GODOT_EXTRA:-} "$SCENE" -- "$@" \
   > "$OUT/log.txt" 2>&1
 code=$?

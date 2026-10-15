@@ -66,7 +66,7 @@ class Bot:
                 break
             time.sleep(0.1)
         head = [self.binary] if self.binary else [GODOT, "--path", os.path.join(ROOT, "godot")]
-        args = head + ["--rendering-method", "mobile", "--rendering-driver", "vulkan",
+        args = head + ["--rendering-method", os.environ.get("METHOD", "forward_plus"), "--rendering-driver", "vulkan",
                 "--resolution", "%dx%d" % (self.w, self.h), "--position", "0,0", "--",
                 "--bot-state=" + self.state_path, "--bot-cmd=" + self.cmd_path, "--bot-log",
                 "--save-root=" + os.path.join(self.out, "userdata"),

@@ -2,8 +2,9 @@ class_name PixelView3D
 extends Control
 ## The 3D world rendered as pixel art (docs/knowledge/21-3d-pixel-render.md).
 ##
-## The world renders into a low-res SubViewport at the native size (480x270 at the 1080p baseline;
-## the canvas follows the window like the 2D core's PixelStage, see fit()) plus a 1-pixel border.
+## The world renders into a low-res SubViewport at the native size (640x360: 720p x2, 1080p x3, 1440p
+## x4, 4K x6; the canvas follows the window like the 2D core's PixelStage, see fit()) plus a 1-pixel
+## border. 1 m = 30 native px (PPM) on the camera's picture plane.
 ## An orthographic camera with fixed yaw (north up) and a fixed pitch looks at it; the camera is
 ## snapped to whole native texels in view space and the sub-pixel remainder shifts the upscaled
 ## image (in whole window pixels), so following is smooth while every texel stays on the world's
@@ -15,9 +16,8 @@ extends Control
 
 signal logical_resized(size: Vector2)
 
-const BASE := Vector2(480, 270)
-const MIN_W := 400.0
-const PPM := 20.0
+const BASE := Vector2(640, 360)
+const PPM := 30.0
 
 @export var pitch_deg := 55.0
 ## Dev previews only (asset checks of tall trees): a fixed integer scale instead of the rule.
@@ -134,18 +134,16 @@ func apply_view_globals() -> void:
 	cam.rotation = Vector3(-p, 0.0, 0.0)
 
 
-## Integer scale from the window, the same rule as the 2D core (core/pixel_stage.gd fit(),
-## knowledge/16 §13): s = round(h / 270), lowered while the canvas would be narrower than 400;
-## the canvas is the window divided by s (1280x720 -> 426x240 x3, 1920x1080 -> 480x270 x4,
-## 2560x1440 -> 512x288 x5, 1200x540 -> 600x270 x2). No black bars, no fractional scale.
+## Integer scale from the window, the same rule as the 2D core (core/pixel_stage.gd scale_for()):
+## s = round(h / 360), lowered while the canvas would be narrower than 400; the canvas is the window
+## divided by s (1280x720 -> 640x360 x2, 1920x1080 -> 640x360 x3, 2560x1440 -> 640x360 x4, 3840x2160
+## -> 640x360 x6, 1366x768 -> 683x384 x2). No black bars, no fractional scale.
 func fit() -> void:
 	var win := get_window()
 	var size := Vector2(win.size)
 	if size.x < 1 or size.y < 1:
 		return
-	var s := maxi(1, roundi(size.y / BASE.y))
-	while s > 1 and size.x / s < MIN_W:
-		s -= 1
+	var s := PixelStage.scale_for(size, BASE)
 	if force_scale > 0:
 		s = force_scale
 	var cs := Vector2i(floori(size.x / s), floori(size.y / s))
