@@ -75,6 +75,7 @@ func _ready() -> void:
 		env.environment.ssao_enabled = false          # comparisons
 	if args.has("noglow"):
 		env.environment.glow_enabled = false
+	cut_mode = String(args.get("cutmode", "cut"))
 	env.rain = float(args.get("rain", "0"))
 	env.set_time(float(args.get("hours", "9.5")))
 	terrain = Terrain3D.new()
@@ -289,14 +290,12 @@ func _place_props() -> void:
 		placed_props.append([name, pos, inst.rotation.y, sc, float(a.get("height", 10.0)) * sc])
 		if kind == "bamboo":
 			# a grove is dense all the way down: open a wide hole around her, she reads first
-			_scale_cutaway(inst, 3.2)
+			_tree_cutaway(inst, 3.2, float(a.get("height", 10.0)) * sc)
 		elif kind != "camphor":
-			_scale_cutaway(inst, 1.8)
+			_tree_cutaway(inst, 1.8, float(a.get("height", 10.0)) * sc)
 		if kind == "camphor":
-			_scale_cutaway(inst, float(args.get("camphor_cut", "3.8")), true)
-			# the trunk and limbs only open where they really cover her (a wide hole would eat the
-			# trunk above her head and the front of the shimenawa)
-			_solid_cutaway(inst, 1.3)
+			# the great tree is always cut (she walks under it); trunk, limbs, rope and leaves alike
+			_tree_cutaway(inst, float(args.get("camphor_cut", "3.8")), 0.0, true)
 			_crown_proxy(inst, a)
 		for fp in a.get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, inst.rotation.y) * sc
@@ -394,7 +393,7 @@ func _place_marker_props() -> void:
 		tree.rotation.y = float(mp[2])
 		props_root.add_child(tree)
 		placed_props.append([mp[0], tree.position, float(mp[2]), 1.0, float(catalog[mp[0]].get("height", 6.0))])
-		_scale_cutaway(tree, 1.8)
+		_tree_cutaway(tree, 1.8, float(catalog[mp[0]].get("height", 6.0)))
 		for fp in catalog[mp[0]].get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(mp[2]))
 			blockers.append([tree.position + off, float(fp[2])])
@@ -501,38 +500,6 @@ func _crown_proxy(parent: Node3D, a: Dictionary) -> void:
 	parent.add_child(mi)
 
 
-## Big canopies fade over a wide disc while she is under them (foreground that thins out).
-func _scale_cutaway(n: Node, k: float, dense := false) -> void:
-	if n is GeometryInstance3D:
-		var gi := n as GeometryInstance3D
-		var mats: Array = []
-		if gi.material_override:
-			mats.append(gi.material_override)
-		if gi is MeshInstance3D and (gi as MeshInstance3D).mesh:
-			var mesh := (gi as MeshInstance3D).mesh
-			for si in mesh.get_surface_count():
-				var sm := (gi as MeshInstance3D).get_active_material(si)
-				if sm:
-					mats.append(sm)
-		for m in mats:
-			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("foliage"):
-				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
-				if dense:
-					# under the great crown the view keeps its lowest boughs along the top edge (she
-					# stands under a roof of leaves; everything nearer to her than that opens)
-					(m as ShaderMaterial).set_shader_parameter("cutaway_keep_px", 96.0)
-					# the great evergreen crown: a deep shade in its heart (the crown proxy), in big
-					# masses toward its rim (the cards cast a little larger than drawn; the sun flecks
-					# on the ground are the terrain's own)
-					(m as ShaderMaterial).set_shader_parameter("shadow_shrink", 1.2)
-					(m as ShaderMaterial).set_shader_parameter("shadow_sieve", 0.0)
-					# seen from its shaded side at midday: keep the masses, not a black lid (the sky
-					# light and the VoxelGI bounce do most of it since round 4)
-					(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.2)
-	for c in n.get_children():
-		_scale_cutaway(c, k, dense)
-
-
 func _set_foliage_shader(n: Node, sh: Shader) -> void:
 	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
 		var mi := n as MeshInstance3D
@@ -544,18 +511,88 @@ func _set_foliage_shader(n: Node, sh: Shader) -> void:
 		_set_foliage_shader(c, sh)
 
 
-## The great tree's limbs and trunk also thin out around her when they stand between her and us.
-func _solid_cutaway(n: Node, k: float) -> void:
+## How a tree that stands between her and the camera lets her through (round 4, item 4: the
+## trunk, the limbs and the leaves of one tree always go together). --cutmode=
+##   cut  (default) every part of the tree opens the same hole around her (the same radius, the same
+##        scattered edge), so a limb never hangs in a hole of leaves;
+##   fade the whole tree turns see-through at once (a share of its pixels let through, eased);
+##   none nothing opens: her silhouette shows through (the x-ray pass).
+## The great tree is always "cut" (she walks under it; it keeps its lowest boughs at the top).
+var cut_mode := "cut"
+var _fade_objs: Array = []        # [node, base position, height m, [GeometryInstance3D], fade]
+
+
+func _tree_cutaway(n: Node3D, k: float, height: float, dense := false) -> void:
+	var mode := cut_mode if not dense else "cut"
+	_set_cut(n, k if mode == "cut" else 0.0, dense)
+	if mode == "fade" and height > 2.5:
+		var gis: Array = []
+		_collect_geometry(n, gis)
+		_fade_objs.append([n, n.global_position, height, gis, 0.0])
+
+
+func _set_cut(n: Node, k: float, dense: bool) -> void:
 	if n is MeshInstance3D and (n as MeshInstance3D).mesh:
 		var mi := n as MeshInstance3D
 		for si in mi.mesh.get_surface_count():
 			var m := mi.get_active_material(si)
-			if m is ShaderMaterial and String((m as ShaderMaterial).shader.resource_path).contains("toon_solid"):
-				(m as ShaderMaterial).set_shader_parameter("cutaway", true)
-				(m as ShaderMaterial).set_shader_parameter("cutaway_scale", k)
-				(m as ShaderMaterial).set_shader_parameter("shade_fill", 0.3)
+			if not (m is ShaderMaterial):
+				continue
+			var sm := m as ShaderMaterial
+			var path := String(sm.shader.resource_path)
+			if not (path.contains("toon_solid") or path.contains("foliage")):
+				continue
+			sm.set_shader_parameter("cutaway", k > 0.0)
+			sm.set_shader_parameter("cutaway_scale", maxf(k, 1.0))
+			if dense:
+				# under the great crown the view keeps its lowest boughs along the top edge (she
+				# stands under a roof of leaves; everything nearer to her than that opens)
+				sm.set_shader_parameter("cutaway_keep_px", 96.0)
+				if path.contains("foliage"):
+					# the great evergreen crown: a deep shade in its heart (the crown proxy), in big
+					# masses toward its rim (the cards cast a little larger than drawn; the sun
+					# flecks on the ground are the terrain's own)
+					sm.set_shader_parameter("shadow_shrink", 1.2)
+					sm.set_shader_parameter("shadow_sieve", 0.0)
+					# seen from its shaded side at midday: keep the masses, not a black lid (the
+					# sky light and the VoxelGI bounce do most of it since round 4)
+					sm.set_shader_parameter("shade_fill", 0.2)
+				else:
+					sm.set_shader_parameter("shade_fill", 0.3)
 	for c in n.get_children():
-		_solid_cutaway(c, k)
+		_set_cut(c, k, dense)
+
+
+func _collect_geometry(n: Node, out: Array) -> void:
+	if n is GeometryInstance3D and (n as GeometryInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_SHADOWS_ONLY:
+		out.append(n)
+	for c in n.get_children():
+		_collect_geometry(c, out)
+
+
+## cutmode "fade": a tree hides her when her chest falls inside its drawn box and it stands nearer
+## the camera (south of her); then all of it eases to see-through, and back when she leaves.
+func _update_fades(dt: float) -> void:
+	if _fade_objs.is_empty() or her == null:
+		return
+	var feet := her.pos
+	var chest := pv.screen_of_upright(feet, 1.0)
+	for o in _fade_objs:
+		var base: Vector3 = o[1]
+		var h: float = o[2]
+		var target := 0.0
+		if base.z > feet.z + 0.4 and base.z < feet.z + h * 1.6:
+			var b0 := pv.screen_of_upright(base, 0.0)
+			var b1 := pv.screen_of_upright(base, h)
+			var half_w := h * 0.42 * PixelView3D.PPM
+			if chest.x > b0.x - half_w and chest.x < b0.x + half_w and chest.y > b0.y + 6.0 and chest.y < b1.y:
+				target = 0.62
+		var f: float = o[4]
+		f = move_toward(f, target, dt * 2.5)
+		if f != o[4]:
+			o[4] = f
+			for g in o[3]:
+				(g as GeometryInstance3D).set_instance_shader_parameter("obj_fade", f)
 
 
 # ------------------------------------------------------------------------------------------------
@@ -880,6 +917,7 @@ func _process(dt: float) -> void:
 	var chest := her.chest()
 	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 26.0))
 	pv.update_camera(dt)
+	_update_fades(dt)
 	if atmos:
 		atmos.update(dt, her.pos)
 	if args.has("shots"):
