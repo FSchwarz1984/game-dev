@@ -187,7 +187,7 @@ class Ground:
 
 # ------------------------------------------------------------------------------------------- one stone
 def slab(sink, ground, poly, prot, depth, colour, moss, R, layer='flat', dome=0.012, bevel=0.03, flat_top=None,
-         ao_top=1.0, ao_bottom=0.45, pattern=PAT_STONE):
+         ao_top=1.0, ao_bottom=0.45, pattern=PAT_STONE, side_top=None):
     """A stone set in the ground: outline `poly` (world x, z; CCW seen from above), its top `prot`
     metres above the ground (following the ground's slope, slightly domed), its skirt going `depth`
     below. The top is inset by `bevel` so the sides slope out (a chamfer that catches the light).
@@ -248,6 +248,8 @@ def slab(sink, ground, poly, prot, depth, colour, moss, R, layer='flat', dome=0.
             else:
                 out_n.append(fn)
             ao = ao_top if vi <= n else ao_bottom
+            if not is_top and vi <= n and side_top is not None:
+                ao = side_top
             if vi == 0:
                 ao = min(1.0, ao_top + 0.05)
             out_c.append(np.concatenate([col, [ao]]))
@@ -260,13 +262,13 @@ def slab(sink, ground, poly, prot, depth, colour, moss, R, layer='flat', dome=0.
 
 
 def box_stone(sink, ground, centre_xz, along, size, top_y, colour, moss, R, layer='solid', jag=0.04, pattern=PAT_STONE,
-              bottom=None, ao=(1.0, 0.5)):
+              bottom=None, ao=(1.0, 0.5), side_top=None):
     """A rough block (a riser stone, a kerb): rectangle `size` = (length along `along`, width) in
     plan with jagged, rounded corners, its top at top_y (flat, a little tilted at random)."""
     along = np.asarray(along, np.float64)
     along = along / np.linalg.norm(along)
     side = np.array([-along[1], along[0]])
-    L, W = size
+    L, W = max(float(size[0]), 0.06), max(float(size[1]), 0.06)
     pts = []
     for sx, sy in ((-1, -1), (1, -1), (1, 1), (-1, 1)):
         pts.append(np.asarray(centre_xz) + along * sx * L / 2 * (1 + R.normal(0, jag)) + side * sy * W / 2 * (1 + R.normal(0, jag)))
@@ -274,7 +276,7 @@ def box_stone(sink, ground, centre_xz, along, size, top_y, colour, moss, R, laye
     poly = poly + R.normal(0, jag * 0.25 * min(L, W), poly.shape)
     gy = float(ground.height(centre_xz[0], centre_xz[1]))
     return slab(sink, ground, poly, 0.0, (gy - bottom) if bottom is not None else 0.12, colour, moss, R, layer=layer,
-                flat_top=top_y, dome=0.0, bevel=0.025, ao_top=ao[0], ao_bottom=ao[1], pattern=pattern)
+                flat_top=top_y, dome=0.0, bevel=0.025, ao_top=ao[0], ao_bottom=ao[1], pattern=pattern, side_top=side_top)
 
 
 def cylinder(sink, a, b, r, colour, end_colour, R, layer='solid', n=7, pattern=PAT_BARK, moss=0.0, ao=1.0):
@@ -347,6 +349,10 @@ def ishidatami(sink, ground, route, s0, s1, width, R, seed, gutter_side=0, drain
         s += step
         row += 1
     seeds = np.array(seeds)
+    # big flat slabs among the small stones: thin the seeds out in patches (their cells merge)
+    patch = noise.fbm(seeds[:, 0] / 2.2, seeds[:, 1] / 1.4 + seed * 0.01, 2, seed + 41)
+    drop = (patch > 0.6) & (R.uniform(size=len(seeds)) < 0.55)
+    seeds = seeds[~drop]
     # cross drains: lines across the road (in s, t) where the stones are replaced by a row of upright ones
     drain_lines = []
     if drains:
@@ -474,8 +480,8 @@ def steps(sink, ground, route, s0, s1, width, R, kind='stone', count=None, rise=
             # one dressed block per step: the whole tread, a clean front edge, chamfered
             c = Pm[0]
             colour = GRANITE * (0.9 + 0.1 * R.uniform())
-            tris += box_stone(sink, ground, c, T0, (abs(sb - sa) + 0.06, width), top, colour, R.uniform(0.2, 0.6), R,
-                              layer='solid', jag=0.008, bottom=top - abs(dh) / n - 0.12, ao=(1.0, 0.55))
+            tris += box_stone(sink, ground, c, T0, (abs(sb - sa) + 0.06, width), top, colour, R.uniform(0.05, 0.3), R,
+                              layer='solid', jag=0.008, bottom=top - abs(dh) / n - 0.12, ao=(1.0, 0.42), side_top=0.72)
             continue
         # the tread: packed earth, a little lower at the middle, flat
         tread = []
@@ -496,8 +502,11 @@ def steps(sink, ground, route, s0, s1, width, R, kind='stone', count=None, rise=
                 tris += cylinder(sink, q, q + np.array([0, 0.38 + r, 0]), 0.035, BARK * 0.85, LOG_END * 0.9, R, n=5)
         else:
             # one to three rough stones across the front edge
-            k = int(R.integers(1, 4))
+            k = int(R.integers(1, 4)) if width > 1.0 else int(R.integers(1, 3))
             cuts = np.sort(R.uniform(0.25, 0.75, k - 1)) if k > 1 else np.array([])
+            if k > 2 and cuts[1] - cuts[0] < 0.18:
+                cuts = cuts[:1]
+                k = 2
             edges = np.concatenate([[0.0], cuts, [1.0]])
             for j in range(k):
                 ta = -hw + width * edges[j]

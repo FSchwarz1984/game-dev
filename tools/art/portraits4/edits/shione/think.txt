@@ -1,0 +1,2 @@
+# Shione, think. Source B_34 ("拿折起地图辨路疑惑"). A thought bubble beside the head.
+use think 109 2

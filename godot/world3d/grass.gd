@@ -29,6 +29,10 @@ func build(t: Terrain3D) -> void:
 	mat.set_shader_parameter("cutaway", false)
 	mat.set_shader_parameter("wind_px", 1.0)
 	mat.set_shader_parameter("porosity", 0.6)
+	# the sprites carry their own natural greens: little of the material's extra freshness, a little
+	# light through the blades against the sun
+	mat.set_shader_parameter("lush", 0.15)
+	mat.set_shader_parameter("transmit", 0.35)
 	var dir := "res://world3d/terrain/" + String(t.info.get("name", "saddle"))
 	var f := FileAccess.open(dir.path_join(String(info.get("file", "cover.bin"))), FileAccess.READ)
 	if f == null:

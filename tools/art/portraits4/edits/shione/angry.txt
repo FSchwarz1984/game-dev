@@ -1,0 +1,13 @@
+# Shione, angry. Source B_30 ("保护姿态警惕", wary; the packs have no angry face). Upper lids pressed down toward
+# the nose, a frown, an anger mark beside the head.
+@ 63 54
+kkkk
+...kkk
+.....kk
+.......kk
+@ 85 61
+kkkk
+.kk
+@ 72 78
+q......q
+use anger 112 12

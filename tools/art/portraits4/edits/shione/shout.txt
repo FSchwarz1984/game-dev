@@ -1,0 +1,2 @@
+# Shione, shout. Source B_12 ("快步焦急"). Two exclamation marks.
+use bang2 109 2

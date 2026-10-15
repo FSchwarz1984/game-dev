@@ -33,8 +33,8 @@ SELECTION = {
         'laugh': ('A_22', (496, 201), (553, 238), (512.4, 258.2), 'open'),
         'surprise': ('A_13', (490, 209), (546, 238), (507.7, 271.7), 'open'),
         'shout': ('A_12', (569, 216), (625, 241), (588.7, 277.8), 'open'),
-        'sad': ('A_23', (510, 219), (562, 241), (505.7, 268.4), 'closed'),
-        'cry': ('A_23', (510, 219), (562, 241), (505.7, 268.4), 'closed'),
+        'sad': ('A_23', (510, 219), (562, 241), (520.0, 269.0), 'closed'),
+        'cry': ('A_23', (510, 219), (562, 241), (520.0, 269.0), 'closed'),
         'pout': ('A_04', (495, 208), (562, 234), (510.6, 256.9), 'closed'),
         'angry': ('A_30', (505.7, 231), (563, 251), (527.3, 283.3), 'closed'),
         'doubt': ('A_09', (491, 203), (551, 235), (515.7, 267.5), 'closed'),
@@ -112,6 +112,7 @@ MOUTH = {
     'shione': ('#95504f', '#d0948c'),
     'saji': ('#8a3b3a', '#cf8c7c'),
 }
+MOUTH_CAVITY = {'tsuzumi': '#6e2a38', 'shione': '#6e2434', 'saji': '#6e2430'}   # inside of an open mouth, upper part
 MOUTH_PINK = {'tsuzumi': '#e8968f', 'shione': '#e8968f', 'saji': '#ea8f86'}   # the inside of a slightly open mouth
 MOUTH_BH = 5.0             # black-hat threshold (L*) of the mouth stroke in the work image
 MOUTH_MAX_W = 9            # widest closed mouth, native px

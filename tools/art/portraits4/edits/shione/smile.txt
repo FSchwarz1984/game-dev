@@ -1,0 +1,6 @@
+# Shione, smile. Source B_01. A light blush beside the nose and under the far eye (clear of the red marks).
+@ 66 63
+bpbb
+pbbp
+@ 82 69
+bpb

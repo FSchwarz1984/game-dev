@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://bw0fgij2te1vd"
+path="res://.godot/imported/cover.png-dad6ec83f4de75aa35e50b5433a9b7bf.image"
+
+[deps]
+
+source_file="res://world3d/terrain/common/cover.png"
+dest_files=["res://.godot/imported/cover.png-dad6ec83f4de75aa35e50b5433a9b7bf.image"]
+
+[params]
+

@@ -1,0 +1,2 @@
+# Saji, surprise. Source C_13 ("转身惊讶"). One exclamation mark.
+use bang1 112 24

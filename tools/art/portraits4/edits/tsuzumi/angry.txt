@@ -1,0 +1,15 @@
+# Kasasagi, angry. Source A_30 ("保护姿态警惕", wary, not angry: the packs have no angry face, see the missing-art
+# list). Upper lids pressed down toward the nose (angry slant), a wide frown, an anger mark over the hat.
+# near eye: inner half of the upper lid one row lower
+@ 47 48
+kkk
+...kkk
+......kk
+# far eye: inner part of the upper lid lower
+@ 70 57
+kkkkk
+kk
+# frown: corners down at both ends of the flat line
+@ 53 76
+q.......q
+use anger 100 46

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Renders a vista capture plan (tools/vista/capture.gd) in a real window on Xvfb with Mesa software
-# rendering and the Mobile renderer (the one both platforms use).
+# rendering and the game's renderer (Forward+ since 2026-10-15; VISTA_RENDERER=mobile for the earlier one).
 #   bash tools/vista/render.sh plan.json [WxH window, default 960x540] [extra godot args...]
 # Example plan: {"out": "/tmp/x", "shots": [{"name": "dusk", "state": {"tod": 19.4, "pan": 1}}]}
 set -euo pipefail
@@ -23,4 +23,4 @@ XPID=$!
 trap 'kill $XPID 2>/dev/null || true' EXIT
 export DISPLAY="$DISP"
 for _ in $(seq 1 50); do xdpyinfo >/dev/null 2>&1 && break; sleep 0.1; done
-"$GODOT_BIN" --path "$PROJ" --rendering-method mobile --rendering-driver vulkan --resolution "$RES" --position 0,0 "$@" -s "$CAP" -- --plan="$PLAN"
+"$GODOT_BIN" --path "$PROJ" --rendering-method "${VISTA_RENDERER:-forward_plus}" --rendering-driver vulkan --resolution "$RES" --position 0,0 "$@" -s "$CAP" -- --plan="$PLAN"

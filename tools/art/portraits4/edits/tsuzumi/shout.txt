@@ -1,0 +1,2 @@
+# Kasasagi, shout. Source A_12 ("快步焦急"). Two exclamation marks over the hat.
+use bang2 101 46

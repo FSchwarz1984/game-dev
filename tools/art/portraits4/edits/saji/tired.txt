@@ -1,0 +1,2 @@
+# Saji, tired. Source C_19 ("扶额疲惫", hand on the forehead). A sweat drop at the temple.
+use sweat 38 44

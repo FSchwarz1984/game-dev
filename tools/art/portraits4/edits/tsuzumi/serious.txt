@@ -1,0 +1,10 @@
+# Kasasagi, serious. Source A_25 ("抬手示意停下严肃"). Upper lids flattened one row lower (stern, narrowed eyes),
+# a firm straight mouth.
+@ 40 47
+kkkkkkkkk
+@ 72 58
+kkkkkkk
+@ 53 75
+..s....
+qqqqqq.
+......s

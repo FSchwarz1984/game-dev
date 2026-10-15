@@ -1,0 +1,43 @@
+# Saji, cry. Source C_23 ("含泪克制悲伤": one faint tear on the near cheek), streams added by hand along the
+# illustration's own tear line; her rosy cheeks get crying hatching; mouth opens in a small downturned arch.
+# near eye: welled lid, stream down the cheek beside the contour
+@ 45 59
+cCc
+@ 46 60
+Cc
+Cc
+Cc
+Cc
+CCc
+Cc.
+Cc.
+Cc.
+Cc.
+CCc
+.Cc
+.Cc
+.zCc
+.zCCz
+..zz
+# far eye: welled lid, short stream
+@ 72 68
+cCc
+@ 73 69
+Cc
+Cc
+Cc
+CCz
+.z
+# crying flush (hatching over her rosy cheeks)
+@ 51 62
+bpbbpbb
+pbbpbbp
+.bbbbb.
+@ 67 70
+bpb
+pb.
+# mouth: small open arch, corners down
+@ 54 75
+.qqq.
+qmmmq
+q...q

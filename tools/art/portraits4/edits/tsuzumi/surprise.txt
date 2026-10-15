@@ -1,0 +1,2 @@
+# Kasasagi, surprise. Source A_13 ("转身惊讶"). One exclamation mark over the hat.
+use bang1 103 46

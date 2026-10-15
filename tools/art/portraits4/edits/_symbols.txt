@@ -1,0 +1,89 @@
+# Manga marks stamped by `use NAME X Y` in the edit files (top-left corner at X, Y). Keys are the face keys of
+# each character's legend: k ink outline, l white, x / X anger red, c / C / z tear and sweat, '.' = leave as is.
+# They sit beside the head on the background, never on the face (docs/knowledge/13 section 10).
+
+= anger
+..XXX.XXX..
+..XxX.XxX..
+..XxX.XxX..
+XXXxX.XxXXX
+XxxX...XxxX
+...........
+XxxX...XxxX
+XXXxX.XxXXX
+..XxX.XxX..
+..XxX.XxX..
+..XXX.XXX..
+
+= question
+..kkkkkk..
+.kllllllk.
+kllkkkkllk
+kllk..kllk
+.kk..kllk.
+....kllk..
+....kllk..
+.....kk...
+....kkkk..
+....kllk..
+....kllk..
+....kkkk..
+
+= think
+.......kkkkk..
+.....kkllllkk.
+....klllllllk.
+...kklllllllkk
+...klllllllllk
+...kklllllllkk
+....kkllllkkk.
+.kk...kkkk....
+kllk..........
+kllk..........
+.kk...........
+..............
+.k............
+klk...........
+.k............
+
+= bang2
+kkkk.kkkk
+kllk.kllk
+kllk.kllk
+kllk.kllk
+kllk.kllk
+kllk.kllk
+.kk...kk.
+.kk...kk.
+kkkk.kkkk
+kllk.kllk
+kkkk.kkkk
+
+= bang1
+kkkk
+kllk
+kllk
+kllk
+kllk
+kllk
+.kk.
+.kk.
+kkkk
+kllk
+kkkk
+
+= sweat
+..z..
+..z..
+.zCz.
+zCcCz
+zCccz
+zCCcz
+.zzz.
+
+= puff
+..kkk.kkk..
+.klllklllk.
+kllllllllk.
+.klllllllk.
+..kkkkkkk..

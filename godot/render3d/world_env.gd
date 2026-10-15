@@ -28,11 +28,11 @@ const KEYS := [
 	[0.0, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[4.4, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[5.4, Color(0.95, 0.62, 0.58), 0.35, Color(0.22, 0.24, 0.36), Color(0.07, 0.07, 0.07), Color(0.45, 0.42, 0.52), Color(0.02, 0.012, 0.04), Color(1.02, 0.99, 1.02), 0.92, Color(-0.004, 0.002, 0.02), Color(0.02, 0.01, 0.0), 0.6],
-	[6.4, Color(1.0, 0.80, 0.60), 1.6, Color(0.52, 0.60, 0.80), Color(0.12, 0.13, 0.10), Color(0.80, 0.76, 0.72), Color(0.012, 0.008, 0.02), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
-	[8.0, Color(1.0, 0.92, 0.80), 1.75, Color(0.58, 0.70, 0.92), Color(0.15, 0.17, 0.12), Color(0.80, 0.84, 0.86), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.01), 1.06, Color(-0.012, 0.004, 0.02), Color(0.018, 0.012, 0.0), 0.0],
-	[12.0, Color(1.0, 0.97, 0.93), 1.75, Color(0.60, 0.72, 0.95), Color(0.15, 0.18, 0.12), Color(0.78, 0.85, 0.90), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.02), 1.08, Color(-0.012, 0.005, 0.02), Color(0.012, 0.010, 0.0), 0.0],
-	[15.5, Color(1.0, 0.92, 0.78), 1.75, Color(0.60, 0.68, 0.92), Color(0.16, 0.17, 0.12), Color(0.80, 0.80, 0.80), Color(0.012, 0.010, 0.022), Color(1.03, 1.02, 1.0), 1.06, Color(-0.012, 0.004, 0.022), Color(0.02, 0.012, 0.0), 0.0],
-	[17.4, Color(1.0, 0.80, 0.55), 1.9, Color(0.56, 0.56, 0.80), Color(0.14, 0.13, 0.10), Color(0.86, 0.74, 0.62), Color(0.010, 0.006, 0.026), Color(1.04, 1.01, 0.98), 1.06, Color(-0.02, 0.0, 0.05), Color(0.03, 0.02, 0.0), 0.0],
+	[6.4, Color(1.0, 0.80, 0.60), 1.6, Color(0.44, 0.56, 0.84), Color(0.12, 0.15, 0.10), Color(0.80, 0.76, 0.72), Color(0.012, 0.008, 0.02), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
+	[8.0, Color(1.0, 0.92, 0.80), 1.75, Color(0.48, 0.63, 0.94), Color(0.16, 0.20, 0.12), Color(0.80, 0.84, 0.86), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.01), 1.06, Color(-0.012, 0.004, 0.02), Color(0.018, 0.012, 0.0), 0.0],
+	[12.0, Color(1.0, 0.95, 0.88), 1.8, Color(0.48, 0.64, 0.95), Color(0.17, 0.21, 0.12), Color(0.78, 0.85, 0.90), Color(0.010, 0.012, 0.022), Color(1.03, 1.03, 1.02), 1.08, Color(-0.012, 0.005, 0.02), Color(0.012, 0.010, 0.0), 0.0],
+	[15.5, Color(1.0, 0.92, 0.80), 1.8, Color(0.50, 0.62, 0.92), Color(0.17, 0.20, 0.12), Color(0.80, 0.80, 0.80), Color(0.012, 0.010, 0.022), Color(1.03, 1.02, 1.0), 1.06, Color(-0.012, 0.004, 0.022), Color(0.02, 0.012, 0.0), 0.0],
+	[17.4, Color(1.0, 0.80, 0.55), 1.9, Color(0.46, 0.50, 0.84), Color(0.15, 0.15, 0.10), Color(0.86, 0.74, 0.62), Color(0.010, 0.006, 0.026), Color(1.04, 1.01, 0.98), 1.06, Color(-0.02, 0.0, 0.05), Color(0.03, 0.02, 0.0), 0.0],
 	[18.4, Color(1.0, 0.62, 0.40), 1.2, Color(0.34, 0.34, 0.56), Color(0.08, 0.07, 0.06), Color(0.50, 0.44, 0.50), Color(0.014, 0.010, 0.034), Color(1.02, 0.99, 0.98), 1.0, Color(-0.02, 0.0, 0.05), Color(0.025, 0.015, 0.0), 0.5],
 	[19.6, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[24.0, Color(0.55, 0.65, 1.0), 0.45, Color(0.050, 0.068, 0.125), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
@@ -104,19 +104,58 @@ func setup(v: PixelView3D) -> void:
 	view.vp.add_child(sun)
 
 
-## Volumetric fog (Forward+): the air the sun's light shows in (shafts through the crowns), the
-## lanterns' halos at night, the morning mist that glows. density: the clear-day haze per metre.
-func use_volumetric_fog(density: float) -> void:
-	environment.volumetric_fog_enabled = density > 0.0
-	environment.volumetric_fog_density = density
+## Volumetric fog (Forward+): the air near the ground, one FogVolume over the terrain
+## (shaders/ground_fog.gdshader): the sun's shafts through the crowns, the lanterns' halos, the
+## morning mist that glows. The global density stays 0 (the air between the top-down camera and the
+## ground is not air). strength scales the hour's density (0 turns it off).
+var fog_volume: FogVolume
+var fog_mat: ShaderMaterial
+var fog_strength := 1.0
+
+
+func use_volumetric_fog(strength: float, t: Terrain3D) -> void:
+	fog_strength = strength
+	environment.volumetric_fog_enabled = strength > 0.0
+	environment.volumetric_fog_density = 0.0
 	environment.volumetric_fog_albedo = Color(0.92, 0.95, 1.0)
-	environment.volumetric_fog_anisotropy = 0.55          # light scatters forward: shafts toward the sun
-	environment.volumetric_fog_length = 120.0
+	environment.volumetric_fog_anisotropy = 0.5           # light scatters forward: shafts toward the sun
+	environment.volumetric_fog_length = view.cam_distance + 80.0
 	environment.volumetric_fog_detail_spread = 1.0
-	environment.volumetric_fog_gi_inject = 0.6
-	environment.volumetric_fog_ambient_inject = 0.25
+	environment.volumetric_fog_gi_inject = 0.5
+	environment.volumetric_fog_ambient_inject = 0.35
 	environment.volumetric_fog_temporal_reprojection_enabled = false   # no ghosting as she walks
 	sun.light_volumetric_fog_energy = 1.0
+	if strength <= 0.0:
+		return
+	fog_volume = FogVolume.new()
+	fog_volume.name = "GroundFog"
+	var size := Vector2(float(t.nx - 1), float(t.nz - 1)) * t.cell
+	fog_volume.size = Vector3(size.x, 90.0, size.y)
+	fog_volume.position = Vector3(t.origin.x + size.x * 0.5, 0.0, t.origin.y + size.y * 0.5)
+	fog_volume.shape = RenderingServer.FOG_VOLUME_SHAPE_BOX
+	fog_mat = ShaderMaterial.new()
+	fog_mat.shader = load("res://render3d/shaders/ground_fog.gdshader")
+	fog_mat.set_shader_parameter("ground", t.height_texture())
+	fog_mat.set_shader_parameter("frame", Vector4(t.origin.x, t.origin.y, t.cell, 0.0))
+	fog_mat.set_shader_parameter("cells", Vector2(t.nx, t.nz))
+	fog_volume.material = fog_mat
+	view.world_root.add_child(fog_volume)
+	_fog_for_hour()
+
+
+# the ground fog per hour: thick, low and warm-lit in the early morning (the valley mist), a light
+# haze by day (enough to show the shafts), clearer at dusk, a thin layer at night for the halos
+func _fog_for_hour() -> void:
+	if fog_mat == null:
+		return
+	var morning := clampf(1.0 - absf(hours - 6.8) / 2.4, 0.0, 1.0)
+	var night := float(sample(hours)[11])
+	var d := lerpf(0.010, 0.05, morning) + night * 0.012 + rain * 0.03
+	var layer := lerpf(5.0, 3.0, morning)
+	fog_mat.set_shader_parameter("density", d * fog_strength)
+	fog_mat.set_shader_parameter("layer", layer)
+	var fc: Color = sample(hours)[5]
+	fog_mat.set_shader_parameter("albedo", Color(0.9, 0.94, 1.0).lerp(fc, 0.25))
 
 
 static func _lerp_key(a: Array, b: Array, t: float) -> Array:
@@ -197,12 +236,14 @@ func set_time(h: float) -> void:
 	var mist_top := lerpf(-11.0, 1.5, morning)
 	var mist_bottom := lerpf(-26.0, -22.0, morning)
 	RenderingServer.global_shader_parameter_set("w3_mist", Vector4(mist_top, mist_bottom, clampf(0.25 + mist_k, 0.0, lerpf(0.92, 0.7, morning)), 0.012))
+	_fog_for_hour()
 	var c := view.composite
 	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b))
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))
 	c.set_shader_parameter("saturation", float(k[8]) * (1.0 - 0.15 * rain))
-	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b))
-	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b))
+	# split toning, a little stronger than the keys (round 4): shade leans blue-green, light warm
+	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b) * 1.6 + Vector3(0.0, 0.004, 0.004) * (1.0 - night))
+	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * 1.3)
 	# a soft S-curve (round 4: soft contrast, nothing crushed), softer still at night
 	c.set_shader_parameter("contrast", lerpf(0.16, 0.08, night))
 	# exposure: a low sun lights the ground at a grazing angle; the eye (and a camera) open up for it
@@ -212,5 +253,7 @@ func set_time(h: float) -> void:
 
 func tick(dt: float) -> void:
 	clock += dt
+	if fog_mat:
+		fog_mat.set_shader_parameter("drift", clock * 0.25 * wind)
 	RenderingServer.global_shader_parameter_set("w3_time", clock)
 	RenderingServer.global_shader_parameter_set("w3_wind", Vector4(1.0, 0.25, wind, 0.35))

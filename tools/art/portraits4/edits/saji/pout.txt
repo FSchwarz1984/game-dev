@@ -1,0 +1,12 @@
+# Saji, pout. Source C_04 ("正面叉腰气鼓鼓"). Pursed wavy mouth, flushed cheeks (hatching over her rosy cheeks),
+# a "hmph" puff.
+@ 58 78
+sqqsqqs
+qssqssq
+sssssss
+@ 47 63
+bpbbpb
+pbbpbb
+@ 70 70
+bpb
+use puff 66 75

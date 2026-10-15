@@ -62,6 +62,18 @@ func load_region(dir: String) -> bool:
 	return true
 
 
+var _height_tex: ImageTexture
+
+
+## The heights as a float texture (one texel per cell, linear filtering gives the ground between):
+## for shaders that need the ground under a point (the ground fog).
+func height_texture() -> ImageTexture:
+	if _height_tex == null:
+		var im := Image.create_from_data(nx, nz, false, Image.FORMAT_RF, heights.to_byte_array())
+		_height_tex = ImageTexture.create_from_image(im)
+	return _height_tex
+
+
 func _image_texture(path: String) -> ImageTexture:
 	var im: Image = load(path)
 	return ImageTexture.create_from_image(im)

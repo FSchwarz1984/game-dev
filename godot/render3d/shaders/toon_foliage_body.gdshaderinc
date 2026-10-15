@@ -21,10 +21,11 @@ uniform sampler2D leaf_tex : source_color, filter_nearest, hint_default_white;
 uniform vec4 tint : source_color = vec4(1.0);
 uniform float lean : hint_range(0.0, 1.0) = 1.0;
 uniform float wind_px = 1.0;                     // sway at flex 1, native px (keep 1-2)
+uniform float push_px = 0.0;                     // ground cover: how far a card bends away from her feet (px)
 uniform float porosity : hint_range(0.0, 1.0) = 0.5;
 uniform float hi_band : hint_range(0.0, 1.0) = 1.0;  // (unused since round 4: the light is continuous)
 uniform float transmit : hint_range(0.0, 2.0) = 0.6; // light through the leaves when they are seen against it
-uniform float lush : hint_range(0.0, 1.0) = 0.65;    // fresh greens (round 4)
+uniform float lush : hint_range(0.0, 1.0) = 0.45;    // fresh greens (round 4)
 uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
 uniform float cutaway_keep_px = 0.0;              // > 0: what lies this far above her stays (the top of the view)
@@ -60,6 +61,17 @@ void vertex() {
 			a = w3_lean(a, origin.y, lean);
 			a += w3_snap(a);
 			vec2 sway = w3_wind_px(anchor, flex, wind_px);
+			// ground cover bends away from her feet (push_px at her feet, nothing beyond 0.7 m;
+			// the root stays, the tip moves: scaled by the corner's height on the card)
+			if (push_px > 0.0 && w3_player.w > 0.0) {
+				vec3 dp = anchor - (w3_player.xyz - vec3(0.0, 1.0, -0.52));
+				float dist = length(dp.xz);
+				if (dist < 0.7) {
+					float k = (1.0 - dist / 0.7) * flex * clamp(UV2.y / 12.0, 0.0, 1.0);
+					sway.x += round(sign(dp.x + 0.001) * push_px * k);
+					sway.y -= round(push_px * 0.75 * k);
+				}
+			}
 			wp = a + w3_px_to_world(UV2 + sway);
 		}
 	} else {

@@ -1,0 +1,2 @@
+# Saji, shout. Source C_12 ("快步焦急"). Two exclamation marks.
+use bang2 104 12

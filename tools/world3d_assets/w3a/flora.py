@@ -25,22 +25,35 @@ def hx(h):
     return np.array([int(h[i:i + 2], 16) for i in (0, 2, 4)], np.float64) / 255.0
 
 
-# greens: (dark, body, light) per family; saturated but natural (knowledge/25 §色)
+# greens: (dark, body, light) per family, defined in CIELAB LCh: natural and full, never lime. The
+# renderer's foliage material adds its own freshness on top (toon_foliage 'lush'), and the ground
+# cover sets it low; these albedos sit near C* 20-26 (knowledge/25: the frame's grass came out at
+# C* 42 with sRGB-picked greens).
+def lch(L, C, h):
+    from skimage import color as _c
+    lab = np.array([[[L, C * math.cos(math.radians(h)), C * math.sin(math.radians(h))]]])
+    return np.clip(_c.lab2rgb(lab)[0, 0], 0, 1)
+
+
+def _fam(d, b, l):
+    return (lch(*d), lch(*b), lch(*l))
+
+
 GREENS = {
-    'grass': (hx('#3d5a2a'), hx('#557a34'), hx('#7a9a48')),
-    'grass_blue': (hx('#36553a'), hx('#4c7046'), hx('#6c8f5c')),
-    'grass_yellow': (hx('#4a5e28'), hx('#6a8034'), hx('#91a54c')),
-    'grass_olive': (hx('#4b5430'), hx('#69713e'), hx('#8c9056')),
-    'sedge': (hx('#3a5236'), hx('#53704a'), hx('#76925e')),
-    'fern': (hx('#2f4f2c'), hx('#47703a'), hx('#6e9650')),
-    'clover': (hx('#335a2e'), hx('#4f7c3c'), hx('#76a052')),
-    'moss': (hx('#2d4a22'), hx('#46692c'), hx('#6a8c3c')),
-    'horsetail': (hx('#3a5a32'), hx('#55784a'), hx('#7a9a62')),
-    'plantain': (hx('#38552e'), hx('#507540'), hx('#73985a')),
-    'sasa': (hx('#2c4a2e'), hx('#45683e'), hx('#6a8e58')),
-    'vine': (hx('#2f532c'), hx('#4a7638'), hx('#6f9a4e')),
-    'iris': (hx('#355a3a'), hx('#4f7a4c'), hx('#76a064')),
-    'stem': (hx('#4a5e30'), hx('#62783c'), hx('#7f9450')),
+    'grass': _fam((27, 17, 128), (37, 22, 126), (49, 24, 116)),
+    'grass_blue': _fam((27, 15, 146), (36, 19, 143), (47, 21, 136)),
+    'grass_yellow': _fam((31, 19, 112), (41, 24, 110), (53, 26, 104)),
+    'grass_olive': _fam((31, 13, 104), (41, 17, 102), (52, 19, 97)),
+    'sedge': _fam((27, 14, 138), (36, 18, 136), (47, 20, 130)),
+    'fern': _fam((24, 17, 132), (33, 22, 130), (45, 25, 122)),
+    'clover': _fam((26, 17, 135), (35, 21, 132), (46, 24, 126)),
+    'moss': _fam((24, 18, 126), (32, 22, 123), (43, 25, 116)),
+    'horsetail': _fam((29, 15, 135), (38, 19, 132), (49, 21, 126)),
+    'plantain': _fam((27, 16, 130), (36, 20, 128), (47, 22, 122)),
+    'sasa': _fam((24, 14, 138), (33, 18, 136), (44, 20, 130)),
+    'vine': _fam((25, 17, 132), (34, 21, 130), (45, 24, 124)),
+    'iris': _fam((28, 15, 145), (38, 19, 142), (49, 21, 135)),
+    'stem': _fam((32, 15, 112), (41, 18, 110), (51, 20, 106)),
 }
 FLOWERS = {
     'kikyo': (hx('#4a3f8a'), hx('#6b5fc0'), hx('#9a8fe0')),       # balloon flower, blue-violet
@@ -207,72 +220,85 @@ def moss_cushion(W, H, seed):
 
 
 def horsetail(W, H, seed):
-    """Field horsetail (スギナ): thin upright stems with whorls of fine branches."""
+    """Field horsetail (スギナ): two or three thin stems, at every node a whorl of fine branches
+    angled down (one pixel strokes), the tips lighter."""
     R = rng(seed)
     cols = GREENS['horsetail']
     c = Canvas(W, H)
     for k in range(int(R.integers(2, 4))):
-        x = W / 2 + (k - 1) * R.uniform(1.5, 2.5)
-        top = R.uniform(1, H * 0.35)
-        for y in range(int(H - 1), int(top), -1):
-            c.put(x, y, 1.0, k, cols[1] if y > top + 2 else cols[2])
-            if (int(H - y) % 3) == 1 and y < H - 2:
-                w = max(1, int((y - top) / (H - top) * 3.0))
-                for s in (-1, 1):
-                    for j in range(1, w + 1):
-                        c.put(x + s * j, y + j * 0.4, 1.0, k - 0.01, cols[2] if j == w else cols[1])
+        x = W / 2 + (k - 1) * R.uniform(1.6, 2.6) + R.normal(0, 0.3)
+        top = R.uniform(1, H * 0.3)
+        lean = R.normal(0, 0.06)
+        y = H - 0.5
+        node = 0
+        while y > top:
+            xx = x + (H - y) * lean
+            c.put(xx, y, 1.0, k, cols[0] if y > H - 2 else cols[1])
+            if node % 2 == 1 and y < H - 2.5:
+                L = 1 + int(2.2 * (y - top) / (H - top))
+                for s_ in (-1, 1):
+                    for j in range(1, L + 1):
+                        c.put(xx + s_ * j, y + j * 0.6, 1.0, k - 0.01, cols[2] if j == L else cols[1])
+            y -= 1.0
+            node += 1
+        c.put(x + (H - top) * lean, top, 1.0, k, cols[2])
     return c.finish()
 
 
 def plantain(W, H, seed):
-    """Plantain (オオバコ) of the path edges: a flat rosette of broad ribbed leaves, one spike."""
+    """Plantain (オオバコ) of trodden ground: a flat rosette of broad ribbed leaves seen from above at
+    an angle (a low wide star), one short seed spike."""
     R = rng(seed)
     cols = GREENS['plantain']
     c = Canvas(W, H)
-    cx, cy = W / 2, H - 1.5
+    cx, cy = W / 2, H - 2.0
     k = int(R.integers(5, 8))
-    for i in range(k):
-        a = math.pi + (i + 0.5) / k * math.pi + R.normal(0, 0.1)
-        L = R.uniform(W * 0.3, W * 0.46)
-        for t in np.linspace(0.2, 1.0, int(L * 1.5)):
-            w = math.sin(t * math.pi) * 1.6
+    angs = np.linspace(0, 2 * math.pi, k, endpoint=False) + R.uniform(0, 1)
+    for i, a in enumerate(sorted(angs, key=lambda q: -math.sin(q))):
+        L = R.uniform(W * 0.32, W * 0.47)
+        for t in np.linspace(0.15, 1.0, int(L * 2)):
+            w = math.sin(t * math.pi) * 1.5
             x = cx + math.cos(a) * L * t
-            y = cy + math.sin(a) * L * t * 0.45
-            for s in np.linspace(-w, w, max(1, int(w * 2) + 1)):
-                xx = x - math.sin(a) * s * 0.7
-                yy = y + math.cos(a) * s * 0.35
-                col = cols[2] if s < -w * 0.4 else cols[1]
-                c.put(xx, yy, 1.0, -t + i * 0.01, col)
-    c.line(cx, cy, cx + R.normal(0, 0.5), cy - H * 0.75, 1.0, 5, cols[0])
-    for y in range(int(cy - H * 0.75), int(cy - H * 0.45)):
-        c.put(cx + 1, y, 1.0, 5.1, hx('#8a8a5a'))
+            y = cy + math.sin(a) * L * t * 0.38
+            for s_ in np.linspace(-w, w, max(1, int(w * 2) + 1)):
+                xx = x - math.sin(a) * s_
+                yy = y + math.cos(a) * s_ * 0.38
+                rib = abs(s_) < 0.4
+                col = cols[0] if rib and t > 0.3 else (cols[2] if (math.sin(a) < 0 and s_ < 0) else cols[1])
+                c.put(xx, yy, 1.0, math.sin(a) + t * 0.01, col)
+    sx = cx + R.normal(0, 0.6)
+    top = max(1.0, cy - H * 0.55)
+    c.line(cx, cy - 1, sx, top, 1.0, 5, cols[1])
+    for y in range(int(top), int(top) + 2):
+        c.put(sx, y, 1.0, 5.1, hx('#7a7a4a'))
     c.sep(R, 0.3)
     return c.finish()
 
 
 def sasa(W, H, seed):
-    """Kumazasa (dwarf bamboo grass): broad lance leaves on thin canes, the leaf edges whitening
-    (late summer), in a low thicket."""
+    """Kumazasa (dwarf bamboo grass): a low thicket of broad lance leaves on thin dark canes, the
+    leaves held level or drooping, their edges whitened in late summer."""
     R = rng(seed)
     cols = GREENS['sasa']
     c = Canvas(W, H)
-    for k in range(int(R.integers(3, 5))):
-        x = R.uniform(W * 0.25, W * 0.75)
-        top = R.uniform(H * 0.15, H * 0.4)
-        c.line(x, H - 0.5, x + R.normal(0, 0.8), top, 1.0, k, cols[0])
-        for j in range(int(R.integers(2, 4))):
-            ax_, ay_ = x + R.normal(0, 0.6), top + j * R.uniform(1.5, 3.0)
-            ang = R.uniform(-0.6, 0.6) + (0 if R.uniform() < 0.5 else math.pi)
-            L = R.uniform(5, 8)
-            for t in np.linspace(0, 1, int(L * 1.5)):
-                w = math.sin(t * math.pi) * 1.4
+    canes = int(R.integers(3, 5))
+    for k in range(canes):
+        x = W * (0.2 + 0.6 * (k + R.uniform(0.2, 0.8)) / canes)
+        top = R.uniform(H * 0.2, H * 0.45)
+        c.line(x, H - 0.5, x + R.normal(0, 0.7), top, 1.0, k - 1, cols[0])
+        for j in range(int(R.integers(3, 5))):
+            ax_, ay_ = x + R.normal(0, 0.8), top + j * R.uniform(1.0, 2.2)
+            ang = (R.uniform(-0.5, 0.35) if R.uniform() < 0.5 else math.pi - R.uniform(-0.5, 0.35))
+            L = R.uniform(5.5, 8.5)
+            for t in np.linspace(0, 1, int(L * 2)):
+                w = math.sin(t * math.pi) ** 0.8 * 1.3
                 px = ax_ + math.cos(ang) * L * t
-                py = ay_ + math.sin(ang) * L * t * 0.5 + t * t * 1.5
-                for s in np.linspace(-w, w, max(1, int(w * 2) + 1)):
-                    edge = abs(s) > w - 0.6 and w > 0.8
-                    col = hx('#c8c8a0') if (edge and s > 0 and R.uniform() < 0.5) else (cols[2] if s < 0 else cols[1])
-                    c.put(px, py + s * 0.6, 1.0, k + t * 0.1, col)
-    c.sep(R, 0.35)
+                py = ay_ + math.sin(ang) * L * t * 0.6 + t * t * 1.4
+                for s_ in np.linspace(-w, w, max(1, int(w * 2) + 1)):
+                    edge = abs(s_) > w - 0.55 and w > 0.9 and s_ > 0
+                    col = hx('#c4c49a') if (edge and R.uniform() < 0.55) else (cols[2] if s_ < -0.2 else cols[1])
+                    c.put(px, py + s_ * 0.7, 1.0, k + j * 0.1 + t * 0.01, col)
+    c.sep(R, 0.4)
     return c.finish()
 
 

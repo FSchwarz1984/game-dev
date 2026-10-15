@@ -10,7 +10,8 @@
 #   assets/portraits/<who>_bust.webp (internal checking only, never shipped as art).
 # - godot/icon.png: a plain placeholder app icon.
 # Re-run whenever those sources change. Only reads and writes inside the repository.
-# `--sprites-only` copies just the sprite sheets and their layout (tools/art/sprite3d uses it).
+# `--sprites-only` copies just the sprite sheets and their layout (tools/art/sprite3d uses it);
+# `--portraits-only` copies just the dialogue portraits (tools/art/portraits4 uses it).
 import json
 import os
 import shutil
@@ -19,7 +20,7 @@ from PIL import Image, ImageDraw
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 GD = os.path.join(ROOT, "godot")
-PORTRAIT = (80, 80)  # native px, as the pixel portraits (knowledge/13 §4)
+PORTRAIT = (128, 128)  # native px, as the pixel portraits (v4, knowledge/13 §10)
 
 
 def sprites():
@@ -50,8 +51,9 @@ def sprites():
 
 
 def portraits():
-    """Pixel portraits (80x80 per expression, docs/knowledge/13-pixel-portraits.md) when present:
+    """Pixel portraits (128x128 per expression, docs/knowledge/13-pixel-portraits.md §10) when present:
     assets/portraits/pixel/<who>/<expression>.png -> godot/art/portraits/<who>/<expression>.png.
+    Portraits that are no longer in the source folder are removed (with their .import files).
     Without them, one crude placeholder per character is cut from <who>_bust.webp (internal only)."""
     out = os.path.join(GD, "art", "portraits")
     os.makedirs(out, exist_ok=True)
@@ -62,10 +64,15 @@ def portraits():
         os.makedirs(dst_dir, exist_ok=True)
         if os.path.isdir(src):
             n = 0
-            for f in sorted(os.listdir(src)):
-                if f.endswith(".png"):
-                    shutil.copyfile(os.path.join(src, f), os.path.join(dst_dir, f))
-                    n += 1
+            wanted = {f for f in os.listdir(src) if f.endswith(".png")}
+            for f in sorted(wanted):
+                shutil.copyfile(os.path.join(src, f), os.path.join(dst_dir, f))
+                n += 1
+            for f in sorted(os.listdir(dst_dir)):
+                base = f[:-len(".import")] if f.endswith(".import") else f
+                if base.endswith(".png") and base not in wanted:
+                    os.remove(os.path.join(dst_dir, f))
+                    print("removed stale portrait", who, f)
             print("portraits", who, n, "expressions <-", os.path.relpath(src, ROOT))
             continue
         im = Image.open(os.path.join(ROOT, "assets", "portraits", who + "_bust.webp")).convert("RGBA")
@@ -94,7 +101,10 @@ def icon():
 
 if __name__ == "__main__":
     import sys
-    sprites()
-    if "--sprites-only" not in sys.argv:   # the sprite generator syncs only its own sheets
+    if "--portraits-only" in sys.argv:     # the portrait builder syncs only its own images
         portraits()
-        icon()
+    else:
+        sprites()
+        if "--sprites-only" not in sys.argv:   # the sprite generator syncs only its own sheets
+            portraits()
+            icon()

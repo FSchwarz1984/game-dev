@@ -1,0 +1,14 @@
+# Kasasagi, pout. Source A_04 ("正面叉腰气鼓鼓"; its pursed "3" mouth is lost at 128 px): a pursed wavy mouth,
+# flushed cheeks and a "hmph" puff beside the mouth.
+@ 53 75
+.qq.qq.
+q..q..q
+ssss...
+@ 38 62
+bpbbpbb
+pbbpbbp
+.bbbbb.
+@ 67 70
+bpb
+pb.
+use puff 62 73

@@ -1,0 +1,10 @@
+# Kasasagi, sad. Source A_23 (same as cry): eyes brimming (tears on the lower lids, no streams), small frown.
+@ 44 55
+cCc
+@ 71 64
+cC
+@ 50 72
+.qqq...
+qsssq..
+ssssss.
+.....ss

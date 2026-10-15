@@ -137,7 +137,7 @@ func _ready() -> void:
 	if args.has("camdist"):
 		pv.set_camera_distance(float(args["camdist"]))
 	if args.has("vfog"):
-		env.use_volumetric_fog(float(args["vfog"]))
+		env.use_volumetric_fog(float(args["vfog"]), terrain)
 	if args.has("noshadow"):
 		env.sun.shadow_enabled = false     # debugging: tell shadow-map artefacts from shading ones
 	if args.has("sbias"):
@@ -179,12 +179,22 @@ func _ready() -> void:
 			var node := pv.world_root.get_node_or_null(n)
 			if node is Node3D:
 				(node as Node3D).visible = false
-	if args.get("route", "") == "walk":
-		_make_route()
-	elif args.get("route", "") == "night":
-		_make_route(NIGHT_ROUTE)
-	elif args.get("route", "") == "lookout":
+	# the routes of the layout (terrain.json "routes", written by the scene generator for its own
+	# layout) come first; the constants below are the round-3 layout's
+	var lay_routes: Dictionary = terrain.info.get("routes", {})
+	var rname: String = args.get("route", "")
+	if rname == "lookout":
 		args["vista"] = ""
+	if rname != "" and lay_routes.has(rname):
+		var pts: Array = []
+		for p in lay_routes[rname]:
+			pts.append(Vector2(float(p[0]), float(p[1])))
+		_make_route(pts)
+	elif rname == "walk":
+		_make_route()
+	elif rname == "night":
+		_make_route(NIGHT_ROUTE)
+	elif rname == "lookout":
 		_make_route(LOOKOUT_ROUTE)
 	if not route.is_empty():
 		# (the camera starts on her where the route starts, not swooping in from the spawn)
@@ -641,7 +651,7 @@ const NIGHT_ROUTE := [Vector2(-16.6, 15.5), Vector2(-14.2, 15.2), Vector2(-13.1,
 const LOOKOUT_ROUTE := [Vector2(-19.4, 30.6), Vector2(-20.8, 34.0), Vector2(-22.4, 38.2), Vector2(-23.5, 41.9)]
 
 
-func _make_route(night: Array = []) -> void:
+func _make_route(given: Array = []) -> void:
 	# Round the great camphor: out of the hut's door and across the yard, up the west side of the tree
 	# between its trunk and the shrine's terrace; round the north side under the limbs and the crown
 	# (she walks in a clearing in the leaves, the limbs reaching out over her); onto the old road and
@@ -651,8 +661,8 @@ func _make_route(night: Array = []) -> void:
 		Vector2(-11.2, 10.0), Vector2(-8.0, 9.9), Vector2(-6.4, 8.6), Vector2(-5.6, 5.0), Vector2(-6.0, 2.5),
 		Vector2(-6.2, -1.0), Vector2(-5.5, -4.5), Vector2(-2.0, -7.0), Vector2(2.0, -6.9), Vector2(5.0, -5.4),
 		Vector2(5.7, -3.0), Vector2(7.0, -0.5), Vector2(9.4, 1.0), Vector2(9.3, 4.0)]
-	if not night.is_empty():
-		pts = night
+	if not given.is_empty():
+		pts = given
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))

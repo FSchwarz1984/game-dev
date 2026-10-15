@@ -14,7 +14,7 @@ stencil_mode write, compare_always, 5;
 
 uniform sampler2D tufts : filter_nearest;
 uniform sampler2D palette : filter_nearest;
-uniform float lush : hint_range(0.0, 1.0) = 0.65;   // fresh greens over the palette (w3_lush)
+uniform float lush : hint_range(0.0, 1.0) = 0.45;   // fresh greens over the palette (w3_lush)
 
 varying vec3 v_wp;
 varying vec3 v_n;

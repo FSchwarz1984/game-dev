@@ -1,0 +1,11 @@
+# Kasasagi, grin. Source A_28 ("张臂欢迎"). The open mouth gets a row of upper teeth under the lip (a happy open
+# mouth, not a shout) and the cheeks a light blush.
+@ 48 73
+yyyyy
+.....yyy
+........y
+@ 38 61
+bbpbb
+pbbpb
+@ 67 69
+bp

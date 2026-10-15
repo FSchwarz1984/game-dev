@@ -38,8 +38,9 @@ bpbbpbb
 @ 66 65
 bpb
 pbb
-# mouth: small open arch, corners down
+# mouth: small open arch, corners down (the auto stroke underneath is cleared with skin s)
 @ 50 72
-.qqq.
-qmmmq
-q...q
+.qqq...
+qmmmq..
+qsssqs.
+.....ss

@@ -1,0 +1,5 @@
+# Shione, blank (失神, "我好像见过您"). Source B_35. The irises fade to a pale ring and lose their catchlights.
+recolor 55 48 45 24 #7e3a48 #a98d92
+recolor 55 48 45 24 #b45d66 #cdb3b4
+recolor 55 48 45 24 #e2928f #e9d6d3
+recolor 55 48 45 24 #ffffff #e9d6d3

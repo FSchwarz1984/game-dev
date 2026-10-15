@@ -1,0 +1,12 @@
+# Saji, angry. Source C_30 ("保护姿态警惕", wary; the packs have no angry face). Upper lids pressed down toward the
+# nose, a frown, an anger mark beside the head.
+@ 53 51
+kkkk
+...kkk
+.....kk
+@ 77 63
+kkkk
+.kk
+@ 58 80
+q....q
+use anger 109 21

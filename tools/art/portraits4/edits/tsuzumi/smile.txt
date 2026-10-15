@@ -1,0 +1,6 @@
+# Kasasagi, smile. Source A_01 ("正面自然站立微笑"). A light blush on both cheeks.
+@ 38 60
+bbpbb
+pbbpb
+@ 67 69
+bp

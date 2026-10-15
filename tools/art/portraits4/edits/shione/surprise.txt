@@ -1,0 +1,2 @@
+# Shione, surprise. Source B_13 ("转身惊讶"). One exclamation mark.
+use bang1 116 16

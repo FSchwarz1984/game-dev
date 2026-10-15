@@ -120,3 +120,137 @@ func test_every_logical_size_is_covered_and_keeps_its_landmarks() -> void:
 
 static func South_yh(h: int) -> int:
 	return VistaSouth.yh_of(h)
+
+
+## G5R2-4 (1): the close leaves the camera rises past are twigs of branches that come up from below the
+## frame. Every leaf and twig of the near layer hangs together with its bottom row (no piece floats
+## free), and on every size that bottom row stays below the view for the whole crane, so no end of a
+## branch is ever in view.
+func test_the_near_leaves_hang_from_branches_below_the_frame() -> void:
+	var v := _vista()
+	v.show_shot("south")
+	var south: VistaSouth = v.shots["south"]
+	var img: Image = south.data.images["near"]
+	var w := img.get_width()
+	var h := img.get_height()
+	var px := img.get_data()                      # RGBA8
+	var seen := PackedByteArray()
+	seen.resize(w * h)
+	var opaque := 0
+	for i in w * h:
+		if px[i * 4 + 3] > 127:
+			opaque += 1
+	# flood from every opaque pixel of the bottom row (8-connected), a span at a time
+	var stack := PackedInt32Array()
+	for x in w:
+		var i := (h - 1) * w + x
+		if px[i * 4 + 3] > 127:
+			stack.append(i)
+	var reached := 0
+	while not stack.is_empty():
+		var i := stack[stack.size() - 1]
+		stack.resize(stack.size() - 1)
+		if seen[i] != 0:
+			continue
+		var y := i / w
+		var x0 := i % w
+		var x1 := x0
+		while x0 > 0 and seen[y * w + x0 - 1] == 0 and px[(y * w + x0 - 1) * 4 + 3] > 127:
+			x0 -= 1
+		while x1 < w - 1 and seen[y * w + x1 + 1] == 0 and px[(y * w + x1 + 1) * 4 + 3] > 127:
+			x1 += 1
+		for x in range(x0, x1 + 1):
+			seen[y * w + x] = 1
+			reached += 1
+		for yy in [y - 1, y + 1]:
+			if yy < 0 or yy >= h:
+				continue
+			for x in range(maxi(0, x0 - 1), mini(w - 1, x1 + 1) + 1):
+				var j: int = yy * w + x
+				if seen[j] == 0 and px[j * 4 + 3] > 127:
+					stack.append(j)
+	check(opaque > 20000, "the near layer has its sprays (%d px)" % opaque)
+	eq(reached, opaque, "every near-leaf pixel hangs from a branch that runs out of the layer's bottom")
+	for size in [Vector2i(426, 240), Vector2i(480, 270), Vector2i(455, 256), Vector2i(512, 288), Vector2i(480, 300), Vector2i(426, 341), Vector2i(640, 270), Vector2i(1024, 560)]:
+		south.layout(size)
+		for pan in [0.0, 0.25, 0.5, 0.75]:
+			v.state = {"tod": 19.6, "pan": pan, "rise": 0.0, "sky": 0.0, "wave": -1.0, "pose": "sit"}
+			south.update(v.state, 1.0)
+			check(not south.near.visible or south.near.position.y + float(h) >= float(size.y),
+				"the near layer's bottom is below the view at %s, pan %s (%s + %d)" % [size, pan, south.near.position.y, h])
+			check(south.near.position.y >= 0.0, "nothing of the near layer reaches above the view at %s" % size)
+	v.queue_free()
+
+
+## G5R2-4 (3): she stands up where she sat. HEAD put her standing 33 px further along the limb with
+## nothing to carry her there, so when the far came she jumped right in one frame. Through the whole
+## prologue her place on screen changes only as the camera moves (vertically, in the crane), never
+## sideways, and not at all when she stands or shouts.
+func test_she_stands_up_where_she_sat() -> void:
+	var v := _vista()
+	v.show_shot("south")
+	var south: VistaSouth = v.shots["south"]
+	eq(south.m["anchors"]["stand"], south.m["anchors"]["branch"], "the stand anchor is her seat")
+	var d := Director.new()
+	d.scene(func(dd: Director) -> void: await v.play_prologue(dd))
+	var last := Vector2(-1.0e9, -1.0e9)
+	var poses := {}
+	var max_dx := 0.0
+	var jump_at_pose := 0.0
+	var last_pose := ""
+	for i in 3000:
+		if not d.busy:
+			break
+		d.tick(DT)
+		v.advance(DT)
+		if v.shot != "south":
+			last = Vector2(-1.0e9, -1.0e9)
+			continue
+		var at := south.figure.position + south.canopy.position
+		var pose := String(v.state.get("pose", "sit"))
+		poses[pose] = true
+		if last.x > -1.0e8:
+			max_dx = maxf(max_dx, absf(at.x - last.x))
+			if pose != last_pose:
+				jump_at_pose = maxf(jump_at_pose, (at - last).length())
+		last = at
+		last_pose = pose
+	eq(poses.keys().size(), 3, "she sat, stood and shouted (%s)" % [poses.keys()])
+	eq(max_dx, 0.0, "she never moves sideways on screen")
+	eq(jump_at_pose, 0.0, "standing up and shouting leave her where she was")
+	v.queue_free()
+
+
+## G5R2-4 (2): the sky shore's rivers in the bake run from the gate's foot (u = 0, at the top of the
+## frame) out to its far ranges (lower on screen, toward the haze). Its gravity pulls away from us, so
+## its water runs back toward u = 0, up the screen; shorelights.gdshader moves the glints that way.
+func test_the_sky_shore_rivers_run_from_the_gate_out_to_its_far_ranges() -> void:
+	var v := _vista()
+	v.show_shot("south")
+	var south: VistaSouth = v.shots["south"]
+	for ci in south.data.lists["shoreSets"].size():
+		var by_river := {}
+		for p in south.data.lists["shoreSets"][ci]["flow"]:
+			var ri := int(p[3])
+			if not by_river.has(ri):
+				by_river[ri] = []
+			by_river[ri].append(p)
+		check(by_river.size() >= 3, "class %d draws its three rivers" % ci)
+		for ri in by_river:
+			var pts: Array = by_river[ri]
+			# least squares slope of the screen row against u: positive = the gate end is up
+			var n := float(pts.size())
+			var su := 0.0
+			var sy := 0.0
+			var suu := 0.0
+			var suy := 0.0
+			for p in pts:
+				su += float(p[2])
+				sy += float(p[1])
+				suu += float(p[2]) * float(p[2])
+				suy += float(p[2]) * float(p[1])
+			var slope := (n * suy - su * sy) / maxf(1e-6, n * suu - su * su)
+			check(slope > 0.5, "class %d river %d: its gate end is the top of the frame (%.2f rows per unit)" % [ci, ri, slope])
+	var src := FileAccess.get_file_as_string("res://vista/shaders/shorelights.gdshader")
+	check(src.contains("sin(pa * 0.9 + t * 1.6 + pb * 2.1)"), "the glints' crests move toward u = 0 (down that land's rivers)")
+	v.queue_free()

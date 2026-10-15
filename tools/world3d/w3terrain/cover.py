@@ -164,11 +164,23 @@ def build(L, W, F, Xs, Zs, Hs, cs, h, x0, z0, cell, seed, out_common: Path):
     # density: the material's room for plants, clumps with bare ground between (negative space)
     mass = geom.smoothstep(0.42, 0.62, noise.fbm(CX / 2.6, CZ / 2.6, 2, seed + 5120) + (noise.fbm(CX / 0.8, CZ / 0.8, 1, seed + 5121) - 0.5) * 0.25)
     room = np.clip(grass + moss * 0.9 + litter * 0.45 + bank * 0.35, 0, 1)
-    dens = room * (0.1 + 0.9 * mass) * np.clip(best_s * 1.6, 0, 1.2)
+    dens = room * (0.04 + 0.96 * mass) * np.clip(best_s * 1.4, 0, 1.0)
     dens *= (1 - geom.smoothstep(0.55, 0.9, trail))
-    dens = dens * (0.75 + 0.35 * sanct)
-    keep = ground_ok & (R.uniform(size=len(CX)) < dens * 0.62)
-    idx = np.nonzero(keep)[0]
+    dens = dens * (0.8 + 0.3 * sanct)
+    keep = ground_ok & (R.uniform(size=len(CX)) < dens * 0.3)
+    # flowers: their own patches, one species to a patch (spots of colour), in the meadows, at the
+    # edges and thickest inside the barrier
+    FLOWERS = ["kikyo", "ominaeshi", "nadeshiko", "tsuyukusa", "hagi", "tanpopo"]
+    fpatch = geom.smoothstep(0.6, 0.78, noise.fbm(CX / 3.2, CZ / 3.2, 2, seed + 5130))
+    fkind = (noise.fbm(CX / 7.0, CZ / 7.0, 2, seed + 5131) * len(FLOWERS) * 1.6).astype(int) % len(FLOWERS)
+    fk = fpatch * (comm["meadow"] * 0.7 + comm["edge"] * 0.5 + comm["sanctum"] * 1.3 + comm["dry"] * 0.4) * room
+    flower = ground_ok & ~keep & (R.uniform(size=len(CX)) < fk * 0.28)
+    for i in np.nonzero(flower)[0]:
+        sp = FLOWERS[fkind[i]]
+        if sp == "tsuyukusa" and shade_k[i] < 0.2 and wet_k[i] < 0.2 and R.uniform() < 0.6:
+            sp = "nadeshiko"
+        best[i] = names.index(sp)
+    idx = np.nonzero(keep | flower)[0]
 
     # ---- choose tiles, avoid the same tile within 0.45 m, build cards
     cellsz = 0.45

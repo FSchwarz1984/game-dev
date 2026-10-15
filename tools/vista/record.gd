@@ -3,7 +3,7 @@ extends SceneTree
 ## real window, one fixed step per frame, for Godot's Movie Maker or for a native-pixel frame grab
 ## (not part of the game). The figure is her real sprite (VistaFigure); --figure=stand_in uses the old
 ## preview stand-in instead.
-##   godot --path godot --rendering-method mobile --resolution 1280x720 --fixed-fps 30 \
+##   godot --path godot --rendering-method forward_plus --resolution 1280x720 --fixed-fps 30 \
 ##     [--write-movie /tmp/rec/f.png] -s tools/vista/record.gd -- [--shot=prologue|title] \
 ##     [--seconds=8] [--quality=high|low] [--to=999] [--grab=DIR] [--rise=DIR --from=0 --every=1] \
 ##     [--stats]

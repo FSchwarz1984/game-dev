@@ -1,7 +1,7 @@
 extends SceneTree
 ## Renders the vista (godot/vista) at fixed time steps and saves what the window shows, for checks
-## and previews (not part of the game). Run in a real window (Xvfb + Mesa, the Mobile renderer):
-##   godot --path godot --rendering-method mobile --resolution 960x540 -s tools/vista/capture.gd -- --plan=plan.json
+## and previews (not part of the game). Run in a real window (Xvfb + Mesa, the game's renderer):
+##   godot --path godot --rendering-method forward_plus --resolution 960x540 -s tools/vista/capture.gd -- --plan=plan.json
 ## plan.json: {"out": dir, "exact": bool, "data_dir": "res://vista/data", "quality": "high",
 ##   "shots": [{"name": n, "shot": "south", "state": {...}, "frames": 30, "dt": 1/60,
 ##              "seq": {"n": 12, "every": 3, "ramps": [[key, from, to, u0, u1], ...]},   (optional)

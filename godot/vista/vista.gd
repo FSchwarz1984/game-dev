@@ -101,6 +101,16 @@ func _environment() -> Environment:
 	e.glow_hdr_scale = 2.0
 	e.glow_blend_mode = Environment.GLOW_BLEND_MODE_ADDITIVE
 	e.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	# The numbers above were set on the Mobile renderer (the look the user approved, G5R2-4). Forward+
+	# (the renderer since 2026-10-15) thresholds the glow after its first blur pass, where a lamp of a
+	# pixel or two is averaged with the dark around it; Mobile thresholds a 4x4 average. With the same
+	# numbers the halos come out much weaker on Forward+ (the open gate's 2-20 px rings 12-26 / 255
+	# darker). These bring Forward+ back to the Mobile look: within ~5 / 255 on those rings, 0.05-0.13 / 255
+	# over the frame (knowledge/14 §7.9). Painted colours (her hat included) still stay under it.
+	if RenderingServer.get_current_rendering_method() == "forward_plus":
+		e.glow_hdr_threshold = 0.7
+		e.glow_hdr_scale = 0.75
+		e.glow_intensity = 0.68
 	return e
 
 

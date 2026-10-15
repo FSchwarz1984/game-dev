@@ -23,12 +23,12 @@ from skimage import color
 
 ROWS = {
     # name: (L*, C*, hue deg) of the middle tone (index 3.5); albedos, the light adds its own warmth
-    "grass": (37.0, 19.0, 132.0),    # round 4: a fuller natural green (G5R2-1: no withered yellow)
+    "grass": (35.0, 15.5, 132.0),    # round 4: natural green (G5R2-1: no withered yellow; the renderer adds freshness)
     "grass_dry": (40.0, 12.0, 112.0),  # olive, not straw; only on baked steep faces (materials.py)
     "dirt": (44.0, 9.0, 70.0),       # packed earth, warm grey-brown, quieter (dirt only where feet wear it)
     "gravel": (42.0, 5.0, 80.0),
     "rock": (38.0, 7.0, 68.0),     # warm grey; the shade turns it violet
-    "moss": (33.0, 24.0, 128.0),     # deeper and fuller than the grass (the barrier's carpet)
+    "moss": (31.0, 18.0, 126.0),     # deeper than the grass (the barrier's carpet, the joints of the paving)
     "litter": (34.0, 11.5, 82.0),
     "needles": (33.0, 10.0, 72.0),
     "bamboo_litter": (45.0, 12.0, 86.0),

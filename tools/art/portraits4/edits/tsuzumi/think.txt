@@ -1,0 +1,2 @@
+# Kasasagi, think. Source A_34 ("拿折起地图辨路疑惑"). A thought bubble over the hat.
+use think 99 40

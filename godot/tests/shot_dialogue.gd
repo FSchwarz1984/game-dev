@@ -19,6 +19,9 @@ const LINES := [
 	{"who": "narr", "face": "", "text": "送り盆"},
 ]
 
+## Display names for the check: the protagonist's approved name (G5R2-5) is the longest one on the plate.
+const NAMES := {"tsuzumi": "百々かさゝぎ", "shione": "垣外しをね", "saji": "家守さぢ", "narr": ""}
+
 var out_dir := "user://shots"
 var bg_path := ""
 var native := Vector2i(640, 360)
@@ -69,11 +72,11 @@ func _run() -> void:
 	var i := 0
 	for line in LINES:
 		var who := String(line["who"])
-		var cast: Dictionary = StoryUI.CAST.get(who, StoryUI.CAST["narr"])
+		var shown := String(NAMES.get(who, ""))
 		var tex: Texture2D = null
-		if cast["name"] != "":
+		if shown != "":
 			tex = StoryUI.portrait(who, String(line["face"]))
-		box.show_line(String(cast["name"]), tex, String(line["text"]))
+		box.show_line(shown, tex, String(line["text"]))
 		box.text.visible_characters = -1
 		box.done = true
 		for _f in 4:

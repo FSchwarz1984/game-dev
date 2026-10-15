@@ -319,8 +319,10 @@ def eye_regions(char, expr):
     return [((xx - e[0]) / (rx * d)) ** 2 + ((yy - e[1]) / (ry * d)) ** 2 <= 1 for e in (e1, e2)]
 
 
-def snap_eyes(char, expr, img):
-    """Inside the eyes, every colour snaps to the character's canonical eye colours (Lab nearest)."""
+def snap_eyes(char, expr, img, work=None):
+    """Inside the eyes, every colour snaps to the character's canonical eye colours (Lab nearest). With the work
+    image, the illustration's catchlights come back: white blobs inside the iris (the downscale tends to drop them,
+    and an eye without its glint looks dead)."""
     cols = np.array([hexrgb(h) for h in C.EYE_CANON[char]])
     P = lab(cols)
     reg = eye_regions(char, expr)
@@ -328,6 +330,36 @@ def snap_eyes(char, expr, img):
     L = lab(img[..., :3].astype(np.float32) / 255)
     k = ((L[m][:, None, :] - P[None]) ** 2).sum(-1).argmin(-1)
     img[m, :3] = (cols[k] * 255).round().astype(np.uint8)
+    if work is None:
+        return
+    n = C.SIZE * C.SUB
+    W = lab(work)
+    wk = ((W[..., None, :] - P[None, None]) ** 2).sum(-1).argmin(-1)
+    for r in reg:
+        rw = cv2.resize(r.astype(np.uint8), (n, n), interpolation=cv2.INTER_NEAREST).astype(bool)
+        iris = rw & np.isin(wk, (2, 3, 4))
+        if iris.sum() < 40:
+            continue
+        hull = np.zeros((n, n), np.uint8)
+        cv2.fillConvexPoly(hull, cv2.convexHull(np.argwhere(iris)[:, ::-1].astype(np.int32)), 1)
+        hull = hull.astype(bool)
+        white = hull & (W[..., 0] > 88) & (np.hypot(W[..., 1], W[..., 2]) < 12)
+        dark = np.isin(wk, (0, 1, 2, 3, 4))                 # lash and iris classes
+        comp, nc = ndi.label(white)
+        for ci in range(1, nc + 1):
+            cm = comp == ci
+            if not 5 <= cm.sum() <= 160:                     # a glint, not a patch of sclera or skin
+                continue
+            ring = ndi.binary_dilation(cm, np.ones((3, 3), bool), iterations=2) & ~cm
+            if dark[ring].mean() < 0.5:                      # a catchlight sits inside the dark iris
+                continue
+            cover = cm.reshape(C.SIZE, C.SUB, C.SIZE, C.SUB).mean((1, 3))
+            pick = cover >= 0.30
+            if not pick.any():
+                yy, xx = np.argwhere(cm).mean(0) / C.SUB
+                pick = np.zeros_like(pick)
+                pick[int(yy), int(xx)] = True
+            img[pick & (img[..., 3] > 0), :3] = 255
 
 
 def _blackhat(lum, r=3):
@@ -411,6 +443,49 @@ def render_mouth(char, expr, img, work):
     return drawn
 
 
+def render_open_mouth(char, expr, img):
+    """An open mouth: the illustration paints it soft pink with a dark rim on one side only, which reads as a
+    blob at 128 px. Find the mouth blob (pinker or darker than the skin around it), give it a full lip line and a
+    darker cavity in its upper part; the lower part keeps its colour (tongue). Returns the drawn mask."""
+    _, el, er, mc, state, *_ = C.SELECTION[char][expr]
+    drawn = np.zeros(img.shape[:2], bool)
+    if state != 'open':
+        return drawn
+    e1, e2 = np.array(to_native(char, expr, el)), np.array(to_native(char, expr, er))
+    d = np.linalg.norm(e2 - e1)
+    m = np.array(to_native(char, expr, mc))
+    yy, xx = np.mgrid[0:C.SIZE, 0:C.SIZE].astype(np.float32) + 0.5
+    reg = ((xx - m[0]) / (0.50 * d)) ** 2 + ((yy - m[1]) / (0.40 * d)) ** 2 <= 1
+    L = lab(img[..., :3].astype(np.float32) / 255)
+    opaque = img[..., 3] > 0
+    ring = reg & ~(((xx - m[0]) / (0.36 * d)) ** 2 + ((yy - m[1]) / (0.28 * d)) ** 2 <= 1) & opaque
+    skin = ring & _is_skin(L)
+    if skin.sum() < 6:
+        return drawn
+    sL, sa = np.median(L[skin][:, 0]), np.median(L[skin][:, 1])
+    blob = reg & opaque & ((L[..., 0] < sL - 7) | (L[..., 1] > sa + 7))
+    comp, k = ndi.label(blob)
+    if not k:
+        return drawn
+    sizes = ndi.sum(blob, comp, range(1, k + 1))
+    blob = comp == (int(np.argmax(sizes)) + 1)
+    if blob.sum() < 6:
+        return drawn
+    blob = ndi.binary_fill_holes(blob)
+    edge = blob & ~ndi.binary_erosion(blob, np.array([[0, 1, 0], [1, 1, 1], [0, 1, 0]], bool))
+    inner = blob & ~edge
+    line = (hexrgb(C.MOUTH[char][0]) * 255).round().astype(np.uint8)
+    cav = (hexrgb(C.MOUTH_CAVITY[char]) * 255).round().astype(np.uint8)
+    img[edge, :3] = line
+    if inner.any():
+        ys = np.nonzero(inner)[0]
+        top, h = ys.min(), ys.max() - ys.min() + 1
+        upper = inner & (yy - 0.5 < top + max(1, round(0.45 * h)))
+        img[upper, :3] = cav
+    drawn |= blob
+    return drawn
+
+
 # ------------------------------------------------------------------------------------------------ edits
 
 def read_legend(path):
@@ -424,13 +499,34 @@ def read_legend(path):
     return leg
 
 
+def read_symbols():
+    """edits/_symbols.txt: blocks introduced by `= NAME`, rows of keys."""
+    syms, cur = {}, None
+    path = os.path.join(EDITS, '_symbols.txt')
+    if not os.path.exists(path):
+        return syms
+    for raw in open(path, encoding='utf-8'):
+        s = raw.strip()
+        if not s or s.startswith('#'):
+            continue
+        if s.startswith('= '):
+            cur = syms.setdefault(s[2:].strip(), [])
+            continue
+        if cur is not None:
+            cur.append(s.split()[0])
+    return syms
+
+
 def read_edits(char, expr):
-    """-> list of (x, y, rows) patches and the legend (key -> '#rrggbb'). Legend lines: `key $rrggbb  comment`."""
+    """-> list of patches and the legend (key -> '#rrggbb'). Legend lines: `key $rrggbb  comment`.
+    Patches: `@ X Y` followed by rows of keys; `use NAME X Y` stamps a block of edits/_symbols.txt;
+    `recolor X Y W H #from #to` swaps one exact colour for another inside a box."""
     legend = read_legend(os.path.join(EDITS, char, '_legend.txt'))
     path = os.path.join(EDITS, char, f'{expr}.txt')
     patches = []
     if not os.path.exists(path):
         return patches, legend
+    syms = None
     cur = None
     for raw in open(path, encoding='utf-8'):
         line = raw.rstrip('\n')
@@ -446,6 +542,18 @@ def read_edits(char, expr):
             cur = (int(x), int(y), [])
             patches.append(cur)
             continue
+        if parts[0] == 'recolor':                      # recolor X Y W H #from #to (exact colour match)
+            x, y, w, h = (int(v) for v in parts[1:5])
+            patches.append(('recolor', (x, y, w, h), parts[5], parts[6]))
+            cur = None
+            continue
+        if parts[0] == 'use':
+            syms = read_symbols() if syms is None else syms
+            if parts[1] not in syms:
+                raise KeyError(f'{path}: no symbol {parts[1]!r} in _symbols.txt')
+            patches.append((int(parts[2]), int(parts[3]), list(syms[parts[1]])))
+            cur = None
+            continue
         if cur is None:
             raise ValueError(f'{path}: pixel row before any @ line')
         cur[2].append(s.split()[0])
@@ -456,7 +564,17 @@ def apply_edits(img, char, expr):
     """img: uint8 RGBA (SIZE, SIZE, 4), modified in place. Returns the edited mask."""
     patches, legend = read_edits(char, expr)
     mask = np.zeros(img.shape[:2], bool)
-    for x0, y0, rows in patches:
+    for patch in patches:
+        if patch[0] == 'recolor':
+            (x, y, w, h), src, dst = patch[1], patch[2], patch[3]
+            a = (hexrgb(src) * 255).round().astype(np.uint8)
+            b = (hexrgb(dst) * 255).round().astype(np.uint8)
+            reg = img[y:y + h, x:x + w]
+            hit = np.all(reg[..., :3] == a, -1) & (reg[..., 3] > 0)
+            reg[hit, :3] = b
+            mask[y:y + h, x:x + w] |= hit
+            continue
+        x0, y0, rows = patch
         for dy, row in enumerate(rows):
             for dx, k in enumerate(row):
                 x, y = x0 + dx, y0 + dy
@@ -494,8 +612,9 @@ def build_all(only=None):
             auto = np.zeros((C.SIZE, C.SIZE, 4), np.uint8)
             auto[..., :3] = (pal[idx] * 255).round().astype(np.uint8)
             auto[..., 3] = msk * 255
-            snap_eyes(char, expr, auto)
+            snap_eyes(char, expr, auto, work.astype(np.float32))
             render_mouth(char, expr, auto, work.astype(np.float32))
+            render_open_mouth(char, expr, auto)
             final = auto.copy()
             apply_edits(final, char, expr)
             out[char][expr] = (auto, final)
