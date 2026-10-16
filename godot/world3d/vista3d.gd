@@ -337,13 +337,15 @@ static func _vnoise(x: float, y: float) -> float:
 	return lerpf(lerpf(_hash2(ix, iy), _hash2(ix + 1.0, iy), ux), lerpf(_hash2(ix, iy + 1.0), _hash2(ix + 1.0, iy + 1.0), ux), uy)
 
 
-## How much of the view the 遠化 fills toward a bearing (0..1): rays across the frame at the horizon's
-## height and a little under it, each marched over the land to where it meets the ground (or runs
-## out to the far ranges); the share of them that end past the front. Cached per degree.
+## How much of the view the 遠化 fills toward a bearing (0..1), by the direction of her head: rays
+## across the frame's width just under the horizon (where the far land is: the frame's own pitch
+## looks down at her feet, and rays at its height met the near slope), each marched over the land to
+## where it meets the ground or runs out past 16 km; the share of them that end past the front.
+## Cached per two degrees.
 var _far_cache := {}
 var _far_sent := 0.0
-func far_share(bearing: float, pitch: float) -> float:
-	var key := Vector2i(roundi(bearing * 0.5), roundi(pitch))
+func far_share(bearing: float) -> float:
+	var key := roundi(bearing * 0.5)
 	if _far_cache.has(key):
 		return float(_far_cache[key])
 	var hits := 0
@@ -351,11 +353,11 @@ func far_share(bearing: float, pitch: float) -> float:
 	var half := rad_to_deg(atan(float(vp.size.x) * 0.5 / px_per_rad()))
 	for i in 7:
 		var b := deg_to_rad(bearing + lerpf(-half, half, float(i) / 6.0))
-		for el in [pitch - 1.0, pitch - 5.0]:
+		for el in [-0.5, -2.5]:
 			var e := deg_to_rad(el)
 			var dir := Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e))
 			var t := 40.0
-			var end := Vector3.INF
+			var end := eye + dir * 16000.0
 			while t < 16000.0:
 				var p := eye + dir * t
 				if p.y <= ground_h(p.x, p.z):
@@ -363,13 +365,6 @@ func far_share(bearing: float, pitch: float) -> float:
 					break
 				t *= 1.08
 			total += 1
-			# (a ray that never meets the land looks at the sky over the far ranges: those lie in the
-			# 遠化 when it is that way)
-			if end == Vector3.INF:
-				end = eye + dir * 16000.0
-				if el > pitch - 2.0:
-					total -= 1
-					continue
 			if past_m(end.x, end.z) > 0.0:
 				hits += 1
 	var k := float(hits) / maxf(float(total), 1.0)
@@ -1844,7 +1839,7 @@ func update(dt: float) -> void:
 	# (the sound of the 遠化: as she turns her head toward it the wind, the birds and the insects
 	# recede, hollow and far; turned back they return. Audio.far, no new sound)
 	if audio:
-		var fk := far_share(yaw, pitch_for(yaw)) if sector == 0 else 0.0
+		var fk := far_share(yaw) if sector == 0 else 0.0
 		if absf(fk - _far_sent) > 0.01:
 			_far_sent = fk
 			audio.call("far", fk)

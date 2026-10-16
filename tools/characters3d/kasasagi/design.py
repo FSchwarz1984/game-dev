@@ -63,7 +63,6 @@ D = {
     'hat_band_w': 0.100,                       # the band's width (front: 15-20 px seen nearly edge-on)
     'hat_strap_angle': 58.0,                   # deg: the strap the front view shows, down the cone's
                                                # front-left to the brim at x 0.48
-    'hat_straps': [float(a) for a in __import__('os').environ.get('C3D_HAT_STRAPS', '58,155').split(',') if a],
     'hat_tail_angle': 155.0,                   # deg round the brim from her front toward her left: where
                                                # the band crosses the brim and hangs (three-quarter and
                                                # side views: behind her, on her left)
