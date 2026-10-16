@@ -28,6 +28,7 @@ var _rain := 0.0
 var _push := 0.0              # pending hour change from the keys this frame
 var _amb_key := ""
 var _spot_t := 5.0
+var _up := false              # the lines sit at the top while she looks out (the far view puts her at the bottom)
 const MORNING_BIRDS := ["birds_ugu_a", "birds_ugu_b", "birds_ugu_c", "birds_tit_a", "birds_tit_b", "birds_bulbul_a", "birds_bulbul_b"]
 const DAY_BIRDS := ["birds_tit_a", "birds_tit_b", "birds_bulbul_a", "birds_bulbul_b"]
 const CROWS := ["crow_crow_a", "crow_crow_a1", "crow_crow_a3", "crow_crow_b", "crow_crow_b1", "crow_crow_b2"]
@@ -64,8 +65,13 @@ func _label(px: int, c: Color) -> Label:
 
 func _layout() -> void:
 	clock.position = Vector2(8, 6)
-	keys.position = Vector2(8, size.y - 20.0).round()
-	tip.position = Vector2(8, size.y - 36.0).round()
+	if _up:
+		# looking out: she and さぢ stand at the bottom of the picture, so the lines go under the clock
+		tip.position = Vector2(8, 22)
+		keys.position = Vector2(8, 38)
+	else:
+		keys.position = Vector2(8, size.y - 20.0).round()
+		tip.position = Vector2(8, size.y - 36.0).round()
 
 
 func _env() -> W3Env:
@@ -98,6 +104,12 @@ func _process(dt: float) -> void:
 	if dh != 0.0 or rain_moves:
 		sample.call("_set_hours", fposmod(h + dh, 24.0), absf(dh) > 1.0)
 	clock.text = _clock_text(env.hours) + ("　雨" if _rain_target > 0.0 else "")
+	if lookout:
+		var v: Variant = sample.get("vista")
+		var up: bool = v is Object and is_instance_valid(v) and (v as Object).get("active") == true
+		if up != _up:
+			_up = up
+			_layout()
 	_air(dt, env.hours)
 	if _hint_t > 0.0:
 		_hint_t -= dt
