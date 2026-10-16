@@ -166,19 +166,21 @@ uniform float ghost_day_mid = 0.5;
 // ground, as cut)
 uniform float ghost_day_knee = 0.72;
 uniform float ghost_day_ceiling = 0.815;
+uniform float ghost_day_toe = 0.52;
+uniform float ghost_day_floor = 0.37;
 uniform float ghost_day_lref = 1.19;          // the white surface's light at noon (the key is set for it)
 const vec3 V_GHOST_TINT_DAY = vec3(0.955, 0.975, 1.02);
-// Each part of the day's look comes in over its own band of k, not all at one k (G5R3-29, the user:
-// the day's edge was "突兀" beside the night's gradual one): the colour drawn out first and widest,
-// lifted to the key a little later, the haze taken off and the light and shade spread last and
-// slowest; each band's place shifted patch by patch by a low noise of the world (the same value noise
-// as the rings' wandering radii), so the edge goes in by islands, like what an ebb tide leaves, not
-// along one smooth contour.
-uniform vec2 ghost_day_drain_band = vec2(0.01, 0.30);
-uniform vec2 ghost_day_lift_band = vec2(0.03, 0.50);
-uniform vec2 ghost_day_air_band = vec2(0.04, 0.55);
-uniform vec2 ghost_day_spread_band = vec2(0.06, 0.60);
-uniform float ghost_day_patch = 0.45;           // how far the noise moves a band, in its widths
+// Each part of the day's look comes in on its own curve of k, not all at one k (G5R3-29, the user:
+// the day's edge was "突兀" beside the night's gradual one). The night mixes in linear light by k, so
+// its lightness answers about as k^(1/3): quick at the very edge, then slow all the way in to the town.
+// The day's parts follow curves of that kind: the colour drawn out first (k^0.3), lifted to the key a
+// little later (k^0.45), the haze taken off later (k^0.55) and the light and shade spread last and
+// slowest (k^0.6); and k itself is broken patch by patch by a low noise of the world (the same value
+// noise as the rings' wandering radii), so the edge goes in by islands, like what an ebb tide leaves,
+// not along one smooth contour.
+uniform vec4 ghost_day_pow = vec4(0.3, 0.45, 0.55, 0.6);   // drain, lift, air, spread
+uniform float ghost_day_drain_gain = 1.1;
+uniform float ghost_day_patch = 0.5;            // how far the noise moves k, either way, as a share of k
 // sRGB encoding of one linear value (w3_srgb_to_linear's inverse)
 float v_lin_to_srgb1(float x) {
 	x = max(x, 0.0);
@@ -187,9 +189,8 @@ float v_lin_to_srgb1(float x) {
 float v_ghost_day_n(vec2 xz) {
 	return w3_vnoise(xz / 640.0 + vec2(3.1, 7.7)) * 0.65 + w3_vnoise(xz / 230.0 + vec2(11.3, 2.9)) * 0.35;
 }
-float v_ghost_day_part(float k, vec2 xz, vec2 band) {
-	float sh = (band.y - band.x) * ghost_day_patch * (v_ghost_day_n(xz) - 0.5) * 2.0;
-	return smoothstep(band.x + sh, band.y + sh, k);
+float v_ghost_day_kn(float k, vec2 xz) {
+	return clamp(k * (1.0 + ghost_day_patch * (v_ghost_day_n(xz) - 0.5) * 2.0), 0.0, 1.0);
 }
 
 // how far gone a point is: 1 at the heart .. 0 (as it is)
@@ -288,10 +289,11 @@ vec3 v_ghost_at(vec3 col, float k, float dist, vec2 xz) {
 	float lref = max(v_light_ref(), 1e-4);
 	float l = w3_luma(col) / lref;
 	float ld = pow(clamp(l, 0.0, 1.6), 1.0 / 2.2);
-	// by day, part by part (v_ghost_day_part)
-	float wd = v_ghost_day_part(k, xz, ghost_day_drain_band);
-	float wl = v_ghost_day_part(k, xz, ghost_day_lift_band);
-	float wc = v_ghost_day_part(k, xz, ghost_day_spread_band);
+	// by day, part by part (v_ghost_day_kn, ghost_day_pow)
+	float kn = v_ghost_day_kn(k, xz);
+	float wd = min(1.0, ghost_day_drain_gain * pow(kn, ghost_day_pow.x));
+	float wl = pow(kn, ghost_day_pow.y);
+	float wc = pow(kn, ghost_day_pow.w);
 	float key = mix(ghost_day_key, ghost_day_key_town, pow(k, ghost_day_gamma));
 	// (far off, past ~2.5 km, the spread halves by ~5 km and the middle it turns on comes down to the
 	// far land's own: once its air is gone the far land is darker than the near, and turned on the
@@ -309,6 +311,11 @@ vec3 v_ghost_at(vec3 col, float k, float dist, vec2 xz) {
 	float lo = lds + wl * (key - mid) + wc * (con - 1.0) * (lds - mid);
 	float kn = ghost_day_knee, room = ghost_day_ceiling - ghost_day_knee;
 	float los = lo < kn ? max(lo, 0.0) : kn + room * (1.0 - exp(-(lo - kn) / room));
+	// (and a toe under the darks: spread at noon's 2.8, a far slope in its own shade went near black,
+	// a dark stain seen through the gaps of the sea of clouds (the lead, looking east): the light and
+	// shade are mid-grey strokes, never black; the floor lands near L* 47 through the view's grade)
+	float tf = ghost_day_floor, tr = ghost_day_toe - ghost_day_floor;
+	los = los > ghost_day_toe ? los : tf + tr * exp((los - ghost_day_toe) / tr);
 	lo = mix(max(lo, 0.0), los, max(wl, wc));
 	// its own colour at that lightness, drawn out by wd to the faint cool silver (3% of its own left);
 	// the light: the hour's at none of the lift, at all of it the noon's ratio (bright by day)
@@ -343,7 +350,7 @@ float v_haze_k(vec3 wp, vec3 cam) {
 	// by day none: what has gone far is seen clearer than the land round it, not hazier (the lead,
 	// G5R3-29), coming in with the day's weight, so its edge is where the 遠化's is)
 	float gk = v_ghost_k(wp.xz);
-	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - mix(gk > 0.0 ? v_ghost_day_part(gk, wp.xz, ghost_day_air_band) : 0.0, 0.5 * gk, w3_night));
+	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - mix(gk > 0.0 ? pow(v_ghost_day_kn(gk, wp.xz), ghost_day_pow.z) : 0.0, 0.5 * gk, w3_night));
 }
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
 	return mix(col, haze_col, v_haze_k(wp, cam));
