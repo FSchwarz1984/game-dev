@@ -48,6 +48,7 @@ varying vec3 v_wu;      // where the leaf really is (before lean and card layout
 varying vec3 v_wn;
 varying vec2 v_cell;
 varying float v_fill;
+varying float v_fill_low;   // the sky's fill in the sun's shadow (w3_shadow_fill): what grows low gets it, a crown up in the air keeps its own shade
 varying vec3 v_detail;      // albedo / the shade's albedo (the shade's tint; light() undoes it)
 varying vec3 v_detail_sun;  // the same for the sunlit side (its green quieter, round 3)
 
@@ -92,6 +93,7 @@ void vertex() {
 	v_wp = wp;
 	v_wu = foliage_mode == 1 ? anchor : VERTEX;
 	v_wn = NORMAL;
+	v_fill_low = 1.0 - smoothstep(1.2, 3.5, v_wu.y - origin.y);
 }
 
 void fragment() {
@@ -182,7 +184,7 @@ void light() {
 			float lit = mix(w3_r3_body(dot(NORMAL, LIGHT)), w3_wrap(dot(NORMAL, LIGHT), 0.5), w3_night) * ATTENUATION;
 			c += LIGHT_COLOR / W3_PI * shade_fill * v_fill * (1.0 - lit);
 		}
-		DIFFUSE_LIGHT += (c + w3_shadow_fill(ATTENUATION)) * k;
+		DIFFUSE_LIGHT += (c + w3_shadow_fill(ATTENUATION) * v_fill_low) * k;
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5) * v_detail * k;
 	}

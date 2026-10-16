@@ -54,6 +54,10 @@ function crng(seed) {
   return f;
 }
 
+// the 遠化's look (plain.js GHOST_LOOKS): the prologue is all night, so the night's silver-grey
+// (G5R3-26: the user found the lookout's silver-white too bright at night)
+const GHOST_LOOK = 'grey';
+
 export function bakeSouth(o = {}) {
   const seed = o.seed ?? 7;
   const Wc = o.Wc ?? REF_W, ox = Math.round((Wc - REF_W) / 2);
@@ -261,7 +265,8 @@ export function bakeSouth(o = {}) {
   // front, houses keep the pale), row 1 the land's silver-white ghost (plain.js ghostPalette: v0.2's,
   // its shapes kept clear); Godot mixes the night with it (in linear light) by how much a ghost the
   // place is (ghostK)
-  const farPal = PL.ghostPalette();
+  // (the prologue is all night: the silver-grey, G5R3-26; plain.js GHOST_LOOKS)
+  const farPal = PL.ghostPalette(GHOST_LOOK);
   const farLut = lutRows(gSpace, [v => {
     const p = farPal(v), m = v >> 8;
     if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron) return p;
@@ -316,7 +321,7 @@ export function bakeSouth(o = {}) {
       mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
       // the far (G5R3-22): ground zero (the town, m in the 3D frame), the rings (m: full, 0.75, 0.4, none),
       // the region's ellipse round home (untouched): plain.js ghostK, the 3D lookout's ghost_k
-      ghost: { zero: PL.ghostZero().map(r2), r: PL.GHOST_R, home: PL.ghostHome() },
+      ghost: { zero: PL.ghostZero().map(r2), r: PL.GHOST_R, home: PL.ghostHome(), look: GHOST_LOOK },
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },
