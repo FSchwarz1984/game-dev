@@ -29,6 +29,7 @@ func _ready() -> void:
 	story = StoryUI.new()
 	_layer(20, "StoryLayer").add_child(story)
 	story.cinema = cinema
+	story.view_shake = func(o: Vector2i) -> void: stage.shake = o     # the dialogue's 震屏 moves the world only
 
 	field = Field.new({"profile": GameState.body_profile()})
 	world = World.new()
@@ -84,6 +85,7 @@ func _region_id() -> String:
 func _exit_tree() -> void:
 	CharacterLibrary.clear()
 	UiTheme.clear()
+	Staging.clear()
 
 
 func _layer(n: int, label: String) -> CanvasLayer:

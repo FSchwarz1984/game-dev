@@ -82,6 +82,7 @@ var kiln_glow: ShaderMaterial
 var rng := RandomNumberGenerator.new()
 var _t := 0.0
 var _vdebug: PackedStringArray = []   # --vdebug=nodrain,nohaze,nocloud (looking into the layers)
+var nochar := false                   # (the sample's --nochar, G5R3-21) her and さぢ are not drawn
 
 
 func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
@@ -1445,6 +1446,8 @@ const VEIL_OUT := 0.35
 
 
 func _build_figures() -> void:
+	if nochar:
+		return
 	var f := FileAccess.open("res://world3d/sprites/characters.json", FileAccess.READ)
 	if f == null:
 		return

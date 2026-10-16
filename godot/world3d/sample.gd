@@ -11,6 +11,10 @@ extends Node
 ##                      for recordings; --route=night: the night walk past the lanterns;
 ##                      --route=lookout: down the spur to the lookout, where she looks out (the view
 ##                      south, east, then back home), and the top-down view comes back
+##   --nochar           no characters drawn (G5R3-21: this round's Windows build): she is an unseen walker
+##                      (the terrain, what blocks her and her pace as before; the camera follows her and
+##                      she still looks out from the lookout), with no model, shadow or silhouette, no
+##                      canopy cut-away round her, no さぢ; the grass and the hens take no notice of her
 ##   --novista          she does not look out from the lookout (the view from the lookout, W3Vista, is on
 ##                      by default: standing still on the rock for a moment she looks out)
 ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
@@ -18,7 +22,7 @@ extends Node
 ##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, --ambience=wind,night
 ##   (recordings: the ambience loops), and debugging switches
 ##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
-##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse): docs/knowledge/21 §12
+##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse, --seed=n): docs/knowledge/21 §12
 ## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
 ## does not run here). On the lookout, looking out, A/D turn her head and W/S come back.
 
@@ -32,7 +36,8 @@ var args := {}
 var frame := 0
 var focus := Vector3.ZERO
 var her: W3Walker
-var saji: W3Walker
+var saji: W3Walker                # (null with --nochar)
+var nochar := false               # --nochar: no characters drawn (GhostWalker below)
 var her_shadow: MeshInstance3D
 var saji_shadow: MeshInstance3D
 var trail: Array[Vector3] = []
@@ -67,6 +72,9 @@ func _ready() -> void:
 			args[kv[0]] = kv[1]
 		elif a.begins_with("--"):
 			args[a.substr(2)] = "1"
+	nochar = args.has("nochar") and not (str(args["nochar"]) in ["0", "false"])
+	if args.has("seed"):
+		seed(int(args["seed"]))      # comparisons: the global random numbers (the model's idle, the motes) alike run to run
 	pv = PixelView3D.new()
 	if args.has("pitch"):
 		pv.pitch_deg = float(args["pitch"])
@@ -141,6 +149,7 @@ func _ready() -> void:
 	atmos.chimney = hut_smoke
 	vista = W3Vista.new()
 	vista.name = "Vista"
+	vista.nochar = nochar
 	vista.props = placed_props
 	vista.lamp_src = lamps
 	add_child(vista)
@@ -150,7 +159,8 @@ func _ready() -> void:
 	if args.has("at"):
 		var p := String(args["at"]).split(",")
 		her.place(Vector3(float(p[0]), 0.0, float(p[1])))
-		saji.place(her.pos + Vector3(-0.9, 0, -0.5))
+		if saji:
+			saji.place(her.pos + Vector3(-0.9, 0, -0.5))
 	pv.follow(_cam_target, {"cut": true})
 	if args.has("nowater"):
 		for wm in terrain.water_meshes:
@@ -179,7 +189,7 @@ func _ready() -> void:
 			amb.call("ambience", Array(String(args["ambience"]).split(",")))
 	if args.has("nolamps"):
 		lamps.enabled = false                       # debugging: the night without its lanterns
-	if args.has("noxray"):
+	if args.has("noxray") and not nochar:
 		her.sprite.xray.visible = false             # debugging: no silhouettes through what covers them (sprites only)
 		saji.sprite.xray.visible = false
 	if args.has("hide_props"):
@@ -681,7 +691,7 @@ func _collect_geometry(n: Node, out: Array) -> void:
 ## cutmode "fade": a tree hides her when her chest falls inside its drawn box and it stands nearer
 ## the camera (south of her); then all of it eases to see-through, and back when she leaves.
 func _update_fades(dt: float) -> void:
-	if _fade_objs.is_empty() or her == null:
+	if _fade_objs.is_empty() or her == null or nochar:
 		return
 	var feet := her.pos
 	var chest := pv.screen_of_upright(feet, 1.0)
@@ -709,6 +719,15 @@ func _update_fades(dt: float) -> void:
 func _spawn_characters() -> void:
 	var f := FileAccess.open(CHARS_JSON, FileAccess.READ)
 	var chars: Dictionary = JSON.parse_string(f.get_as_text())
+	if nochar:
+		# (G5R3-21: no characters this round) she walks unseen; no さぢ, no contact shadows
+		her = GhostWalker.new()
+		her.name = "Tsuzumi"
+		pv.world_root.add_child(her)
+		her.setup(terrain, "tsuzumi", "load", chars)
+		her.blockers = blockers
+		her.place(terrain.marker("spawn"))
+		return
 	her = W3Walker.new()
 	her.name = "Tsuzumi"
 	pv.world_root.add_child(her)
@@ -732,6 +751,28 @@ func _spawn_characters() -> void:
 	if args.has("nocontact"):
 		her_shadow.visible = false
 		saji_shadow.visible = false
+
+
+## --nochar: a walker that is never drawn. The terrain, what blocks her, her pace, her facing and her
+## chest (where the camera looks) are the walker's own; no model or sprite is made (so nothing of her
+## is drawn: no body, no shadow, no silhouette through what covers her). `ghost` tells the grass and
+## the small life (W3Grass, dressing_life) not to answer to her: grass bending and hens hurrying off
+## round no one read as something unseen there.
+class GhostWalker extends W3Walker:
+	var ghost := true
+
+	func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> void:
+		terrain = t
+		char_id = id
+		sheet_name = sheet_key
+		meta = chars[id]
+		sheet = meta["sheets"][sheet_key]
+
+	func _apply() -> void:
+		position = pos
+
+	func set_xray_colour(_c: Color) -> void:
+		pass
 
 
 func _contact_shadow(r: Vector2) -> MeshInstance3D:
@@ -801,6 +842,8 @@ func _key(k: Key) -> bool:
 
 
 func _follow_saji(dt: float) -> void:
+	if saji == null:
+		return
 	# breadcrumbs of her path; she leads, さぢ keeps a step behind and to the north side of her
 	if trail.is_empty() or trail[-1].distance_to(her.pos) > 0.25:
 		trail.append(her.pos)
@@ -851,13 +894,15 @@ func _make_route(given: Array = []) -> void:
 	for p in pts:
 		route.append(p)
 	her.place(Vector3(pts[0].x, 0, pts[0].y))
-	saji.place(her.pos + Vector3(-0.9, 0, -0.6))
+	if saji:
+		saji.place(her.pos + Vector3(-0.9, 0, -0.6))
 	route_i = 1
 
 
 func _drive_route() -> void:
 	if args.has("route_log") and frame % 30 == 0:
-		print("ROUTE f=%d i=%d her=(%.2f, %.2f) saji=(%.2f, %.2f)" % [frame, route_i, her.pos.x, her.pos.z, saji.pos.x, saji.pos.z])
+		var sp := saji.pos if saji else Vector3.ZERO
+		print("ROUTE f=%d i=%d her=(%.2f, %.2f) saji=(%.2f, %.2f)" % [frame, route_i, her.pos.x, her.pos.z, sp.x, sp.z])
 	for k in [KEY_W, KEY_A, KEY_S, KEY_D]:
 		keys_down[k] = false
 	if route_i >= route.size():
@@ -942,7 +987,8 @@ func _set_view(i: int) -> void:
 	var v: Array = _shot_list[i]
 	her.place(Vector3(v[0], 0.0, v[1]))
 	_realm_k = -1.0
-	saji.place(her.pos + Vector3(-0.9, 0, -0.5))
+	if saji:
+		saji.place(her.pos + Vector3(-0.9, 0, -0.5))
 	trail.clear()
 	env.rain = float(args.get("rain", "0"))
 	if v.size() > 3:
@@ -1089,14 +1135,16 @@ func _process(dt: float) -> void:
 			Performance.get_monitor(Performance.RENDER_TOTAL_OBJECTS_IN_FRAME), Performance.get_monitor(Performance.RENDER_VIDEO_MEM_USED) / 1048576.0,
 			RenderingServer.viewport_get_measured_render_time_gpu(vr), RenderingServer.viewport_get_measured_render_time_cpu(vr)])
 	if args.has("log_pos") and frame % maxi(int(args["log_pos"]), 1) == 0:
-		print("POS f=%d her=(%.2f, %.2f) saji=(%.2f, %.2f) facing=%d vista=%s yaw=%.1f" % [frame, her.pos.x, her.pos.z, saji.pos.x, saji.pos.z, her.facing, str(vista.active), vista.yaw_target])
+		var sjp := saji.pos if saji else Vector3.ZERO
+		print("POS f=%d her=(%.2f, %.2f) saji=(%.2f, %.2f) facing=%d vista=%s yaw=%.1f" % [frame, her.pos.x, her.pos.z, sjp.x, sjp.z, her.facing, str(vista.active), vista.yaw_target])
 	_update_vista(dt, dir)
 	if vista.active or vista.amount > 0.0:
 		dir = Vector2.ZERO
 	her.step(dt, dir)
 	_follow_saji(dt)
-	_lay(her_shadow, her.pos)
-	_lay(saji_shadow, saji.pos)
+	if not nochar:
+		_lay(her_shadow, her.pos)
+		_lay(saji_shadow, saji.pos)
 	# aerial perspective measured from her: the land that falls away below her hazes over
 	_haze_h = lerpf(_haze_h, her.pos.y, clampf(dt * 1.5, 0.0, 1.0)) if frame > 1 else her.pos.y
 	# (it starts well below her, so the cuts and dips near her keep their colour; the plain below
@@ -1104,7 +1152,9 @@ func _process(dt: float) -> void:
 	var haze_max := 0.0 if args.has("nohaze") else 0.78
 	RenderingServer.global_shader_parameter_set("w3_haze", Vector4(_haze_h, 5.0, 40.0, haze_max))
 	var chest := her.chest()
-	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 26.0))
+	# (the canopy's cut-away and the grass and bushes giving way round her: off with --nochar, no one
+	# to keep in sight)
+	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 0.0 if nochar else 26.0))
 	pv.update_camera(dt)
 	_update_fades(dt)
 	_update_realm(dt)
@@ -1142,7 +1192,8 @@ func _process(dt: float) -> void:
 				_shot_list.append(e)
 			var lk := terrain.marker("lookout")
 			her.place(lk)
-			saji.place(lk + Vector3(-0.9, 0, -0.5))
+			if saji:
+				saji.place(lk + Vector3(-0.9, 0, -0.5))
 			_set_vview(0)
 		if frame % int(args.get("settle", "40")) == 0:
 			var vdir := String(args["vshots"]).split(":", true, 1)[0]

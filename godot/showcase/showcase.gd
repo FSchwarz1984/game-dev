@@ -158,6 +158,10 @@ func _on_chosen(id: String, index: int) -> void:
 		"fullscreen":
 			_toggle_fullscreen()
 			(screen as ShowcaseMenu).refresh()
+		"motion":
+			# 减少晃动 (docs/design/dialogue-staging.md D6): the dialogue's staging without movement or flashes
+			GameState.set_setting("reduce_motion", not GameState.reduce_motion())
+			(screen as ShowcaseMenu).refresh()
 		_:
 			open(id)
 

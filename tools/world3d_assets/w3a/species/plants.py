@@ -290,11 +290,13 @@ def build_sacred_shrubs(out, back):
                                                                                   ridge=('#a08c78', '#b29c86', '#c0aa92'), lip='#cdb8a0',
                                                                                   fissure='#8c7866', deep='#7c6a5a', break_p=0.03,
                                                                                   lichen=('#b9b49c', '#c6c0a6'), lichen_p=0.004))})
-    pinks = ((176, 72, 118), (204, 98, 142), (226, 138, 172))
+    # (round 5 b: in the first build the panicles were few, 5 px and dark: a green tree with a few
+    # magenta dots; in bloom at Obon the crown's top is a pink cloud)
+    pinks = ((206, 92, 142), (232, 128, 172), (247, 172, 201))
     specs = {'mass': [(LV.broad_leaves, dict(W=int(13 + (i % 3) * 2), H=int(11 + (i % 2) * 2), seed=9102 + i, size=(2.2, 3.0),
                                              wid=(1.5, 2.0), gloss=0.2, droop=0.2)) for i in range(7)],
              'interior': [(LV.broad_leaves, dict(W=14, H=12, seed=9150 + i, size=(2.2, 3.0), gloss=0.0)) for i in range(2)],
-             'flower': [(LV.panicle, dict(W=int(5 + (k % 2)), seed=9160 + k, colours=pinks)) for k in range(4)]}
+             'flower': [(LV.panicle, dict(W=int(7 + (k % 3)), seed=9160 + k, colours=pinks)) for k in range(5)]}
     atlas, rects, sets = FO.build_tiles(specs)
     m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=1.0),
                         textures={'leaf_tex': a.texture('leaves', atlas)})
@@ -315,9 +317,9 @@ def build_sacred_shrubs(out, back):
                                   clumps=0.2, clump_r=(0.3, 0.5), tiles='mass', interior=True, lump=0.12))
         flowers = []
         for m in masses:
-            for k in range(7):
+            for k in range(24):
                 dd = normalize(R.normal(0, 1, 3) * np.array([1, 0.4, 1]) + np.array([0, 0.9, 0]) + back * 0.4)
-                t = sets['flower'][int(R.integers(0, 4))]
+                t = sets['flower'][int(R.integers(0, len(sets['flower'])))]
                 flowers.append(CD.Card(m.c + dd * m.r * 0.95, normalize(dd + np.array([0, 0.5, 0])), t[1], t[2], t[0], 0.95,
                                        np.array([1.0, 1.0, 1.0]), 0.6, 'flower', 3.0))
         cc = np.mean([m.c for m in masses], axis=0)

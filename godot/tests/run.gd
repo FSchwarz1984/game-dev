@@ -98,7 +98,7 @@ func _main() -> void:
 	quit.call_deferred(1 if failed > 0 else 0)  # first, so a failing cleanup cannot hang the run
 	# drop static caches so nothing outlives the engine (loaded by path: this script is compiled
 	# before the autoloads exist, so it must not name classes that use them)
-	for path in ["res://actors/character_library.gd", "res://ui/ui_theme.gd"]:
+	for path in ["res://actors/character_library.gd", "res://ui/ui_theme.gd", "res://story/staging.gd"]:
 		var s = load(path)
 		if s != null and s.has_method("clear"):
 			s.clear()

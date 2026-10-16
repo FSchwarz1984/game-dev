@@ -599,7 +599,7 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
         # twos and threes, bigger on the downhill side
         st = max(float(stones), 0.4)
         tris += edge_stones(sink, ground, route, s0, s1, R, every=(0.8 / st, 2.4 / st), size=(0.22, 0.44), cluster=0.5,
-                            moss=(0.1, 0.45), bury=0.45, out=0.08)
+                            moss=(0.05, 0.35), bury=0.45, out=0.08, lift=1.7)
     for k in range(n):
         s = s0 + R.uniform(0, L)
         t = R.uniform(0.45, 0.85) * width * 0.5 * (1 if R.uniform() < 0.5 else -1)
@@ -659,8 +659,11 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
     return tris
 
 
+KERB = []   # (x, z, r) of every kerb stone laid (build.py keeps the sward's tufts off them)
+
+
 def edge_stones(sink, ground, route, s0, s1, R, every=(1.2, 3.5), size=(0.14, 0.32), sides=(-1, 1), out=0.04, bury=0.6,
-                colour=None, moss=(0.3, 0.9), cluster=0.45):
+                colour=None, moss=(0.3, 0.9), cluster=0.45, lift=1.0):
     """The kerb of an earth path (路缘): half-buried field stones along its edges at uneven intervals,
     one to three together, bigger where the path runs along a slope's downhill side."""
     tris = 0
@@ -687,8 +690,9 @@ def edge_stones(sink, ground, route, s0, s1, R, every=(1.2, 3.5), size=(0.14, 0.
                 # long axis along the path
                 rot = np.stack([Tj[0], Nj[0]], 0)
                 poly = c + pts @ rot
-                tris += slab(sink, ground, chaikin(poly, 1), R.uniform(0.03, 0.08) * big * (1 - bury * 0.5), 0.1,
+                tris += slab(sink, ground, chaikin(poly, 1), R.uniform(0.03, 0.08) * big * (1 - bury * 0.5) * lift, 0.1,
                              colour * (0.72 + 0.22 * R.uniform()), R.uniform(*moss), R, layer='solid', dome=0.03 * big)
+                KERB.append((float(c[0]), float(c[1]), float(r * el)))
             s += R.uniform(*every)
     return tris
 
@@ -896,6 +900,7 @@ def build(L, h, x0, z0, cell, placements, seed):
     """Reads the layout's `road.segments`, `paths[*].kind` / `segments` and `steps`; returns (chunks,
     stats)."""
     R = np.random.default_rng(seed + 4040)
+    KERB.clear()
     ground = Ground(h, x0, z0, cell)
     sink = Sink()
     stats = {}

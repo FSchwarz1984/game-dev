@@ -589,110 +589,326 @@ export const PLATE_AT = [300, 900, 1400, 1900], PLATE_SPREAD = 320;
  * Then the cut is cleaned: one-pixel gaps along a line are closed, pieces shorter than a few pixels go
  * (more far away: only the big structures stay).
  */
-export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
+export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
   const N = W * H, out = new Uint8Array(N * 4), idx = L.idx;
+  const mat = i => idx[i] >> 8;
   const cl = i => CLS[idx[i] >> 8] || 0;
+  const land = i => i >= 0 && i < N && mask[i] !== 0;
   const isMtn = m => m === G.farRock || m === G.farForest || m === G.hillForest;
+  const isIron = i => land(i) && (idx[i] >> 8) === G.iron;
   const sd = sunDir || [0.85, 0.27, -0.45], sl = Math.hypot(...sd), lx = sd[0] / sl, ly = sd[1] / sl, lz = sd[2] / sl;
-  const kind = new Uint8Array(N);                 // 0 none, 1 fine, 2 main
-  // the land's relief as the paper takes it (and the ranges' folds): the light on the land's slope,
-  // smoothed (over ~2 pixels near; ~500 m on the ranges, so that their faces read as faces)
+
+  // the land's relief as the paper takes it: the light on the land's slope, smoothed (over ~2 pixels
+  // near; FOLD_SMOOTH on the ranges, so that their faces read as faces and their folds as folds)
   const lamA = new Float32Array(N);
   for (let i = 0; i < N; i++) {
     if (!mask[i]) continue;
-    const Z = Zb[i], X = Xb[i], far = Z > 30;
-    const sm = (far ? 500 : Math.max(120, 2 * Z * Z / f * U)) / U;
+    const Z = Zb[i], X = Xb[i];
+    const sm = (Z > 30 ? FOLD_SMOOTH : Math.max(120, 2 * Z * Z / f * U)) / U;
     const hx = heightBase(X + sm, Z) - heightBase(X - sm, Z), hz = heightBase(X, Z + sm) - heightBase(X, Z - sm);
-    const nl = Math.hypot(hx, 2 * sm, hz);
-    lamA[i] = (-hx * lx + 2 * sm * ly - hz * lz) / nl;
+    lamA[i] = (-hx * lx + 2 * sm * ly - hz * lz) / Math.hypot(hx, 2 * sm, hz);
+  }
+  // runs of one material down a column (for the levees: only between fields deep enough to show
+  // paper between their lines) and the viaduct's runs (its deck across, its bents down)
+  const runDn = new Uint16Array(N), runUp = new Uint16Array(N), ironAcross = new Uint16Array(N);
+  for (let x = 0; x < W; x++) {
+    for (let y = 0; y < H; y++) { const i = y * W + x; runUp[i] = y > 0 && land(i) && land(i - W) && mat(i - W) === mat(i) ? runUp[i - W] + 1 : 1; }
+    for (let y = H - 1; y >= 0; y--) { const i = y * W + x; runDn[i] = y < H - 1 && land(i) && land(i + W) && mat(i + W) === mat(i) ? runDn[i + W] + 1 : 1; }
   }
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
+    if (!isIron(i)) continue;
+    let n = 1;
+    for (let d = 1; d < 4 && x - d >= 0 && isIron(i - d); d++) n++;
+    for (let d = 1; d < 4 && x + d < W && isIron(i + d); d++) n++;
+    ironAcross[i] = n;
+  }
+
+  // how much deeper the land one row up is, where it goes on from X, Z without a break (along the line
+  // of sight: a row up is f (h' Z + 1 - h) / Z^2 farther per unit; a face turned away goes on out of
+  // sight: anything over it is a break)
+  const rowDepth = (X, Z) => {
+    const e = 0.01, h = heightBase(X, Z), h1 = heightBase(X * (1 + e), Z * (1 + e)), dh = (h1 - h) / (Z * e);
+    const den = f * (dh * Z + 1 - h);
+    return den > 1e-6 ? Z * Z / den : 0;
+  };
+  // 1. where the block's lines are cut. kind: 1 fine, 2 main, 3 a fold in the ranges (chosen below)
+  const kind = new Uint8Array(N);
+  const SRC = FADE_STATS.wantSrc ? (FADE_STATS.src = new Uint8Array(N)) : null;   // (diagnostics: what cut each line)
+  const weak = new Uint8Array(N);
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
     if (!mask[i]) continue;
-    const Z = Zb[i], X = Xb[i], c = cl(i), m = idx[i] >> 8, mtn = isMtn(m);
-    let k = 0;
+    const Z = Zb[i], X = Xb[i], c = cl(i), m = mat(i), mtn = isMtn(m);
     const up = y > 0 ? i - W : -1;
-    if (up < 0 || !mask[up]) k = 2;                                    // the skyline
-    else {
-      const Zu = Zb[up], flat = Z * Z / f;
-      if (mtn) {
-        // the ranges: their ridges and spurs, one in front of the next (fewer the farther)
-        const r = Z > 60 ? 1.12 : 1.05;
-        if (Zu > Z * r && Zu - Z > 1.5 * flat) k = 2;
-        // and their folds: where a face turned to the light gives onto one turned away (a spur's crest
-        // or a valley's crease, read across the slope)
-        if (!k && x > 0 && mask[i - 1] && isMtn(idx[i - 1] >> 8)) {
-          const a0 = lamA[i - 1] - ly, a1 = lamA[i] - ly, thr = Z > 60 ? 0.2 : 0.13;
-          if (a0 * a1 < 0 && Math.abs(a1 - a0) > thr) k = 2;
-        }
-      } else if (Zu > Z * 1.25 && Zu - Z > 6 * flat + 0.04) k = 2;    // crests, terraces, the viaduct
-    }
-    if (k < 2) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
-      if (n < 0 || !mask[n]) continue;
+    if (!land(up)) { kind[i] = 2; if (SRC) SRC[i] = 1; continue; }        // the skyline
+    const Zu = Zb[up], flat = Z * Z / f;
+    let k = 0, sc = 0;
+    if (c === 9) {
+      // the viaduct: its deck (the top edge always; both rows of it near) and, near, its bents where a
+      // bent is a stroke of 4 px or more
+      if (!isIron(up)) k = 2;
+      else if (Z < 9 && ironAcross[i] >= 3) k = 2;
+      else if (Z < 9 && ironAcross[i] < 3 && runUp[i] + runDn[i] - 1 >= 5) k = 2;
+      sc = 12;
+    } else if (mtn) {
+      // a ridge in front of the next: the land seen over it is farther than this face, if it went on,
+      // could be one row up (the face's own rise along the line of sight, beyond this point)
+      // (the big ones only: one range or hill in front of land a good way behind it; a ridge going on
+      // along a fainter break where it joins one)
+      const rd = rowDepth(X, Z), jr = Z > 45 ? RIDGE_JUMP : RIDGE_JUMP_HILLS;
+      if (Zu - Z > Math.max(2 * rd, jr * Z)) { k = 5; sc = 2; }
+      else if (Zu - Z > Math.max(1.2 * rd, jr * 0.5 * Z)) weak[i] = 1;
+    } else if (Zu > Z * 1.25 && Zu - Z > 6 * flat + 0.04) { k = 2; sc = 3; }   // crests, terraces of land
+    if (!k) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
+      if (!land(n)) continue;
       const cn = cl(n);
       if (cn === c || (c <= 2 && cn <= 2)) {
-        // the levees between fields and paddies, while a field is a few pixels deep
-        if (c <= 2 && (idx[n] >> 8) !== m && Z < 9 && n === up) k = Math.max(k, 1);
+        // the levees between fields, where both fields are deep enough to show paper between lines
+        if (c <= 2 && mat(n) !== m && Z < 9 && n === up && runDn[i] >= 3 && runUp[up] >= 2) { k = Math.max(k, 1); sc = sc || 10; }
         continue;
       }
       if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
-      if (c === 3 || c === 4 || c === 5 || c === 9) k = 2;              // banks, roads, the town, the viaduct
-      else if (c === 6 && !mtn && (Z < 8 || (n === up && Z < 16))) k = Math.max(k, 1);   // the woods' edges
-      else if (c === 8 && Z < 16) k = Math.max(k, 1);                   // roofs
-      else if (c === 7 && Z < 8) k = Math.max(k, 1);
+      if (c === 3 || c === 5) { k = 2; sc = c === 3 ? 4 : 5; }            // banks, the town
+      else if (c === 4 && Z < 16) { k = 2; sc = 6; }                      // roads
+      else if (c === 6 && !mtn && (Z < 9 || (n === up && Z < 16))) { k = Math.max(k, 1); sc = sc || 7; }   // the woods' edges
+      else if (c === 8 && Z < 9) { k = Math.max(k, 1); sc = sc || 8; }   // roofs
+      else if (c === 7 && Z < 8) { k = Math.max(k, 1); sc = sc || 9; }   // rock
     }
     // the crowns in a near wood (the bake's crown cells: their shaded side)
     if (!k && c === 6 && Z > 600 / U && Z < 8) {
       const t = heightBase(X, Z), cs = 0.06 * Math.max(1, Z / 6), u = X / cs, v = (Z + t * 4) / (cs * 1.6);
       const fu = u - Math.floor(u) - 0.5, fv = v - Math.floor(v) - 0.5;
-      if (fu + fv * 0.6 < -0.4) k = 1;
+      if (fu + fv * 0.6 < -0.4) { k = 1; sc = 11; }
     }
     kind[i] = k;
+    if (SRC && k) SRC[i] = sc;
   }
-  // clean the cut: one-pixel gaps along a line closed (a gap between two line pixels of the same kind
-  // along the line: left-right or a diagonal; never up-down, which would weld two lines lying one above
-  // the other into a band), then the pieces shorter than a few pixels dropped
+
+  // a ridge goes on as long as the break goes on, if fainter (from each clear break, along the fainter)
+  {
+    const st2 = [];
+    for (let i = 0; i < N; i++) if (kind[i] === 5) st2.push(i);
+    while (st2.length) {
+      const i = st2.pop(), y = (i / W) | 0, x = i - y * W;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const j = yy * W + xx;
+        if (weak[j] && !kind[j]) { kind[j] = 5; weak[j] = 0; if (SRC) SRC[j] = 2; st2.push(j); }
+      }
+    }
+  }
+  // 1b. the ranges' spurs and creases, as a print draws a mountain: from each peak of the skyline the
+  // crest of a spur followed down toward us (the highest way down, one bearing left and one right),
+  // from each saddle the crease followed down (the lowest way down); cut where they are the land in
+  // sight. Fewer the farther: past FOLD_FAR only one spur to a peak and no creases.
+  const top = new Int16Array(W).fill(-1);
+  for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (mask[y * W + x]) { top[x] = y; break; }
+  const trace = (X, Z, mode, side) => {
+    const pts = [[X, Z, heightBase(X, Z)]];
+    const h0 = pts[0][2];
+    for (let n = 0; n < 120; n++) {
+      const [Xc, Zc, hc] = pts[pts.length - 1];
+      const ds = 45 / U * Math.max(1, Zc / 50), dl = Math.hypot(Xc, Zc), ux = -Xc / dl, uz = -Zc / dl;
+      let best = null;
+      for (let a = -100; a <= 100; a += 10) {
+        if (side && (a * side < 0 || Math.abs(a) < 20)) continue;
+        const r = a * Math.PI / 180, cx = ux * Math.cos(r) - uz * Math.sin(r), cz = ux * Math.sin(r) + uz * Math.cos(r);
+        const X1 = Xc + cx * ds, Z1 = Zc + cz * ds, h1 = heightBase(X1, Z1);
+        if (h1 >= hc) continue;
+        if (!best || (mode > 0 ? h1 > best[2] : h1 < best[2])) best = [X1, Z1, h1];
+      }
+      if (!best) break;
+      pts.push(best);
+      if (best[2] < Math.max(0.5, h0 * 0.45)) break;
+    }
+    return pts;
+  };
+  const cxF = cam ? cam.cx : 0, yhF = cam ? cam.yh : 0;
+  const cut = (pts, tag) => {
+    // a spur seen end-on (straight down the frame) or edge-on (along the skyline) is not drawn
+    if (pts.length < 3) return 0;
+    const proj = ([X, Z, h]) => [cxF + f * X / Z, yhF + f * (1 - h) / Z];
+    const [x0, y0] = proj(pts[0]), [x1, y1] = proj(pts[pts.length - 1]);
+    if (Math.abs(y1 - y0) < 0.3 * Math.abs(x1 - x0)) return 0;
+    FADE_STATS.spurs = (FADE_STATS.spurs || 0) + 1;
+    let drawn = 0;
+    for (let q = 0; q < pts.length - 1; q++) {
+      const [Xa, Za, ha] = pts[q], [Xb2, Zb2, hb2] = pts[q + 1];
+      const xa = cxF + f * Xa / Za, ya = yhF + f * (1 - ha) / Za, xb = cxF + f * Xb2 / Zb2, yb = yhF + f * (1 - hb2) / Zb2;
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(xb - xa), Math.abs(yb - ya))));
+      for (let s2 = 0; s2 <= n; s2++) {
+        const t = s2 / n, xx = Math.round(xa + (xb - xa) * t), yy = Math.round(ya + (yb - ya) * t), Zs = Za + (Zb2 - Za) * t;
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const j = yy * W + xx;
+        if (!land(j) || !isMtn(mat(j)) || Math.abs(Zb[j] - Zs) > Zs * 0.04 || yy <= top[xx]) continue;
+        if (!kind[j]) { kind[j] = tag; drawn++; if (SRC) SRC[j] = 13; }
+      }
+    }
+    return drawn;
+  };
+  if (cam) {
+    const R = 9;
+    for (let x = R; x < W - R; x++) {
+      const t = top[x];
+      if (t < 0 || !isMtn(mat(t * W + x))) continue;
+      let pk = true, sd = true, lmax = t, rmax = t, lmin = t, rmin = t;
+      for (let d = -2 * R; d <= 2 * R; d++) {
+        const u = top[Math.min(W - 1, Math.max(0, x + d))];
+        if (u < 0) { pk = sd = false; break; }
+        if (Math.abs(d) <= R) { if (u < t || (u === t && d < 0)) pk = false; if (u > t || (u === t && d < 0)) sd = false; }
+        if (d < 0) { lmax = Math.max(lmax, u); lmin = Math.min(lmin, u); } else { rmax = Math.max(rmax, u); rmin = Math.min(rmin, u); }
+      }
+      const i = t * W + x, Z = Zb[i], X = Xb[i], far = Z > FOLD_FAR;
+      if (pk && Math.min(lmax - t, rmax - t) >= (far ? 4 : 2)) {
+        cut(trace(X, Z, 1, -1), 4);
+        if (!far) cut(trace(X, Z, 1, 1), 4);
+      }
+    }
+  }
+
+  // 2. lines never lie on one another: where two lines running across touch one above the other (they
+  // would print as a band), the lower gives way: a fine line to any line, a main line to a main line
+  for (let y = 1; y < H; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x, k = kind[i], a = kind[i - W];
+    if (!k || k >= 3 || !a || a >= 3) continue;
+    if (!(kind[i - 1] || kind[i + 1]) || !(kind[i - W - 1] || kind[i - W + 1])) continue;   // a line going down
+    if (k === 1 || a === 2) kind[i] = 0;
+  }
+
+  // 3. the cut cleaned: gaps along a line closed (one pixel across or on a diagonal; two or three
+  // pixels across between two ends of main lines that meet in line), never up-down (which would weld
+  // two lines lying one above the other)
   const fill = new Uint8Array(N);
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const i = y * W + x;
     if (kind[i] || !mask[i]) continue;
-    for (const [a, b2] of [[i - 1, i + 1], [i - W - 1, i + W + 1], [i - W + 1, i + W - 1]]) {
-      const ka = kind[a], kb = kind[b2];
-      if (ka && ka === kb && !kind[i - W] && !kind[i + W]) { fill[i] = ka; break; }
+    // (a bent of the viaduct that is not drawn is no gap: the line runs on behind it)
+    const leg = isIron(i);
+    for (const [p, q] of [[i - 1, i + 1], [i - W - 1, i + W + 1], [i - W + 1, i + W - 1]]) {
+      const kp = kind[p], kq = kind[q];
+      if (kp && kp === kq && kp < 3 && (leg || (!kind[i - W] && !kind[i + W]))) { fill[i] = kp; break; }
     }
   }
-  for (let i = 0; i < N; i++) if (fill[i]) kind[i] = fill[i];
-  const comp = new Int32Array(N).fill(-1), stack = [];
+  for (let i = 0; i < N; i++) if (fill[i]) { kind[i] = fill[i]; if (SRC) SRC[i] = 14; }
+  const isEnd = (i, dir) => {                 // a main line's end facing dir (+1 right, -1 left)
+    if (kind[i] !== 2) return false;
+    for (const dy of [-1, 0, 1]) if (kind[i + dy * W + dir]) return false;
+    let back = 0;
+    for (const dy of [-1, 0, 1]) if (kind[i + dy * W - dir]) back++;
+    return back >= 1;
+  };
+  for (let y = 2; y < H - 2; y++) for (let x = 4; x < W - 4; x++) {
+    const i = y * W + x;
+    if (!isEnd(i, 1)) continue;
+    // the nearest other end within 3 px to the right, one row off at most
+    let best = -1;
+    for (let d = 2; d <= 4 && best < 0; d++) for (const dy of [0, -1, 1]) {
+      const j = i + dy * W + d;
+      if (isEnd(j, -1) && Math.abs(Zb[j] - Zb[i]) < Zb[i] * 0.15) { best = j; break; }
+    }
+    if (best < 0) continue;
+    const yj = (best / W) | 0, xj = best - yj * W;
+    for (let xx = x + 1; xx < xj; xx++) {
+      const yy = Math.round(y + (yj - y) * (xx - x) / (xj - x)), j = yy * W + xx;
+      if (land(j) && !kind[j - W] && !kind[j + W]) { kind[j] = 2; if (SRC && !SRC[j]) SRC[j] = 15; }
+    }
+  }
+
+  // 4. the pieces too short to be cut on purpose go: main lines 4 px near, 6 past ~1.6 km, 8 past
+  // ~3 km, 10 in the ranges; fine lines 5 near, 8 farther
+  const comp = new Int32Array(N).fill(-1), stack = [], folds = [], ridges = [];
   for (let i0 = 0; i0 < N; i0++) {
     if (!kind[i0] || comp[i0] >= 0) continue;
-    const piece = [];
+    const fam = kind[i0] >= 4 ? kind[i0] : 0, fold = fam === 4, piece = [];
     stack.push(i0); comp[i0] = i0;
-    let zmin = 1e9;
+    let zmin = 1e9, zsum = 0, ymin = 1e9, ymax = -1, xsum = 0;
     while (stack.length) {
       const i = stack.pop(); piece.push(i);
-      if (Zb[i] < zmin) zmin = Zb[i];
       const y = (i / W) | 0, x = i - y * W;
+      if (Zb[i] < zmin) zmin = Zb[i];
+      zsum += Zb[i]; xsum += x; if (y < ymin) ymin = y; if (y > ymax) ymax = y;
       for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
         if (!dx && !dy) continue;
         const xx = x + dx, yy = y + dy;
         if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
         const j = yy * W + xx;
-        if (kind[j] && comp[j] < 0) { comp[j] = i0; stack.push(j); }
+        if (comp[j] < 0 && kind[j] && (kind[j] >= 4 ? kind[j] : 0) === fam) { comp[j] = i0; stack.push(j); }
       }
     }
-    // the shortest piece kept: main lines 4 px near, 6 past ~3 km, 9 in the far ranges; fine lines 6
-    // near, 10 farther
-    const main = kind[i0] === 2 || piece.some(i => kind[i] === 2);
-    const min = main ? (zmin < 16 ? 4 : zmin < 40 ? 6 : 9) : (zmin < 8 ? 6 : 10);
+    if (fold) { folds.push({ piece, n: piece.length, tall: ymax - ymin + 1, x: xsum / piece.length, z: zsum / piece.length }); continue; }
+    if (fam === 5) { ridges.push({ piece, n: piece.length, z: zsum / piece.length }); continue; }
+    const main = piece.some(i => kind[i] === 2);
+    const min = main ? (zmin < 9 ? 4 : zmin < 16 ? 6 : zmin < 45 ? 8 : 10) : (zmin < 6 ? 5 : 8);
     if (piece.length < min) for (const i of piece) kind[i] = 0;
   }
+  // 5. the ranges' ridges, one range in front of the next: the longest first, each kept where it keeps
+  // clear of those kept (two rows of paper between) and is long enough to be a range (RIDGE_MIN px;
+  // farther ranges need longer ridges)
+  // each drawn as clean strokes: the ridge's top row in each column, smoothed along it (a median over
+  // five columns), gaps of a column or two bridged, a step of two rows drawn down; where it steps
+  // three rows or more it is two ridges
+  const strokes = [];
+  for (const r of ridges) {
+    const rowAt = new Map();
+    for (const i of r.piece) {
+      kind[i] = 0;
+      const y = (i / W) | 0, x = i - y * W;
+      if (!rowAt.has(x) || y < rowAt.get(x)) rowAt.set(x, y);
+    }
+    const cols = [...rowAt.keys()].sort((a, b) => a - b);
+    const line = [];
+    for (let q = 0; q < cols.length; q++) {
+      const x = cols[q], win = [];
+      for (let d = -2; d <= 2; d++) { const v = rowAt.get(x + d); if (v != null) win.push(v); }
+      win.sort((a, b) => a - b);
+      line.push([x, win[win.length >> 1]]);
+      const nx = cols[q + 1];
+      if (nx != null && nx - x > 1 && nx - x <= 3) {
+        const y0 = rowAt.get(x), y1 = rowAt.get(nx);
+        for (let xx = x + 1; xx < nx; xx++) line.push([xx, Math.round(y0 + (y1 - y0) * (xx - x) / (nx - x))]);
+      }
+    }
+    line.sort((a, b) => a[0] - b[0]);
+    let px = [];
+    const flush = () => { if (px.length) strokes.push({ piece: px.filter(i => land(i)), z: r.z }); px = []; };
+    for (let q = 0; q < line.length; q++) {
+      const [x, y] = line[q];
+      px.push(y * W + x);
+      const nb = line[q + 1];
+      if (!nb || nb[0] !== x + 1 || Math.abs(nb[1] - y) >= 3) { flush(); continue; }
+      if (Math.abs(nb[1] - y) === 2) px.push((y + Math.sign(nb[1] - y)) * W + (nb[1] > y ? x : x + 1));
+    }
+    flush();
+  }
+  // the longest first, each kept where it keeps clear of those kept (RIDGE_CLEAR rows of paper) and
+  // is long enough to be a range (RIDGE_MIN px; farther ranges longer; hills RIDGE_MIN_HILLS)
+  for (const r of strokes) r.n = r.piece.length;
+  strokes.sort((p, q) => q.n - p.n);
+  const taken = new Uint8Array(N);
+  for (let i = 0; i < N; i++) if (kind[i] === 2 && Zb[i] > 30) taken[i] = 1;
+  for (const r of strokes) {
+    let ok = r.n >= (r.z > 70 ? RIDGE_MIN * 1.4 : r.z > 45 ? RIDGE_MIN : RIDGE_MIN_HILLS);
+    if (ok) {
+      let clash = 0;
+      for (const i of r.piece) for (const d of RIDGE_CLEAR) if (taken[i + d * W]) { clash++; break; }
+      ok = clash <= r.n * 0.2;
+    }
+    if (ok) for (const i of r.piece) { kind[i] = 2; taken[i] = 1; if (SRC && !SRC[i]) SRC[i] = 2; }
+  }
+  // the ranges' spurs and creases: pieces of FOLD_MIN px or more
+  FADE_STATS.folds = folds.map(fo => [fo.n, fo.tall, Math.round(fo.x), +fo.z.toFixed(1)]);
+  for (const fo of folds) for (const i of fo.piece) kind[i] = fo.n >= FOLD_MIN ? 2 : 0;
+
+  // 6. out: the ink (main lines nearest us two pixels: the line and the pixel under it, if that is land
+  // and no line), the stage, the paper
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     if (!mask[i]) continue;
     const Z = Zb[i], X = Xb[i];
-    // the main lines nearest us are two pixels: the line and the pixel under it (if that is land)
     let ink = kind[i] ? 1 : 0;
-    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < 6 && Zb[i] < Zb[i - W] * 1.4) ink = 1;
+    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < 6 && Zb[i] < Zb[i - W] * 1.4 && !(y < H - 1 && kind[i + W])) ink = 1;
     // which blocks are gone here: metres past the rim against each block's front (wandering with the
     // bearing), per piece of land
     const xm = -X * U, zm = Z * U;
@@ -706,19 +922,28 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
       const spread = k === 0 ? 0 : (hash2(pxc, pzc, 700 + k) - 0.5) * 2 * PLATE_SPREAD;
       if (past >= PLATE_AT[k] * (0.8 + 0.4 * w) + spread) st = k + 1;
     }
-    // the blind embossing: the land's smoothed slope lit from the sun's side against level ground,
-    // within 5 % (the plain stays level; the ranges' faces read as faces)
-    const emb = clamp((lamA[i] - ly) * (Z > 30 ? 0.5 : 0.35), -0.05, 0.05);
-    // the paper's fibres: long flecks along the sheet and short ones, about 2.5 % either way, fixed to
-    // the land (the canvas moves with it by whole pixels)
-    const fib = ((vnoise(x / 7, y / 1.6, 631) - 0.5) * 0.6 + (vnoise(x / 2.2, y / 1.4, 632) - 0.5) * 0.4) * 0.09;
+    // the blind embossing: the land's smoothed slope lit from the light's side against level ground,
+    // within 5 % (the plain stays level; the ranges' faces read as faces, a little less in the far ones)
+    const mtn = isMtn(mat(i));
+    const emb = Z > 30 ? clamp((lamA[i] - ly) * 25, -1, 1) * (Z > 70 ? 0.04 : 0.05) : clamp((lamA[i] - ly) * 0.35, -0.05, 0.05);
+    // the paper's fibres: long flecks along the sheet and short ones, about 2.5 % either way (less on
+    // the ranges, whose relief carries them), fixed to the land (the canvas moves with it by whole pixels)
+    const fib = clamp(((vnoise(x / 7, y / 1.6, 631) - 0.5) * 0.6 + (vnoise(x / 2.2, y / 1.4, 632) - 0.5) * 0.4) * 0.09, -0.025, 0.025) * (mtn ? 0.35 : 1);
     const o = i * 4;
     out[o] = ink ? 255 : 0;
     out[o + 1] = st * 50;
-    out[o + 2] = Math.round(clamp(128 + (emb + clamp(fib, -0.025, 0.025)) / 0.08 * 120, 0, 255));
+    out[o + 2] = Math.round(clamp(128 + (emb + fib) / 0.08 * 120, 0, 255));
     out[o + 3] = Math.round(hash2(pxc, pzc, 614) * 255);
   }
   return out;
 }
+// the ranges: the relief's smoothing (m); the shortest spur or crease piece cut (px); past FOLD_FAR
+// (units) one spur to a peak and no creases
+const FOLD_SMOOTH = 300, FOLD_MIN = 4, FOLD_FAR = 70, RIDGE_MIN = 10, RIDGE_MIN_HILLS = 16;
+let RIDGE_JUMP = 0.025, RIDGE_JUMP_HILLS = 0.15;
+export function _setRidgeJump(a, b) { RIDGE_JUMP = a; RIDGE_JUMP_HILLS = b; }
+let RIDGE_CLEAR = [-2, -1, 1, 2];
+export function _setRidgeClear(a) { RIDGE_CLEAR = a; }
+export const FADE_STATS = {};
 // the region's rim (vista.py MIST: the mist ellipse round the walkable region)
 const MIST = { cx: -50, cz: 100, rx: 430, rz: 370 };

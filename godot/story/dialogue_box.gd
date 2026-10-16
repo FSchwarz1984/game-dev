@@ -7,6 +7,11 @@ extends Control
 ## (F-3). The name plate sits on the box's top border above the text column, always one line, as wide as
 ## the name. Narration (no speaker) has no card and uses the full width.
 ## Everything is drawn on whole native pixels; the stage scales it by an integer.
+## Staging (docs/design/dialogue-staging.md, StoryUI's Staging): box_offset moves the box with everything in it
+## (框抖); card_offset moves only the portrait's card (D1: the card is the portrait's own acting, the picture never
+## moves inside it). The words and the name plate stay with the box, never with the card, so the card (at most 3 px
+## sideways, 8 px clear of the text column) can never reach them. `staging` draws the dot screen under the portrait
+## and the manga marks over it.
 
 const BOX_W := 624
 const BOX_H := 64
@@ -30,6 +35,9 @@ var name_label: Label
 var portrait_tex: Texture2D = null
 var speaker := ""
 var done := false
+var box_offset := Vector2.ZERO
+var card_offset := Vector2.ZERO
+var staging: Staging = null
 var _blink := 0.0
 var _kind := "pixel"
 
@@ -89,18 +97,19 @@ func show_line(who_name: String, portrait: Texture2D, bbcode: String) -> void:
 func relayout() -> void:
 	var view := get_viewport_rect().size
 	var bw := minf(BOX_W, view.x - 2.0 * BOTTOM)
-	var bx := floorf((view.x - bw) * 0.5)
-	var by := view.y - BOTTOM - BOX_H
+	var bx := floorf((view.x - bw) * 0.5) + box_offset.x
+	var by := view.y - BOTTOM - BOX_H + box_offset.y
 	box = Rect2(bx, by, bw, BOX_H)
 	var has_card := portrait_tex != null
-	card = Rect2(bx + 4, by - CARD_RISE, CARD, CARD) if has_card else Rect2()
-	var tx := card.end.x + 8 if has_card else bx + 12
+	var base_card := Rect2(bx + 4, by - CARD_RISE, CARD, CARD) if has_card else Rect2()
+	card = Rect2(base_card.position + card_offset, base_card.size) if has_card else Rect2()
+	var tx := base_card.end.x + 8 if has_card else bx + 12
 	text.position = Vector2(tx, by + 12)
 	# two lines at the 16-px pitch need 16 + font height (34 px at 12 px); room for that plus slack, ending
 	# above the advance arrow
 	text.size = Vector2(bx + bw - 9 - tx, BOX_H - 22)
 	var nw := ceilf(name_label.get_minimum_size().x)
-	var px := card.end.x + 6 if has_card else bx + 10
+	var px := base_card.end.x + 6 if has_card else bx + 10
 	plate = Rect2(px, by - 8, 15 + nw, 15) if speaker != "" else Rect2()
 	name_label.visible = speaker != ""
 	name_label.position = Vector2(px + 12, by - 9)
@@ -125,7 +134,11 @@ func _draw() -> void:
 		draw_rect(card, BORDER)
 		draw_rect(card.grow(-1), BORDER_IN)
 		draw_rect(card.grow(-2), CARD_BG)
+		if staging != null:
+			staging.draw_under(self, card.position + Vector2(2, 2))
 		draw_texture(portrait_tex, card.position + Vector2(2, 2))
+		if staging != null:
+			staging.draw_over(self, card.position + Vector2(2, 2))
 	if speaker != "":
 		draw_rect(plate, PLATE_BG)
 		draw_rect(plate, BORDER, false, 1.0)

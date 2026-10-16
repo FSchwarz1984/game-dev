@@ -202,7 +202,9 @@ func _find_walkers() -> void:
 		return
 	for k in ["her", "saji"]:
 		var w: Variant = sc.get(k)
-		if w is Object and is_instance_valid(w) and (w as Object).get("pos") != null:
+		# (an unseen walker, the sample's --nochar, bends no grass: grass pressed by no one reads as
+		# something there)
+		if w is Object and is_instance_valid(w) and (w as Object).get("pos") != null and (w as Object).get("ghost") != true:
 			walkers.append(w)
 
 

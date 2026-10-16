@@ -62,11 +62,12 @@ func _ready() -> void:
 
 func _entries() -> Array:
 	var fs := DisplayServer.window_get_mode() in [DisplayServer.WINDOW_MODE_FULLSCREEN, DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN]
+	var calm := GameState.reduce_motion()
 	return [["home", "家一带"], ["lookout", "眺望岩"], ["vista", "序章·树顶远景"], ["gallery", "立绘"],
-		["fullscreen", "窗口" if fs else "全屏"], ["quit", "退出"]]
+		["motion", "减少晃动：开" if calm else "减少晃动：关"], ["fullscreen", "窗口" if fs else "全屏"], ["quit", "退出"]]
 
 
-## After the window mode changed: the fullscreen entry says what it would switch to.
+## After the window mode or a setting changed: those entries say their state.
 func refresh() -> void:
 	var es := _entries()
 	for i in items.size():

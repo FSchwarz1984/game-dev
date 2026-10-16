@@ -8,6 +8,11 @@ extends Control
 ## capture); the first press completes the line, the next one moves on. Hold to fast-forward.
 ##   await ui.say([{"who": "saji", "text": "……", "face": "smile"}, {"who": "narr", "text": "..."}])
 ## Timed text waits on the game clock: `wait` is the director's wait.
+## Staging (docs/design/dialogue-staging.md, G5R3-19): a line's text may carry the staging tags ([抖]..[/抖], [框抖],
+## [漫符:汗], [停0.5], ...; see Staging). They are read before anything is escaped, typed out on the line's own
+## schedule, and fire when the typing reaches them; a new face brings its default beat. The view behind shakes
+## through `view_shake` (the stage's whole-pixel offset), the flash goes to the Cinema layer under the words.
+## GameState's "reduce_motion" (减少晃动) turns every movement and the flash off.
 
 signal dialogue_closed
 
@@ -17,19 +22,20 @@ const CAST := {
 	"shione": {"name": "垣外しをね", "kana": "かいと しおね", "voice": "shione"},
 	"narr": {"name": "", "kana": "", "voice": ""},
 }
-const PAUSE_SHORT := "，、,"
-const PAUSE_LONG := "。！？…—!?"
 const SILENT := "，。、！？…—「」（）『』 ,.!?"
 
 var cinema: Cinema
 var dlg: DialogueBox
 var wait: Callable
+## Called with the view's shake (Vector2i, whole native px) whenever it changes; the game points it at its stage.
+var view_shake: Callable
+var stg := Staging.new()
+var shake_fx := PixelShake.new()
+var wave_fx := PixelWave.new()
+var _view_off := Vector2i.ZERO
 var kind := "pixel"
 var _lines: Array = []
 var _i := 0
-var _shown := 0
-var _total := 0
-var _t := 0.0
 var _open := false
 var _holds := 0
 var _labels: Dictionary = {}     # "card", "card_sub", "title", "title_sub", "sub", "bark"
@@ -42,6 +48,9 @@ func _init() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	dlg = DialogueBox.new()
+	dlg.staging = stg
+	dlg.text.install_effect(shake_fx)
+	dlg.text.install_effect(wave_fx)
 	add_child(dlg)
 	for key in ["card", "card_sub", "title", "title_sub", "sub", "bark"]:
 		var l := Label.new()
@@ -92,6 +101,7 @@ func say(lines: Array) -> void:
 	_lines = lines
 	_i = 0
 	_open = true
+	stg.reset()
 	InputRouter.capture_all = true
 	Audio.duck(0.35, 0.3)
 	_show_line()
@@ -102,13 +112,15 @@ func _show_line() -> void:
 	var line: Dictionary = _lines[_i]
 	var who := String(line.get("who", "narr"))
 	var cast: Dictionary = CAST.get(who, CAST["narr"])
+	var face := String(line.get("face", "neutral"))
 	var tex: Texture2D = null
 	if cast["name"] != "":
-		tex = portrait(who, String(line.get("face", "neutral")))
-	dlg.show_line(String(cast["name"]), tex, _bbcode(String(line.get("text", ""))))
-	_total = dlg.text.get_total_character_count()
-	_shown = 0
-	_t = 0.0
+		tex = portrait(who, face)
+	var parsed := Staging.parse(String(line.get("text", "")))
+	stg.reduce_motion = GameState.reduce_motion()
+	stg.begin(who, face, parsed, tex != null, bool(line.get("slow", false)))
+	dlg.show_line(String(cast["name"]), tex, _colour(String(parsed["bb"])))
+	_apply_staging()
 
 
 ## The pixel portrait of a cast member's expression (art/portraits/<who>/<face>.png), or neutral.
@@ -120,9 +132,14 @@ static func portrait(who: String, face: String) -> Texture2D:
 	return null
 
 
-## 「重」 and the other quality names take their quality's colour; nothing else is markup.
+## 「重」 and the other quality names take their quality's colour; the rest of the markup is the staging's.
 static func _bbcode(text: String) -> String:
-	var out := text.replace("[", "[lb]")
+	return _colour(String(Staging.parse(text)["bb"]))
+
+
+## Colours the quality names in BBCode whose words are already escaped.
+static func _colour(bb: String) -> String:
+	var out := bb
 	for k in Qualities.ALL:
 		var kj := Qualities.kanji(k)
 		out = out.replace("「%s」" % kj, "[color=%s]「%s」[/color]" % [Qualities.INFO[k]["color"], kj])
@@ -134,17 +151,15 @@ func advance() -> void:
 	if not _open:
 		return
 	if not dlg.done:
-		_shown = _total
+		stg.complete()
 		dlg.text.visible_characters = -1
 		dlg.done = true
+		_apply_staging()
 		return
 	Audio.sfx("ui")
 	_i += 1
 	if _i >= _lines.size():
-		_open = false
-		dlg.visible = false
-		InputRouter.capture_all = false
-		Audio.duck(0.0, 0.5)
+		_finish()
 		if wait.is_valid():
 			await wait.call(0.12)
 		dialogue_closed.emit()
@@ -152,27 +167,41 @@ func advance() -> void:
 		_show_line()
 
 
+## Close the dialogue now, wherever it is (a page that shows a dialogue and is left mid-way).
+func close() -> void:
+	if not _open:
+		return
+	_finish()
+	dialogue_closed.emit()
+
+
+func _finish() -> void:
+	_open = false
+	dlg.visible = false
+	InputRouter.capture_all = false
+	Audio.duck(0.0, 0.5)
+	stg.end()
+	_apply_staging()
+
+
 func update(dt: float) -> void:
-	if _open and not dlg.done:
+	if _open:
 		var line: Dictionary = _lines[_i]
-		var plain := dlg.text.get_parsed_text()
 		var who := String(line.get("who", "narr"))
 		var voice := String(CAST.get(who, CAST["narr"])["voice"])
-		_t += dt * (3.0 if InputRouter.fast_held() else 1.0)
-		var cps := 14.0 if line.get("slow", false) else 30.0
-		while _t > 1.0 / cps and _shown < _total:
-			var c := plain[_shown] if _shown < plain.length() else ""
-			_t -= 1.0 / cps
-			_shown += 1
-			if PAUSE_SHORT.contains(c):
-				_t -= 0.09
-			elif PAUSE_LONG.contains(c):
-				_t -= 0.22
-			if voice != "" and c != "" and not SILENT.contains(c) and _shown % 2 == 1:
-				Audio.blip(voice, _shown)
-		dlg.text.visible_characters = _shown
-		if _shown >= _total:
-			dlg.done = true
+		stg.reduce_motion = GameState.reduce_motion()
+		var typed := stg.step(dt, 3.0 if InputRouter.fast_held() else 1.0)
+		for e in typed:
+			var c := String(e[1])
+			var n := int(e[0]) + 1
+			if voice != "" and not SILENT.contains(c) and n % 2 == 1:
+				Audio.blip(voice, n)
+		if not dlg.done:
+			dlg.text.visible_characters = stg.shown
+			if stg.typed_out:
+				dlg.text.visible_characters = -1
+				dlg.done = true
+		_apply_staging()
 	for key in _alpha:
 		var a: Array = _alpha[key]
 		a[0] = move_toward(a[0], a[1], dt / maxf(0.05, a[2]))
@@ -256,6 +285,31 @@ func letterbox(on: bool) -> void:
 		cinema.letterbox(on)
 
 
+## Puts the staging's state of this frame on the screen: the box's and the card's offsets, the view's shake, the
+## flash, whether the shaky and wavy words still move, and the marks (redrawn every frame while a line is up).
+func _apply_staging() -> void:
+	var b := stg.box_offset() if _open else Vector2.ZERO
+	var c := stg.card_offset() if _open else Vector2.ZERO
+	if b != dlg.box_offset or c != dlg.card_offset:
+		dlg.box_offset = b
+		dlg.card_offset = c
+		dlg.relayout()
+	var v := stg.view_offset() if _open else Vector2i.ZERO
+	if v != _view_off:
+		_view_off = v
+		if view_shake.is_valid():
+			view_shake.call(v)
+	if cinema != null:
+		cinema.set_flash(stg.flash_alpha() if _open else 0.0)
+	var moving := _open and stg.text_moving()
+	shake_fx.active = moving
+	wave_fx.active = moving
+	shake_fx.t = stg.time
+	wave_fx.t = stg.time
+	if _open:
+		dlg.queue_redraw()
+
+
 ## For the debug bridge.
 func snapshot() -> Dictionary:
 	var out := {"open": _open, "blocking": blocking, "fade": cinema.fade_alpha if cinema != null else 0.0,
@@ -267,8 +321,8 @@ func snapshot() -> Dictionary:
 				"rect": [l.position.x, l.position.y, l.size.x, l.size.y]}
 	if _open:
 		var line: Dictionary = _lines[_i]
-		out.merge({"who": line.get("who", "narr"), "index": _i, "count": _lines.size(), "shown": _shown,
-			"total": _total, "done": dlg.done, "text": String(line.get("text", "")),
+		out.merge({"who": line.get("who", "narr"), "index": _i, "count": _lines.size(), "shown": stg.shown,
+			"total": stg.total, "done": dlg.done, "text": String(line.get("text", "")), "staging": stg.snapshot(),
 			"box": [dlg.box.position.x, dlg.box.position.y, dlg.box.size.x, dlg.box.size.y],
 			"card": [dlg.card.position.x, dlg.card.position.y, dlg.card.size.x, dlg.card.size.y],
 			"text_rect": [dlg.text.position.x, dlg.text.position.y, dlg.text.size.x, dlg.text.size.y]})

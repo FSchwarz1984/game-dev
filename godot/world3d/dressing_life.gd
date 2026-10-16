@@ -194,7 +194,9 @@ func _process(delta: float) -> void:
 		var sc := get_tree().current_scene
 		if sc:
 			var h: Variant = sc.get("her")
-			if h is Object and is_instance_valid(h) and (h as Object).get("pos") != null:
+			# (an unseen walker, the sample's --nochar: the hens and the crows take no notice of
+			# her; running from no one reads as something there)
+			if h is Object and is_instance_valid(h) and (h as Object).get("pos") != null and (h as Object).get("ghost") != true:
 				_her = h
 			var b: Variant = sc.get("blockers")
 			if b is Array:

@@ -70,6 +70,7 @@ def fields(L, W, F, Xs, Zs, Hs, cs, seed):
     edge = F.get("edge_k", zero)
     tread = F.get("tread_k", zero)
     dens = np.maximum(dens, 0.42 * edge * (1.0 - tread) * (1.0 - 0.6 * geom.smoothstep(0.3, 0.9, canopy)) * (1.0 - geom.smoothstep(0.15, 0.6, pave)))
+    dens *= 1.0 - F.get("kerb_k", zero)          # (and never over the kerb stones)
     dens *= 1.0 - geom.smoothstep(0.15, 0.6, pave)
     dens *= 1.0 - geom.smoothstep(0.2, 0.6, stone)
     dens *= 1.0 - yard * 0.97

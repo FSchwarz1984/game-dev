@@ -110,7 +110,7 @@ export function bakeSouth(o = {}) {
   }
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
   // the far as plates peeled (G5R3-18): the key block's lines and how far each place ends up gone
-  const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f, sun.dir);
+  const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f, sun.dir, cam);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
   const RIV = PL.RIVER, near = [];
   for (let i = 0; i < RIV.length; i++) if (Math.hypot(RIV[i][0] - PL.TOWN.X, RIV[i][1] - PL.TOWN.Z) < 3.4) near.push(i);

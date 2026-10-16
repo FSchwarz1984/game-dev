@@ -9,6 +9,8 @@ extends Node
 ##   font_theme      "pixel" (Fusion Pixel 12px) or "vector" (Noto Serif SC), pending.
 ##   body_profile    a BodyRules profile: "draft" (pending) or "legacy" (the JS segment 1 body).
 ##   touch_ui        "auto" (on for phones and after a real touch), "on", "off".
+##   reduce_motion   减少晃动 (docs/design/dialogue-staging.md D6): no shaking, hopping or flashing in dialogue; off
+##                    by default.
 ## Settings persist through Save ("settings" slot); flags are part of the game save.
 
 signal settings_changed(key: String, value)
@@ -19,6 +21,7 @@ const DEFAULT_SETTINGS := {
 	"font_theme": "pixel",
 	"body_profile": "draft",
 	"touch_ui": "auto",
+	"reduce_motion": false,
 	"long_press_s": 0.34,
 	"swipe_px": 14.0,
 	"vol_master": 1.0,
@@ -49,9 +52,10 @@ func _ready() -> void:
 
 
 ## Command-line overrides for checking (after "--"): --scheme=explicit|obvious,
-## --font=pixel|vector, --body=draft|legacy, --touch-ui=on|off|auto. Not saved.
+## --font=pixel|vector, --body=draft|legacy, --touch-ui=on|off|auto, --reduce-motion=on|off. Not saved.
 func _apply_cmdline() -> void:
-	var names := {"scheme": "control_scheme", "font": "font_theme", "body": "body_profile", "touch-ui": "touch_ui"}
+	var names := {"scheme": "control_scheme", "font": "font_theme", "body": "body_profile", "touch-ui": "touch_ui",
+		"reduce-motion": "reduce_motion"}
 	for a in OS.get_cmdline_user_args():
 		var kv := a.trim_prefix("--").split("=", true, 1)
 		if kv.size() == 2 and names.has(kv[0]):
@@ -72,6 +76,14 @@ func set_setting(key: String, value) -> void:
 	settings[key] = value
 	Save.write("settings", settings)
 	settings_changed.emit(key, value)
+
+
+## 减少晃动: the setting as a bool (a command-line override is a string: on / 1 / true).
+func reduce_motion() -> bool:
+	var v: Variant = setting("reduce_motion")
+	if v is bool:
+		return v
+	return String(v).to_lower() in ["on", "1", "true", "yes"]
 
 
 func body_profile() -> Dictionary:

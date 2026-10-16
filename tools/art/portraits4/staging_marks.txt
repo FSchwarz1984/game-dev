@@ -1,0 +1,195 @@
+# Manga marks (漫符, docs/design/dialogue-staging.md §2.1) as small pixel sprites with a few frames each, in the
+# style of the marks drawn into the v4 portraits (tools/art/portraits4/edits/_symbols.txt): 1-px ink outline, white
+# fill, the same reds and blues. Built by staging_fx.py. The blush lines and the gloom lines are not here: they are
+# drawn for each face (staging_fx.py), since they must fit its eyes.
+# Blocks: "= NAME FRAME"; rows of keys; '.' transparent. Colours (shared by all three characters):
+k $201114  ink outline
+l $ffffff  white
+g $d7d0de  smoke grey
+x $e23b4e  anger red
+X $931f35  anger red, dark
+c $eef9ff  sweat light
+C $a8d9f2  sweat
+z $5f9fd0  sweat edge
+y $fff1a8  sparkle
+Y $f2c94c  sparkle, warm
+
+# ---- 怒筋 anger: pops in small, then the full mark; pulses (a heavier frame) now and then
+= anger 0
+.XX.XX.
+.Xx.xX.
+XXx.xXX
+.......
+XXx.xXX
+.Xx.xX.
+.XX.XX.
+= anger 1
+..XXX.XXX..
+..XxX.XxX..
+..XxX.XxX..
+XXXxX.XxXXX
+XxxX...XxxX
+...........
+XxxX...XxxX
+XXXxX.XxXXX
+..XxX.XxX..
+..XxX.XxX..
+..XXX.XXX..
+= anger 2
+.XXXX.XXXX.
+.XxxX.XxxX.
+XXxxX.XxxXX
+XxxxX.XxxxX
+XxxX...XxxX
+...........
+XxxX...XxxX
+XxxxX.XxxxX
+XXxxX.XxxXX
+.XxxX.XxxX.
+.XXXX.XXXX.
+
+# ---- 汗滴 sweat: a small bead, the full drop, then it slides down (the player moves the anchor 1 px per step)
+= sweat 0
+.z.
+zCz
+zcz
+.z.
+= sweat 1
+..z..
+..z..
+.zCz.
+zCcCz
+zCccz
+zCCcz
+.zzz.
+
+# ---- 惊叹线 surprise lines: three outlined strokes jump out from beside the head, then settle shorter
+= surprise 0
+.................
+.................
+.......kkk.......
+..kk...klk...kk..
+...kk..kkk..kk...
+= surprise 1
+kk.....kkk.....kk
+klk....klk....klk
+.klk...klk...klk.
+..klk..klk..klk..
+...kk..kkk..kk...
+= surprise 2
+.................
+.kk....kkk....kk.
+..klk..klk..klk..
+...kk..kkk..kk...
+.................
+
+# ---- 问号 question: appears 2 px low and rises into place, then bobs 1 px (the player moves it)
+= question 0
+..kkkkkk..
+.kllllllk.
+kllkkkkllk
+kllk..kllk
+.kk..kllk.
+....kllk..
+....kllk..
+.....kk...
+....kkkk..
+....kllk..
+....kllk..
+....kkkk..
+
+# ---- 闪光 sparkle: a twinkle (dot, cross, star, cross)
+= sparkle 0
+.......
+.......
+.......
+...y...
+.......
+.......
+.......
+= sparkle 1
+.......
+.......
+...y...
+..yly..
+...y...
+.......
+.......
+= sparkle 2
+...Y...
+...y...
+...l...
+YylllyY
+...l...
+...y...
+...Y...
+= sparkle 3
+.......
+...y...
+...l...
+.yllly.
+...l...
+...y...
+.......
+
+# ---- 叹气的烟 sigh: a puff comes out and drifts away, thinning
+= sigh 0
+.kk.
+kllk
+.kk.
+= sigh 1
+.kkk.
+klllk
+klggk
+.kkk.
+= sigh 2
+..kkkk..
+.kllllk.
+kllllllk
+kggllggk
+.kkkkkk.
+= sigh 3
+..k..k..
+.kl..lk.
+k......k
+.kg..gk.
+..k..k..
+
+# ---- 音符 note: an eighth note that sways (two drawn leans, no rotation)
+= note 0
+....kk..
+....klkk
+....kllk
+....kk.k
+....k...
+.kkkk...
+kllllk..
+kllllk..
+.kkkk...
+= note 1
+.....kk.
+.....klk
+....kkllk
+....kk..k
+....k....
+.kkkk....
+kllllk...
+kllllk...
+.kkkk....
+
+# ---- …… ellipsis over the head: the dots come one by one
+= dots 0
+.kk.........
+kllk........
+kllk........
+.kk.........
+= dots 1
+.kk..kk.....
+kllkkllk....
+kllkkllk....
+.kk..kk.....
+= dots 2
+.kk..kk..kk.
+kllkkllkkllk
+kllkkllkkllk
+.kk..kk..kk.

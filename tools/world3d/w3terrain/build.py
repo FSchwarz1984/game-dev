@@ -279,6 +279,17 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     F["trail_k"] = trail_k
     F["pave_k"] = pave_k
     F["stone_k"] = stone_k
+    # the kerb stones the roads laid (roads.KERB): the sward keeps off them, so they show
+    kerb = np.zeros_like(Hs)
+    cs_ = float(Xs[0, 1] - Xs[0, 0])
+    for (kx, kz, kr) in RO.KERB:
+        i0 = max(int((kx - kr - 0.3 - Xs[0, 0]) / cs_), 0); i1 = min(int((kx + kr + 0.3 - Xs[0, 0]) / cs_) + 2, Hs.shape[1])
+        j0 = max(int((kz - kr - 0.3 - Zs[0, 0]) / cs_), 0); j1 = min(int((kz + kr + 0.3 - Zs[0, 0]) / cs_) + 2, Hs.shape[0])
+        if i1 <= i0 or j1 <= j0:
+            continue
+        dd = np.hypot(Xs[j0:j1, i0:i1] - kx, Zs[j0:j1, i0:i1] - kz)
+        kerb[j0:j1, i0:i1] = np.maximum(kerb[j0:j1, i0:i1], geom.smoothstep(kr + 0.15, kr, dd))
+    F["kerb_k"] = kerb
     F["gutter_k"] = gutter_k
     F["ditch_k"] = ditch_k
     F["border_k"] = border_k

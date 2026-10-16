@@ -21,6 +21,10 @@ extends Control
 ##
 ## The world viewport has its own World3D: the WorldEnvironment (2D HDR glow, tonemap) applies to
 ## the world only, never to text and UI drawn above it.
+##
+## Shake (the dialogue's 震屏, docs/design/dialogue-staging.md §2.3, D5): `shake` moves the shown world by whole
+## native pixels, nothing above it (HUD, dialogue box, words) moves. The world viewport draws SHAKE_MARGIN extra
+## pixels round the canvas, so a shaken view never shows an empty edge; the HUD's projection ignores the shake.
 
 signal logical_resized(size: Vector2)
 
@@ -29,6 +33,9 @@ const BASE := Vector2(640, 360)
 const MIN_W := 400.0
 ## The rule before 2026-10-15 (the 2D prologue vista is drawn for it).
 const LEGACY_BASE := Vector2(480, 270)
+## World pixels drawn beyond the canvas on every side (beside the 1-px border the sub-pixel offset needs), so the
+## view can be shaken this far. The dialogue's view shake (Staging.VIEW_TRACK) goes up to 4.
+const SHAKE_MARGIN := 6
 
 var world_vp: SubViewport
 var world_root: Node2D
@@ -40,6 +47,14 @@ var logical := BASE
 var margin := Vector2.ZERO        # window px of the logical canvas's top-left corner
 var render_cam := Vector2.ZERO    # the camera position actually rendered this frame (world px)
 var hdr := true
+## The view's shake this frame, whole native px (|x|, |y| <= SHAKE_MARGIN); set by the story layer. It takes effect
+## at once (the story updates after the camera in the frame) and apply_camera() keeps it.
+var shake := Vector2i.ZERO:
+	set(v):
+		var nv := v.clamp(-Vector2i.ONE * SHAKE_MARGIN, Vector2i.ONE * SHAKE_MARGIN)
+		if view != null:
+			view.position += Vector2(nv - shake)
+		shake = nv
 
 
 func _init() -> void:
@@ -125,7 +140,7 @@ func fit() -> void:
 		win.content_scale_size = cs
 	logical = Vector2(cs)
 	margin = ((size - logical * s) * 0.5).round()
-	world_vp.size = cs + Vector2i(2, 2)
+	world_vp.size = cs + Vector2i(2, 2) * (1 + SHAKE_MARGIN)
 	view.size = Vector2(world_vp.size)
 	cam.view = logical
 	logical_resized.emit(logical)
@@ -133,14 +148,16 @@ func fit() -> void:
 
 ## Applies the camera to this frame: the integer part into the world's canvas, the remainder (in
 ## whole screen pixels) into the view's offset. The game calls it after moving things and before
-## the HUD projects anything, so the HUD and the world agree on the same frame.
+## the HUD projects anything, so the HUD and the world agree on the same frame. The shake is added
+## to the shown view only.
 func apply_camera() -> void:
 	var c := cam.pos
 	var ci := c.round()
 	var frac := ((c - ci) * scale_factor).round() / float(scale_factor)
 	render_cam = ci + frac
-	world_vp.canvas_transform = Transform2D(0.0, -ci + (logical * 0.5).floor() + Vector2.ONE)
-	view.position = -Vector2.ONE - frac
+	var pad := Vector2.ONE * (1 + SHAKE_MARGIN)
+	world_vp.canvas_transform = Transform2D(0.0, -ci + (logical * 0.5).floor() + pad)
+	view.position = -pad - frac + Vector2(shake)
 
 
 ## World pixels -> logical screen pixels (where the HUD draws), for the frame being rendered.

@@ -11,6 +11,11 @@
 #    through the mist's white), hold D (she turns her head west), hold A (back east and, held
 #    against the end, round to the look back home; held until the game's log shows the home
 #    bearing), then W 1.2 s (the top-down view comes back, she walks on north).
+# N: --nochar (G5R3-21, the Windows build without characters): from the hut door a loop round the
+#    home (the yard's west side and back), then down the spur to the lookout rock, steered with held
+#    keys from the game's own log of where she is (as a player steers by the screen); standing still
+#    there the view comes in; hold D (her head turns west), then S (the top-down view comes back).
+#    Not in the default set: CASES=N.
 # Screens: <out>/A_*.png, <out>/B_*.png, <out>/C_*.png (import -window root); logs: <out>/?.log.
 # (round 4: the check runs without the VoxelGI bake, the volumetric fog, SSAO and the sun's shadow
 # map, --gi=none --vfog=0 --ssao=0 --noshadow: on the software rasteriser the full picture runs at
@@ -45,6 +50,42 @@ run_case() {
 }
 
 shot() { DISPLAY="$CASE_DISP" import -window root "$OUT/$1.png"; echo "MARK $1 $(date +%s.%N)" >> "$OUT/marks.txt"; }
+# walk_to <case> <x> <z> [max s]: hold the movement keys toward (x, z), changing them as the game's
+# log shows where she is (keys only, through XTEST); when she stops moving (a post, a corner) add
+# the key across the way for a moment, as a player does
+walk_to() {
+	local log="$OUT/$1.log" tx="$2" tz="$3" max="${4:-25}"
+	local t0; t0=$(date +%s)
+	local held="" px="" pz="" pt; pt=$(date +%s.%N) side=""
+	while :; do
+		local line x z want
+		line=$(grep "^POS" "$log" | tail -1)
+		x=$(sed -n 's/.*her=(\([-0-9.]*\), \([-0-9.]*\)).*/\1/p' <<< "$line")
+		z=$(sed -n 's/.*her=(\([-0-9.]*\), \([-0-9.]*\)).*/\2/p' <<< "$line")
+		[ -z "$x" ] && { sleep 0.2; continue; }
+		want=$(awk -v x="$x" -v z="$z" -v tx="$tx" -v tz="$tz" 'BEGIN{dx=tx-x; dz=tz-z; d=sqrt(dx*dx+dz*dz);
+			if (d < 0.7) { print "done"; exit } k="";
+			if (dx > 0.38*d) k=k" d"; if (dx < -0.38*d) k=k" a"; if (dz > 0.38*d) k=k" s"; if (dz < -0.38*d) k=k" w"; print k}')
+		[ "$want" = "done" ] && break
+		(( $(date +%s) - t0 > max )) && { echo "walk_to $tx,$tz: gave up at $x,$z"; break; }
+		# stalled for a second and a half: the key across the way, for a moment
+		if [ -n "$px" ] && awk -v a="$px" -v b="$pz" -v x="$x" -v z="$z" 'BEGIN{exit !((x-a)^2+(z-b)^2 < 0.02)}'; then
+			if awk -v a="$pt" -v b="$(date +%s.%N)" 'BEGIN{exit !(b - a > 1.5)}'; then
+				side=$([[ "$want" == *d* || "$want" == *a* ]] && echo s || echo d)
+				pt=$(date +%s.%N)
+			fi
+		else
+			px="$x"; pz="$z"; pt=$(date +%s.%N); side=""
+		fi
+		[ -n "$side" ] && want="$want $side"
+		for k in $held; do [[ " $want " == *" $k "* ]] || DISPLAY="$CASE_DISP" xdotool keyup "$k"; done
+		for k in $want; do [[ " $held " == *" $k "* ]] || DISPLAY="$CASE_DISP" xdotool keydown "$k"; done
+		held="$want"
+		sleep 0.15
+	done
+	for k in $held; do DISPLAY="$CASE_DISP" xdotool keyup "$k"; done
+	grep "^POS" "$log" | tail -1
+}
 hold() { local t="$1"; shift; DISPLAY="$CASE_DISP" xdotool keydown "$@"; sleep "$t"; DISPLAY="$CASE_DISP" xdotool keyup "$@"; }
 finish() { kill "$CASE_GP" 2>/dev/null; sleep 0.5; kill "$CASE_XP" 2>/dev/null; }
 
@@ -104,6 +145,43 @@ hold_until d 3 "y > 195"; sleep 0.8; shot D_2_after_D
 hold_until a 15 "y <= 60.5"; sleep 2.5; shot D_3_after_A_home
 hold 1.2 w; sleep 2.5; shot D_4_after_W
 finish
+fi
+if [[ "$CASES" == *N* ]]; then
+# ---- N: no characters (--nochar): round the home, down to the lookout, the view
+run_case N --nochar --hours=12.5
+shot N_0_hut_door
+walk_to N -15.0 11.4; shot N_1_through_the_gate
+walk_to N -11.0 11.6; shot N_2_yard
+walk_to N -11.4 15.0
+walk_to N -13.0 12.6
+walk_to N -15.0 11.4
+walk_to N -18.0 13.0; shot N_3_back_by_the_hut
+walk_to N -19.6 18.0
+walk_to N -17.6 20.8
+walk_to N -19.0 26.0
+walk_to N -21.4 30.6; shot N_4_down_the_spur
+walk_to N -21.8 34.0
+walk_to N -22.6 38.2
+walk_to N -23.5 41.9; shot N_5_on_the_rock
+for _ in $(seq 1 300); do grep -q "VISTA on" "$OUT/N.log" 2>/dev/null && break; sleep 0.1; done
+for _ in $(seq 1 600); do grep -q "VISTA built" "$OUT/N.log" 2>/dev/null && break; sleep 0.1; done
+sleep 3; shot N_6_looking_out
+hold_until_n() { # key, max seconds, awk condition on the yaw of the last "vista=true" POS line
+	local key="$1" max="$2" cond="$3"
+	DISPLAY="$CASE_DISP" xdotool keydown "$key"
+	local t0; t0=$(date +%s.%N)
+	while :; do
+		local y; y=$(grep "vista=true" "$OUT/N.log" | tail -1 | sed -n 's/.*yaw=\([-0-9.]*\).*/\1/p')
+		[ -n "$y" ] && awk -v y="$y" "BEGIN{exit !($cond)}" && break
+		awk -v a="$t0" -v b="$(date +%s.%N)" -v m="$max" 'BEGIN{exit !(b - a > m)}' && break
+		sleep 0.1
+	done
+	DISPLAY="$CASE_DISP" xdotool keyup "$key"
+}
+hold_until_n d 6 "y > 200"; sleep 1.0; shot N_7_after_D
+hold 1.2 s; sleep 3; shot N_8_after_S
+finish
+grep -h "POS\|VISTA\|AUDIO\|SCRIPT ERROR\|SHADER ERROR" "$OUT/N.log" > "$OUT/N_pos.txt"
 fi
 for c in A B C; do [ -f "$OUT/$c.log" ] && grep -h "POS" "$OUT/$c.log" | head -60 > "$OUT/${c}_pos.txt"; done
 [ -f "$OUT/D.log" ] && grep -h "POS\|VISTA" "$OUT/D.log" > "$OUT/D_pos.txt"

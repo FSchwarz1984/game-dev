@@ -3,7 +3,10 @@ extends Control
 ## Letterbox bars and the fade, on their own canvas layer BELOW the HUD and every text layer: a
 ## fade covers the picture and the letterbox, never words (knowledge/09 §1: the JS fade layer once
 ## hid the title drop and the end card). Animated on the game clock through tick(dt).
+## The dialogue's white flash (闪白, docs/design/dialogue-staging.md §2.3) is here too, under the letterbox and the
+## fade: it whitens the picture, never the box, the portrait or a word.
 
+var flash_rect: ColorRect
 var fade_rect: ColorRect
 var bars: Array[ColorRect] = []
 var fade_alpha := 0.0
@@ -19,6 +22,11 @@ func _init() -> void:
 	name = "Cinema"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash_rect = ColorRect.new()
+	flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	flash_rect.color = Color(1, 1, 1, 0)
+	flash_rect.visible = false
+	add_child(flash_rect)
 	for i in 2:
 		var b := ColorRect.new()
 		b.color = Color8(7, 8, 11)
@@ -37,6 +45,14 @@ func fade_to(alpha: float, dur: float, color: Color) -> void:
 	_fade_t = 0.0
 	_fade_dur = maxf(0.0001, dur)
 	fade_rect.color = Color(color.r, color.g, color.b, fade_alpha)
+
+
+## The flash's whiteness now (0: none); StoryUI sets it every frame from its staging.
+func set_flash(alpha: float) -> void:
+	flash_rect.visible = alpha > 0.0
+	flash_rect.color.a = alpha
+	flash_rect.position = Vector2.ZERO
+	flash_rect.size = get_viewport_rect().size
 
 
 func letterbox(on: bool) -> void:

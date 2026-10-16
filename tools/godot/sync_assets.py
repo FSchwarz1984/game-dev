@@ -88,6 +88,21 @@ def portraits():
     man = os.path.join(pixel, "portraits.json")
     if os.path.isfile(man):
         shutil.copyfile(man, os.path.join(out, "portraits.json"))
+    # the dialogue staging's pictures (manga marks, per-face gloom, blush and focus lines, the dot screen;
+    # tools/art/portraits4/staging_fx.py, docs/design/dialogue-staging.md)
+    src = os.path.join(pixel, "staging")
+    if os.path.isdir(src):
+        dst_dir = os.path.join(out, "staging")
+        os.makedirs(dst_dir, exist_ok=True)
+        wanted = {f for f in os.listdir(src) if f.endswith((".png", ".json"))}
+        for f in sorted(wanted):
+            shutil.copyfile(os.path.join(src, f), os.path.join(dst_dir, f))
+        for f in sorted(os.listdir(dst_dir)):
+            base = f[:-len(".import")] if f.endswith(".import") else f
+            if base not in wanted:
+                os.remove(os.path.join(dst_dir, f))
+                print("removed stale staging file", f)
+        print("staging", len(wanted), "files <-", os.path.relpath(src, ROOT))
 
 
 def icon():
