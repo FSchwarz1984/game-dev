@@ -175,10 +175,10 @@ class Check:
         self.focus()
         self.menu_to(0)
         self.wait_loaded("home", timeout=300)
-        self.hold("d", 2.0)
+        self.hold("d", 12.0)        # wine with software Vulkan: a frame every few seconds
         self.shot("home_walked_right", must_change=True)
         self.key("4")
-        time.sleep(3)
+        time.sleep(20)
         self.shot("home_night", must_change=True)
         self.key("Escape")
         self.wait_loaded("menu_again", timeout=120)
