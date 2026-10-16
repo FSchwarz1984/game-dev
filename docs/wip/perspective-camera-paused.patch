@@ -1,0 +1,1017 @@
+diff --git a/godot/project.godot b/godot/project.godot
+index 0404f89..ef6a754 100644
+--- a/godot/project.godot
++++ b/godot/project.godot
+@@ -144,6 +144,10 @@ w3_fill={
+ "type": "vec3",
+ "value": Vector3(0, 0, 0)
+ }
++w3_cam={
++"type": "vec4",
++"value": Vector4(0, 0, 0, 0)
++}
+ w3_canopy={
+ "type": "sampler2D",
+ "value": ""
+@@ -152,3 +156,7 @@ w3_canopy_frame={
+ "type": "vec4",
+ "value": Vector4(0, 0, 0, 0)
+ }
++w3_dbg={
++"type": "float",
++"value": 0.0
++}
+diff --git a/godot/render3d/pixel_view3d.gd b/godot/render3d/pixel_view3d.gd
+index e172211..921eb24 100644
+--- a/godot/render3d/pixel_view3d.gd
++++ b/godot/render3d/pixel_view3d.gd
+@@ -5,11 +5,14 @@ extends Control
+ ## The world renders into a low-res SubViewport at the native size (640x360: 720p x2, 1080p x3, 1440p
+ ## x4, 4K x6; the canvas follows the window like the 2D core's PixelStage, see fit()) plus a 1-pixel
+ ## border. 1 m = 30 native px (PPM) on the camera's picture plane.
+-## An orthographic camera with fixed yaw (north up) and a fixed pitch looks at it; the camera is
+-## snapped to whole native texels in view space and the sub-pixel remainder shifts the upscaled
+-## image (in whole window pixels), so following is smooth while every texel stays on the world's
+-## pixel lattice (no shimmer). Outlines and fog are a screen post per
+-## outline class (stencil-gated quads, see shaders/post_*.gdshader); grading is the composite.
++## A camera with fixed yaw (north up) and a fixed pitch looks at it: perspective since round 5
++## (G5R3-27, the user: "把正交視角改為透視視角"; PRESETS, V cycles them in the sample), the old
++## orthographic one as the last preset. The camera is snapped to whole native texels of the focus
++## plane (the layer at her feet) and the sub-pixel remainder shifts the upscaled image (in whole
++## window pixels), so following is smooth while the focus plane stays on the world's pixel lattice
++## (no shimmer there; nearer and farther layers move by fractions of a pixel: parallax). Outlines and
++## fog are a screen post per outline class (stencil-gated quads, see shaders/post_*.gdshader);
++## grading is the composite.
+ ##
+ ## Camera space here is "screen px": native pixels, x east, y up the screen (w3_screen() in the
+ ## shaders), independent of where the camera is.
+@@ -20,6 +23,26 @@ const BASE := Vector2(640, 360)
+ const PPM := 30.0
+ 
+ @export var pitch_deg := 55.0
++
++## The camera presets (G5R3-27). fov: the vertical field of view in degrees (0: orthographic, the
++## old camera); pitch: down from the horizon; lean: the share of the orthographic lean-back
++## (tan(pitch / 2), w3_lean) that upright things keep (it made up for the orthographic view's squashed
++## verticals; a perspective view shows height by itself, and a full lean would tip near things
++## back). At the focus 1 m is PPM px in every preset: the camera stands (half the view's height in
++## metres) / tan(fov / 2) away (P2 about 28 m, P1 57 m, P3 17.5 m). The first is the default.
++const PRESETS := [
++	{"key": "P2", "name": "P2 中焦 24°", "fov": 24.0, "pitch": 50.0, "lean": 0.3},
++	{"key": "P1", "name": "P1 近正交 12°", "fov": 12.0, "pitch": 55.0, "lean": 0.6},
++	{"key": "P3", "name": "P3 广角 38°", "fov": 38.0, "pitch": 45.0, "lean": 0.0},
++	{"key": "ORTHO", "name": "正交（旧）", "fov": 0.0, "pitch": 55.0, "lean": 1.0},
++]
++signal preset_changed(index: int, name: String)
++## The class's own default is the old orthographic camera (the tools: asset previews, the
++## character lab); the sample (the game) selects P2 (sample.gd --camera=).
++const ORTHO := 3
++var preset := ORTHO
++var fov_deg := 0.0                 # 0: orthographic
++var lean := 1.0
+ ## Dev previews only (asset checks of tall trees): a fixed integer scale instead of the rule.
+ var force_scale := 0
+ 
+@@ -57,6 +80,68 @@ func set_camera_distance(d: float) -> void:
+ 	cam.far = d + 70.0
+ 
+ 
++## Choose a camera preset before the view is in the tree (index into PRESETS, wraps): only the
++## numbers; _ready() fits the camera to them.
++func select_preset(i: int) -> void:
++	preset = posmod(i, PRESETS.size())
++	var p: Dictionary = PRESETS[preset]
++	pitch_deg = float(p["pitch"])
++	lean = float(p["lean"])
++	fov_deg = float(p["fov"])
++
++
++## Switch to a camera preset while running (V in the sample). Keeps the focus where it is.
++func set_preset(i: int) -> void:
++	select_preset(i)
++	_fit_camera()
++	apply_view_globals()
++	if is_inside_tree():
++		apply_camera()
++	preset_changed.emit(preset, preset_name())
++
++
++func preset_key(key: String) -> int:
++	for i in PRESETS.size():
++		if String(PRESETS[i]["key"]).to_lower() == key.to_lower():
++			return i
++	return -1
++
++
++func preset_name() -> String:
++	return String(PRESETS[preset]["name"])
++
++
++func is_perspective() -> bool:
++	return fov_deg > 0.0
++
++
++## The lean-back of upright things per metre of height (w3_view.w): tan(pitch / 2) x the preset's
++## share. Whatever places things by hand where the shaders lean them (hung lanterns, glints, the
++## crows on the limbs) uses this.
++func lean_k() -> float:
++	return tan(deg_to_rad(pitch_deg) * 0.5) * lean
++
++
++## How far the sun's shadow map has to reach from the camera to cover what the view shows.
++func shadow_distance() -> float:
++	return cam_distance + 45.0 if is_perspective() else 48.0
++
++
++func _fit_camera() -> void:
++	if is_perspective():
++		cam.projection = Camera3D.PROJECTION_PERSPECTIVE
++		cam.fov = fov_deg
++		cam_distance = (float(vp.size.y) * 0.5 / PPM) / tan(deg_to_rad(fov_deg) * 0.5)
++		cam.near = 0.5
++		cam.far = cam_distance + 150.0
++	else:
++		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
++		cam.size = float(vp.size.y) / PPM
++		cam_distance = 120.0
++		cam.near = 60.0
++		cam.far = 190.0
++
++
+ func _init() -> void:
+ 	name = "PixelView3D"
+ 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+@@ -154,7 +239,7 @@ const CHAR_POST := "res://characters/shaders/char_post.gdshader"
+ 
+ func apply_view_globals() -> void:
+ 	var p := deg_to_rad(pitch_deg)
+-	RenderingServer.global_shader_parameter_set("w3_view", Vector4(PPM, sin(p), cos(p), tan(p * 0.5)))
++	RenderingServer.global_shader_parameter_set("w3_view", Vector4(PPM, sin(p), cos(p), lean_k()))
+ 	cam.rotation = Vector3(-p, 0.0, 0.0)
+ 	# the 3D characters stamp their faces with the same numbers (a global shader parameter cannot be
+ 	# read back at run time)
+@@ -182,7 +267,7 @@ func fit() -> void:
+ 	margin = ((size - logical * s) * 0.5).round()
+ 	vp.size = cs + Vector2i(2, 2)
+ 	view.size = Vector2(vp.size)
+-	cam.size = float(vp.size.y) / PPM
++	_fit_camera()
+ 	composite.set_shader_parameter("view_size", logical)
+ 	logical_resized.emit(logical)
+ 
+@@ -205,8 +290,7 @@ func screen_of(wp: Vector3) -> Vector2:
+ 
+ ## Screen px of a point on an upright object at height h above its base b (the lean applied).
+ func screen_of_upright(base: Vector3, h: float) -> Vector2:
+-	var k := tan(deg_to_rad(pitch_deg) * 0.5)
+-	return screen_of(base + Vector3(0, h, -k * h))
++	return screen_of(base + Vector3(0, h, -lean_k() * h))
+ 
+ 
+ func cam_up() -> Vector3:
+@@ -223,10 +307,31 @@ func px_to_world(d: Vector2) -> Vector3:
+ 
+ ## Logical canvas px (y down, origin top-left: where the HUD draws) of a world point this frame.
+ func world_to_canvas(wp: Vector3) -> Vector2:
++	if is_perspective():
++		# the viewport's pixel, less its 1-px border and the sub-pixel shift of the image
++		return cam.unproject_position(wp) + view.position
+ 	var s := screen_of(wp) - cam_px
+ 	return Vector2(s.x, -s.y) + (logical * 0.5)
+ 
+ 
++## The height at which the upright line through a point of latitude z (any x) crosses the canvas
++## row `row` (logical px from the top) this frame: for things that must come in from just outside
++## the view (the camphor's falling leaves start a little above its top edge). Screen rows depend on
++## y and z only (the camera never turns about its view axis or sideways).
++func height_at_row(z: float, row: float) -> float:
++	var sp := sin_p()
++	var cp := cos_p()
++	var up_px := logical.y * 0.5 - row          # px above the view's centre
++	var c := cam.position
++	if not is_perspective():
++		# (y cos p - z sin p) * PPM - render_px.y = up_px
++		return ((up_px + render_px.y) / PPM + z * sp) / cp
++	# offset u (focus-plane px) at depth d shows at u * D / d
++	var dd := cam_distance
++	var num := PPM * dd * (c.y * cp + (z - c.z) * sp) + up_px * (c.y * sp + (c.z - z) * cp)
++	return num / (PPM * dd * cp + up_px * sp)
++
++
+ ## Window px (what a real finger or xdotool clicks) of a world point this frame.
+ func world_to_window(wp: Vector3) -> Vector2:
+ 	return margin + world_to_canvas(wp) * scale_factor
+@@ -294,6 +399,9 @@ func apply_camera() -> void:
+ 	# a world point on the view axis whose screen position is si; the camera stands back from it
+ 	var centre := px_to_world(si) + cam_back() * _focus.dot(cam_back())
+ 	cam.position = centre + cam_back() * cam_distance
++	# (the shaders' w3_screen / w3_to_cam: where the camera is; w 0 for the orthographic camera)
++	var cp := cam.position
++	RenderingServer.global_shader_parameter_set("w3_cam", Vector4(cp.x, cp.y, cp.z, cam_distance if is_perspective() else 0.0))
+ 	# the image content sits frac px away from where it should; move the image back (window px)
+ 	var off := (frac * scale_factor).round() / float(scale_factor)
+ 	view.position = -Vector2.ONE - Vector2(off.x, -off.y)
+diff --git a/godot/render3d/shaders/contact_shadow.gdshader b/godot/render3d/shaders/contact_shadow.gdshader
+index 9a286a0..bfda96e 100644
+--- a/godot/render3d/shaders/contact_shadow.gdshader
++++ b/godot/render3d/shaders/contact_shadow.gdshader
+@@ -17,7 +17,7 @@ void vertex() {
+ }
+ 
+ void fragment() {
+-	vec2 c = w3_ptex(v_wp) + 0.5 - round(w3_screen(v_origin));
++	vec2 c = w3_ptex(v_wp) + 0.5 - round(w3_screen_o(v_origin));
+ 	vec2 e = c / radius_px;
+ 	float r = dot(e, e);
+ 	if (r > 1.0) {
+diff --git a/godot/render3d/shaders/pixel_particles.gdshader b/godot/render3d/shaders/pixel_particles.gdshader
+index 0d2e1e9..8c66dfa 100644
+--- a/godot/render3d/shaders/pixel_particles.gdshader
++++ b/godot/render3d/shaders/pixel_particles.gdshader
+@@ -20,7 +20,8 @@ void vertex() {
+ 	vec2 size = INSTANCE_CUSTOM.xy + vec2(INSTANCE_CUSTOM.w * 2.0);
+ 	vec2 off = (UV - 0.5) * size;
+ 	off = floor(off + 0.5);
+-	vec3 wp = a + w3_px_to_world(off);
++	// (a mote is so many screen pixels at any depth: G5R3-27)
++	vec3 wp = a + w3_px_to_world(off * w3_px_scale(a));
+ 	VERTEX = wp;
+ 	v_wp = wp;
+ 	v_col = COLOR;
+diff --git a/godot/render3d/shaders/pixel_toon.gdshaderinc b/godot/render3d/shaders/pixel_toon.gdshaderinc
+index 6c5572a..840c323 100644
+--- a/godot/render3d/shaders/pixel_toon.gdshaderinc
++++ b/godot/render3d/shaders/pixel_toon.gdshaderinc
+@@ -13,7 +13,8 @@
+ // Declared in godot/project.godot [shader_globals]; the time-of-day controller
+ // (render3d/world_env.gd) writes them every frame.
+ 
+-global uniform vec4 w3_view;        // x: native px per metre (30), y: sin(pitch), z: cos(pitch), w: lean k = tan(pitch/2)
++global uniform vec4 w3_view;        // x: native px per metre (30) at the focus, y: sin(pitch), z: cos(pitch), w: lean k = tan(pitch/2) x the preset's lean
++global uniform vec4 w3_cam;         // xyz: the camera (world); w: its distance to the focus plane along the view, 0 = orthographic (PixelView3D presets, G5R3-27)
+ global uniform float w3_time;       // world clock, seconds (animation; deterministic in captures)
+ global uniform vec3 w3_sun_dir;     // unit vector toward the sun (or moon at night), world space
+ global uniform vec3 w3_sun;         // sun colour * intensity (linear), for effects outside light()
+@@ -60,27 +61,87 @@ float w3_fbm(vec2 p) {
+ 
+ // ------------------------------------------------------------------------------------------------
+ // the screen-texel lattice
+-// Native pixel coordinates of a (rendered, i.e. already leaned) world point: x to the east, y up the
+-// screen. The camera is snapped so that pixel centres sit at k + 0.5, hence floor() is the texel cell.
+-vec2 w3_screen(vec3 wp) {
++// The world's pixel lattice: native pixel coordinates of a (rendered, i.e. already leaned) world point
++// on the focus plane's scale, x to the east, y up the screen. With the orthographic camera this is the
++// screen itself; with a perspective one (G5R3-27) it is the lattice glued to the world that the focus
++// plane (her feet) shows texel for pixel (nearer things show it larger, farther smaller): procedural
++// detail and dithering are keyed to it, so they move with the world and never swim. The camera is
++// snapped so that pixel centres sit at k + 0.5 there, hence floor() is the texel cell.
++vec2 w3_screen_o(vec3 wp) {
+ 	return vec2(wp.x, wp.y * w3_view.z - wp.z * w3_view.y) * w3_view.x;
+ }
+ vec2 w3_ptex(vec3 wp) {
+-	return floor(w3_screen(wp));
++	return floor(w3_screen_o(wp));
+ }
+ // camera axes in world space
+ vec3 w3_cam_right() { return vec3(1.0, 0.0, 0.0); }
+ vec3 w3_cam_up() { return vec3(0.0, w3_view.z, -w3_view.y); }
+-vec3 w3_cam_back() { return vec3(0.0, w3_view.y, w3_view.z); }   // from the scene toward the camera
++vec3 w3_cam_back() { return vec3(0.0, w3_view.y, w3_view.z); }   // from the scene toward the camera (the view axis)
++// where a world point really lands on the screen (native px, the same frame as w3_screen_o): with a
++// perspective camera nearer things spread out from the view axis, farther ones gather toward it
++vec2 w3_screen(vec3 wp) {
++	vec2 s = w3_screen_o(wp);
++	if (w3_cam.w <= 0.0) return s;
++	vec2 c = w3_screen_o(w3_cam.xyz);
++	float depth = dot(w3_cam.xyz - wp, w3_cam_back());
++	return c + (s - c) * w3_cam.w / max(depth, 0.05);
++}
++// from a point toward the camera
++vec3 w3_to_cam(vec3 wp) {
++	return w3_cam.w > 0.0 ? normalize(w3_cam.xyz - wp) : w3_cam_back();
++}
++// how far a point is from the camera along the view (perspective; meaningless for the orthographic one)
++float w3_depth(vec3 wp) {
++	return dot(w3_cam.xyz - wp, w3_cam_back());
++}
++// focus-plane px per screen px at a point: depth / D (1 with the orthographic camera). Something
++// meant to move or measure in whole screen pixels (a sway, a mote's size) is scaled by it.
++float w3_px_scale(vec3 wp) {
++	return w3_cam.w > 0.0 ? max(w3_depth(wp), 0.05) / w3_cam.w : 1.0;
++}
++// the world point that shows at screen position q (native px, w3_screen's frame) at this depth
++vec3 w3_unproject(vec2 q, float depth) {
++	vec2 m = (q - w3_screen_o(w3_cam.xyz)) * depth / (w3_view.x * w3_cam.w);
++	return w3_cam.xyz - w3_cam_back() * depth + w3_cam_right() * m.x + w3_cam_up() * m.y;
++}
+ // world displacement that moves a point by (dx, dy) native px on screen (y up), without changing depth
+ vec3 w3_px_to_world(vec2 d) {
+ 	return w3_cam_right() * (d.x / w3_view.x) + w3_cam_up() * (d.y / w3_view.x);
+ }
+-// displacement that moves an anchor onto the texel corner lattice (integer ptex): cards and painted
+-// details then map texel-for-pixel
++// displacement that moves an anchor onto a pixel corner of the screen: cards and painted details
++// then map texel-for-pixel (with a perspective camera only on the focus plane; nearer cards show a
++// little larger, farther ones smaller, but their corner sits on a pixel corner, so they move by
++// whole pixels and never shimmer). Orthographic: the lattice (integer ptex) is the screen.
+ vec3 w3_snap(vec3 anchor_wp) {
+-	vec2 s = w3_screen(anchor_wp);
+-	return w3_px_to_world(round(s) - s);
++	if (w3_cam.w <= 0.0) {
++		vec2 s = w3_screen_o(anchor_wp);
++		return w3_px_to_world(round(s) - s);
++	}
++	// where it really lands; one pixel there is depth / D focus-plane pixels (same depth)
++	vec2 p = w3_screen(anchor_wp);
++	float depth = max(dot(w3_cam.xyz - anchor_wp, w3_cam_back()), 0.05);
++	return w3_px_to_world((round(p) - p) * depth / w3_cam.w);
++}
++
++// A card laid out in whole screen pixels (sprites, grass tufts): its corner `off` px (x right, y up)
++// from the snapped anchor `a` shows exactly `off` px from it, texel for pixel at any depth and upright
++// on the screen, and keeps the depth of the upright card leaned back as usual (so what stands behind
++// it or in front of it still hides the right part). d_out: its depth, for w3_card_uv (1 for the
++// orthographic camera, where this is the leaned card itself).
++vec3 w3_card(vec3 a, vec2 off, out float d_out) {
++	vec3 wl = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
++	if (w3_cam.w <= 0.0) {
++		d_out = 1.0;
++		return wl;
++	}
++	d_out = max(w3_depth(wl), 0.05);
++	return w3_unproject(w3_screen(a) + off, d_out);
++}
++// pass vec4(UV * d, d, 0) from the vertex (d from w3_card) and read UV back with this in the fragment:
++// the texels then step evenly across the screen (a perspective-correct UV would bunch toward the
++// nearer end of a slanted card)
++vec2 w3_card_uv(vec4 v) {
++	return v.xy / v.z;
+ }
+ 
+ // ------------------------------------------------------------------------------------------------
+@@ -115,7 +176,7 @@ vec2 w3_wind_px(vec3 anchor, float flex, float amp_px) {
+ bool w3_cutaway_k(vec3 wp, vec2 cell, float scale, float keep_px) {
+ 	if (w3_player.w == 0.0) return false;
+ 	vec3 d = wp - w3_player.xyz;
+-	float toward = dot(d, w3_cam_back());           // > 0: this surface is between her and the camera
++	float toward = dot(d, w3_to_cam(w3_player.xyz));   // > 0: this surface is between her and the camera
+ 	if (toward < 0.3) return false;
+ 	vec2 ds = w3_screen(wp) - w3_screen(w3_player.xyz);
+ 	float r = length(ds * vec2(1.0, 0.8));
+diff --git a/godot/render3d/shaders/post_body.gdshaderinc b/godot/render3d/shaders/post_body.gdshaderinc
+index 0c42ec1..ed44943 100644
+--- a/godot/render3d/shaders/post_body.gdshaderinc
++++ b/godot/render3d/shaders/post_body.gdshaderinc
+@@ -13,6 +13,12 @@
+ 
+ uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
+ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
++// verification (sample.gd --crawl): 1 draws the view depth (R: m / 100), the class (G: / 10) and a
++// marker (B 0.777) instead of the picture
++global uniform float w3_dbg;
++#ifndef OL_CLASS
++#define OL_CLASS 0
++#endif
+ 
+ void vertex() {
+ 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
+@@ -82,6 +88,9 @@ void fragment() {
+ #else
+ 	col = w3_apply_fog(col, wp, cell);
+ #endif
++	if (w3_dbg > 0.5) {
++		col = vec3(c / 100.0, float(OL_CLASS) / 10.0, 0.777);
++	}
+ 	ALBEDO = col;
+ 	ALPHA = 1.0;
+ }
+diff --git a/godot/render3d/shaders/post_char.gdshader b/godot/render3d/shaders/post_char.gdshader
+index f54c15e..21e3f9c 100644
+--- a/godot/render3d/shaders/post_char.gdshader
++++ b/godot/render3d/shaders/post_char.gdshader
+@@ -8,4 +8,5 @@ stencil_mode read, compare_equal, 3;
+ #define OL_TINT vec3(1.0)
+ #define OL_RIM 0
+ #define OL_FOG 0.33
++#define OL_CLASS 3
+ #include "res://render3d/shaders/post_body.gdshaderinc"
+diff --git a/godot/render3d/shaders/post_foliage.gdshader b/godot/render3d/shaders/post_foliage.gdshader
+index 6d85d3c..3bfbb60 100644
+--- a/godot/render3d/shaders/post_foliage.gdshader
++++ b/godot/render3d/shaders/post_foliage.gdshader
+@@ -6,4 +6,5 @@ stencil_mode read, compare_equal, 2;
+ #define OL_CREASE 0.0
+ #define OL_TINT vec3(0.6, 0.66, 0.72)
+ #define OL_RIM 0
++#define OL_CLASS 2
+ #include "res://render3d/shaders/post_body.gdshaderinc"
+diff --git a/godot/render3d/shaders/post_noline.gdshader b/godot/render3d/shaders/post_noline.gdshader
+index c7de0fb..248b1fa 100644
+--- a/godot/render3d/shaders/post_noline.gdshader
++++ b/godot/render3d/shaders/post_noline.gdshader
+@@ -6,4 +6,5 @@ stencil_mode read, compare_equal, 5;
+ #define OL_CREASE 0.0
+ #define OL_TINT vec3(1.0)
+ #define OL_RIM 0
++#define OL_CLASS 5
+ #include "res://render3d/shaders/post_body.gdshaderinc"
+diff --git a/godot/render3d/shaders/post_solid.gdshader b/godot/render3d/shaders/post_solid.gdshader
+index 83b9948..67a304b 100644
+--- a/godot/render3d/shaders/post_solid.gdshader
++++ b/godot/render3d/shaders/post_solid.gdshader
+@@ -6,4 +6,5 @@ stencil_mode read, compare_equal, 1;
+ #define OL_CREASE 0.7
+ #define OL_TINT vec3(0.52, 0.56, 0.66)
+ #define OL_RIM 0
++#define OL_CLASS 1
+ #include "res://render3d/shaders/post_body.gdshaderinc"
+diff --git a/godot/render3d/shaders/post_target.gdshader b/godot/render3d/shaders/post_target.gdshader
+index a53e033..6c7af22 100644
+--- a/godot/render3d/shaders/post_target.gdshader
++++ b/godot/render3d/shaders/post_target.gdshader
+@@ -6,4 +6,5 @@ stencil_mode read, compare_equal, 4;
+ #define OL_CREASE 0.0
+ #define OL_TINT vec3(1.0)
+ #define OL_RIM 1
++#define OL_CLASS 4
+ #include "res://render3d/shaders/post_body.gdshaderinc"
+diff --git a/godot/render3d/shaders/sprite_char.gdshader b/godot/render3d/shaders/sprite_char.gdshader
+index 36016f0..7378b1d 100644
+--- a/godot/render3d/shaders/sprite_char.gdshader
++++ b/godot/render3d/shaders/sprite_char.gdshader
+@@ -34,6 +34,7 @@ varying vec3 v_wp;
+ varying vec3 v_wu;      // the card's upright place (lamps light her where she stands)
+ varying vec3 v_alb;
+ varying vec2 v_tex;
++varying vec4 v_uvd;     // UV x depth, depth (pixel_toon w3_card_uv: texel for pixel with a perspective camera)
+ 
+ void vertex() {
+ 	vec3 anchor = MODEL_MATRIX[3].xyz;
+@@ -44,10 +45,14 @@ void vertex() {
+ 		r.y = 0.0;
+ 		r = length(r) > 0.001 ? normalize(r) : vec3(1.0, 0.0, 0.0);
+ 		wp = anchor + r * (off.x / w3_view.x) + vec3(0.0, off.y / w3_view.x, 0.0);
++		v_uvd = vec4(UV, 1.0, 0.0);
+ 	} else {
+ 		vec3 a = anchor + w3_snap(anchor);
+-		// leaned card: x right, y up 20 px per metre on screen
+-		wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
++		// a card facing the camera, leaned back; with a perspective camera (G5R3-27) laid out in whole
++		// screen pixels, upright on the screen and texel for pixel wherever she stands (w3_card)
++		float d;
++		wp = w3_card(a, off, d);
++		v_uvd = vec4(UV * d, d, 0.0);
+ 	}
+ 	VERTEX = wp;
+ 	v_wp = wp;
+@@ -56,7 +61,7 @@ void vertex() {
+ 
+ void fragment() {
+ 	vec2 sheet_size = vec2(textureSize(sheet, 0));
+-	vec2 uv = UV;
++	vec2 uv = w3_card_uv(v_uvd);
+ 	if (flip_h) uv.x = 1.0 - uv.x;
+ 	vec2 tp = frame_rect.xy + vec2(uv.x, 1.0 - uv.y) * frame_rect.zw;
+ 	ivec2 ti = ivec2(clamp(floor(tp), frame_rect.xy, frame_rect.xy + frame_rect.zw - 1.0));
+diff --git a/godot/render3d/shaders/sprite_xray.gdshader b/godot/render3d/shaders/sprite_xray.gdshader
+index 4e78312..1c0d140 100644
+--- a/godot/render3d/shaders/sprite_xray.gdshader
++++ b/godot/render3d/shaders/sprite_xray.gdshader
+@@ -24,12 +24,16 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
+ 
+ varying vec3 v_wp;
+ varying float v_up;
++varying vec4 v_uvd;
+ 
+ void vertex() {
+ 	vec3 anchor = MODEL_MATRIX[3].xyz;
+ 	vec3 a = anchor + w3_snap(anchor);
+ 	vec2 off = UV2;
+-	vec3 wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
++	// (the same card as sprite_char)
++	float d;
++	vec3 wp = w3_card(a, off, d);
++	v_uvd = vec4(UV * d, d, 0.0);
+ 	VERTEX = wp;
+ 	v_wp = wp;
+ 	v_up = off.y;
+@@ -43,7 +47,7 @@ float alpha_at(ivec2 t) {
+ }
+ 
+ void fragment() {
+-	vec2 uv = UV;
++	vec2 uv = w3_card_uv(v_uvd);
+ 	if (flip_h) uv.x = 1.0 - uv.x;
+ 	vec2 tp = frame_rect.xy + vec2(uv.x, 1.0 - uv.y) * frame_rect.zw;
+ 	ivec2 ti = ivec2(clamp(floor(tp), frame_rect.xy, frame_rect.xy + frame_rect.zw - 1.0));
+diff --git a/godot/render3d/shaders/toon_foliage_body.gdshaderinc b/godot/render3d/shaders/toon_foliage_body.gdshaderinc
+index 2410a63..9882bbb 100644
+--- a/godot/render3d/shaders/toon_foliage_body.gdshaderinc
++++ b/godot/render3d/shaders/toon_foliage_body.gdshaderinc
+@@ -80,13 +80,14 @@ void vertex() {
+ 					sway.y -= round(push_px * 0.75 * k);
+ 				}
+ 			}
+-			wp = a + w3_px_to_world(UV2 + sway);
++			// (the sway in whole screen pixels at any depth: G5R3-27)
++			wp = a + w3_px_to_world(UV2 + sway * w3_px_scale(a));
+ 		}
+ 	} else {
+ 		wp = VERTEX;
+ 		if (!IN_SHADOW_PASS) {
+ 			wp = w3_lean(wp, origin.y, lean);
+-			wp += w3_px_to_world(w3_wind_px(anchor, flex, wind_px));
++			wp += w3_px_to_world(w3_wind_px(anchor, flex, wind_px) * w3_px_scale(anchor));
+ 		}
+ 	}
+ 	VERTEX = wp;
+diff --git a/godot/render3d/shaders/toon_solid_body.gdshaderinc b/godot/render3d/shaders/toon_solid_body.gdshaderinc
+index 09740ab..3486ef6 100644
+--- a/godot/render3d/shaders/toon_solid_body.gdshaderinc
++++ b/godot/render3d/shaders/toon_solid_body.gdshaderinc
+@@ -51,7 +51,7 @@ void vertex() {
+ 	VERTEX = wp;
+ 	v_wp = wp;
+ 	v_wn = NORMAL;
+-	v_origin_px = w3_screen(origin);
++	v_origin_px = w3_screen_o(origin);
+ 	v_base_y = origin.y;
+ }
+ 
+diff --git a/godot/render3d/world_env.gd b/godot/render3d/world_env.gd
+index 50ad7f8..2b5be24 100644
+--- a/godot/render3d/world_env.gd
++++ b/godot/render3d/world_env.gd
+@@ -121,6 +121,16 @@ func setup(v: PixelView3D) -> void:
+ 	sun.shadow_blur = 0.0
+ 	sun.light_specular = 0.0
+ 	view.vp.add_child(sun)
++	fit_to_view()
++
++
++## The camera preset changed (PixelView3D.set_preset): the sun's shadow map and the air reach as
++## deep as the view does. (A perspective camera fits the shadow map to its frustum up to the max
++## distance; the orthographic one ignores it, see above.)
++func fit_to_view() -> void:
++	sun.directional_shadow_max_distance = view.shadow_distance()
++	if environment.volumetric_fog_enabled:
++		environment.volumetric_fog_length = view.cam_distance + 45.0
+ 
+ 
+ ## Volumetric fog (Forward+): the air near the ground, one FogVolume over the terrain
+diff --git a/godot/showcase/showcase_hud.gd b/godot/showcase/showcase_hud.gd
+index 375451a..8a25bc3 100644
+--- a/godot/showcase/showcase_hud.gd
++++ b/godot/showcase/showcase_hud.gd
+@@ -4,6 +4,7 @@ extends Control
+ ## corner, the keys along the bottom (they fade after a while; H brings them back), and the controls
+ ## for the light: hold Q / E (gamepad LB / RB) to move the hour back / on, 1-4 jump to morning, noon,
+ ## dusk, night, T lets the hour run on its own, R (gamepad Y) brings the rain or takes it away.
++## V (the sample's own key) changes the camera (G5R3-27); its name shows under the hour.
+ ## Walking is the sample's own (WASD / arrows; the gamepad's left stick where the sample reads it).
+ ## The air follows the hour with the field recordings in audio/ (CC0 / public domain, SOURCES.json):
+ ## wind by day, the night's insects after dark, birds in the morning, crows towards evening.
+@@ -19,6 +20,7 @@ const RAIN := 0.85
+ var sample: Node = null
+ var lookout := false
+ var clock: Label
++var cam_name: Label
+ var keys: Label
+ var tip: Label
+ var _hint_t := 14.0
+@@ -41,8 +43,9 @@ func _init() -> void:
+ 
+ func _ready() -> void:
+ 	clock = _label(12, TEXT)
++	cam_name = _label(12, DIM)
+ 	keys = _label(12, DIM)
+-	keys.text = "WASD 走　Q/E 时刻　1–4 晨午昏夜　T 时间流动　R 雨　H 隐藏　Esc 菜单"
++	keys.text = "WASD 走　Q/E 时刻　1–4 晨午昏夜　T 时间流动　R 雨　V 镜头　H 隐藏　Esc 菜单"
+ 	tip = _label(12, DIM)
+ 	tip.text = "走上岩石，站定一会儿就会远眺；A/D 转头，W/S 回来" if lookout else ""
+ 	resized.connect(_layout)
+@@ -64,6 +67,7 @@ func _label(px: int, c: Color) -> Label:
+ 
+ func _layout() -> void:
+ 	clock.position = Vector2(8, 6)
++	cam_name.position = Vector2(8, 22)
+ 	keys.position = Vector2(8, size.y - 20.0).round()
+ 	tip.position = Vector2(8, size.y - 36.0).round()
+ 
+@@ -98,6 +102,8 @@ func _process(dt: float) -> void:
+ 	if dh != 0.0 or rain_moves:
+ 		sample.call("_set_hours", fposmod(h + dh, 24.0), absf(dh) > 1.0)
+ 	clock.text = _clock_text(env.hours) + ("　雨" if _rain_target > 0.0 else "")
++	if sample.has_method("camera_name"):
++		cam_name.text = "镜头　" + String(sample.call("camera_name"))
+ 	_air(dt, env.hours)
+ 	if _hint_t > 0.0:
+ 		_hint_t -= dt
+diff --git a/godot/world3d/atmosphere.gd b/godot/world3d/atmosphere.gd
+index 5776427..1008ce0 100644
+--- a/godot/world3d/atmosphere.gd
++++ b/godot/world3d/atmosphere.gd
+@@ -179,6 +179,12 @@ func _step(p: Array, dt: float) -> void:
+ 	p[4] = c
+ 
+ 
++## The height at which a falling thing at latitude z is just above the view's top edge (26 px over
++## it: particles do not lean), from the camera of this frame (PixelView3D.height_at_row).
++func _above_view(z: float) -> float:
++	return env.view.height_at_row(z, -26.0)
++
++
+ func update(dt: float, at: Vector3) -> void:
+ 	focus = at
+ 	var night := clampf(1.0 - absf(env.hours - 12.0) / 7.0, 0.0, 1.0)
+@@ -208,13 +214,11 @@ func update(dt: float, at: Vector3) -> void:
+ 			var pp := at + Vector3(rng.randf_range(-12.0, 12.0), 0, rng.randf_range(-6.0, 5.0))
+ 			if realm_mask.sample(pp.x, pp.z).r < 0.5:
+ 				continue
+-			var dz2 := pp.z - at.z
+-			pp.y = at.y + 0.9 + (6.9 + 0.819 * (dz2 + 0.47)) / 0.574 + rng.randf_range(0.0, 1.0)
++			pp.y = _above_view(pp.z) + rng.randf_range(0.0, 1.0)
+ 			particles.spawn(pp, Vector3.ZERO, 40.0, Color(0.8, 0.5, 0.7, 1.0), Vector2(2, 1), 0.0, 8, rng.randf())
+ 	# old leaves coming down under the great camphor (by day). Each starts just above the top of the
+-	# view, so it drifts in from the crown overhead and never appears out of nothing: a point's height
+-	# on screen is 0.574 m per metre of height (particles do not lean) less 0.819 m per metre south
+-	# of the camera's focus (her chest, 0.47 m north of her feet), and the top edge is 6.75 m up
++	# view, so it drifts in from the crown overhead and never appears out of nothing (_above_view:
++	# whatever the camera preset)
+ 	_leaf_light = clampf(1.0 - maxf(absf(env.hours - 12.0) - 5.0, 0.0) / 2.5, 0.45, 1.0) * (1.0 - 0.3 * env.rain)
+ 	if camphor != Vector3.INF and not is_night:
+ 		var dc := Vector2(at.x - camphor.x, at.z - camphor.z).length()
+@@ -225,8 +229,7 @@ func update(dt: float, at: Vector3) -> void:
+ 				var lp := at + Vector3(rng.randf_range(-12.0, 12.0), 0, rng.randf_range(-5.0, 4.0))
+ 				if Vector2(lp.x - camphor.x, lp.z - camphor.z).length() > CAMPHOR_REACH:
+ 					continue
+-				var dz := lp.z - at.z
+-				lp.y = at.y + 0.9 + (6.9 + 0.819 * (dz + 0.47)) / 0.574 + rng.randf_range(0.0, 1.5)
++				lp.y = _above_view(lp.z) + rng.randf_range(0.0, 1.5)
+ 				if lp.y < terrain.height_at(lp.x, lp.z) + 4.0:
+ 					continue
+ 				particles.spawn(lp, Vector3.ZERO, 45.0, Color(0.6, 0.3, 0.15, 1.0), Vector2(2, 1), 0.0, 7, rng.randf())
+diff --git a/godot/world3d/grass_field.gdshader b/godot/world3d/grass_field.gdshader
+index 21c5a84..6a6c180 100644
+--- a/godot/world3d/grass_field.gdshader
++++ b/godot/world3d/grass_field.gdshader
+@@ -62,6 +62,7 @@ varying flat float v_root_fleck;   // (scene, round 5) the sun fleck at the tuft
+ varying flat float v_root_open;    // (renderer, round 5) the canopy's openness at the root (pixel_toon w3_canopy_open)
+                                    // or not, as the ground under it (per pixel, the blades lit in streaks)
+ varying vec3 v_detail;        // albedo / the shade's flattened albedo (light() restores the detail)
++varying vec4 v_uvd;           // (renderer, G5R3-27) UV x depth, depth: texel for pixel under a perspective camera (w3_card_uv)
+ 
+ vec3 pal(float row, float tone) {
+ 	vec3 c = texelFetch(palette, ivec2(int(clamp(floor(tone + 0.5), 0.0, 7.0)), int(row)), 0).rgb;
+@@ -75,6 +76,7 @@ float ground_h(vec2 xz) {
+ void vertex() {
+ 	v_root_fleck = 0.0;
+ 	v_root_open = 1.0;
++	v_uvd = vec4(UV, 1.0, 0.0);
+ 	vec3 corner = MODEL_MATRIX[3].xyz;
+ 	int i = INSTANCE_ID % lattice;
+ 	int j = INSTANCE_ID / lattice;
+@@ -141,7 +143,11 @@ void vertex() {
+ 		sway.x += push.x * push_px;
+ 		float squash = 1.0 - 0.55 * pressed;
+ 		vec2 off = vec2(UV2.x + floor(sway.x * top + 0.5), floor(UV2.y * squash + sway.y * top + 0.5));
+-		vec3 wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
++		// (renderer, G5R3-27: with a perspective camera the tuft is laid out in whole screen pixels,
++		// texel for pixel at any depth; pixel_toon w3_card)
++		float dv;
++		vec3 wp = w3_card(a, off, dv);
++		v_uvd = vec4(UV * dv, dv, 0.0);
+ 		VERTEX = wp;
+ 		v_wp = wp;
+ 		NORMAL = n;
+@@ -165,7 +171,8 @@ void vertex() {
+ void fragment() {
+ 	int ci = int(v_cellk + 0.5);
+ 	ivec2 base = ivec2((ci % cols) * 16, (ci / cols) * 16);
+-	ivec2 tp = base + ivec2(int(clamp(floor(UV.x * 16.0), 0.0, 15.0)), int(clamp(15.0 - floor(UV.y * 16.0), 0.0, 15.0)));
++	vec2 uv = w3_card_uv(v_uvd);
++	ivec2 tp = base + ivec2(int(clamp(floor(uv.x * 16.0), 0.0, 15.0)), int(clamp(15.0 - floor(uv.y * 16.0), 0.0, 15.0)));
+ 	vec4 t = texelFetch(blades, tp, 0);
+ 	if (t.a < 0.5) {
+ 		discard;
+diff --git a/godot/world3d/sample.gd b/godot/world3d/sample.gd
+index 2ebb925..ae28954 100644
+--- a/godot/world3d/sample.gd
++++ b/godot/world3d/sample.gd
+@@ -18,13 +18,16 @@ extends Node
+ ##   --novista          she does not look out from the lookout (the view from the lookout, W3Vista, is on
+ ##                      by default: standing still on the rock for a moment she looks out)
+ ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
+-##   --pitch=deg        camera pitch (evidence renders)
++##   --camera=P2|P1|P3|ortho   the camera preset (G5R3-27; default P2, the perspective one; V cycles
++##                      them while running, PixelView3D.PRESETS)
++##   --pitch=deg        camera pitch (evidence renders; after the preset's)
+ ##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, --ambience=wind,night
+ ##   (recordings: the ambience loops), and debugging switches
+ ##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
+ ##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse, --seed=n): docs/knowledge/21 §12
+ ## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
+-## does not run here). On the lookout, looking out, A/D turn her head and W/S come back.
++## does not run here). On the lookout, looking out, A/D turn her head and W/S come back. V: the next
++## camera preset.
+ 
+ const CHARS_JSON := "res://world3d/sprites/characters.json"
+ const CATALOG := "res://world3d/assets/catalog.json"
+@@ -64,6 +67,8 @@ var realm_mask: W3RealmMask       # the barrier: where she stands sets the frame
+ var hut_smoke := Vector3.INF      # the home's smoke hole (catalog anchors.smoke)
+ var _realm_k := -1.0
+ var _swell_k := 0.0
++var _hung: Array = []             # [node, upright place, ground height]: hung things, leaned by hand (_relean)
++var _lean_now := 0.0              # the lean those were placed with
+ 
+ 
+ func _ready() -> void:
+@@ -78,6 +83,10 @@ func _ready() -> void:
+ 	if args.has("seed"):
+ 		seed(int(args["seed"]))      # comparisons: the global random numbers (the model's idle, the motes) alike run to run
+ 	pv = PixelView3D.new()
++	var cam_i := pv.preset_key(String(args.get("camera", "P2")))
++	pv.select_preset(cam_i if cam_i >= 0 else 0)
++	if args.has("fov") and pv.is_perspective():
++		pv.fov_deg = float(args["fov"])                # tuning
+ 	if args.has("pitch"):
+ 		pv.pitch_deg = float(args["pitch"])
+ 	if args.has("scale"):
+@@ -137,6 +146,7 @@ func _ready() -> void:
+ 	pv.world_root.add_child(dressing)
+ 	dressing.lamps = lamps
+ 	dressing.lean_k = pv_lean()
++	_lean_now = pv_lean()
+ 	dressing.build(terrain, catalog)
+ 	_place_marker_props()
+ 	_round3_leaf_palette(pv.world_root)
+@@ -160,6 +170,7 @@ func _ready() -> void:
+ 	add_child(vista)
+ 	vista.setup(pv, env, terrain)
+ 	_spawn_characters()
++	_lean_walkers()
+ 	focus = her.pos
+ 	if args.has("at"):
+ 		var p := String(args["at"]).split(",")
+@@ -253,7 +264,68 @@ func _cam_target() -> Vector3:
+ 
+ 
+ func pv_lean() -> float:
+-	return tan(deg_to_rad(pv.pitch_deg) * 0.5)
++	return pv.lean_k()
++
++
++## V: the next camera preset (G5R3-27). The view's numbers change at once; the sun's shadow reach,
++## the air's depth and what was leaned by hand follow.
++func cycle_camera() -> void:
++	set_camera(pv.preset + 1)
++
++
++func set_camera(i: int) -> void:
++	pv.set_preset(i)
++	_camera_changed()
++	pv.follow(_cam_target, {"cut": true})
++	print("CAMERA %s %s fov=%.0f pitch=%.0f lean=%.2f dist=%.1f" % [String(PixelView3D.PRESETS[pv.preset]["key"]),
++		pv.preset_name(), pv.fov_deg, pv.pitch_deg, pv.lean, pv.cam_distance])
++
++
++func camera_name() -> String:
++	return pv.preset_name()
++
++
++func _camera_changed() -> void:
++	env.fit_to_view()
++	_relean(pv_lean())
++
++
++## Put what hangs in the air (and the glints, the creatures above the ground) where the new lean
++## draws the things they hang from.
++func _relean(k: float) -> void:
++	if is_equal_approx(k, _lean_now):
++		return
++	for h in _hung:
++		var node: Node3D = h[0]
++		if is_instance_valid(node):
++			var p: Vector3 = h[1]
++			node.position = Vector3(p.x, p.y, p.z - k * maxf(p.y - float(h[2]), 0.0))
++	if dressing:
++		for g in dressing.glints:
++			var gp: Vector3 = g[0]
++			gp.z += (_lean_now - k) * maxf(gp.y - terrain.height_at(gp.x, gp.z), 0.0)
++			g[0] = gp
++		dressing.lean_k = k
++		if dressing.life:
++			dressing.life.lean_k = k
++			for c in dressing.life.critters:
++				dressing.life._place(c)
++	_lean_now = k
++	_lean_walkers()
++
++
++func _lean_walkers() -> void:
++	# (the orthographic camera keeps the 0.5 m it always had: the old picture stays exactly the old one)
++	var k := pv_lean() if pv.is_perspective() else 0.5
++	for w in [her, saji]:
++		if w != null:
++			(w as W3Walker).lean_k = k
++
++
++func _unhandled_input(e: InputEvent) -> void:
++	if e is InputEventKey and e.pressed and not e.echo and (e as InputEventKey).physical_keycode == KEY_V:
++		cycle_camera()
++		get_viewport().set_input_as_handled()
+ 
+ 
+ # ------------------------------------------------------------------------------------------------
+@@ -426,6 +498,7 @@ func _place_marker_props() -> void:
+ 		var a: Dictionary = catalog[nm]
+ 		var p: Vector3 = sl[1]
+ 		var gy := t.height_at(p.x, p.z)
++		var upright := p
+ 		if not sl[3]:
+ 			p.y = gy
+ 		else:
+@@ -435,6 +508,8 @@ func _place_marker_props() -> void:
+ 		if base == null:
+ 			continue
+ 		base.position = p
++		if sl[3]:
++			_hung.append([base, upright, gy])
+ 		base.rotation.y = float(sl[2])
+ 		props_root.add_child(base)
+ 		if nm in ["hut", "shrine", "graves"]:
+@@ -459,6 +534,8 @@ func _place_marker_props() -> void:
+ 				lit.rotation.y = float(sl[2])
+ 				lit.visible = false
+ 				props_root.add_child(lit)
++				if sl[3]:
++					_hung.append([lit, upright, gy])
+ 				_lit_pairs.append([base, lit])
+ 		for fp in a.get("footprint", []):
+ 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(sl[2]))
+@@ -991,6 +1068,76 @@ func _update_realm(dt: float) -> void:
+ 	env.set_band_swell(_swell_k)
+ 
+ 
++## --crawl=dir:x,z,h;... (G5R3-27, verification): how much of the picture changes when the camera
++## steps one pixel. For each view: settle with time running, freeze the world (Engine.time_scale 0),
++## put the camera on whole focus-plane pixels and shoot `a`; the depth map `d` (post_body w3_dbg:
++## view depth in cm in R*256+G, the outline class * 40 in B, white where no post drew); then the
++## camera alone one focus-plane pixel east (`e`) and one up the screen (`n`). On the focus plane `e`
++## is `a` moved one pixel left exactly; what differs elsewhere is the crawl.
++var _crawl_i := 0
++var _crawl_t := 0
++var _crawl_focus := Vector3.ZERO
++
++
++func _crawl_tick() -> void:
++	if _shot_list.is_empty():
++		var spec := String(args["crawl"]).split(":", true, 1)
++		for v in spec[1].split(";"):
++			var p := v.split(",")
++			_shot_list.append([float(p[0]), float(p[1]), float(p[2]) if p.size() > 2 else 10.0])
++		_set_view(0)
++		_crawl_t = 0
++	var outdir := String(args["crawl"]).split(":", true, 1)[0]
++	var settle := int(args.get("settle", "40"))
++	_crawl_t += 1
++	var v: Array = _shot_list[_crawl_i]
++	var base := "%s/c%02d_%d_%d_%sh" % [outdir, _crawl_i, int(v[0]), int(v[1]), String.num(v[2], 1)]
++	if _crawl_t == settle:
++		Engine.time_scale = 0.0
++		var f := _cam_target()
++		var t := pv.screen_of(f)
++		_crawl_focus = f + pv.px_to_world(t.round() - t)
++		pv.point_at(_crawl_focus, {"cut": true})
++	elif _crawl_t == settle + 3:
++		_save_shot(base + "_a")
++		RenderingServer.global_shader_parameter_set("w3_dbg", 1.0)
++	elif _crawl_t == settle + 6:
++		_save_depth(base + "_d.png")
++		RenderingServer.global_shader_parameter_set("w3_dbg", 0.0)
++		pv.point_at(_crawl_focus + pv.px_to_world(Vector2(1, 0)), {"cut": true})
++	elif _crawl_t == settle + 9:
++		_save_shot(base + "_e")
++		pv.point_at(_crawl_focus + pv.px_to_world(Vector2(0, 1)), {"cut": true})
++	elif _crawl_t == settle + 12:
++		_save_shot(base + "_n")
++		Engine.time_scale = 1.0
++		_crawl_i += 1
++		if _crawl_i >= _shot_list.size():
++			get_tree().quit()
++			return
++		_set_view(_crawl_i)
++		_crawl_t = 0
++
++
++func _save_depth(path: String) -> void:
++	var img := pv.vp.get_texture().get_image()
++	var w := img.get_width() - 2
++	var h := img.get_height() - 2
++	var out := Image.create(w, h, false, Image.FORMAT_RGB8)
++	var coded := 0
++	for y in h:
++		for x in w:
++			var c := img.get_pixel(x + 1, y + 1)
++			if absf(c.b - 0.777) > 0.02:
++				out.set_pixel(x, y, Color8(255, 255, 255))
++				continue
++			coded += 1
++			var cm := clampi(int(roundf(c.r * 10000.0)), 0, 65535)
++			out.set_pixel(x, y, Color8(cm >> 8, cm & 255, clampi(int(roundf(c.g * 10.0)), 0, 6) * 40))
++	out.save_png(path)
++	print("DEPTH ", path, " format=", img.get_format(), " coded=", coded, "/", w * h, " D=", pv.cam_distance)
++
++
+ func _set_view(i: int) -> void:
+ 	var v: Array = _shot_list[i]
+ 	her.place(Vector3(v[0], 0.0, v[1]))
+@@ -1214,6 +1361,9 @@ func _process(dt: float) -> void:
+ 				return
+ 			_set_vview(_shot_i)
+ 		return
++	if args.has("crawl"):
++		_crawl_tick()
++		return
+ 	if args.has("shot") and frame == int(args.get("frames", "30")):
+ 		var path: String = args["shot"]
+ 		var img := pv.vp.get_texture().get_image()
+diff --git a/godot/world3d/walker.gd b/godot/world3d/walker.gd
+index f0c0ea0..9e627c5 100644
+--- a/godot/world3d/walker.gd
++++ b/godot/world3d/walker.gd
+@@ -36,6 +36,9 @@ var model: Node3D
+ ## the sprite even where a 3D model exists (the sample's `sprites` option, or --sprites on the command
+ ## line; G5R3-24: this build shows the round-3 figure while her model is redone)
+ var use_sprites := false
++## the camera's lean-back per metre of height (PixelView3D.lean_k(); the sample sets it): where her
++## chest is drawn (her sprite is a card leaned back by it)
++var lean_k := 0.5
+ 
+ 
+ func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> void:
+@@ -208,4 +211,4 @@ func set_xray_colour(c: Color) -> void:
+ func chest() -> Vector3:
+ 	if model:
+ 		return model.call("chest")
+-	return pos + Vector3(0, 1.0, -0.5)
++	return pos + Vector3(0, 1.0, -lean_k)
+diff --git a/tools/world3d/metrics/crawl.py b/tools/world3d/metrics/crawl.py
+new file mode 100755
+index 0000000..e4932ea
+--- /dev/null
++++ b/tools/world3d/metrics/crawl.py
+@@ -0,0 +1,53 @@
++#!/usr/bin/env python3
++"""crawl.py <base> <D> [tol...] -- how much of the picture changes when the camera steps one pixel.
++<base>_a.png: the frame; <base>_e.png: the camera one focus-plane pixel east; <base>_n.png: one up;
++<base>_d.png: depth map (cm = R*256 + G, class = B / 40, white = no post: characters, particles).
++On the focus plane e(x, y) == a(x + 1, y) and n(x, y) == a(x, y - 1) exactly. Counts the pixels that
++differ by more than tol code values (any channel), by depth band: near (d < D - 1.5 m), focus
++(|d - D| <= 1.5 m), far (d > D + 1.5 m). Writes <base>_crawl.png (a, with the changed pixels red)."""
++import sys
++from PIL import Image
++import numpy as np
++
++base = sys.argv[1]
++D = float(sys.argv[2])
++tols = [int(t) for t in sys.argv[3:]] or [0, 3]
++a = np.asarray(Image.open(base + '_a.png').convert('RGB')).astype(np.int16)
++e = np.asarray(Image.open(base + '_e.png').convert('RGB')).astype(np.int16)
++n = np.asarray(Image.open(base + '_n.png').convert('RGB')).astype(np.int16)
++dm = np.asarray(Image.open(base + '_d.png').convert('RGB')).astype(np.int32)
++H, W, _ = a.shape
++coded = ~((dm[..., 0] == 255) & (dm[..., 1] == 255) & (dm[..., 2] == 255))
++depth = (dm[..., 0] * 256 + dm[..., 1]) / 100.0
++band = np.full((H, W), -1, np.int8)
++band[coded & (depth < D - 1.5)] = 0
++band[coded & (np.abs(depth - D) <= 1.5)] = 1
++band[coded & (depth > D + 1.5)] = 2
++names = ['near', 'focus', 'far']
++out = {}
++# east: e[:, x] vs a[:, x + 1]; the source band is a's
++de = np.abs(e[:, :W - 1] - a[:, 1:]).max(axis=2)
++be = band[:, 1:]
++# up: n[y] vs a[y - 1]
++dn = np.abs(n[1:, :] - a[:H - 1, :]).max(axis=2)
++bn = band[:H - 1, :]
++line = []
++for tol in tols:
++    for nm, dd, bb in (('E', de, be), ('N', dn, bn)):
++        parts = []
++        for k in range(3):
++            m = bb == k
++            tot = int(m.sum())
++            ch = int(((dd > tol) & m).sum())
++            parts.append('%s %5.1f%% (%d/%d)' % (names[k], 100.0 * ch / max(tot, 1), ch, tot))
++        line.append('tol %d %s: %s' % (tol, nm, '  '.join(parts)))
++print(base.split('/')[-1], 'D=%.1f' % D, 'depth %.1f..%.1f' % (depth[coded].min(), depth[coded].max()))
++for l in line:
++    print('  ' + l)
++# picture: a, changed (east, tol 3) in red, uncoded in blue tint
++vis = a.astype(np.uint8).copy()
++mask = np.zeros((H, W), bool)
++mask[:, 1:] = (de > 3)
++vis[mask] = (vis[mask] * 0.3 + np.array([255, 30, 30]) * 0.7).astype(np.uint8)
++vis[~coded] = (vis[~coded] * 0.6 + np.array([40, 80, 255]) * 0.4).astype(np.uint8)
++Image.fromarray(vis).save(base + '_crawl.png')
