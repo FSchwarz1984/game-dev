@@ -4,28 +4,30 @@ main colour; shadow and highlight colours are painted only where the design draw
 underside, hair strands, folds), the light does the rest."""
 from c3d.surf import hex_to_rgb as H
 
-HAIR = H('#3e344a')
-HAIR_DEEP = H('#2a2133')        # between the sheet's strands, the cap's underside (GPT shadow #231a28, a step up)
-HAIR_HI = H('#5f5071')          # strand highlights (GPT highlight)
+# Round 6: the darks are set so that they land on the sheet's main colours on screen in the game's
+# light and grade at 10:30 (measured: an albedo comes out about 1.6x brighter in the darks, reds
+# more saturated: navy #33395b rendered #515b8d, red #7e2840 rendered #d8437b). Targets on screen:
+# hair #3e344a, navy #33395b, lining #252c4b, trousers #38344b, boots #332d3b, red #9b324e.
+HAIR = H('#27202f')
+HAIR_DEEP = H('#1a1520')        # between the sheet's strands, the cap's underside
+HAIR_HI = H('#3b3247')          # strand highlights (on screen about the GPT highlight #5f5071)
 SKIN = H('#fce4d2')
 SKIN_DEEP = H('#ecc0ab')        # the jaw's underside, the neck, inside the ears
 CREAM = H('#f9efe6')            # the outer kimono (haori)
 CREAM_DEEP = H('#dfd5d3')       # its painted folds and inner side
 HAT = H('#f7eadc')              # the sugegasa's top (ivory)
 HAT_DEEP = H('#ddd1c7')
-NAVY_LINING = H('#252c4b')      # the hat's underside, the sleeves' lining
-NAVY = H('#33395b')             # the kosode
-NAVY_DEEP = H('#232741')
-TROUSERS = H('#38344b')         # the lantern trousers (a violet navy)
-TROUSERS_DEEP = H('#1e1c2a')
-BOOTS = H('#332d3b')
-BOOTS_DEEP = H('#22202b')
+NAVY_LINING = H('#171b2f')      # the hat's underside, the sleeves' lining
+NAVY = H('#20243a')             # the kosode
+NAVY_DEEP = H('#161829')
+TROUSERS = H('#23202f')         # the lantern trousers (a violet navy)
+TROUSERS_DEEP = H('#14121b')
+BOOTS = H('#201c25')
+BOOTS_DEEP = H('#15141b')
 SOLE = H('#d5c8c0')
-# the reds a step deeper than the sheet's mid-tone: a red albedo in full sun, after the frame's grade,
-# came out hot pink (#fc4e8b measured); these land near the sheet's crimson on screen
-RED = H('#7e2840')              # the sash, the bow, the collar, the hat's band
-RED_DEEP = H('#5e1c30')
-RED_HI = H('#9b324e')
+RED = H('#5c1d2b')              # the sash, the bow, the collar, the hat's band
+RED_DEEP = H('#45151f')
+RED_HI = H('#6e2433')
 WHITE = H('#f8efe5')            # obi, hair ties, ankle bands
 WHITE_DEEP = H('#d9d1cd')
 # the carrying frame (shoiko)
