@@ -201,19 +201,25 @@ void fragment() {
 		// grass and scrub as the base
 		float tone = 3.4 + floor((clump - 0.5) * 2.6 + 0.5) + (n1 < 0.14 ? -1.0 : (n1 > 0.9 ? 1.0 : 0.0));
 		alb = pal(n1 > 0.55 && clump > 0.6 ? 1.0 : 0.0, tone);
+		// the plain's maps and the paddies' grid (which follows an old grid that turns slowly across the
+		// plain), and how fast they change across a pixel: taken before the branch, where every pixel
+		// of a quad runs it, so the derivatives hold on any GPU
+		vec4 pm = v_plain_data(xz);
+		float ang = (w3_vnoise(xz / 2600.0 + 3.0) - 0.5) * 0.9;
+		vec2 ax = vec2(cos(ang), sin(ang));
+		vec2 uv = vec2(dot(xz, ax), dot(xz, vec2(-ax.y, ax.x)));
+		vec2 fw_uv = fwidth(uv);
+		float fw_dens = fwidth(pm.b);
+		float fw_road = fwidth(pm.g * 127.5);
+		float fw_river = fwidth(pm.r * 255.0);
 		if (plain) {
 			// the plain in early summer: blocks of paddies in strips (young rice, a few still flooded
 			// and holding the sky), dry fields and fallow, groves round the villages, lanes, the river
-			vec4 pm = v_plain_data(xz);
 			float d_river = pm.r * 255.0;
 			float d_road = pm.g * 127.5;
 			float dens = pm.b;
 			v_town = dens;
 			float pxm = dist / v_ppr;                      // metres per pixel here
-			// (the paddies follow an old grid that turns slowly across the plain)
-			float ang = (w3_vnoise(xz / 2600.0 + 3.0) - 0.5) * 0.9;
-			vec2 ax = vec2(cos(ang), sin(ang));
-			vec2 uv = vec2(dot(xz, ax), dot(xz, vec2(-ax.y, ax.x)));
 			vec2 bc = floor(uv / vec2(240.0, 180.0));
 			float bh = w3_hash(bc + 3.3);
 			float sw = mix(16.0, 28.0, w3_hash(bc + 9.1));
@@ -226,9 +232,16 @@ void fragment() {
 			else if (kind < 0.74) { water = true; }                              // still flooded
 			else if (kind < 0.87) { alb = pal(6.0, 4.4 + floor(sh * 9.0) * 0.3); plate = V_EARTH; }   // dry fields
 			else { alb = pal(8.0, 4.0); plate = V_EARTH; }                       // fallow
-			// (the key block: the paddies' blocks, where a block is a few pixels across)
+			// (the key block's lines, the lead's rules 2026-10-16: whole and deliberate, as a print's
+			// key block draws the big things: the paddies' blocks, lanes, banks, villages, ridges. Each
+			// line is a pixel wide across whatever the angle (its half width at least 0.6 of the
+			// pixel's footprint across it, so it never breaks into dashes), and a family of lines is
+			// drawn only where they stay a few pixels apart: seen edge on, the paddies' rows would crowd
+			// into one dark band. vista_post then drops what is left shorter than about five pixels.)
+			// the paddies' blocks, where a block is four pixels or more across that way
 			vec2 bl = abs(fract(uv / vec2(240.0, 180.0)) - 0.5) * vec2(240.0, 180.0);
-			if (pxm < 50.0 && max(bl.x - 120.0 + pxm * 0.55, bl.y - 90.0 + pxm * 0.55) > 0.0) ink = 1.0;
+			vec2 hw = max(vec2(pxm * 0.55), fw_uv * 0.6);
+			if ((fw_uv.x < 60.0 && bl.x > 120.0 - hw.x) || (fw_uv.y < 45.0 && bl.y > 90.0 - hw.y)) ink = 1.0;
 			// the levees between the strips, where the pixel can hold them
 			if (pxm < sw * 0.4 && fract(along / sw) < max(0.06, pxm * 0.5 / sw)) alb = pal(0.0, 3.0);
 			// groves and gardens round the villages, a tree line along the lanes
@@ -238,15 +251,19 @@ void fragment() {
 				water = false;
 				plate = V_GREEN;
 			}
-			// (the key block: a village's grove drawn round)
-			if (abs(dens - 0.33) < max(fwidth(dens) * 0.6, 1e-4)) ink = 1.0;
-			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; plate = V_EARTH; ink = 1.0; }
+			// (the key block: a village's grove drawn round, nearer than 9 km: farther, only the big
+			// things keep a line)
+			if (dist < 9000.0 && fw_dens < 0.15 && abs(dens - 0.33) < max(fw_dens * 0.6, 1e-4)) ink = 1.0;
+			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; plate = V_EARTH; }
 			else if (d_road < max(5.0, pxm * 1.1) && w3_hash(floor(xz / 9.0)) > 0.55) { alb = srgb(vec3(0.19, 0.27, 0.15)); water = false; plate = V_GREEN; }
+			// (the key block: the lanes, nearer than 9 km, where the pixel's footprint across a lane is
+			// under 40 m)
+			if (dist < 9000.0 && fw_road < 40.0 && d_road < max(2.6, fw_road * 0.6)) { water = false; plate = V_EARTH; ink = 1.0; }
 			float r_edge = 34.0 + w3_vnoise(xz / 90.0) * 10.0;
 			if (d_river < r_edge) { water = true; v_river = 1.0; }
 			else if (d_river < 44.0) { alb = pal(9.0, 3.0); water = false; plate = V_EARTH; }        // its banks
 			// (the key block: the river's banks)
-			if (abs(d_river - r_edge) < max(pxm * 0.55, fwidth(d_river) * 0.6)) ink = 1.0;
+			if (fw_river < 30.0 && abs(d_river - r_edge) < max(pxm * 0.55, fw_river * 0.6)) ink = 1.0;
 		}
 		if (cult > 0.5) {
 			// the lower layer's terraces: young rice in muted greens, a few strips still flooded
@@ -258,9 +275,13 @@ void fragment() {
 			if (fract(rowf) < 0.18) { alb = pal(0.0, 2.5); water = false; }
 		}
 		// (the key block: the edges of the terraces, the woods, the water)
-		if (abs(cult - 0.5) < max(fwidth(cult) * 0.6, 1e-4)) ink = 1.0;
-		if (!plain && abs(forest - 0.4) < max(fwidth(forest) * 0.6, 1e-4)) ink = 1.0;
-		if (!plain && abs(wat - 0.5) < max(fwidth(wat) * 0.6, 1e-4)) ink = 1.0;
+		// (where a field changes by more than 0.15 across a pixel its edges would crowd: none)
+		float fc = fwidth(cult);
+		float ff = fwidth(forest);
+		float fwt = fwidth(wat);
+		if (fc < 0.15 && abs(cult - 0.5) < max(fc * 0.6, 1e-4)) ink = 1.0;
+		if (!plain && ff < 0.15 && abs(forest - 0.4) < max(ff * 0.6, 1e-4)) ink = 1.0;
+		if (!plain && fwt < 0.15 && abs(wat - 0.5) < max(fwt * 0.6, 1e-4)) ink = 1.0;
 		bool far_hill = !plain && dist > 2600.0;
 		wood = (forest > 0.4 && !plain) ? 1.0 : 0.0;
 		if (forest > 0.4 && !plain) {
@@ -339,7 +360,7 @@ void fragment() {
 			vec2 cc = floor(pc / vec2(4.0, 3.0));
 			vec2 q = pc - cc * vec2(4.0, 3.0) - vec2(floor(w3_hash(cc + 9.1) * 2.0), 0.0);
 			bool crown = (q.y == 1.0 && q.x == 1.0) || (q.y == 0.0 && (q.x == 0.0 || q.x == 2.0));
-			if (crown && w3_hash(cc * 1.7 + 3.0) < 0.6) EMISSION = v_ink();
+			if (crown && w3_hash(cc * 1.7 + 3.0) < 0.6) EMISSION = v_ink_mark();
 		}
 		if (dbg_mode == 1) { EMISSION = vec3(clamp(slope / 60.0, 0.0, 1.0), n.y, 0.0); ALBEDO = vec3(0.0); }
 		if (dbg_mode == 3) { EMISSION = alb; ALBEDO = vec3(0.0); }

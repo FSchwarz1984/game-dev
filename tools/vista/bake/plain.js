@@ -582,12 +582,12 @@ export const PLATE_AT = [300, 900, 1400, 1900], PLATE_SPREAD = 320;
  * mottle of long and short flecks, fixed to the land), 128 = plain paper; A a small delay for the
  * blocks coming off after the tide.
  *
- * The key block is drawn as a block is cut: deliberate, continuous lines. Main lines (2 px near, 1 px
- * far): the skyline and the ridges, the top edge of whatever stands in front of the land behind it
- * (a wood's crest, a terrace of land, the viaduct), river and pond banks, roads, the town's and the
- * villages' outline, the woods' edges near by; fine lines (1 px): the levees between fields, roofs,
- * the crowns in a near wood. Then the cut is cleaned: pieces shorter than a few pixels go (more far
- * away: only the big structures stay), one-pixel gaps along a line are closed.
+ * The key block is drawn as a block is cut: deliberate, continuous lines. Main lines (2 px nearest us,
+ * 1 px beyond): the skyline and the ridges, the top edge of whatever stands in front of the land
+ * behind it (a crest, a terrace of land, the viaduct), river and pond banks, roads, the town's outline;
+ * fine lines (1 px): the woods' edges, the levees between fields, roofs, the crowns in a near wood.
+ * Then the cut is cleaned: one-pixel gaps along a line are closed, pieces shorter than a few pixels go
+ * (more far away: only the big structures stay).
  */
 export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
   const N = W * H, out = new Uint8Array(N * 4), idx = L.idx;
@@ -595,6 +595,17 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
   const isMtn = m => m === G.farRock || m === G.farForest || m === G.hillForest;
   const sd = sunDir || [0.85, 0.27, -0.45], sl = Math.hypot(...sd), lx = sd[0] / sl, ly = sd[1] / sl, lz = sd[2] / sl;
   const kind = new Uint8Array(N);                 // 0 none, 1 fine, 2 main
+  // the land's relief as the paper takes it (and the ranges' folds): the light on the land's slope,
+  // smoothed (over ~2 pixels near; ~500 m on the ranges, so that their faces read as faces)
+  const lamA = new Float32Array(N);
+  for (let i = 0; i < N; i++) {
+    if (!mask[i]) continue;
+    const Z = Zb[i], X = Xb[i], far = Z > 30;
+    const sm = (far ? 500 : Math.max(120, 2 * Z * Z / f * U)) / U;
+    const hx = heightBase(X + sm, Z) - heightBase(X - sm, Z), hz = heightBase(X, Z + sm) - heightBase(X, Z - sm);
+    const nl = Math.hypot(hx, 2 * sm, hz);
+    lamA[i] = (-hx * lx + 2 * sm * ly - hz * lz) / nl;
+  }
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     if (!mask[i]) continue;
@@ -608,6 +619,12 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
         // the ranges: their ridges and spurs, one in front of the next (fewer the farther)
         const r = Z > 60 ? 1.12 : 1.05;
         if (Zu > Z * r && Zu - Z > 1.5 * flat) k = 2;
+        // and their folds: where a face turned to the light gives onto one turned away (a spur's crest
+        // or a valley's crease, read across the slope)
+        if (!k && x > 0 && mask[i - 1] && isMtn(idx[i - 1] >> 8)) {
+          const a0 = lamA[i - 1] - ly, a1 = lamA[i] - ly, thr = Z > 60 ? 0.2 : 0.13;
+          if (a0 * a1 < 0 && Math.abs(a1 - a0) > thr) k = 2;
+        }
       } else if (Zu > Z * 1.25 && Zu - Z > 6 * flat + 0.04) k = 2;    // crests, terraces, the viaduct
     }
     if (k < 2) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
@@ -620,7 +637,7 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
       }
       if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
       if (c === 3 || c === 4 || c === 5 || c === 9) k = 2;              // banks, roads, the town, the viaduct
-      else if (c === 6 && !mtn && (Z < 8 || (n === up && Z < 16))) k = 2;   // the woods' edges, then crests
+      else if (c === 6 && !mtn && (Z < 8 || (n === up && Z < 16))) k = Math.max(k, 1);   // the woods' edges
       else if (c === 8 && Z < 16) k = Math.max(k, 1);                   // roofs
       else if (c === 7 && Z < 8) k = Math.max(k, 1);
     }
@@ -632,15 +649,16 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
     }
     kind[i] = k;
   }
-  // clean the cut: one-pixel gaps along a line closed (a gap between two line pixels of the same kind,
-  // across: left-right, up-down or a diagonal), then the pieces shorter than a few pixels dropped
+  // clean the cut: one-pixel gaps along a line closed (a gap between two line pixels of the same kind
+  // along the line: left-right or a diagonal; never up-down, which would weld two lines lying one above
+  // the other into a band), then the pieces shorter than a few pixels dropped
   const fill = new Uint8Array(N);
   for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
     const i = y * W + x;
     if (kind[i] || !mask[i]) continue;
-    for (const [a, b2] of [[i - 1, i + 1], [i - W, i + W], [i - W - 1, i + W + 1], [i - W + 1, i + W - 1]]) {
+    for (const [a, b2] of [[i - 1, i + 1], [i - W - 1, i + W + 1], [i - W + 1, i + W - 1]]) {
       const ka = kind[a], kb = kind[b2];
-      if (ka && ka === kb) { fill[i] = ka; break; }
+      if (ka && ka === kb && !kind[i - W] && !kind[i + W]) { fill[i] = ka; break; }
     }
   }
   for (let i = 0; i < N; i++) if (fill[i]) kind[i] = fill[i];
@@ -662,17 +680,19 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
         if (kind[j] && comp[j] < 0) { comp[j] = i0; stack.push(j); }
       }
     }
-    // the shortest piece kept: 4 px near, 6 past ~3 km, 9 in the far ranges
-    const min = zmin < 16 ? 4 : zmin < 40 ? 6 : 9;
+    // the shortest piece kept: main lines 4 px near, 6 past ~3 km, 9 in the far ranges; fine lines 6
+    // near, 10 farther
+    const main = kind[i0] === 2 || piece.some(i => kind[i] === 2);
+    const min = main ? (zmin < 16 ? 4 : zmin < 40 ? 6 : 9) : (zmin < 8 ? 6 : 10);
     if (piece.length < min) for (const i of piece) kind[i] = 0;
   }
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     if (!mask[i]) continue;
     const Z = Zb[i], X = Xb[i];
-    // the main lines near by are two pixels: the line and the pixel under it (if that is land)
+    // the main lines nearest us are two pixels: the line and the pixel under it (if that is land)
     let ink = kind[i] ? 1 : 0;
-    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < 8 && Zb[i] < Zb[i - W] * 1.4) ink = 1;
+    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < 6 && Zb[i] < Zb[i - W] * 1.4) ink = 1;
     // which blocks are gone here: metres past the rim against each block's front (wandering with the
     // bearing), per piece of land
     const xm = -X * U, zm = Z * U;
@@ -686,13 +706,9 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
       const spread = k === 0 ? 0 : (hash2(pxc, pzc, 700 + k) - 0.5) * 2 * PLATE_SPREAD;
       if (past >= PLATE_AT[k] * (0.8 + 0.4 * w) + spread) st = k + 1;
     }
-    // the blind embossing: the land's slope (over ~2 pixels near, ~150 m on the ranges, so that their
-    // faces read and the plain stays level), lit from the sun's side against level ground, within 5 %
-    const far = Z > 30;
-    const sm = (far ? 150 : Math.max(120, 2 * Z * Z / f * U)) / U;
-    const hx = heightBase(X + sm, Z) - heightBase(X - sm, Z), hz = heightBase(X, Z + sm) - heightBase(X, Z - sm);
-    const nl = Math.hypot(hx, 2 * sm, hz), lam = (-hx * lx + 2 * sm * ly - hz * lz) / nl;
-    const emb = clamp((lam - ly) * (far ? 0.6 : 0.35), -0.05, 0.05);
+    // the blind embossing: the land's smoothed slope lit from the sun's side against level ground,
+    // within 5 % (the plain stays level; the ranges' faces read as faces)
+    const emb = clamp((lamA[i] - ly) * (Z > 30 ? 0.5 : 0.35), -0.05, 0.05);
     // the paper's fibres: long flecks along the sheet and short ones, about 2.5 % either way, fixed to
     // the land (the canvas moves with it by whole pixels)
     const fib = ((vnoise(x / 7, y / 1.6, 631) - 0.5) * 0.6 + (vnoise(x / 2.2, y / 1.4, 632) - 0.5) * 0.4) * 0.09;

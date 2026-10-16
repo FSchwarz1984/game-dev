@@ -527,10 +527,11 @@ def hat_band():
         return hat_point(ring + (u - 0.5) * wfrac, v * TAU, lift=0.010 + 0.004 * math.sin(u * math.pi))
     grid(part, 3, nv, pos_ring, close_v=True, col=lambda u, v: C.RED,
          auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'hat'}, flip=True)
-    # two straps down the cone: one over her front-left (the front view), one to the knot behind her left
+    # straps down the cone from the ring (design 'hat_straps': angles in degrees from her front toward
+    # her left)
     th_t = math.radians(D['hat_tail_angle'])
     half = D['hat_band_w'] / 2.0
-    for th_s in (math.radians(D['hat_strap_angle']), th_t):
+    for th_s in [math.radians(a) for a in D['hat_straps']]:
         def pos_strap(u, v, th_s=th_s):
             rho = lerp(ring, 1.0, u)
             r = max(rho * R, 0.05)

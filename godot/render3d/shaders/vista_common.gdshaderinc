@@ -2,11 +2,9 @@
 // godot/world3d/vista3d.gd): a perspective camera in its own world, drawn at native resolution in
 // the same pixel-art language as the top-down world. Height maps, aerial perspective (haze toward
 // the horizon colour, continuous), the sea of clouds over the lowland (where its banks may lie, how
-// they creep, the shade they cast on the plain), and the 遠化 beyond the region's ring: the land
-// there sinks into the air with distance, faster than the haze alone would take it, and past a front
-// that wanders round the region a few kilometres out it is far land in the air's blue-grey, low in
-// contrast, layer behind layer (round 4: no longer a flat white with a bright edge, which read as a
-// beach).
+// they creep, the shade they cast on the plain), and the 遠化 beyond the region's ring: past a front
+// that wanders round the region a few kilometres out the land is a woodblock print losing its colour
+// blocks (round 5: 褪版, below).
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
 uniform sampler2D mid_tex : filter_nearest, repeat_disable;   // RG u16 height, B forest, A water
@@ -273,24 +271,46 @@ vec3 v_flat(int plate, vec3 alb) {
 	if (plate == V_EARTH) return l > 0.05 ? print_earth_lt : print_earth_dk;
 	return alb;
 }
-// The paper: it must read as paper. Uninked, it is one step lighter than the coloured land beside it
-// (its albedo a little over the light earth's), flat, even and without a hue; at night it is paper
-// under the moon, a grey a step above the dark land, never sunk into the night's blue. (A fog's
-// reading comes from soft edges and eaten lines, not from the lightness.)
+// The paper: it must read as paper (the lead's rules, 2026-10-16; the prologue's 2D view keeps the
+// same numbers: coord/to_vista2d). Uninked it is a step lighter than the coloured land beside it (its
+// albedo a little over the light earth's); warm white by day (unbleached washi), a little cool under
+// the moon (a grey a step above the dark land, never sunk into the night's blue); and its grain shows,
+// very light, fixed to the world (a large flat fill reads as unfinished). (A fog's reading comes from
+// soft edges and eaten lines, not from the lightness.)
 const float V_PAPER_ALB = 0.31;
+const vec3 V_PAPER_DAY = vec3(1.035, 1.0, 0.915);
+const vec3 V_PAPER_NIGHT = vec3(0.955, 0.985, 1.045);
 vec3 v_paper_white() {
-	return vec3(V_PAPER_ALB * w3_luma(v_print_light())) * vec3(1.015, 1.0, 0.975);
+	return vec3(V_PAPER_ALB * w3_luma(v_print_light())) * mix(V_PAPER_DAY, V_PAPER_NIGHT, w3_night);
 }
-// the paper with its blind embossing (karazuri): only the big relief (rn: a normal of the land taken
-// over tens of metres, vista_ground), very light: a few hundredths, never broken up
-vec3 v_emboss(vec3 rn) {
+// the paper's grain at a point: fibres a few pixels long lying across, on the lattice of directions
+// (fixed to the world: from the lookout she only turns, by whole pixels); a factor within 1 +- 0.03.
+// The colour blocks print on it, so it shows through them as well
+float v_grain(vec3 wp, vec3 cam) {
+	vec2 pc = v_dir_cell(wp, cam);
+	float f = w3_vnoise(pc * vec2(0.22, 0.85) + 5.0) * 0.6 + w3_hash(pc * 0.917 + 2.0) * 0.4;
+	return 1.0 + clamp(f - 0.5, -0.5, 0.5) * 0.06;
+}
+// the paper with its blind embossing (karazuri): the relief pressed into the paper, read from the big
+// landforms only (rn: a normal of the land taken over tens to hundreds of metres, vista_ground): up to
+// 5 % lighter or darker by the slope's turn to the light, so a range keeps its volume (a skyline with
+// a flat fill inside reads as a placeholder); never broken up
+const float V_EMBOSS = 0.05;
+vec3 v_emboss(vec3 rn, vec3 wp, vec3 cam) {
 	vec3 sd = normalize(w3_sun_dir);
-	return v_paper_white() * (1.0 + 0.1 * clamp(dot(rn, sd) - max(sd.y, 0.2), -0.4, 0.3));
+	float k = clamp((dot(rn, sd) - max(sd.y, 0.2)) * 2.5, -1.0, 1.0);
+	return v_paper_white() * (1.0 + V_EMBOSS * k) * v_grain(wp, cam);
 }
 // the key block's ink: the clearest thing in the 遠化, hard and dark at every distance (the
 // opposite of air): the palette's K printed in the hour's light
 vec3 v_ink() {
 	return w3_srgb_to_linear(ink_k) * w3_luma(v_print_light());
+}
+// the same ink for the key block's small marks (a wood's crowns): a hair lighter, which no eye sees,
+// so that vista_post's line filter (it drops broken bits of line shorter than a few pixels) knows
+// them from the lines and leaves them be
+vec3 v_ink_mark() {
+	return v_ink() * 1.03;
 }
 // a surface's colour past the front: amb its colour as drawn before the 遠化 (ambient-lit, without
 // the sun); flat_c its block's flat colour (the albedo the print uses: two tones to a block, v_flat);
@@ -298,8 +318,9 @@ vec3 v_ink() {
 vec3 v_print(vec3 amb, vec3 flat_c, int plate, vec3 n, vec3 wp, vec3 cam, vec2 frag) {
 	float dist = length(wp - cam);
 	if (v_plate_on(0, wp.xz, dist, frag) > 0.5) return amb;
-	if (plate == V_PAPER || v_plate_on(plate, wp.xz, dist, frag) < 0.5) return v_emboss(n);
-	return flat_c * v_print_light();
+	if (plate == V_PAPER || v_plate_on(plate, wp.xz, dist, frag) < 0.5) return v_emboss(n, wp, cam);
+	// (a block prints on the paper: the grain shows through it)
+	return flat_c * v_print_light() * v_grain(wp, cam);
 }
 // the sun's share a surface keeps (the gradations go first: past the front no modelling)
 float v_print_sun(vec3 wp, vec3 cam, vec2 frag) {

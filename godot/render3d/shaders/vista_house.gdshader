@@ -170,7 +170,7 @@ void fragment() {
 			}
 		}
 		vec3 cc = v_air(col, v_wp, eye, FRAGCOORD.xy);
-		if (v_past(v_wp, eye, FRAGCOORD.xy)) cc = row < v_roof ? v_ink() : v_emboss(vec3(0.0, 1.0, 0.0));
+		if (v_past(v_wp, eye, FRAGCOORD.xy)) cc = row < v_roof ? v_ink() : v_emboss(vec3(0.0, 1.0, 0.0), v_wp, eye);
 		ALBEDO = lamp ? mix(cc, lamp_c * 3.0, 0.85) : cc;
 	} else {
 	vec3 h_alb = w3_srgb_to_linear(v_col.rgb);   // the block's colour in the 遠化
