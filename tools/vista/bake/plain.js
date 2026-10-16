@@ -628,8 +628,8 @@ export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt }
 export function ghostZero() { const v = VILLAGES.reduce((a, b) => (b.n > a.n ? b : a)); return [v.x, v.z]; }
 /** the rings (m from ground zero) and how much a ghost the land is at each: GHOST_K[0] within r0,
  *  GHOST_K[1] at r1, GHOST_K[2] at r2, GHOST_K[3] (nothing) past r3 (vista3d.gd GHOST_R, GHOST_K) */
-export const GHOST_R = [400, 1100, 2600, 5500];
-export const GHOST_K = [1, 0.75, 0.4, 0];
+export const GHOST_R = [350, 900, 2000, 4200];
+export const GHOST_K = [1, 0.6, 0.3, 0];
 /** the region's ellipse round home (vista.json mist: cx, cz, rx, rz in m) */
 export function ghostHome() { const m = W3.json.mist; return { cx: m.cx, cz: m.cz, rx: m.rx, rz: m.rz }; }
 // pixel_toon's w3_hash and vista3d.gd _vnoise (fposmod = the GLSL fract)

@@ -197,7 +197,7 @@ func _process(delta: float) -> void:
 
 
 func _find_walkers() -> void:
-	var sc := get_tree().current_scene
+	var sc := _sample_node()
 	if sc == null:
 		return
 	for k in ["her", "saji"]:
@@ -206,6 +206,18 @@ func _find_walkers() -> void:
 		# something there)
 		if w is Object and is_instance_valid(w) and (w as Object).get("pos") != null and (w as Object).get("ghost") != true:
 			walkers.append(w)
+
+
+## The scene that holds her (`her`, `saji`): the nearest ancestor that has them. The sample is the
+## tree's current scene only when it runs on its own; in the showcase (the Windows build) the
+## showcase is, and the sample one of its children (G5R3-24: no grass bent under her there).
+func _sample_node() -> Node:
+	var n := get_parent()
+	while n != null:
+		if "her" in n:
+			return n
+		n = n.get_parent()
+	return get_tree().current_scene
 
 
 # ------------------------------------------------------------------------------------------------

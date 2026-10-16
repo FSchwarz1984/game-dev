@@ -151,7 +151,10 @@ float v_mist_e(vec2 xz) {
 uniform vec2 ghost_c = vec2(-260.0, 2160.0);
 uniform vec4 ghost_r = vec4(350.0, 900.0, 2000.0, 4200.0);
 const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
-uniform float ghost_night_gain = 1.0;               // the night look's light (linear; see v_ghost)
+// the night look's light (linear): 0.89 lands its lightness on the prologue's silver-grey as the
+// screen shows it (the town there sRGB about (118, 126, 145), luma 126; through this view's night grade
+// the same numbers came out at luma 133, a little bluer: vista_display's gain and lift)
+uniform float ghost_night_gain = 0.89;
 
 // how far gone a point is: 1 at the heart .. 0 (as it is)
 float v_ghost_k(vec2 xz) {

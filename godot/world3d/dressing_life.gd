@@ -191,7 +191,13 @@ func _setup_crows() -> void:
 func _process(delta: float) -> void:
 	if not _looked:
 		_looked = true
-		var sc := get_tree().current_scene
+		# (the sample: the nearest ancestor that has her; in the showcase the tree's current scene is
+		# the showcase, and the hens and crows took no notice of her there, G5R3-24)
+		var sc: Node = get_parent()
+		while sc != null and not ("her" in sc):
+			sc = sc.get_parent()
+		if sc == null:
+			sc = get_tree().current_scene
 		if sc:
 			var h: Variant = sc.get("her")
 			# (an unseen walker, the sample's --nochar: the hens and the crows take no notice of
