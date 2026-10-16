@@ -151,6 +151,7 @@ float v_mist_e(vec2 xz) {
 uniform vec2 ghost_c = vec2(-260.0, 2160.0);
 uniform vec4 ghost_r = vec4(350.0, 900.0, 2000.0, 4200.0);
 const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
+uniform float ghost_night_gain = 1.0;               // the night look's light (linear; see v_ghost)
 
 // how far gone a point is: 1 at the heart .. 0 (as it is)
 float v_ghost_k(vec2 xz) {
@@ -219,34 +220,35 @@ float v_cloud_shade(vec3 wp) {
 // pixels, slowly) and small silver lights rise from it (vista3d.gd _motes). It is lit by a light of its
 // own more than by the hour's (v_ghost_light): at night a bright silver one or two steps above the
 // dark land, by day level with the land round it or a touch above.
-// the light a level white surface has at this hour (the sky above, the sun at round 3's middle level)
+// the light a level white surface has at this hour (the sky above, the sun at round 3's middle level):
+// the 遠化's lightness is taken against it (how light a thing is, whatever the hour)
 float v_light_ref() {
 	return w3_luma(vec3(w3_luma(w3_sky)) * w3_shade_tint + w3_sun * w3_lit_tint * (0.78 / W3_PI));
 }
-// The 遠化's own light (the lead, after the prologue matched: round 2's "lit by nothing in particular";
-// G5R3-26: at night a silver grey, not a glare, as the prologue's v6, the town about sRGB 110-150):
-// by day the hour's own (with the lift its silver sits a touch above the land round it), but never
-// under a light of its own (V_GHOST_OWN), so at night it is a silver grey a step or two above the
-// dark land, and at dusk between the two.
-const float V_GHOST_DAY = 1.0;
-const float V_GHOST_OWN = 0.5;
-float v_ghost_light() {
-	float d = v_light_ref() * V_GHOST_DAY;
-	return sqrt(d * d + V_GHOST_OWN * V_GHOST_OWN);
-}
-// a colour as the 遠化 shows it (k: v_ghost_k): its lightness (against the hour's light: about its
-// albedo and its shading) lifted toward white in display terms, 0.34 + 0.6 l^0.8 (round 2's was 0.2 +
-// 0.58 l^0.85: silver, not silver-grey), a tenth of its own colour left, the rest a cool silver, in
-// the 遠化's own light (v_ghost_light)
+// a colour as the 遠化 shows it (k: v_ghost_k), two looks, the same numbers as the prologue's 2D view
+// (tools/vista/bake/plain.js GHOST_LOOKS), from its lightness against the hour's light (display: ld):
+// - by day the silver-white: ld -> 0.34 + 0.6 ld^0.8, the cool silver (0.88, 0.93, 1.05), a tenth of
+//   its own colour at the same lightness; it keeps the hour's light (bright by day);
+// - at night the silver-grey (round 2's ghost() lifted a third wider): ld -> 0.2 + 0.74 ld^0.85, the
+//   silver (0.86, 0.92, 1.07) mixed a tenth with its own colour; a light of its own, not the hour's
+//   (the user, G5R3-26: the silver-white was too bright at night; the silver-grey of the prologue
+//   "在夜間的表現還是不錯的");
+// - at dusk and dawn the one turns into the other with the night (w3_night).
+const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
 vec3 v_ghost(vec3 col, float k) {
 	if (k <= 0.0) return col;
-	float l = w3_luma(col) / max(v_light_ref(), 1e-4);
+	float lref = max(v_light_ref(), 1e-4);
+	float l = w3_luma(col) / lref;
 	float ld = pow(clamp(l, 0.0, 1.6), 1.0 / 2.2);
+	// by day
 	float l2 = 0.34 + 0.6 * pow(ld, 0.8);
-	vec3 g = w3_srgb_to_linear(clamp(vec3(l2) * V_GHOST_TINT, vec3(0.0), vec3(1.0))) * v_ghost_light();
-	// a tenth of its own colour, at the same lightness
-	g = mix(g, col * (w3_luma(g) / max(w3_luma(col), 1e-5)), 0.1);
-	return mix(col, g, k);
+	vec3 gd = w3_srgb_to_linear(clamp(vec3(l2) * V_GHOST_TINT, vec3(0.0), vec3(1.0))) * lref;
+	gd = mix(gd, col * (w3_luma(gd) / max(w3_luma(col), 1e-5)), 0.1);
+	// at night
+	float ln = clamp(0.2 + 0.74 * pow(min(ld, 1.0), 0.85), 0.0, 1.0);
+	vec3 own = pow(clamp(col / lref, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
+	vec3 gn = w3_srgb_to_linear(clamp(0.9 * ln * V_GHOST_TINT_NIGHT + 0.1 * own, vec3(0.0), vec3(1.0))) * ghost_night_gain;
+	return mix(col, mix(gd, gn, w3_night), k);
 }
 // lamps go out in the 遠化 (and smoke and cloud stand still there: vista_puff, vista_cloud)
 float v_drain(vec2 xz, float y) {
