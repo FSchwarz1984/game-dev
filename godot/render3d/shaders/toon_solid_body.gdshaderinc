@@ -113,7 +113,7 @@ void light() {
 			float lit = mix(w3_r3_body(dot(NORMAL, LIGHT)), w3_wrap(dot(NORMAL, LIGHT), 0.3), w3_night) * ATTENUATION;
 			c += LIGHT_COLOR / W3_PI * shade_fill * (1.0 - lit);
 		}
-		DIFFUSE_LIGHT += c * k;
+		DIFFUSE_LIGHT += (c + w3_shadow_fill(ATTENUATION)) * k;
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail * k;
 	}

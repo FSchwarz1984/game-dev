@@ -34,7 +34,9 @@ export function bakeTitle(o = {}) {
   const R = rng(seed * 11 + 5);
   const yh = Math.round(clamp(H * 0.6, H - 118, H - 80));
   const cx = ox + Math.round(W / 2), f = 360, S = Math.max(110, yh * 0.95);
-  const env = todEnv(21);
+  // the hour: the night of the 送魂 before the tide (the prologue's tide comes at 20.3), every lamp lit
+  const TOD = 20;
+  const env = todEnv(TOD);
   const lift = { lift: env.lift.map((v, i) => v + [0.014, 0.018, 0.028][i]) };
   const envG = { ...env, ...lift, sun: env.sun.map(v => v * 0.62), amb: env.amb.map(v => v * 1.08) };
   const sun = { dir: norm([0.6, 0.45, -0.35]), slope: 0.45 };
@@ -101,6 +103,8 @@ export function bakeTitle(o = {}) {
   // the canopy overhead (top group: reference coords, a margin at the sides and above)
   const mX = ox, mT = 40;
   const canopy = run(titleCanopy(W, H, moon, R, Wc, mX, mT));
+  // a low bough of the same tree in from the left (the foreground that keeps the menu's corner dark)
+  const bough = run(titleBough());
   const gh = Math.round(clamp(H * 0.3, 50, 110));
   const grass = [0, 1, 2].map(k => ({ layer: paintGrass(Wc + 4, gh, seed * 17 + k, { n: Math.round(Wc * (1.1 - k * 0.3)), rimSide: 1, hMin: 0.1 + k * 0.08, hMax: 0.36 + k * 0.2, plumes: 0.05 + k * 0.04 }), ph: k * 2.1 }));
   const flies = [{ x: W * 0.2, y: H * 0.84, ph: 0.3 }, { x: W * 0.84, y: H * 0.8, ph: 2.1 }, { x: W * 0.58, y: H * 0.88, ph: 4.0 }];
@@ -181,7 +185,7 @@ export function bakeTitle(o = {}) {
   const fpal = palette(FOLIAGE_MATS, { ...env, ...lift, sun: [0.46, 0.53, 0.72] });
 
   return {
-    meta: { shot: 'title', seed, refW: W, refH: H, Wc, Hc, ox, oy, yh, YH, moon, mX, mT, gh,
+    meta: { shot: 'title', seed, tod: TOD, refW: W, refH: H, Wc, Hc, ox, oy, yh, YH, moon, mX, mT, gh, bough: { w: bough.w, h: bough.h },
       canopy: { w: canopy.layer.w, h: canopy.layer.h }, text: { x: Math.round(W * 0.34), y: Math.round(H * 0.45) },
       vignette: { cx: 0.45, cy: 0.5, r0: 0.3, r1: 0.62, a: 0.32 } },
     stars: stars.filter(s => s.tw).map(s => [s.x, s.y, s.mag, s.col[0], s.col[1], s.col[2], +s.ph.toFixed(3), +s.sp.toFixed(3), 1]),
@@ -196,6 +200,7 @@ export function bakeTitle(o = {}) {
       back: canvasImage(back),
       moon: { w: mw, h: mw, data: moonImg },
       canopy: layerImage(canopy.layer, fpal),
+      bough: layerImage(bough, fpal),
       ...Object.fromEntries(canopy.sprays.map((sp, k) => ['spray' + k, layerImage(sp.layer, fpal)])),
       ...Object.fromEntries(grass.map((gr, k) => ['grass' + k, layerImage(gr.layer, fpal)])),
     },
@@ -286,6 +291,43 @@ function* titleCanopy(W, H, moon, R, Wc, mX, mT) {
     sprays.push({ layer: L, x: x - 15, y: e - 2, ph: R() * TAU });
   }
   return { layer, sprays };
+}
+
+// A low bough of the great camphor, in from the left edge of the view (its trunk just out of frame,
+// the same tree as the canopy overhead: the same leaves, bark, light and palette), rising a little
+// to the right and ending well short of the town and the old road's thread of light. It stands on the
+// view's bottom-left corner (title.gd), so that the menu's lower entries, which fall over the plain,
+// stand on dark leaves (the lead's composition note: a foreground pressing the corner).
+function* titleBough() {
+  const w = 200, h = 150;
+  const light = [0.55, -0.55, -0.6];
+  const curve = (a, b, bend, n, r0, r1) => {
+    const pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, mx = (a[0] + b[0]) / 2 - (b[1] - a[1]) * bend, my = (a[1] + b[1]) / 2 + (b[0] - a[0]) * bend;
+      const x = (1 - t) * (1 - t) * a[0] + 2 * (1 - t) * t * mx + t * t * b[0], y = (1 - t) * (1 - t) * a[1] + 2 * (1 - t) * t * my + t * t * b[1];
+      pts.push([x + Math.sin(t * 9 + a[0]) * 1.2, y + Math.cos(t * 7) * 1.2, lerp(r0, r1, Math.pow(t, 0.8))]);
+    }
+    return pts;
+  };
+  // the bough itself, mostly hidden in its leaves (it shows through the gaps, as the canopy's limbs do)
+  const limbs = [
+    { pts: curve([-16, 100], [160, 58], 0.12, 14, 9, 2.4), z: 0.9, dark: 1 },
+    { pts: curve([60, 84], [104, 40], -0.2, 6, 3, 1.0), z: 0.85, dark: 1 },
+  ];
+  // one mass of leaves along it, as the canopy's underside is: big clumps behind in their own shade,
+  // smaller ones in front along the lower edge and the tip, a few bumps on top, sprays hanging under
+  const clumps = [
+    { x: 10, y: 70, rx: 30, ry: 20, z: 0.6, ao: 1 }, { x: 52, y: 60, rx: 32, ry: 20, z: 0.55, ao: 1 },
+    { x: 96, y: 54, rx: 30, ry: 18, z: 0.6, ao: 1 }, { x: 136, y: 54, rx: 24, ry: 15, z: 0.5, ao: 1 },
+    { x: 24, y: 46, rx: 18, ry: 11, z: 0.8 }, { x: 64, y: 38, rx: 20, ry: 12, z: 0.75 }, { x: 106, y: 38, rx: 16, ry: 10, z: 0.8 },
+    { x: 0, y: 94, rx: 22, ry: 14, z: 1.1 }, { x: 34, y: 88, rx: 24, ry: 14, z: 1.2 }, { x: 72, y: 78, rx: 22, ry: 13, z: 1.15 },
+    { x: 110, y: 70, rx: 20, ry: 12, z: 1.1 }, { x: 146, y: 64, rx: 16, ry: 10, z: 1.05 }, { x: 170, y: 60, rx: 10, ry: 7, z: 1.0 },
+    { x: 18, y: 116, rx: 16, ry: 12, z: 1.0 }, { x: 54, y: 106, rx: 14, ry: 10, z: 1.05 }, { x: 92, y: 96, rx: 12, ry: 9, z: 1.0 },
+  ];
+  // (no rim: the moon is far up to the right; the canopy's rims are only round the moon too)
+  const rimBelow = { x: 1e4, y: -1e4, r: 1 };
+  return yield* paintCanopyGen(w, h, { clumps, limbs, light, cell: 3.4, cellSeed: 13, rimBelow }, 77);
 }
 
 function norm(v) { const l = Math.hypot(...v); return v.map(q => q / l); }

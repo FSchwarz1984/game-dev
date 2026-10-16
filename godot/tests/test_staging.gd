@@ -364,3 +364,19 @@ func test_a_track_moves_one_step_every_frame_at_30_fps() -> void:
 		st.step(1.0 / 30.0)
 	eq(xs, [3.0, -3.0, 2.0, -2.0, 1.0, -1.0, 0.0, 0.0], "框抖, frame by frame")
 	eq(flash, [85, 60, 35, 15, 0, 0, 0, 0], "闪白 (percent), frame by frame")
+
+
+func test_a_long_frame_slows_the_line_instead_of_skipping_its_beats() -> void:
+	var root := (Engine.get_main_loop() as SceneTree).root
+	var ui := StoryUI.new()
+	root.add_child(ui)
+	ui.apply_theme("pixel")
+	ui.say([{"who": "tsuzumi", "face": "neutral", "text": "开头"}, {"who": "tsuzumi", "face": "neutral", "text": "[框抖]婆婆——！"}])
+	for i in 60:
+		ui.update(1.0 / 30.0)
+	ui.advance()
+	ui.update(2.5)                        # one frame of two and a half seconds
+	check(ui.dlg.box_offset != Vector2.ZERO, "the jolt is still on screen after the long frame")
+	check(not ui.stg.typed_out, "and the line has not raced to its end")
+	ui.close()
+	ui.free()

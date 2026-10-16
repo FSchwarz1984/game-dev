@@ -26,6 +26,7 @@ global uniform float w3_wet;        // rain wetness 0..1
 global uniform vec4 w3_player;      // xyz: her chest (world), w: cut-away radius in native px (0 = off; negative: the
                                     // cut-away only, nothing gives way or clears round her: --nochar, an unseen walker)
 global uniform float w3_night;      // 0 day .. 1 night
+global uniform vec3 w3_fill;        // the sky's light let back into the sun's shadow (round 5; world_env.gd: by the hour)
 global uniform sampler2D w3_lamps;  // lamps (render3d/lamps.gd): row 0 xyz + reach, row 1 rgb * energy + on
 global uniform float w3_lamp_n;     // how many lamps are lit (texels in use)
 global uniform float w3_bake;       // 0 the game; impostor bake (render3d/dev/impostor_bake.gd):
@@ -134,6 +135,18 @@ bool w3_cutaway_r(vec3 wp, vec2 cell, float scale) {
 }
 bool w3_cutaway(vec3 wp, vec2 cell) {
 	return w3_cutaway_r(wp, cell, 1.0);
+}
+
+// ------------------------------------------------------------------------------------------------
+// The sky's light let back into the sun's shadow (round 5, the lead: the mornings, the evenings and
+// the shrine under the great camphor were far darker than round 3's). Round 3 lit all its shade with
+// the whole sky; since round 4 the VoxelGI sees little sky under a crown or by a hedge, and with the
+// sun low most of the frame lies in such shade. Added in light() for the sun, where the sun is
+// shadowed (att: its shadow, 0 in shadow .. 1 lit), as more ambient (the engine multiplies it by the
+// painted shade's albedo like the sky's own light). world_env.gd sets w3_fill by the hour: none at
+// midday, at night or in rain, so those keep their light as it was.
+vec3 w3_shadow_fill(float att) {
+	return w3_fill * (1.0 - clamp(att, 0.0, 1.0));
 }
 
 // ------------------------------------------------------------------------------------------------

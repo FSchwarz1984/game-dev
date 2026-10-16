@@ -305,6 +305,7 @@ void light() {
 		float sh = max(ATTENUATION, v_fleck * 0.85);
 		// (round 5: round 3's levels, continuous: w3_sun_level)
 		DIFFUSE_LIGHT += w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, sh, true, 0.15) * v_detail;
+		DIFFUSE_LIGHT += w3_shadow_fill(sh);
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail;
 	}

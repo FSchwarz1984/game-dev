@@ -7,6 +7,9 @@ extends Node2D
 ## space centre-left for the title: anchors()["text"].
 ## Live: twinkling stars, three groups of stars on the water, the moon's glitter, the jade
 ## reflections, flickering fires, two or three fireflies, the hanging sprays and the grass stirring.
+## The plain is the prologue's (the 3D lookout's land) on the night of the 送魂 before the tide, every
+## lamp lit (meta.tod, 20 h); a low bough of the same camphor comes in from the left over the bottom-
+## left corner, so the menu's lower entries stand on dark leaves.
 ## Layout for any logical view: the plain keeps the JS frame's place above the bottom, the canopy and
 ## the moon hang from the top, the grass runs along the bottom; centred.
 
@@ -25,6 +28,7 @@ var sky: Sprite2D
 var moon: VistaQuad
 var back: Sprite2D
 var canopy: Sprite2D
+var bough: Sprite2D = null
 var sprays: Array[Sprite2D] = []
 var spray_d: Array = []
 var grass: Array[Sprite2D] = []
@@ -39,7 +43,7 @@ func setup(p_data: VistaData) -> void:
 	data = p_data
 	m = data.meta
 	name = "Title"
-	env = VistaEnv.at(21.0)
+	env = VistaEnv.at(float(m.get("tod", 21.0)))
 	var ox := float(m["ox"])
 	var oy := float(m["oy"])
 	back_g = Node2D.new()
@@ -95,7 +99,7 @@ func setup(p_data: VistaData) -> void:
 	var never := Image.create(1, 1, false, Image.FORMAT_RF)
 	never.fill(Color(-1.0e9, 0, 0, 0))
 	fires.set_param("tdep", ImageTexture.create_from_image(never))
-	fires.set_param("tod", 21.0)
+	fires.set_param("tod", float(m.get("tod", 21.0)))
 	fires.set_param("wave", -1.0)
 	light.root.add_child(fires)
 	# the canopy overhead and its sprays (top group)
@@ -105,6 +109,10 @@ func setup(p_data: VistaData) -> void:
 		sprays.append(_sprite("Spray%d" % k, "spray%d" % k, self))
 		spray_d.append(sp)
 		k += 1
+	# a low bough of the same tree in from the left, standing on the view's bottom-left corner: the
+	# menu's lower entries fall over it, not over the lit plain
+	if m.has("bough"):
+		bough = _sprite("Bough", "bough", self)
 	k = 0
 	for g in data.lists.get("grass", []):
 		grass.append(_sprite("Grass%d" % k, "grass%d" % k, self))
@@ -143,6 +151,8 @@ func update(_st: Dictionary, t: float) -> void:
 		var sp: Dictionary = spray_d[i]
 		var k := sin(t * 0.7 + float(sp["ph"])) + 0.35 * sin(t * 1.9 + float(sp["ph"]) * 2.0)
 		sprays[i].position = Vector2(dxv + float(sp["x"]) + floorf(k * 0.8 + 0.5), float(sp["y"]) + floorf(maxf(0.0, k) * 0.6 + 0.5))
+	if bough != null:
+		bough.position = Vector2(0.0, float(view.y) - float(m["bough"]["h"]))
 	for i in grass.size():
 		var g: Dictionary = grass_d[i]
 		var k := sin(t * 0.55 + float(g["ph"])) + 0.3 * sin(t * 1.7 + float(g["ph"]) * 3.0)
