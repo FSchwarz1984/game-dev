@@ -2446,6 +2446,30 @@
    "z": -39.05,
    "yaw": 35,
    "hang": 0.75
+  },
+  {
+   "name": "goban",
+   "x": -5.0,
+   "z": 3.5,
+   "yaw": 12
+  },
+  {
+   "name": "ono",
+   "x": -3.4,
+   "z": 4.7,
+   "yaw": -30
+  },
+  {
+   "name": "kumotsu_old",
+   "x": -12.15,
+   "z": 6.15,
+   "yaw": 0
+  },
+  {
+   "name": "shoryouma",
+   "x": 6.0,
+   "z": 13.15,
+   "yaw": 0
   }
  ],
  "perches": {
@@ -3621,7 +3645,16 @@
    "scale": 0.85,
    "rot": 1.2,
    "clear": 1.6,
-   "note": "the one red maple of the precinct (a red-leaved kind, red in summer too): the accent at the forecourt edge"
+   "note": "the precinct's one red maple (nomura-momiji, wine red all summer): the accent at the forecourt's east edge"
+  },
+  {
+   "kind": "maple_red_b",
+   "x": -38.6,
+   "z": 42.8,
+   "scale": 1.0,
+   "rot": 0.7,
+   "clear": 1.6,
+   "note": "the other red one, by the way down to the lookout (v0.1's red maples were the accent the user liked)"
   },
   {
    "kind": "maple_a",
@@ -3633,22 +3666,22 @@
    "note": "green maple at the landing (添景)"
   },
   {
-   "kind": "tsubaki_b",
+   "kind": "sakaki_a",
    "x": -12.9,
    "z": 5.3,
-   "scale": 0.8,
+   "scale": 1.0,
    "rot": 0.6,
    "clear": 1.2,
-   "note": "the sakaki beside the shrine (stand-in until sakaki_a)"
+   "note": "the sakaki beside the shrine"
   },
   {
-   "kind": "maple_b",
+   "kind": "sarusuberi_a",
    "x": 9.2,
    "z": 10.0,
-   "scale": 0.7,
+   "scale": 1.0,
    "rot": 4.0,
    "clear": 1.4,
-   "note": "the crape myrtle behind the graves (stand-in until sarusuberi_a)"
+   "note": "the crape myrtle behind the graves (百日紅, the Obon flower)"
   }
  ],
  "hedges": [
@@ -3665,19 +3698,20 @@
     ],
     [
      -15.6,
-     10.3
+     10.4
     ]
    ],
-   "kind": "shrub",
-   "scale": 0.75,
-   "step": 0.8
+   "kind": "ikegaki",
+   "scale": 1.0,
+   "step": 1.85,
+   "align": true
   },
   {
    "id": "yard_hedge_s",
    "pts": [
     [
      -15.6,
-     12.5
+     12.4
     ],
     [
      -15.7,
@@ -3688,9 +3722,10 @@
      16.8
     ]
    ],
-   "kind": "shrub",
-   "scale": 0.75,
-   "step": 0.8
+   "kind": "ikegaki",
+   "scale": 1.0,
+   "step": 1.85,
+   "align": true
   }
  ]
 }

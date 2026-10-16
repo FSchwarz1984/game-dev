@@ -326,7 +326,9 @@ def _base_mesh(R, M, ground):
     ax_x, ax_z = trunk.axis_at(Yv)
     thv = np.arctan2(-(Xall[..., 0] - ax_x), -(Xall[..., 2] - ax_z)) + TWIST * Yv
     rrv = trunk_ref(np.clip(Yv, -1.0, TRUNK_TOP)) / 0.62
-    flute = (fbm3(np.cos(thv) * rrv, np.sin(thv) * rrv, Yv / 2.8, octaves=3, seed=SEED) - 0.5) * 0.26
+    # (round 5, G5R3-5 "still too hard, like bricks / like folded paper": the flutes were deep enough to
+    # fold the trunk into planes; now a gentle undulation, the bark's lines carry the rest)
+    flute = (fbm3(np.cos(thv) * rrv * 1.4, np.sin(thv) * rrv * 1.4, Yv / 2.2, octaves=3, seed=SEED) - 0.5) * 0.09
     lumps = (fbm3(Xall[..., 0] / 1.3, Yv / 1.3, Xall[..., 2] / 1.3, octaves=3, seed=SEED + 3) - 0.5) * 0.12 \
         + (fbm3(Xall[..., 0] / 0.5, Yv / 0.5, Xall[..., 2] / 0.5, octaves=2, seed=SEED + 5) - 0.5) * 0.03
     wt = np.exp(-np.maximum(trunk.dist(Xall), 0.0) / 0.7) * np.clip((TRUNK_TOP + 0.3 - Yv) / 1.2, 0, 1)
@@ -581,6 +583,28 @@ def fern_tile(W, seed):
     return LV._finish(val, cov)
 
 
+def noki_tile(W, seed):
+    """ノキシノブ (Lepisorus thunbergianus), the little fern that lives on old bark: narrow strap
+    leaves fanning out of one point and arching over and down (cards on the limbs' flanks)."""
+    R = rng(seed)
+    H = W
+    c = LV.Canvas(W, H)
+    bx, by = W / 2 + R.uniform(-0.8, 0.8), H * 0.42
+    n = int(R.integers(5, 8))
+    for k in range(n):
+        a = -math.pi / 2 + (k - (n - 1) / 2) * 0.48 + R.normal(0, 0.1)
+        L = R.uniform(W * 0.4, W * 0.58)
+        steps = int(L * 1.6) + 2
+        x, y = bx, by
+        for j in range(steps):
+            t = j / steps
+            x += math.cos(a) * L / steps
+            y += math.sin(a) * L / steps + t * 0.6
+            c.put(x, y, LV.TOP if (t < 0.5 and math.sin(a) < -0.3) else LV.BODY, k * 0.01)
+    c.sep(R, 0.3)
+    return c.finish()
+
+
 def leaf_tiles():
     S = SEED
     specs = {
@@ -593,6 +617,8 @@ def leaf_tiles():
         'interior': [(LV.clumps, dict(W=24, seed=S + 300 + i, r=(2.6, 4.0), gloss=0.0, tips=2, shape=0.46, ragged=0.1, top_p=0.3, sep_p=0.4)) for i in range(2)],
         'fern': [(fern_tile, dict(W=12, seed=S + 500 + i)) for i in range(3)],
         'moss': [(LV.clumps, dict(W=9, seed=S + 600 + i, r=(1.2, 2.0), gloss=0.0, tips=2, shape=0.42, aspect=0.6, top_p=0.6)) for i in range(2)],
+        'noki': [(noki_tile, dict(W=10, seed=S + 650 + i)) for i in range(3)],
+        'bigfern': [(LV.fern_clump, dict(W=16, H=12, seed=S + 670 + i)) for i in range(3)],
     }
     for d in range(8):
         specs[f'spray{d}'] = [(LV.spray, dict(W=18, seed=S + 400 + d * 10, direction=-d * math.pi / 4, n_twigs=3,
@@ -616,8 +642,8 @@ def crown(M, sets):
     # at 30 px per metre the cards are smaller in the world, so there are more of them
     return CD.crown_cards(M, (0.0, 12.5, 0.5), (17.0, 7.0, 15.5), sets, seed=SEED + 9,
                           base_tint=_tint('#566e3e'), young_tint=_tint('#6e7c45'), old_tint=_tint('#34504a'),
-                          base_y=7.0, top_y=21.0, overlap=1.0, clump_overlap=1.15, fill_density=0.28,
-                          interior_frac=0.42, env_k=0.25, clump_k=0.5, up_bias=0.2, max_cards=6800)
+                          base_y=7.0, top_y=21.0, overlap=1.05, clump_overlap=1.2, fill_density=0.42,
+                          interior_frac=0.42, env_k=0.25, clump_k=0.5, up_bias=0.32, max_cards=7900)
 
 
 def clear_path(cards, sp, climb):
@@ -663,6 +689,61 @@ def path_plants(R, edges, sets):
         out.append(CD.Card(pos, normalize(nrm * 0.4 + np.array([0.0, 1.0, 0.3])), tl[1], tl[2], tl[0], 0.95,
                            np.clip(tint * (1 + R.normal(0, 0.03)), 0, 1), 0.2 if is_fern else 0.0, 'epi', 2.0))
     return out
+
+
+def limb_dress(R, named, limbs, sets):
+    """Round 5 (G5R3-5: the limb over the iwakura "光秃秃的没什么叶子只有苔藓"; lead: "枝上要有小枝、叶、
+    羊齿、ノキシノブ，中间留出走的苔路"): the ground limb and the lowest climbing limb are not bare tubes.
+    Along their flanks (never on the moss walk on top): ノキシノブ in little fans, ferns, moss; and
+    leaves on the epicormic twigs (胴吹き, the offshoots 'Gb*', 'P2b*'), along their outer half.
+    Returns (flank cards, twig leaf cards); the leaf cards go through clear_path."""
+    epi = []
+    for key, every, f_hi in (('G', 0.36, 0.74), ('P2', 0.55, 0.9)):
+        sp = named[key].spine
+        n = int(sp.length / every)
+        for i in range(n):
+            f = (i + R.uniform(0.2, 0.8)) / max(n, 1)
+            if f < 0.05 or f > f_hi:
+                continue
+            p, t, r = sp.point_at(f)
+            side = normalize(np.cross(t, [0, 1, 0]) + 1e-6) * (1 if R.uniform() < 0.5 else -1)
+            # on the flank: below the top's moss walk, facing out and a little up
+            ang = R.uniform(0.2, 1.05)
+            nrm = normalize(side * math.cos(ang) + np.array([0, math.sin(ang), 0]) * 0.6)
+            pos = p + nrm * (r + 0.02)
+            u = R.uniform()
+            if u < 0.42:
+                tl = sets['noki'][int(R.integers(0, len(sets['noki'])))]
+                tint, flex = _tint('#3f5f3a'), 0.25
+            elif u < 0.74:
+                lst = sets['bigfern'] if R.uniform() < 0.6 else sets['fern']
+                tl = lst[int(R.integers(0, len(lst)))]
+                tint, flex = _tint('#5d7a3c'), 0.3
+                pos = pos + np.array([0, tl[2] / PPM * 0.3, 0])
+            else:
+                tl = sets['moss'][int(R.integers(0, len(sets['moss'])))]
+                tint, flex = _tint('#56703a'), 0.0
+            epi.append(CD.Card(pos, normalize(nrm + np.array([0.0, 0.3, 0.35])), tl[1], tl[2], tl[0], 0.85,
+                               np.clip(tint * (1 + R.normal(0, 0.03)), 0, 1), flex, 'epi', 2.0))
+    leaves = []
+    base_t, young_t = _tint('#566e3e'), _tint('#6e7c45')
+    for L in limbs:
+        if not L.name.startswith(('Gb', 'P2b')) or L.spine is None:
+            continue
+        sp = L.spine
+        n = max(4, int(sp.length / 0.12))
+        for i in range(n):
+            f = 0.35 + 0.65 * (i + R.uniform(0.0, 1.0)) / n
+            p, t, r = sp.point_at(min(f, 1.0))
+            for _ in range(2 if f > 0.8 else 1):
+                off = normalize(R.normal(0, 1, 3) + np.array([0, 0.5, 0]))
+                q = p + off * R.uniform(0.08, 0.26)
+                tl = sets['small'][int(R.integers(0, len(sets['small'])))]
+                nrm = normalize(off * 0.6 + np.array([0.0, 0.55, 0.35]))
+                tint = young_t if R.uniform() < 0.3 else base_t
+                leaves.append(CD.Card(q, nrm, tl[1], tl[2], tl[0], float(R.uniform(0.7, 0.9)),
+                                      np.clip(tint * (1 + R.normal(0, 0.035)), 0, 1), 0.6, 'clump', 0.95))
+    return epi, leaves
 
 
 def crevice_plants(R, base_md, sets):
@@ -1145,14 +1226,17 @@ def build(out):
                                ('NE', 2, (0.5, 0.9), (2.4, 3.6), 0.45), ('N', 2, (0.5, 0.9), (2.4, 3.6), 0.45),
                                ('L', 2, (0.3, 0.6), (2.4, 4.0), 0.45), ('SEu', 2, (0.5, 0.9), (2.0, 3.0), 0.45),
                                ('SWu', 2, (0.5, 0.9), (2.0, 3.0), 0.45), ('P3', 2, (0.2, 0.75), (1.4, 2.2), -0.25),
-                               ('G', 2, (0.62, 0.9), (1.0, 1.8), 0.3)):
+                               ('G', 8, (0.12, 0.72), (0.55, 1.25), 0.35)):
         L = named[key]
         WD.build_limb(L)
         _shift_v(L, L.tags['s0'])
-        for b in WD.offshoots(L, R, n, frac_range=fr, length=ln, radius_k=(0.3, 0.45) if key in CLIMB else (0.4, 0.6),
-                              up_bias=ub, name=key + 'b', min_r=0.05, moss=0.15, segs=3, spread=1.1 if key in CLIMB else 0.9):
-            b.n_around = 7
-            b.step = 0.7
+        rk, mr, twig = ((0.3, 0.45) if key in CLIMB else (0.4, 0.6)), 0.05, False
+        if key == 'G':     # round 5: epicormic twigs (胴吹き) out of the ground limb's flanks, thin, leafy at the ends
+            rk, mr, twig = (0.06, 0.1), 0.022, True
+        for b in WD.offshoots(L, R, n, frac_range=fr, length=ln, radius_k=rk, up_bias=ub, name=key + 'b', min_r=mr,
+                              moss=0.15, segs=3, spread=1.15 if twig else (1.1 if key in CLIMB else 0.9)):
+            b.n_around = 5 if twig else 7
+            b.step = 0.3 if twig else 0.7
             limbs.append(b)
     for L in limbs:
         if L.spine is None:
@@ -1160,7 +1244,8 @@ def build(out):
             if 's0' in L.tags:
                 _shift_v(L, L.tags['s0'])
     a = out.asset(NAME, 'trees')
-    bark_img = WD.bark_flow_texture(SEED, size=256)
+    # round 5: round 3's line work (its ukiyo-e grain), the ridges' tones continuous (no plates, no breaks)
+    bark_img = WD.bark_lines_texture(SEED, size=256, ridge=('#6c6458', '#7b7365', '#8a8272'), lip='#999080')
     bark_res = a.texture('bark', bark_img)
     m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 1.0, 'cutaway': True},
                         textures={'albedo_tex': bark_res})
@@ -1188,6 +1273,9 @@ def build(out):
         c.ao = float(np.clip(c.ao * (0.62 + 0.38 * v), 0.2, 1.0))
     cards += epiphytes(R, named, sets)
     cards += path_plants(R, moss_edges, sets)
+    dress, twig_leaves = limb_dress(R, named, limbs, sets)
+    cards += dress
+    cards += clear_path(twig_leaves, path_sp, climb)
     cards += crevice_plants(R, base_md, sets)
     if os.environ.get('W3A_DEBUG_KINDS'):
         dbg = {'clump': (0.3, 0.9, 0.3), 'fill': (0.3, 0.4, 1.0), 'interior': (1.0, 0.2, 0.2), 'spray': (1.0, 1.0, 0.2), 'epi': (1.0, 0.2, 1.0)}

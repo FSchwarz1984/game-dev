@@ -145,6 +145,73 @@ def _wrap_noise(R, S, cells, octaves=2):
     return (out - out.min()) / max(out.max() - out.min(), 1e-9)
 
 
+def bark_lines_texture(seed, size=256, spacing=(3, 6), ridge=('#6c6458', '#7b7365', '#8a8272'), lip='#999080',
+                       fissure='#3a332e', deep='#2b2623', lichen=('#8f9178', '#a3a58a'), lichen_p=0.0015,
+                       moss=('#4c5a33', '#5a6a3a'), moss_p=0.0012, wave=(2.5, 1.2), merge_p=0.25, tone_len=46.0):
+    """Round 5 (G5R3-5: the great camphor's bark in round 3's ukiyo-e manner, "更自然", never bricks):
+    round 3's line work, one-texel dark fissures running up the trunk, wavy, now and then fading out
+    and merging, a lighter lip along one edge of each; but the ridges between them change tone
+    gradually along their length (round 3 cut them into flat segments, and the segments with the
+    short dark breaks across them are what read as bricks): no breaks, no plates. Tiles both ways.
+    Returns (size, size, 3) uint8."""
+    from .core import hex_rgb
+    R = rng(seed)
+    S = size
+    C = lambda h: np.array(hex_rgb(h), np.float64)
+    xs0 = []
+    x = 0.0
+    while x < S - spacing[0]:
+        xs0.append(x)
+        x += R.uniform(*spacing)
+    xs0 = np.array(xs0)
+    n = len(xs0)
+    y = np.arange(S)
+    paths = np.zeros((n, S))
+    for i in range(n):
+        f1, f2 = int(R.integers(1, 4)), int(R.integers(4, 9))
+        p1, p2 = R.uniform(0, 2 * math.pi, 2)
+        paths[i] = xs0[i] + wave[0] * np.sin(2 * math.pi * f1 * y / S + p1) + wave[1] * np.sin(2 * math.pi * f2 * y / S + p2)
+    alive = np.ones((n, S), bool)
+    for i in range(n):
+        if R.uniform() < merge_p:
+            start = int(R.integers(0, S))
+            length = int(R.integers(10, 40))
+            alive[i, (start + np.arange(length)) % S] = False
+    # each ridge's tone: a slow periodic curve along y (a few cycles per tile), its own phase
+    k_cyc = max(int(round(S / tone_len)), 1)
+    ph = R.uniform(0, 2 * math.pi, n)
+    ph2 = R.uniform(0, 2 * math.pi, n)
+    rc = [C(h) for h in ridge]
+    img = np.zeros((S, S, 3))
+    for yy in range(S):
+        px = np.round(paths[:, yy]).astype(int) % S
+        order = np.argsort(px)
+        px_sorted = px[order]
+        al = alive[order, yy]
+        cuts = px_sorted[al]
+        if len(cuts) == 0:
+            continue
+        rid = np.searchsorted(cuts, np.arange(S), side='right') % len(cuts)
+        owner = order[al][rid]                                   # the fissure to the left of each texel
+        t = 0.5 + 0.32 * np.sin(2 * math.pi * k_cyc * yy / S + ph[owner]) + 0.18 * np.sin(2 * math.pi * 2 * k_cyc * yy / S + ph2[owner])
+        # three flat tones (pixel art), stepping where each ridge's own curve crosses the thresholds,
+        # so the steps are staggered from ridge to ridge (no courses) and nothing dark marks them
+        lvl = np.where(t < 0.36, 0, np.where(t < 0.64, 1, 2))
+        img[yy] = np.stack(rc)[lvl]
+        for xx in cuts:
+            img[yy, xx % S] = C(fissure) if R.uniform() > 0.3 else C(deep)
+            if R.uniform() < 0.8:
+                img[yy, (xx + 1) % S] = C(lip)
+    # lichen and moss specks, a few
+    m = R.uniform(size=(S, S))
+    img[m < lichen_p] = C(lichen[0])
+    img[(m >= lichen_p) & (m < lichen_p * 1.6)] = C(lichen[-1])
+    m2 = R.uniform(size=(S, S))
+    img[m2 < moss_p] = C(moss[0])
+    img[(m2 >= moss_p) & (m2 < moss_p * 1.7)] = C(moss[-1])
+    return np.clip(img, 0, 255).astype(np.uint8)
+
+
 def bark_flow_texture(seed, size=256, spacing=(6, 11), ridge=('#665e53', '#746c60', '#827a6c'), lip='#938a7a',
                       shadow='#5c554b', fissure='#4a423b', deep='#37302b', moss=('#55623a', '#627142', '#4a5733'),
                       lichen=('#8e9379', '#a3a68b'), flow=2.6, wander=(2.2, 1.1), split_p=0.5, gap_p=0.35, cross_n=26,

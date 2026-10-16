@@ -368,8 +368,18 @@ def authored(L, ctx, rng):
         # hedges: a clipped evergreen line along a polyline (生垣)
     for hd in L.get("hedges", []):
         pts = np.asarray(hd["pts"], np.float64)
-        P, s = geom.resample_polyline(pts, float(hd.get("step", 0.85)))
-        for q in P:
-            out.append({"kind": hd.get("kind", "shrub"), "x": float(q[0]), "z": float(q[1]), "rot": float(rng.uniform(0, 6.28)),
+        step = float(hd.get("step", 0.85))
+        P, s = geom.resample_polyline(pts, step)
+        align = bool(hd.get("align", False))
+        for i in range(len(P) - (1 if align else 0)):
+            if align:
+                # a segment of clipped hedge centred between two samples, its length along the line
+                q = (P[i] + P[i + 1]) * 0.5
+                d = P[i + 1] - P[i]
+                rot = float(np.arctan2(-d[1], d[0]))
+            else:
+                q = P[i]
+                rot = float(rng.uniform(0, 6.28))
+            out.append({"kind": hd.get("kind", "shrub"), "x": float(q[0]), "z": float(q[1]), "rot": rot,
                         "scale": float(hd.get("scale", 0.9)), "variant": int(rng.integers(0, 8)), "planted": "hedge"})
     return out

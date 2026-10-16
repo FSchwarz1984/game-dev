@@ -142,10 +142,13 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     open_meadow = W["grass"] * (1.0 - geom.smoothstep(0.1, 0.4, canopy)) * geom.smoothstep(26.0, 14.0, slope)
     flowers = open_meadow * geom.smoothstep(0.5 - 0.12 * sanct, 0.75 - 0.12 * sanct, noise.fbm(Xs / 5.5, Zs / 5.5, 3, seed + 105))
     litter_kind = F["litter_kind"]
-    # dry grass only where the sun bakes a steep south face or the soil is thin by the rock; never a
-    # broad yellow field (round 4: the "withered yellow" of round 3 came from here)
-    dryness = np.clip(geom.smoothstep(0.58, 0.85, n3) * 0.45 + (1.0 - faces_north) * 0.08 - wet * 0.6
-                      + geom.smoothstep(22, 34, slope) * 0.35 + rock * 0.3 - sanct * 0.7, 0, 1)
+    # dry grass: round 3's map again (the user, G5R3-14: "把那種草地地面上的枯草黃色部分也加回來，這看起來
+    # 可以讓畫面更有層次感"): broad straw-coloured areas on the open sward where the 15 m noise is high,
+    # more on the faces turned to the sun and on the steeper ground, none by the water; round 4's two
+    # additions kept (thin soil by the rock, none in the sanctum). The renderer draws it as soft changes
+    # over metres (render3d/shaders/sward.gdshaderinc), not round 3's hard patches (G5R3-2)
+    dryness = np.clip(geom.smoothstep(0.35, 0.75, n3) * 0.7 + (1.0 - faces_north) * 0.15 - wet * 0.5
+                      + geom.smoothstep(18, 30, slope) * 0.2 + rock * 0.3 - sanct * 0.7, 0, 1)
     tufts = W["grass"] * (0.35 + 0.65 * geom.smoothstep(0.3, 0.7, n2)) * (1.0 - geom.smoothstep(0.3, 0.7, canopy) * 0.6)
     tufts *= 1.0 - np.maximum(np.maximum(road, F.get("pave_k", 0.0)), F.get("stone_k", 0.0)) * 0.9
 
