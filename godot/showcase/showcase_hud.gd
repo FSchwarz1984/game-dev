@@ -5,6 +5,8 @@ extends Control
 ## for the light: hold Q / E (gamepad LB / RB) to move the hour back / on, 1-4 jump to morning, noon,
 ## dusk, night, T lets the hour run on its own, R (gamepad Y) brings the rain or takes it away.
 ## Walking is the sample's own (WASD / arrows; the gamepad's left stick where the sample reads it).
+## The air follows the hour with the field recordings in audio/ (CC0 / public domain, SOURCES.json):
+## wind by day, the night's insects after dark, birds in the morning, crows towards evening.
 
 const TEXT := Color8(243, 236, 220)
 const DIM := Color8(243, 236, 220, 170)
@@ -24,6 +26,11 @@ var _flow := false
 var _rain_target := 0.0
 var _rain := 0.0
 var _push := 0.0              # pending hour change from the keys this frame
+var _amb_key := ""
+var _spot_t := 5.0
+const MORNING_BIRDS := ["birds_ugu_a", "birds_ugu_b", "birds_ugu_c", "birds_tit_a", "birds_tit_b", "birds_bulbul_a", "birds_bulbul_b"]
+const DAY_BIRDS := ["birds_tit_a", "birds_tit_b", "birds_bulbul_a", "birds_bulbul_b"]
+const CROWS := ["crow_crow_a", "crow_crow_a1", "crow_crow_a3", "crow_crow_b", "crow_crow_b1", "crow_crow_b2"]
 
 
 func _init() -> void:
@@ -91,10 +98,31 @@ func _process(dt: float) -> void:
 	if dh != 0.0 or rain_moves:
 		sample.call("_set_hours", fposmod(h + dh, 24.0), absf(dh) > 1.0)
 	clock.text = _clock_text(env.hours) + ("　雨" if _rain_target > 0.0 else "")
+	_air(dt, env.hours)
 	if _hint_t > 0.0:
 		_hint_t -= dt
 		keys.modulate.a = clampf(_hint_t / 1.5, 0.0, 1.0)
 		tip.modulate.a = keys.modulate.a
+
+
+func _air(dt: float, h: float) -> void:
+	var night := h < 4.8 or h >= 19.2
+	var key := "night" if night else "day"
+	if key != _amb_key:
+		_amb_key = key
+		Audio.ambience(["night", "wind"] if night else ["wind"])
+	_spot_t -= dt
+	if _spot_t > 0.0:
+		return
+	_spot_t = randf_range(7.0, 18.0)
+	if _rain > 0.4:
+		return
+	if h >= 5.5 and h < 10.5:
+		Audio.spot(MORNING_BIRDS.pick_random(), -10.0)
+	elif h >= 15.5 and h < 18.8:
+		Audio.spot(CROWS.pick_random(), -12.0)
+	elif h >= 10.5 and h < 15.5 and randf() < 0.4:
+		Audio.spot(DAY_BIRDS.pick_random(), -13.0)
 
 
 static func _clock_text(h: float) -> String:
