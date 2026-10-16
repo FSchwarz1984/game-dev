@@ -641,14 +641,21 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
             Pp, T, N = route.at(np.array([si]))
             a2 = np.array([tx, tz]) + (Pp[0] - np.array([tx, tz])) / max(d[i], 0.1) * tr
             b2 = Pp[0] + (Pp[0] - np.array([tx, tz])) / max(d[i], 0.1) * (width * 0.9 + R.uniform(0.2, 0.8)) + T[0] * R.normal(0, 0.4)
-            pts = [a2 + (b2 - a2) * f for f in np.linspace(0, 1, 6)]
+            # (round 5) a root is thick where it leaves the trunk and thins out, and it lies in the
+            # ground with only its back showing, wandering a little: thin round sticks lying on the
+            # ground read as sticks (or spider legs) in the 3/4 view
+            side = np.array([-(b2 - a2)[1], (b2 - a2)[0]]) / max(np.linalg.norm(b2 - a2), 1e-6)
+            k0 = 0.16 * min(1.6, max(0.8, tr / 0.35))
+            pts = [a2 + (b2 - a2) * f + side * 0.12 * math.sin(f * 5.0 + j * 2.1) * f for f in np.linspace(0, 1, 7)]
             for q in range(len(pts) - 1):
                 p0, p1 = pts[q], pts[q + 1]
-                y0 = float(ground.height(*p0)) - 0.02 - q * 0.004
-                y1 = float(ground.height(*p1)) - 0.02 - (q + 1) * 0.004
-                r = 0.07 * (1 - q / len(pts)) + 0.025
-                tris += cylinder(sink, [p0[0], y0, p0[1]], [p1[0], y1, p1[1]], r, ROOT * (0.9 + 0.2 * R.uniform()), ROOT * 0.8, R, n=5,
-                                 moss=0.3, ao=0.85)
+                r0 = k0 * (1 - q / len(pts)) ** 1.3 + 0.035
+                r1 = k0 * (1 - (q + 1) / len(pts)) ** 1.3 + 0.035
+                r = 0.5 * (r0 + r1)
+                y0 = float(ground.height(*p0)) - 0.45 * r0
+                y1 = float(ground.height(*p1)) - 0.45 * r1
+                tris += cylinder(sink, [p0[0], y0, p0[1]], [p1[0], y1, p1[1]], r, ROOT * (0.9 + 0.2 * R.uniform()), ROOT * 0.8, R, n=6,
+                                 moss=0.35, ao=0.8)
     return tris
 
 

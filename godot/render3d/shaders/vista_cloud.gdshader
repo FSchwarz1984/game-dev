@@ -144,9 +144,8 @@ void fragment() {
 	// so its tones survive the grade instead of clipping together)
 	vec3 c = v_air_only(w3_srgb_to_linear(col * 0.84), sp, eye, FRAGCOORD.xy);
 	if (v_still > 0.5) {
-		// in the 遠化 a cloud is the paper (pressed round by its form) with the key block's line
-		// round each billow, about a pixel
-		c = v_emboss(n);
+		// in the 遠化 a cloud is the paper with the key block's line round each billow, about a pixel
+		c = v_emboss(vec3(0.0, 1.0, 0.0));
 		if (rr > 1.0 - 1.4 * fwidth(rr)) c = v_ink();
 	}
 	// the cover. The edge: crisp round the top, where the light draws the billow's round edge (a

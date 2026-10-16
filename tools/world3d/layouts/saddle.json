@@ -1918,8 +1918,8 @@
     9.2
    ],
    [
-    -7.4,
-    8.4
+    -6.8,
+    8.6
    ],
    [
     -6.6,
@@ -1954,16 +1954,28 @@
     -7.0
    ],
    [
-    -4.6,
-    -5.6
+    -3.4,
+    -6.6
    ],
    [
-    -3.6,
-    -1.0
+    0.6,
+    -7.8
    ],
    [
-    -1.6,
-    6.0
+    5.6,
+    -4.9
+   ],
+   [
+    6.9,
+    1.0
+   ],
+   [
+    4.4,
+    6.4
+   ],
+   [
+    -1.2,
+    7.2
    ],
    [
     -5.6,
@@ -2010,6 +2022,10 @@
    [
     -11.0,
     8.6
+   ],
+   [
+    -10.4,
+    11.9
    ],
    [
     -8.6,
@@ -2082,8 +2098,12 @@
     8.6
    ],
    [
-    -12.6,
-    11.0
+    -11.6,
+    11.8
+   ],
+   [
+    -13.4,
+    11.6
    ],
    [
     -15.0,
@@ -3640,13 +3660,14 @@
  ],
  "specimens": [
   {
-   "kind": "maple_red_a",
+   "kind": "maple",
    "x": -4.5,
    "z": 10.6,
    "scale": 0.85,
    "rot": 1.2,
    "clear": 1.6,
-   "note": "the precinct's one red maple (nomura-momiji, wine red all summer): the accent at the forecourt's east edge"
+   "note": "the precinct's one red maple (nomura-momiji, wine red all summer): the accent at the forecourt's east edge (kind maple, variant 3: the assembly gives the accent-tagged red maples only to maple placements with variant % 4 == 3; an exact asset name of an accent is not placed)",
+   "variant": 3
   },
   {
    "kind": "maple_c",
@@ -3677,12 +3698,12 @@
   },
   {
    "kind": "sarusuberi_a",
-   "x": 9.2,
-   "z": 10.0,
+   "x": 10.3,
+   "z": 11.6,
    "scale": 1.0,
    "rot": 4.0,
    "clear": 1.4,
-   "note": "the crape myrtle behind the graves (百日紅, the Obon flower)"
+   "note": "the crape myrtle behind the graves (百日紅, the Obon flower) (round 5: moved from (9.2, 10.0) to stand behind the east end of the graves: in the 3/4 view a 5 m tree 4.5 m north of the graves' front showed only its trunk; here its flowers are in the graves' frame)"
   },
   {
    "kind": "boulder",
@@ -3783,5 +3804,6 @@
    "step": 1.85,
    "align": true
   }
- ]
+ ],
+ "routes_note": "Round 5: the walk no longer goes down the camphor's west side (the buttress roots, the iwakura's three stones and the ground limb close it: the oku is entered from the forecourt); it goes round the east and north sides under the crown and comes back."
 }

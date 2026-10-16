@@ -243,10 +243,16 @@ float v_plate_front(int k, vec2 xz) {
 }
 // 1 while block k is still printed at this point, 0 past its front; the seam dithered over about two
 // screen pixels (dist: from the eye, to size the seam)
+// (the lead's rules for the look, 2026-10-16, the same for the prologue's 2D view: coord/to_vista2d)
+// A block's edge is in blocks, like a colour print's registration: the land is cut into cells (about
+// 420 x 300 m, the grid turned off the axes) and each cell takes the block's front a little nearer or
+// farther, with a hard edge; so near a block's front some cells keep their colour past it (the
+// paddies' blue, the woods' green) and some have lost it before. No smooth fade, no dither.
 float v_plate_on(int k, vec2 xz, float dist, vec2 frag) {
-	float past = v_past_m(xz) - v_plate_front(k, xz);
-	float seam = 2.0 * dist / v_ppr;
-	return step(past, (w3_hash(floor(frag) + float(k) * 7.31) - 0.5) * seam);
+	vec2 q = vec2(xz.x * 0.92 + xz.y * 0.39, -xz.x * 0.39 + xz.y * 0.92) / vec2(420.0, 300.0) + float(k) * 0.37;
+	float cell_off = (w3_hash(floor(q) * 1.31 + float(k) * 7.0) - 0.5) * (k == 0 ? 500.0 : 1100.0);
+	float past = v_past_m(xz) - v_plate_front(k, xz) - cell_off;
+	return past < 0.0 ? 1.0 : 0.0;
 }
 // how far into the 遠化: 0 before the front .. 1 past the last block (only the key block)
 float v_fade(vec2 xz) {
@@ -267,19 +273,24 @@ vec3 v_flat(int plate, vec3 alb) {
 	if (plate == V_EARTH) return l > 0.05 ? print_earth_lt : print_earth_dk;
 	return alb;
 }
-// the paper, with its blind embossing: the relief pressed into it, read by the light on the slope
-// against the light on level ground (a level paper is the paper; a face to the light a few
-// hundredths lighter, one away a few darker)
-vec3 v_emboss(vec3 n) {
-	vec3 sd = normalize(w3_sun_dir);
-	return far_white * (1.0 + 0.25 * clamp(dot(n, sd) - max(sd.y, 0.2), -0.4, 0.3));
+// The paper: it must read as paper. Uninked, it is one step lighter than the coloured land beside it
+// (its albedo a little over the light earth's), flat, even and without a hue; at night it is paper
+// under the moon, a grey a step above the dark land, never sunk into the night's blue. (A fog's
+// reading comes from soft edges and eaten lines, not from the lightness.)
+const float V_PAPER_ALB = 0.31;
+vec3 v_paper_white() {
+	return vec3(V_PAPER_ALB * w3_luma(v_print_light())) * vec3(1.015, 1.0, 0.975);
 }
-// the key block's ink: the palette's K, printed (lit like the paper), a little of the paper through it
+// the paper with its blind embossing (karazuri): only the big relief (rn: a normal of the land taken
+// over tens of metres, vista_ground), very light: a few hundredths, never broken up
+vec3 v_emboss(vec3 rn) {
+	vec3 sd = normalize(w3_sun_dir);
+	return v_paper_white() * (1.0 + 0.1 * clamp(dot(rn, sd) - max(sd.y, 0.2), -0.4, 0.3));
+}
+// the key block's ink: the clearest thing in the 遠化, hard and dark at every distance (the
+// opposite of air): the palette's K printed in the hour's light
 vec3 v_ink() {
-	vec3 k = w3_srgb_to_linear(ink_k);
-	float paper_l = max(w3_luma(far_white), 1e-4);
-	// (lit as the paper is: the paper's own albedo is about 0.75)
-	return mix(far_white, k * paper_l / 0.75, 0.78);
+	return w3_srgb_to_linear(ink_k) * w3_luma(v_print_light());
 }
 // a surface's colour past the front: amb its colour as drawn before the 遠化 (ambient-lit, without
 // the sun); flat_c its block's flat colour (the albedo the print uses: two tones to a block, v_flat);
@@ -326,7 +337,7 @@ bool v_past(vec3 wp, vec3 cam, vec2 frag) {
 }
 // (kept for the old callers: the paper with a share of ink)
 vec3 v_paper(float ink) {
-	return mix(far_white, v_ink(), ink);
+	return mix(v_paper_white(), v_ink(), ink);
 }
 
 // the toon sun of the vista: three bands, the painted shade of pixel_toon (w3_ambient); the band

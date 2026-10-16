@@ -110,7 +110,7 @@ export function bakeSouth(o = {}) {
   }
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
   // the far as plates peeled (G5R3-18): the key block's lines and how far each place ends up gone
-  const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f);
+  const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f, sun.dir);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
   const RIV = PL.RIVER, near = [];
   for (let i = 0; i < RIV.length; i++) if (Math.hypot(RIV[i][0] - PL.TOWN.X, RIV[i][1] - PL.TOWN.Z) < 3.4) near.push(i);
@@ -293,15 +293,15 @@ export function bakeSouth(o = {}) {
   // meanwhile); the key block's ink in that light goes to meta.fade
   const farPal = palette(GROUND_MATS, envG(envs[0]), { haze: envs[0].mist, far: true });
   const envW = envG(todEnv(WAVE_TOD));
-  const waterPal = palette(GROUND_MATS, envW, { haze: envW.mist });
+  const nightPal = palette(GROUND_MATS, envW, { haze: envW.mist });
   const stagePals = [];
-  for (let st = 1; st <= PL.FADE_STAGES; st++) stagePals.push(PL.fadePalette(st, envW, waterPal));
+  for (let st = 1; st <= PL.FADE_STAGES; st++) stagePals.push(PL.fadePalette(st, nightPal));
   const farLut = lutRows(gSpace, [v => {
     const p = farPal(v), m = v >> 8;
     if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron) return p;
     const c = mix3([p & 255, (p >> 8) & 255, (p >> 16) & 255], [222, 230, 250], 0.34);
     return ((255 << 24) | (Math.round(c[2]) << 16) | (Math.round(c[1]) << 8) | Math.round(c[0])) >>> 0;
-  }, ...stagePals]);
+  }, ...stagePals], true);
   const fSpace = new IdSpace().add(back.layer.idx).add(frontC.layer.idx).add(nearL.idx);
   for (const sp of stir) fSpace.add(sp.layer.idx);
   const foliageLut = lutRows(fSpace, envs.map(e => palette(FOLIAGE_MATS, { ...e, sun: e.sun.map(v => v * (1 - 0.7 * e.night)) })));
@@ -347,7 +347,7 @@ export function bakeSouth(o = {}) {
       // how far the mountains were lowered to stay clear of the sky shore (plain.js mountainFit)
       mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
       // the far as a print (plain.js): the key block's ink at the hour, the blocks' fronts past the rim
-      fade: { ink: PL.fadeInk(envW), plateAt: PL.PLATE_AT, tod: WAVE_TOD },
+      fade: { ink: PL.fadeInk(), paperAlpha: PL.PAPER_ALPHA, plateAt: PL.PLATE_AT, plateSpread: PL.PLATE_SPREAD, tod: WAVE_TOD },
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },

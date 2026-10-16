@@ -29,13 +29,15 @@ export class IdSpace {
   get size() { return this.values.length; }
 }
 
-/** RGBA8 LUT: width = id count (id 0 transparent), one row per palette in `pals` (palette: value -> packed). */
-export function lutRows(space, pals) {
+/** RGBA8 LUT: width = id count (id 0 transparent), one row per palette in `pals` (palette: value -> packed).
+ *  Alpha is 255 where set, or with keepAlpha the palette's own (a flag the shader reads: the far's
+ *  paper). */
+export function lutRows(space, pals, keepAlpha = false) {
   const w = space.size, out = new Uint8Array(w * pals.length * 4);
   pals.forEach((pal, r) => {
     for (let id = 1; id < w; id++) {
       const p = pal(space.values[id]) >>> 0, o = (r * w + id) * 4;
-      out[o] = p & 255; out[o + 1] = (p >> 8) & 255; out[o + 2] = (p >> 16) & 255; out[o + 3] = p ? 255 : 0;
+      out[o] = p & 255; out[o + 1] = (p >> 8) & 255; out[o + 2] = (p >> 16) & 255; out[o + 3] = p ? (keepAlpha ? (p >>> 24) || 255 : 255) : 0;
     }
   });
   return { w, h: pals.length, data: out };

@@ -51,7 +51,7 @@ void fragment() {
 	vec3 em = emission_col * emission_energy;
 	// (in the 遠化: leafy things from the green block, the rest from the earths)
 	int plate = leafy > 0.5 ? V_GREEN : V_EARTH;
-	EMISSION = v_print(v_air(w3_ambient(alb, n, COLOR.a), v_wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, n, v_wp, eye, FRAGCOORD.xy) + em * v_print_sun(v_wp, eye, FRAGCOORD.xy);
+	EMISSION = v_print(v_air(w3_ambient(alb, n, COLOR.a), v_wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, vec3(0.0, 1.0, 0.0), v_wp, eye, FRAGCOORD.xy) + em * v_print_sun(v_wp, eye, FRAGCOORD.xy);
 	EMISSION += w3_lamp_light(alb, v_wp, n, floor(v_wp.xz * 8.0), 1.0) * v_air_keep(v_wp, eye, FRAGCOORD.xy) * (1.0 - v_drain(v_wp.xz, v_wp.y));
 }
 

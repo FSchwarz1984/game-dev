@@ -451,24 +451,9 @@ func _place_marker_props() -> void:
 		if nm == "offering_box":
 			var gl: Array = a.get("anchors", {}).get("glint", [0.0, 0.45, 0.0])
 			dressing.glints.append([p + Vector3(gl[0], gl[1], float(gl[2]) - lean * float(gl[1])), 0.0])
-	# two red maples by the way down to the lookout and south of the road (v0.1's red maples were
-	# the accent the user liked); both stand where nothing she needs to see lies north of them
-	# (and both stay out of the look back home from the lookout: W3Vista)
-	for mp in [["maple_red_a", Vector2(-38.6, 42.8), 0.7], ["maple_red_b", Vector2(6.0, 28.0), 2.1]]:
-		if not catalog.has(mp[0]):
-			continue
-		var tree := _instance(String(catalog[mp[0]]["scene"]))
-		if tree == null:
-			continue
-		var at: Vector2 = mp[1]
-		tree.position = Vector3(at.x, t.height_at(at.x, at.y), at.y)
-		tree.rotation.y = float(mp[2])
-		props_root.add_child(tree)
-		placed_props.append([mp[0], tree.position, float(mp[2]), 1.0, float(catalog[mp[0]].get("height", 6.0))])
-		_tree_cutaway(tree, 1.8, float(catalog[mp[0]].get("height", 6.0)))
-		for fp in catalog[mp[0]].get("footprint", []):
-			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(mp[2]))
-			blockers.append([tree.position + off, float(fp[2])])
+	# (round 5: the two red maples that stood here by the way down to the lookout and south of the road
+	# are gone: the approved composition has one nomura maple on the east edge of the grounds, placed
+	# by the layout; the view from the lookout keeps round 3's own, round3_props.json)
 
 
 ## Global illumination (round 4, Forward+): a VoxelGI over the sample region, baked once when the

@@ -13,11 +13,11 @@ shader_type canvas_item;
 uniform sampler2D ids : filter_nearest, repeat_disable;     // R, G id; B arrival (255 never); A mask
 uniform sampler2D lut : filter_nearest, repeat_disable;     // per time of day
 uniform sampler2D lut_far : filter_nearest, repeat_disable; // row 0 the front, rows 1..4 the stages
-uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink (0 | 1), G stage x 50, B delay
+uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink (0 | 1), G stage x 50, B emboss, A delay
 uniform float tod_row;
 uniform float wave = -1.0;
 uniform float settled = 0.0;
-uniform vec3 ink_col = vec3(27.0, 27.0, 32.0);   // the key block's ink in the hour's light (sRGB 0..255)
+uniform vec3 ink_col = vec3(15.0, 13.0, 13.0);   // the key block's ink (sRGB 0..255)
 
 const float PEEL = 5.0;      // buckets of the wave between one block and the next coming off
 const float DELAY = 4.0;     // buckets: the longest a place waits before its first block goes
@@ -44,14 +44,17 @@ void fragment() {
 			float b = clamp(floor(wave * 250.0), -1.0, 254.0);
 			float arr = floor(t.b * 255.0 + 0.5);
 			if (arr <= b - 2.0) {
-				float since = b - 2.0 - arr - floor(fm.b * DELAY + 0.5);
+				float since = b - 2.0 - arr - floor(fm.a * DELAY + 0.5);
 				st = since < 0.0 ? min(fin, 1.0) : min(fin, 1.0 + floor(since / PEEL));
 			} else if (arr <= b) {
 				c = texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0;
 			}
 		}
 		if (st >= 1.0) {
-			c = texelFetch(lut_far, ivec2(id, int(st)), 0).rgb * 255.0;
+			vec4 pc = texelFetch(lut_far, ivec2(id, int(st)), 0);
+			c = pc.rgb * 255.0;
+			// the paper (flagged by its alpha): its blind embossing, the big relief pressed in
+			if (pc.a < 0.75) c *= 1.0 + (fm.b * 255.0 - 128.0) / 120.0 * 0.07;
 			if (fm.r > 0.5) c = ink_col;
 		}
 	}

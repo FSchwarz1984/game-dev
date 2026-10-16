@@ -68,6 +68,7 @@ void fragment() {
 	v_river = 0.0;
 	v_town = 0.0;
 	vec3 n = normalize(v_n);
+	vec3 rn = n;                // the land's big relief (the 遠化's blind embossing: tens of metres, never broken up)
 	// (round 4: away from the eye the mesh's rings lie tens of metres apart and its radial strips
 	// run straight up the screen; a normal interpolated across them shaded every strip of a hill's
 	// face its own way, a curtain of vertical streaks. Out there the normal comes from the height
@@ -82,6 +83,9 @@ void fragment() {
 		float hz = v_height(xz + vec2(0.0, e)) - v_height(xz - vec2(0.0, e));
 		n = normalize(vec3(-hx, 2.0 * e, -hz));
 		NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
+		float er = max(12.0, dist * 0.02);
+		rn = normalize(vec3(v_height(xz - vec2(er, 0.0)) - v_height(xz + vec2(er, 0.0)), 2.0 * er,
+				v_height(xz - vec2(0.0, er)) - v_height(xz + vec2(0.0, er))));
 	}
 	// texture cell: about a pixel and a half wide at this distance (fine grain near, never blocks).
 	// On steep faces the cells lie in the face (along it and down its fall line), not in the map:
@@ -320,12 +324,12 @@ void fragment() {
 		// (in the 遠化 the water is its block, flat and still: no sky's gradation, no ruffle, no glint;
 		// then paper with its banks drawn)
 		vec3 w_flat = mix(haze_col, w3_sky * 1.6, 0.35) * 0.62 / max(w3_luma(v_print_light()), 1e-3);
-		EMISSION = v_print(v_air(alb, wp, eye, FRAGCOORD.xy), w_flat, V_BLUE, n, wp, eye, FRAGCOORD.xy);
+		EMISSION = v_print(v_air(alb, wp, eye, FRAGCOORD.xy), w_flat, V_BLUE, rn, wp, eye, FRAGCOORD.xy);
 		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
 	} else {
 		v_alb = alb;
 		ALBEDO = vec3(1.0);
-		EMISSION = v_print(v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, n, wp, eye, FRAGCOORD.xy);
+		EMISSION = v_print(v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, rn, wp, eye, FRAGCOORD.xy);
 		// the key block's lines where the print has lost its gradations
 		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
 		// and its woods: once the green block is gone a wood is small crowns in ink on the paper, as a

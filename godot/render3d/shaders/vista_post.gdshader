@@ -97,11 +97,13 @@ void fragment() {
 	if (d > bd) { bd = d; behind = vec2(0.0, px.y); }
 	// the sky is very far: an edge against it counts
 	float jump = bd - c;
-	float th = 0.35 + c * 0.06;
+	vec3 wp = c < 20000.0 ? world_at(uv, ip, VIEWPORT_SIZE) : eye;
+	// (in the 遠化 the key block's lines must not be eaten: a nearer ridge before a farther one gets
+	// its line at a third of the depth step the rest of the view needs)
+	bool enka = c < 20000.0 && v_past(wp, eye, FRAGCOORD.xy);
+	float th = 0.35 + c * (enka ? 0.02 : 0.06);
 	if (c < 20000.0 && jump > th) {
-		// where is this pixel in the world: past the ring the 遠化 has taken the land's relief
-		vec3 wp = world_at(uv, ip, VIEWPORT_SIZE);
-		if (v_past(wp, eye, FRAGCOORD.xy)) {
+		if (enka) {
 			// in the 遠化 (past its gradations) every edge is the key block's line in ink, at every
 			// distance: ridges, the far mountains against the sky, trees, houses (the 褪版: what is left
 			// of a print when its colour blocks are gone; vista_common)
