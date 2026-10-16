@@ -49,6 +49,14 @@ def main():
         char.pose_sheet(built, d, specs.split(','))
     if not o['static'] or o['out']:
         out = o['out'] or os.path.join(os.getcwd(), 'godot', 'characters', o['char'], o['char'] + '.glb')
+        # the repository's godot/characters/ holds the models the game uses (kasasagi there is round 4;
+        # this generator is the rejected round 6, G5R3-20): replacing one needs C3D_MAIN=1 (build.sh
+        # checks the same before it starts Blender)
+        game = os.path.realpath(os.path.join(HERE, '..', '..', 'godot', 'characters')) + os.sep
+        if (os.path.realpath(out).startswith(game) and os.path.exists(out)
+                and os.environ.get('C3D_MAIN', '0') != '1'):
+            print("NOT EXPORTED: %s is the game's model (pass --out elsewhere, or set C3D_MAIN=1)" % out)
+            return
         os.makedirs(os.path.dirname(out), exist_ok=True)
         char.export(built, out)
         print('EXPORTED', out)
