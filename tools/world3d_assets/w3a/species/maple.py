@@ -20,7 +20,7 @@ SEED = 7301
 NAME = 'maple'
 
 GREEN = ('#6b8a43', '#7e9a49', '#58773f')
-RED = ('#7a3438', '#8c4040', '#62292f')      # nomura-momiji in summer: wine red, not autumn scarlet
+RED = ('#87402d', '#9a4a32', '#6a3026')      # nomura-momiji in summer: copper red (赤銅), not autumn scarlet; round 5 b: warmer than wine, whose shade turned magenta on screen
 VARIANTS = [  # key, height, stems, spread, palette, seed
     ('a', 7.0, 3, 4.2, GREEN, 1),
     ('b', 5.5, 2, 3.4, GREEN, 2),
