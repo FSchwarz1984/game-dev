@@ -157,8 +157,6 @@ const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
 uniform float ghost_night_gain = 0.89;
 // the day's 遠化 (see v_ghost): where it is, by k, coming in early and quickly (its edge where the
 // night's is); its key, contrast and shoulder in display terms, before the view's grade
-uniform float ghost_day_w0 = 0.035;
-uniform float ghost_day_w1 = 0.045;
 uniform float ghost_day_key = 0.77;
 uniform float ghost_day_key_town = 1.14;
 uniform float ghost_day_contrast = 2.8;
@@ -170,8 +168,28 @@ uniform float ghost_day_knee = 0.72;
 uniform float ghost_day_ceiling = 0.815;
 uniform float ghost_day_lref = 1.19;          // the white surface's light at noon (the key is set for it)
 const vec3 V_GHOST_TINT_DAY = vec3(0.955, 0.975, 1.02);
-float v_ghost_day_w(float k) {
-	return smoothstep(ghost_day_w0, ghost_day_w1, k);
+// Each part of the day's look comes in over its own band of k, not all at one k (G5R3-29, the user:
+// the day's edge was "突兀" beside the night's gradual one): the colour drawn out first and widest,
+// lifted to the key a little later, the haze taken off and the light and shade spread last and
+// slowest; each band's place shifted patch by patch by a low noise of the world (the same value noise
+// as the rings' wandering radii), so the edge goes in by islands, like what an ebb tide leaves, not
+// along one smooth contour.
+uniform vec2 ghost_day_drain_band = vec2(0.01, 0.30);
+uniform vec2 ghost_day_lift_band = vec2(0.03, 0.50);
+uniform vec2 ghost_day_air_band = vec2(0.04, 0.55);
+uniform vec2 ghost_day_spread_band = vec2(0.06, 0.60);
+uniform float ghost_day_patch = 0.45;           // how far the noise moves a band, in its widths
+// sRGB encoding of one linear value (w3_srgb_to_linear's inverse)
+float v_lin_to_srgb1(float x) {
+	x = max(x, 0.0);
+	return x < 0.0031308 ? x * 12.92 : 1.055 * pow(x, 1.0 / 2.4) - 0.055;
+}
+float v_ghost_day_n(vec2 xz) {
+	return w3_vnoise(xz / 640.0 + vec2(3.1, 7.7)) * 0.65 + w3_vnoise(xz / 230.0 + vec2(11.3, 2.9)) * 0.35;
+}
+float v_ghost_day_part(float k, vec2 xz, vec2 band) {
+	float sh = (band.y - band.x) * ghost_day_patch * (v_ghost_day_n(xz) - 0.5) * 2.0;
+	return smoothstep(band.x + sh, band.y + sh, k);
 }
 
 // how far gone a point is: 1 at the heart .. 0 (as it is)
@@ -265,28 +283,41 @@ float v_light_ref() {
 // - at dusk and dawn the one turns into the other with the night (w3_night).
 const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
 uniform float ghost_day_gamma = 4.0;
-vec3 v_ghost_at(vec3 col, float k, float dist) {
+vec3 v_ghost_at(vec3 col, float k, float dist, vec2 xz) {
 	if (k <= 0.0) return col;
 	float lref = max(v_light_ref(), 1e-4);
 	float l = w3_luma(col) / lref;
 	float ld = pow(clamp(l, 0.0, 1.6), 1.0 / 2.2);
-	// by day
+	// by day, part by part (v_ghost_day_part)
+	float wd = v_ghost_day_part(k, xz, ghost_day_drain_band);
+	float wl = v_ghost_day_part(k, xz, ghost_day_lift_band);
+	float wc = v_ghost_day_part(k, xz, ghost_day_spread_band);
 	float key = mix(ghost_day_key, ghost_day_key_town, pow(k, ghost_day_gamma));
 	// (far off, past ~2.5 km, the spread halves by ~5 km and the middle it turns on comes down to the
 	// far land's own: once its air is gone the far land is darker than the near, and turned on the
-	// near's middle it fell to the lightness of the hazy land round it, so that the 遠化's far edge
-	// did not read)
+	// near's middle it fell to the lightness of the hazy land round it)
 	float far = smoothstep(2500.0, 5000.0, dist);
 	// (and with the sun low the shadows of the far slopes are long and deep: spread as at noon they went
 	// black and the 遠化 read dirty; the spread eases to 0.55 as the sun goes down to the hills)
 	float sun_hi = smoothstep(0.08, 0.35, normalize(w3_sun_dir).y);
 	float con = ghost_day_contrast * mix(1.0, 0.5, far) * mix(0.55, 1.0, sun_hi);
-	float lo = key + con * (ld - mix(ghost_day_mid, 0.455, far));
+	float mid = mix(ghost_day_mid, 0.455, far);
+	// its own lightness (display, exactly the sRGB curve, so that with none of the parts it is itself),
+	// lifted toward the key by wl, its light and shade spread by wc, under the shoulder as far as
+	// either has come in
+	float lds = v_lin_to_srgb1(min(l, 1.6));
+	float lo = lds + wl * (key - mid) + wc * (con - 1.0) * (lds - mid);
 	float kn = ghost_day_knee, room = ghost_day_ceiling - ghost_day_knee;
-	lo = lo < kn ? max(lo, 0.0) : kn + room * (1.0 - exp(-(lo - kn) / room));
-	vec3 gd = w3_srgb_to_linear(clamp(lo * V_GHOST_TINT_DAY, vec3(0.0), vec3(1.0))) * clamp(lref / ghost_day_lref, 0.5, 1.0);
-	gd = mix(gd, col * (w3_luma(gd) / max(w3_luma(col), 1e-5)), 0.03);
-	vec3 day = mix(col, gd, v_ghost_day_w(k));
+	float los = lo < kn ? max(lo, 0.0) : kn + room * (1.0 - exp(-(lo - kn) / room));
+	lo = mix(max(lo, 0.0), los, max(wl, wc));
+	// its own colour at that lightness, drawn out by wd to the faint cool silver (3% of its own left);
+	// the light: the hour's at none of the lift, at all of it the noon's ratio (bright by day)
+	float yt = w3_srgb_to_linear(vec3(lo)).x;
+	vec3 rel = col / lref;
+	vec3 ownl = rel * (yt / max(w3_luma(rel), 1e-6));
+	vec3 silver = w3_srgb_to_linear(clamp(lo * V_GHOST_TINT_DAY, vec3(0.0), vec3(1.0)));
+	silver *= yt / max(w3_luma(silver), 1e-6);
+	vec3 day = mix(ownl, mix(silver, ownl, 0.03), wd) * mix(lref, clamp(lref / ghost_day_lref, 0.5, 1.0), wl);
 	// at night
 	float ln = clamp(0.2 + 0.74 * pow(min(ld, 1.0), 0.85), 0.0, 1.0);
 	vec3 own = pow(clamp(col / lref, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
@@ -294,7 +325,7 @@ vec3 v_ghost_at(vec3 col, float k, float dist) {
 	return mix(day, mix(col, gn, k), w3_night);
 }
 vec3 v_ghost(vec3 col, float k) {
-	return v_ghost_at(col, k, 0.0);
+	return v_ghost_at(col, k, 0.0, vec2(0.0));
 }
 // lamps go out in the 遠化 (and smoke and cloud stand still there: vista_puff, vista_cloud)
 float v_drain(vec2 xz, float y) {
@@ -312,7 +343,7 @@ float v_haze_k(vec3 wp, vec3 cam) {
 	// by day none: what has gone far is seen clearer than the land round it, not hazier (the lead,
 	// G5R3-29), coming in with the day's weight, so its edge is where the 遠化's is)
 	float gk = v_ghost_k(wp.xz);
-	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - mix(v_ghost_day_w(gk), 0.5 * gk, w3_night));
+	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - mix(gk > 0.0 ? v_ghost_day_part(gk, wp.xz, ghost_day_air_band) : 0.0, 0.5 * gk, w3_night));
 }
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
 	return mix(col, haze_col, v_haze_k(wp, cam));
