@@ -12,6 +12,8 @@
 #       portraits (expressions, characters, the staged demo dialogue); reduced motion; fullscreen
 #       toggle; quit from the menu.
 # smoke (Windows export under wine): menu, home area, a walk, back to the menu, quit.
+# long  (Linux export): walking metres and the lookout's far view with long holds (software
+#       rendering makes game time run ten or more times slower than the clock; see plan_long).
 # Writes DIR/NN_name.png (X screen), DIR/log.txt (engine output), DIR/steps.txt; exit code 1 when
 # the engine died, printed a script error, or a step that must change the screen did not.
 import argparse
@@ -182,6 +184,38 @@ class Check:
         if self.alive():
             self.failed.append("退出 did not quit")
 
+    def plan_long(self):
+        """software rendering runs this game at about one frame in two seconds and the engine caps
+        a frame's step (about 0.13 s), so game time runs ten or more times slower than the clock:
+        hold the keys long enough to walk metres, and wait long enough for the far view"""
+        self.wait_loaded("menu", timeout=240)
+        self.focus()
+        self.menu_to(0)
+        self.wait_loaded("home", timeout=300)
+        self.hold("d", 20.0)
+        self.shot("home_after_20s_d", must_change=True)
+        self.hold("s", 20.0)
+        self.shot("home_after_20s_s", must_change=True)
+        self.key("Escape")
+        self.wait_loaded("menu_from_home", timeout=120)
+        self.menu_to(1)
+        self.wait_loaded("lookout", timeout=300)
+        self.hold("s", 25.0)
+        self.shot("lookout_on_the_rock")
+        time.sleep(45)
+        self.shot("lookout_far_view", must_change=True)
+        self.hold("a", 15.0)
+        self.shot("lookout_head_left", must_change=True)
+        self.hold("w", 25.0)
+        time.sleep(30)
+        self.shot("lookout_back_top_down", must_change=True)
+        self.key("Escape")
+        self.wait_loaded("menu_end", timeout=120)
+        self.menu_to(6)
+        time.sleep(8)
+        if self.alive():
+            self.failed.append("退出 did not quit")
+
     def plan_full(self):
         self.wait_loaded("menu", timeout=240)
         self.focus()
@@ -302,7 +336,7 @@ def main():
     p.add_argument("--binary", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--display", default=":94")
-    p.add_argument("--plan", default="full", choices=["full", "smoke"])
+    p.add_argument("--plan", default="full", choices=["full", "smoke", "long"])
     a = p.parse_args()
     c = Check(a)
     c.start()
