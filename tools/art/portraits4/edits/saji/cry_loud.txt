@@ -1,0 +1,89 @@
+# Saji, cry_loud (大哭, round 5). Source: the owner's ChatGPT pack (x_v1_supplement_100, saji_cry): eyes squeezed,
+# mouth wide open. Its tears are clear streaks that turn into pale stripes at 128 px, so they go back to skin and
+# v4's tear streams (as in cry.txt) are drawn by hand along the same lines; crying flush on both cheeks.
+# the illustration's pale tear stripes -> skin (near cheek; along the far jaw)
+recolor 44 60 7 29 #fbf3e9 #fee1ca
+recolor 76 72 5 11 #fbf3e9 #fee1ca
+# near eye: welled lid, a long stream between the hair and the open mouth, a drop at the jaw
+@ 45 54
+cCc
+@ 46 55
+Cc
+Cc
+Cc
+Cc
+Cc
+CCc
+Cc.
+Cc.
+Cc.
+Cc.
+Cc.
+CCc
+Cc.
+Cc.
+Cc.
+Cc.
+Cc.
+Cc.
+CCc
+Cc.
+Cc.
+Cc.
+Cc.
+Cc.
+CCc
+Cc.
+Cc.
+.Cc
+.Cc
+.zCc
+.zCCz
+..zz
+# far eye: welled lid, a stream down the far cheek along the jaw line
+@ 82 68
+cCc
+@ 82 69
+Cc
+Cc
+Cc
+Cc
+@ 81 73
+Cc
+Cc
+@ 80 75
+Cc
+Cc
+@ 79 77
+Cc
+Cc
+zCz
+.z
+# crying flush (hatching over the cheeks, as cry.txt)
+@ 50 58
+bpbbpb
+pbbpbb
+.bbbb.
+@ 66 59
+bpbbpbb
+pbbpbbp
+.bbbbb.
+# near eye, inner corner: a short stream beside the nose (the illustration has one there too)
+@ 58 55
+Cc
+Cc
+Cc
+CCc
+.zz
+# tears dripping off the chin (the illustration's drops, redrawn as v4 tears; the gap beside the neck shows through)
+@ 66 89
+c
+C
+C
+z
+_
+c
+C
+z
+_
+_

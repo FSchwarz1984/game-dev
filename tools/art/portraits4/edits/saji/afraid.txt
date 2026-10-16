@@ -1,0 +1,7 @@
+# Saji, afraid (害怕, round 5). Source: the owner's ChatGPT pack (x_v1_supplement_100, saji_afraid): wide eyes, a
+# wavy open mouth and a cold-sweat drop beside the near eye; the drop was lost in the conversion and comes back as v4's
+# sweat mark; the nose's white glint (a speck at 128 px) goes back to skin.
+N $f8d5bd  skin (the portrait's own)
+@ 71 69
+N
+use sweat 43 61

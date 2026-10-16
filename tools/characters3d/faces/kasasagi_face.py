@@ -16,18 +16,20 @@ A glow pixel (the eye's light, tears) is stored with alpha 200 and keeps its lig
 """
 
 PALETTE = {
-    'K': (61, 65, 79, 255),       # the eye's dark (the iris shadow, ChatGPT sheet #3d414f)
+    'K': (54, 57, 71, 255),       # the eye's dark: the sheet's iris shadow #3d414f as it lands on screen
+                                  # (the face's light and the grade lift a stamp by about 6 levels)
     'k': (46, 46, 60, 255),       # a closed eye's line (a step deeper than K, so a 1 px line reads)
     'I': (111, 120, 135, 255),    # iris (#6f7887)
-    'W': (176, 190, 216, 255),    # the eye's light: a pale blue-grey catch-light (the v0.2 sprite's is a
-                                  # light blue; a white glow pixel read as a stare)
+    'W': (118, 138, 180, 255),    # the eye's light: a blue-grey glint in the dark (the v0.2 sprite's is a
+                                  # mid blue #6f84b3; a white pixel read as a stare, a near-skin one
+                                  # left only a thin dark line)
     'S': (250, 248, 246, 255),    # the white of a startled eye
     'M': (176, 92, 104, 255),     # mouth: a dark pink, never red
     'm': (222, 150, 146, 255),    # a soft mouth (a pale pink dot)
     'B': (246, 168, 160, 255),    # blush, soft (always on)
     'b': (238, 132, 138, 255),    # blush, warm (happy, shy, pouting)
-    'C': (214, 238, 255, 200),    # tear, light (glow)
-    'c': (150, 190, 236, 255),    # tear
+    'C': (176, 214, 250, 200),    # tear, light (glow): a clear blue, not white
+    'c': (128, 172, 230, 255),    # tear
     'V': (214, 64, 78, 255),      # anger mark
     'D': (200, 236, 255, 200),    # sweat drop (glow)
     'Z': (226, 232, 255, 200),    # sleepy 'z' (glow)
@@ -40,36 +42,34 @@ EYE_LIGHT = 'mirror'
 # eyes: her right eye, column 0 its outer side; 3 rows (the top row lies under the bangs' edge)
 EYE_PIVOT = (0, 1)
 EYES = {
-    'open': ['KK',
+    # (the top row of every eye lies under the bangs: the shape a stamp shows lives in its two lower rows)
+    'open': ['KK',               # the sprite's eye: three dark pixels and a glint
              'KW',
-             'KI'],
+             'KK'],
     'blink': ['..',
               '..',
               'kk'],
     'half': ['..',               # sleepy: the lid half down
              'kk',
-             'KI'],
-    'smug': ['..',               # half-lidded, the light under a flat lid (mischief)
+             'KW'],
+    'smug': ['..',               # half-lidded over the glint (mischief)
              'kk',
              'KW'],
     'happy': ['.k.',             # ^ (three wide: its middle on the eye's outer column, see pivots)
               'k.k'],
-    'wide': ['KK',               # startled: the eye opens a row taller, a white ring round the dark
+    'wide': ['KK',               # startled: a white ring round the dark, a row taller
              'SK',
              'SW',
              'KK'],
-    'look_in': ['KK',            # glancing toward her nose side (the light kept inner)
+    'look_in': ['KK',            # glancing toward her nose (the glint moves out)
                 'WK',
-                'IK'],
-    'look_out': ['KK',
-                 'KW',
-                 'KK'],
-    'angry': ['K.',              # the lid slants down to the inner corner (under the bangs)
-              'KK',
+                'KK'],
+    'angry': ['K.',              # the lid slants down to the inner corner
+              'K.',
               'KW'],
     'sad': ['.K',                # the inner corner up
-            'KK',
-            'KI'],
+            '.K',
+            'KW'],
     'teary': ['KK',
               'KW',
               'CC'],
@@ -85,12 +85,13 @@ EYES = {
              '..',
              '.c',
              '.C'],
-    'shut': ['..',               # squeezed shut without tears (a wince, a grin)
-             'k.',
-             '.k'],
+    'shut': ['k.',               # squeezed shut without tears (a wince, a giggle)
+             '.k',
+             'k.'],
 }
-# per-stamp pivots where they differ from EYE_PIVOT (the ^ centred over the eye's two columns)
-EYE_PIVOTS = {'happy': (1, 0)}
+# per-stamp pivots where they differ from EYE_PIVOT: the ^ centred over the eye's outer column; the
+# squeezed-shut > one row lower, so all three of its rows show under the bangs
+EYE_PIVOTS = {'happy': (1, 0), 'cry0': (0, 0), 'cry1': (0, 0), 'shut': (0, 0)}
 
 # columns kept per view (None: all). In profile only the near eye shows, one column wide (its outer,
 # dark column: a dark dash under the bangs reads as an eye seen from the side).
@@ -141,7 +142,7 @@ EXPRESSIONS = {
     # 坏笑 / 古灵精怪: half-lidded eyes over a sly one-sided dot of a smile
     'mischief':  {'eyes': 'smug', 'mouth': 'smirk'},
     'cat':       {'eyes': 'happy', 'mouth': ''},
-    'curious':   {'eyes': 'look_out', 'mouth': 'o'},
+    'curious':   {'eyes': 'open', 'mouth': 'o'},
     'surprised': {'eyes': 'wide', 'mouth': 'o', 'cheeks': ''},
     'angry':     {'eyes': 'angry', 'mouth': 'line', 'mark': 'anger', 'cheeks': 'blush'},
     'sad':       {'eyes': 'sad', 'mouth': ''},

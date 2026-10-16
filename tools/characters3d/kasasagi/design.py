@@ -31,7 +31,9 @@ _COMMON = {
                                # receding chin up the screen) still leaves three rows of cheek and chin
     'eye_x': 0.083,            # eye centre half spacing: 2 px eyes, 3 px between them
     'face_y': 0.200,           # the face plate's front (distance in front of the head's axis)
-    'face_w': 0.184,           # half width of the face at the cheeks (11 px)
+    'face_w': 0.155,           # half width of the face at the cheeks: 9 px, laid out as the sprite's
+                               # [1 skin][2 eye][3][2 eye][1 skin]; the cranium is much wider (the
+                               # baby schema: a big head, a small low face)
     'bang_cut': 0.268,         # the hime cut: just over the eyes' top row (the bangs press on it)
     'mouth_h': 0.096,
     'cheek_h': 0.158,          # the blush: a row under the eyes, under their outer column (v0.2)
@@ -46,8 +48,8 @@ _D = {
         'cranium_w': 0.232,        # half width at the widest (above the ears)
         'cranium_back': 0.215,
         # hat (sugegasa): radius, cone height, how far the brim plane sits below the crown
-        'hat_r': 0.60, 'hat_h': 0.27, 'hat_sink': 0.12,
-        'hat_tilt': 22.0, 'hat_tilt_away': 22.0, 'hat_roll': 6.0,
+        'hat_r': 0.58, 'hat_h': 0.25, 'hat_sink': 0.16,
+        'hat_tilt': 26.0, 'hat_tilt_away': 26.0, 'hat_roll': 6.0,
         'hat_band': 'ribbon',      # a red ribbon round the crown, tied, with a tail
         # hair
         'lock_tie_h': -0.17,       # the side locks' ties, height above the chin (chest)
@@ -61,6 +63,10 @@ _D = {
         'coat_flare': 0.30,        # its half width at the hem
         'sleeve_hem': 0.50, 'sleeve_w': 0.40,    # sleeve bottom height; outer edge from the middle
         'hand_z': 0.64,            # the hand's tip (hanging arm): out of the cuff, over the hanging sleeve
+        'hand_dx': 0.020, 'hand_dy': -0.110,     # the hand's place from the shoulder (in front of the robe)
+        'sleeve_top': 0.40,        # the sleeve's width at the shoulder (share of its width at the hem)
+        'shoulder_drop': 0.15,     # how far the shoulder seam drops from the neck side to the outside
+        'sleeve_flare': 0.75,      # how soon the sleeve reaches its full width (lower: sooner)
         'trouser_puff': 0.135,
         'foot_len': 0.20,
         'bow': 'front',
@@ -69,23 +75,28 @@ _D = {
     }),
     'B': dict(_COMMON, **{
         'name': 'B (v0.2 sprite)',
-        'chin_z': 1.15,
-        'head_h': 0.56,
-        'cranium_w': 0.245,
-        'cranium_back': 0.225,
-        'hat_r': 0.64, 'hat_h': 0.32, 'hat_sink': 0.12,
-        'hat_tilt': 22.0, 'hat_tilt_away': 22.0, 'hat_roll': 0.0,
+        # about 2.7 heads (the sprite is about 2.4): a big head on a short body
+        'chin_z': 1.02,
+        'head_h': 0.60,
+        'cranium_w': 0.255,
+        'cranium_back': 0.235,
+        'hat_r': 0.66, 'hat_h': 0.27, 'hat_sink': 0.19,
+        'hat_tilt': 26.0, 'hat_tilt_away': 26.0, 'hat_roll': 0.0,
         'hat_band': 'stripe',      # a red stripe from the apex down to the front right of the brim
         'lock_tie_h': -0.05,       # just under the chin, as in the sprite
-        'lock_end_h': -0.17,
-        'back_hair_end': 0.66,     # to the small of her back
-        'back_hair_w': 0.215,
-        'shoulder_w': 0.150, 'shoulder_z': 0.99, 'neck_base': 1.03,
-        'obi_z': (0.74, 0.84), 'hip_z': 0.64, 'knee_z': 0.34, 'ankle_z': 0.10,
-        'coat_hem': 0.36,
-        'coat_flare': 0.30,
-        'sleeve_hem': 0.56, 'sleeve_w': 0.50,
-        'hand_z': 0.51,            # the hands just show under the sleeves' hems
+        'lock_end_h': -0.16,
+        'back_hair_end': 0.56,     # to the small of her back
+        'back_hair_w': 0.225,
+        'shoulder_w': 0.145, 'shoulder_z': 0.875, 'neck_base': 0.91,
+        'obi_z': (0.65, 0.74), 'hip_z': 0.56, 'knee_z': 0.29, 'ankle_z': 0.09,
+        'coat_hem': 0.31,
+        'coat_flare': 0.29,
+        'sleeve_hem': 0.37, 'sleeve_w': 0.54,    # long bags, nearly to the robe's hem (the sprite's)
+        'hand_z': 0.44,            # the hands at the sleeves' inner edge, in front, above the bags' hem
+        'hand_dx': 0.040, 'hand_dy': -0.105,
+        'sleeve_top': 0.58,
+        'shoulder_drop': 0.08,
+        'sleeve_flare': 0.55,
         'trouser_puff': 0.13,
         'foot_len': 0.19,
         'bow': 'left',

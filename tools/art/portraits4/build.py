@@ -1,10 +1,12 @@
 """v4 pixel dialogue portraits (docs/knowledge/13-pixel-portraits.md section 10).
 
     python3 -I tools/art/portraits4/build.py crops --packs DIR      # 1. cut the source crops (needs the 12 packs)
+    python3 -I tools/art/portraits4/build.py crops --gpt DIR --only X1_cry ...   # (sources outside the 12 packs)
     python3 -I tools/art/portraits4/build.py build                  # 2. crops + edits -> assets/portraits/pixel
     python3 -I tools/art/portraits4/build.py build --auto DIR       #    also write the un-edited auto results to DIR
     python3 -I tools/art/portraits4/build.py check                  #    verify the PNGs against a fresh build
-    python3 -I tools/godot/sync_assets.py --portraits-only          # 3. copy them into godot/art/portraits
+    python3 -I tools/art/portraits4/talkblink.py                    # 3. talk and blink overlays (after every build)
+    python3 -I tools/godot/sync_assets.py --portraits-only          # 4. copy them into godot/art/portraits
 `build --out DIR` writes somewhere else; PORTRAITS4_CACHE=DIR caches the slow pixelising step (~5 min -> ~80 s).
 
 Dependencies: numpy, Pillow, opencv-python-headless, scipy (the same as v1's tools/art/pixel_portraits.py).
@@ -12,7 +14,9 @@ Dependencies: numpy, Pillow, opencv-python-headless, scipy (the same as v1's too
 Inputs: the owner's packs (12 zips of 1024x1536 RGBA PNGs, A = Kasasagi (id tsuzumi), B = Shione, C = Saji, extracted
 as DIR/Character_<L>_<nn-nn>/<L>_<nn>.png) are read once by `crops`, which keeps the source pixels around every window
 in assets/portraits/src4/<char>/<source>.webp (lossy colour, lossless alpha) with their origin in crops.json; `build`
-reads only those, so the portraits are reproducible from the repository.
+reads only those, so the portraits are reproducible from the repository. Three of Saji's expressions (round 5) come
+from the owner's ChatGPT pack instead (config.EXTRA_SOURCES, `crops --gpt DIR`): their own head size ('eye_dist') and
+Saji's palette as measured from her 12-pack expressions ('palette': False), so they changed none of the others.
 
 Method:
  1. Window. Each expression has its own illustration (config.SELECTION, both eyes measured in source px). The eye
@@ -62,16 +66,23 @@ EDITS = os.path.join(HERE, 'edits')
 
 # ------------------------------------------------------------------------------------------------ geometry
 
-def scale_of(char):
-    """Source px per native px."""
-    return C.REF_EYE_DIST[char] / C.FRAME[char][0]
+def options(char, expr):
+    """The expression's options dict (config.SELECTION, 6th field), or {}."""
+    _, _, _, _, _, *opt = C.SELECTION[char][expr]
+    return opt[0] if opt else {}
+
+
+def scale_of(char, expr=None):
+    """Source px per native px (the expression's own when its source has another head size)."""
+    d = options(char, expr).get('eye_dist', C.REF_EYE_DIST[char]) if expr else C.REF_EYE_DIST[char]
+    return d / C.FRAME[char][0]
 
 
 def window(char, expr):
     """(x0, y0, side) of the native window in source px."""
     _, el, er, _, _, *opt = C.SELECTION[char][expr]
     opt = opt[0] if opt else {}
-    s = scale_of(char)
+    s = scale_of(char, expr)
     _, ex, ey = C.FRAME[char]
     mid = (np.asarray(el, float) + np.asarray(er, float)) / 2
     dx, dy = opt.get('shift', (0, 0))
@@ -80,7 +91,7 @@ def window(char, expr):
 
 def to_native(char, expr, p):
     x0, y0, _ = window(char, expr)
-    s = scale_of(char)
+    s = scale_of(char, expr)
     return (p[0] - x0) / s, (p[1] - y0) / s
 
 
@@ -93,9 +104,12 @@ def pack_path(packs, name):
 
 
 def cmd_crops(args):
+    """Cut every source (or only `--only NAME ...`, keeping the other crops and their crops.json entries)."""
     boxes = {}
     for char, exprs in C.SELECTION.items():
         for expr, row in exprs.items():
+            if args.only and row[0] not in args.only:
+                continue
             x0, y0, side = window(char, expr)
             b = (int(np.floor(x0)) - C.CROP_MARGIN, int(np.floor(y0)) - C.CROP_MARGIN,
                  int(np.ceil(x0 + side)) + C.CROP_MARGIN, int(np.ceil(y0 + side)) + C.CROP_MARGIN)
@@ -103,8 +117,19 @@ def cmd_crops(args):
             o = boxes.get(key, b)
             boxes[key] = (min(o[0], b[0]), min(o[1], b[1]), max(o[2], b[2]), max(o[3], b[3]))
     manifest = {}
+    if args.only and os.path.exists(os.path.join(SRC4, 'crops.json')):
+        with open(os.path.join(SRC4, 'crops.json')) as fh:
+            manifest = json.load(fh)
     for (char, name), (bx0, by0, bx1, by1) in sorted(boxes.items()):
-        im = Image.open(pack_path(args.packs, name)).convert('RGBA')
+        if name in C.EXTRA_SOURCES:
+            if not args.gpt:
+                raise SystemExit(f'{name} is not in the 12 packs: give --gpt DIR')
+            src = os.path.join(args.gpt, C.EXTRA_SOURCES[name])
+        else:
+            if not args.packs:
+                raise SystemExit(f'{name}: give --packs DIR')
+            src = pack_path(args.packs, name)
+        im = Image.open(src).convert('RGBA')
         crop = Image.new('RGBA', (bx1 - bx0, by1 - by0), (0, 0, 0, 0))
         crop.paste(im.crop((max(bx0, 0), max(by0, 0), min(bx1, im.width), min(by1, im.height))),
                    (max(0, -bx0), max(0, -by0)))
@@ -179,7 +204,7 @@ def load_work(char, expr):
     a = np.clip((rgba[..., 3] - 0.03) / 0.93, 0, 1)            # the packs top out at alpha 253
     pm = np.dstack([rgba[..., :3] * a[..., None], a])
     x0, y0, _ = window(char, expr)
-    sk = scale_of(char) / C.SUB
+    sk = scale_of(char, expr) / C.SUB
     sig = max(0.0, 0.5 * sk - 0.25)
     if sig > 0.2:
         pm = cv2.GaussianBlur(pm, (0, 0), sig)
@@ -613,7 +638,7 @@ def build_all(only=None):
         if only and not any(o.split('/')[0] == char for o in only):
             continue
         results = {e: cached_pixelise(char, e) for e in exprs}
-        pal = measure_palette(char, results)
+        pal = measure_palette(char, {e: r for e, r in results.items() if options(char, e).get('palette', True)})
         palettes[char] = pal
         out[char] = {}
         for expr, (rgb, msk, work) in results.items():
@@ -685,7 +710,9 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     sub = ap.add_subparsers(dest='cmd', required=True)
     a = sub.add_parser('crops')
-    a.add_argument('--packs', required=True)
+    a.add_argument('--packs', help='the 12 packs, extracted')
+    a.add_argument('--gpt', help='the ChatGPT pack\'s portraits folder (config.EXTRA_SOURCES)')
+    a.add_argument('--only', nargs='*', help='cut only these sources (e.g. X1_cry); the other crops stay')
     b = sub.add_parser('build')
     b.add_argument('--only', nargs='*')
     b.add_argument('--auto', help='also write the un-edited results here')

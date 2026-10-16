@@ -182,11 +182,14 @@ def export(built, path):
     # the head snap puts the head's origin on a pixel centre horizontally (the face is an odd 11 px wide,
     # its centre column between the eyes): head_snap_modifier.gd reads this
     head_snap = {'x': 0.5, 'y': 0.0}
+    # her material (godot/characters/shaders/char_toon.gdshader; its defaults are the round-4 look)
+    material = {'c3_style': 5, 'key_side': 0.55, 'key_up': 0.30, 'key_neutral': 0.60, 'white_point': 0.66,
+                'face_white_point': 0.76, 'face_rim_keep': 0.0, 'face_rim_back': 0.0, 'hair_sheen': 0.0}
     meta = {'note': 'landmarks: model space, bind pose, Godot axes (x east, y up, z toward the camera)',
             'variant': _VARIANT, 'design': _D['name'],
             'landmarks': lm, 'clips': clips, 'hat_tilt_deg': HAT_TILT_DEG, 'hat_tilt_away_deg': HAT_TILT_AWAY_DEG,
             'hat_roll_deg': HAT_ROLL_DEG, 'head_turn_bias_deg': HEAD_TURN_BIAS_DEG, 'hat_brim': HAT_BRIM,
-            'springs': spring_chains(), 'colliders': colliders(), 'head_snap': head_snap}
+            'springs': spring_chains(), 'colliders': colliders(), 'head_snap': head_snap, 'material': material}
     with open(os.path.join(os.path.dirname(path), 'rig.json'), 'w') as f:
         json.dump(meta, f, indent=1)
     export_pack(os.path.join(os.path.dirname(os.path.dirname(path)), 'props', 'shoiko.glb'))

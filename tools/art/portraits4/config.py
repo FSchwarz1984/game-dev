@@ -23,7 +23,11 @@ FRAME = {
 
 # expression: (source image, left eye, right eye, mouth centre (source px), mouth state[, options])
 # mouth state: 'open' | 'small' | 'closed' | 'hidden' (a hand over the mouth).
-# options: {'shift': (dx, dy)} moves the window by native px (composition only; the head moves with it).
+# options: {'shift': (dx, dy)} moves the window by native px (composition only; the head moves with it);
+#          {'eye_dist': px} the source px between the eyes when the source is not one of the 12 packs (another
+#          head size; the head still comes out at FRAME's eye distance);
+#          {'palette': False} the expression is not measured into the character's palette (it uses the palette
+#          of her 12-pack expressions, so adding it changes none of the others).
 # An eye hidden behind a hand is estimated from the visible one and the head's usual eye spacing.
 SELECTION = {
     'tsuzumi': {
@@ -81,7 +85,24 @@ SELECTION = {
         'serious': ('C_25', (492, 183), (559, 213), (512.9, 245.2), 'closed'),
         'tired': ('C_19', (506, 205), (561, 242), (522.8, 267.3), 'closed'),
         'calm': ('C_29', (498, 183), (564, 215), (519.6, 245.6), 'closed'),
+        # Round 5 (G5R3-9): three expressions the 12 packs do not have, from the owner's ChatGPT pack
+        # x_v1_supplement_100 (EXTRA_SOURCES). Eyes and mouth: the neutral's, carried over by an affine registration
+        # of each image to the pack's neutral (the pack keeps one head pose).
+        'mischievous': ('X1_mischievous', (747.8, 660.6), (922.7, 731.8), (829.5, 820.7), 'open',
+                        {'eye_dist': 188.8, 'palette': False}),
+        'afraid': ('X1_afraid', (748.4, 659.8), (923.6, 730.8), (830.4, 819.7), 'open',
+                   {'eye_dist': 188.8, 'palette': False}),
+        'cry_loud': ('X1_cry', (748.7, 662.0), (924.3, 733.8), (831.2, 822.8), 'open',
+                     {'eye_dist': 189.4, 'palette': False}),
     },
+}
+
+# Sources outside the 12 packs: name -> path inside the folder given to `crops --gpt DIR` (the owner's ChatGPT pack
+# x_v1_supplement_100/portraits, 1408 x 1408 RGBA busts; reviewed against v4 in round 5, docs/knowledge/13 section 10).
+EXTRA_SOURCES = {
+    'X1_mischievous': 'saji/saji_mischievous.png',
+    'X1_afraid': 'saji/saji_afraid.png',
+    'X1_cry': 'saji/saji_cry.png',
 }
 
 NAMES = {'tsuzumi': '百々かさゝぎ', 'shione': '垣外しをね', 'saji': '家守さぢ'}

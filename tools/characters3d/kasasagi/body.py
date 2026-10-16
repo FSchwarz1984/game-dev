@@ -40,9 +40,10 @@ SW = D['shoulder_w']
 CLAV_IN = Vector((0.03, 0.010, SHOULDER_Z - 0.006))
 SHOULDER = Vector((SW, 0.012, SHOULDER_Z))
 _arm_len = SHOULDER_Z - D['hand_z']
-ELBOW = Vector((SW + 0.030, 0.012, SHOULDER_Z - _arm_len * 0.44))
-WRIST = Vector((SW + 0.040, -0.020, SHOULDER_Z - _arm_len * 0.86))
-HAND_TIP = Vector((SW + 0.040, -0.040, D['hand_z']))
+_hx, _hy = D['hand_dx'], D['hand_dy']
+ELBOW = Vector((SW + 0.6 * _hx, 0.006, SHOULDER_Z - _arm_len * 0.44))
+WRIST = Vector((SW + 0.96 * _hx, 0.65 * _hy, SHOULDER_Z - _arm_len * 0.86))
+HAND_TIP = Vector((SW + _hx, _hy, D['hand_z']))
 
 # ---- legs ----------------------------------------------------------------------------------------
 HIP_JOINT = Vector((0.072, 0.0, D['hip_z'] - 0.035))

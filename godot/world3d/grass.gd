@@ -110,6 +110,11 @@ func _build_field(t: Terrain3D) -> void:
 		buf[k * 12 + 5] = 1.0
 		buf[k * 12 + 10] = 1.0
 	mm.buffer = buf
+	# the instances all sit at the chunk's corner; the shader spreads them over the chunk and puts
+	# them on the ground: the bounds cover the chunk and the whole height range (each chunk node
+	# narrows them with its own custom_aabb)
+	var hr: Dictionary = t.info.get("height", {"min": -50.0, "range": 120.0})
+	mm.custom_aabb = AABB(Vector3(-0.6, float(hr["min"]) - 0.5, -1.0), Vector3(chunk + 1.2, float(hr["range"]) + 2.0, chunk + 1.6))
 	for c in info.get("chunks", []):
 		var o: Array = c["origin"]
 		var yr: Array = c["y"]
@@ -118,6 +123,9 @@ func _build_field(t: Terrain3D) -> void:
 		mi.multimesh = mm
 		mi.material_override = grass_mat
 		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		# (renderer: out of the VoxelGI bake, which plots every instance where its transform says, all
+		# 2500 at the chunk's corner: wrong blobs in the GI and bake time; the ground carries the GI)
+		mi.gi_mode = GeometryInstance3D.GI_MODE_DISABLED
 		mi.position = Vector3(float(o[0]), 0.0, float(o[1]))
 		# the tufts stand on the ground anywhere in the chunk; the cards lean back up to half a metre
 		mi.custom_aabb = AABB(Vector3(-0.6, float(yr[0]), -1.0), Vector3(chunk + 1.2, float(yr[1]) - float(yr[0]) + 0.6, chunk + 1.6))

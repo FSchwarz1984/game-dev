@@ -33,13 +33,13 @@ def _head_table():
     cw, cb, hh = D['cranium_w'], D['cranium_back'], B.HEAD_H
     t = [
         # h      W              F              K
-        (0.000, 0.052,         fy - 0.020,    -0.100),
-        (0.018, 0.108,         fy - 0.008,    -0.040),
-        (0.046, 0.150,         fy - 0.002,     0.020),
-        (0.090, fw - 0.014,    fy,             0.090),
-        (0.150, fw - 0.002,    fy,             0.145),
+        (0.000, 0.30 * fw,     fy - 0.020,    -0.100),
+        (0.018, 0.62 * fw,     fy - 0.008,    -0.040),
+        (0.046, 0.84 * fw,     fy - 0.002,     0.020),
+        (0.090, 0.94 * fw,     fy,             0.090),
+        (0.150, 0.99 * fw,     fy,             0.145),
         (0.220, fw,            fy,             0.180),
-        (0.280, fw + 0.010,    fy - 0.002,     0.200),
+        (0.280, fw + 0.012,    fy - 0.002,     0.200),
     ]
     h0 = 0.28
     for s, w, f, k in ((0.22, 0.5 * (fw + cw) + 0.014, fy - 0.010, cb - 0.006),
@@ -285,12 +285,18 @@ def side_lock_points(side):
     fw = B.FACE_W
     tie_h, end_h = D['lock_tie_h'], D['lock_end_h']
     t = math.pi / 2 - side * 1.28
-    return [head_point(0.36, t, grow=0.024),
-            Vector((side * (fw + 0.040), B.HEAD_YC - 0.070, B.CHIN_Z + 0.22)),
-            Vector((side * (fw + 0.036), B.HEAD_YC - 0.068, B.CHIN_Z + 0.07)),
-            Vector((side * (fw + 0.028), -0.070, B.CHIN_Z + tie_h + 0.05)),
-            Vector((side * (fw + 0.024), -0.068, B.CHIN_Z + tie_h)),
-            Vector((side * (fw + 0.020), -0.064, B.CHIN_Z + end_h))]
+    c = fw + LOCK_W + 0.004
+    return [head_point(0.38, t, grow=0.030),
+            Vector((side * c, B.HEAD_YC - 0.080, B.CHIN_Z + 0.24)),
+            Vector((side * c, B.HEAD_YC - 0.078, B.CHIN_Z + 0.08)),
+            Vector((side * (c - 0.004), -0.078, B.CHIN_Z + tie_h + 0.06)),
+            Vector((side * (c - 0.006), -0.076, B.CHIN_Z + tie_h)),
+            Vector((side * (c - 0.008), -0.072, B.CHIN_Z + end_h))]
+
+
+# the side hair's half width: thick curtains beside the face (the sprite's hair columns are 5 px each
+# side of a 9 px face; the round-5 first try at 2 px left the head looking small under the hat)
+LOCK_W = 0.066
 
 
 def side_locks():
@@ -307,29 +313,32 @@ def side_locks():
         tie_u = (Path(pts[:5]).length) / L
 
         def width(u, tie_u=tie_u):
-            w = lerp(0.040, 0.034, smooth(u))
-            w *= 1.0 - 0.25 * math.exp(-((u - tie_u) / 0.05) ** 2)
+            w = lerp(LOCK_W * 0.9, LOCK_W, smooth(u * 3.0)) * lerp(1.0, 0.82, smooth((u - 0.5) / 0.5))
+            w *= 1.0 - 0.32 * math.exp(-((u - tie_u) / 0.045) ** 2)
             return w
 
         def thick(u, tie_u=tie_u):
-            return 0.024 * (1.0 - 0.25 * math.exp(-((u - tie_u) / 0.05) ** 2))
+            return 0.030 * (1.0 - 0.25 * math.exp(-((u - tie_u) / 0.05) ** 2))
 
         def tag(u, v, side=side):
             return {'seg': 'hair_side', 'u': u, 'side': side}
 
-        outward = Vector((side * 1.0, -0.35, 0.0)).normalized()
+        # the curtain faces forward: its thickness front-to-back, its width across (seen from the front
+        # it is a wide dark strip beside the cheek)
+        outward = Vector((side * 0.30, -1.0, 0.0)).normalized()
         n0 = len(part.v)
         _strand(part, pts, width, thick, nu=16, nv=10, tip='blunt', up=outward,
                 col=lambda u, v: C.HAIR, tagf=tag)
         for i in range(n0, len(part.v)):
-            part.nrm[i] = Vector((side * 0.8, -0.55, 0.12)).normalized()
+            q = part.v[i]
+            part.nrm[i] = Vector((side * 0.30 + (q.x - side * (B.FACE_W + LOCK_W)) * 5.0, -1.0, 0.15)).normalized()
         # the tie: white - red - white, three native rows
         tc = p4 + Vector((0, 0, 0.012))
         path = Path([tc + Vector((0, -0.002, 0.050)), tc + Vector((0, 0.002, -0.050))], up=outward)
 
         def section(u, a):
-            r = 0.031
-            return (r * math.cos(a) * 1.05, r * math.sin(a) * 1.10)
+            r = 0.034
+            return (r * math.cos(a) * 1.0, r * math.sin(a) * 1.55)
 
         def tcol(u, v):
             return C.RED if 0.34 < u < 0.66 else C.WHITE
@@ -442,7 +451,9 @@ def hat_top_z(s):
     cone = (1.0 - s) ** 1.0
     apex = -0.06 * Hh * math.exp(-(s / 0.05) ** 2)
     droop = -0.018 * smooth((s - 0.86) / 0.14)
-    return Hh * cone + apex + droop
+    # the crown rises a little over the head (room inside for the cranium when the hat is tipped)
+    crown = 0.075 * (1.0 - s) ** 3
+    return Hh * cone + apex + droop + crown
 
 
 def hat(tilt_deg=0.0, roll_deg=0.0):
@@ -551,8 +562,8 @@ def hat_band():
         # line read as a sign, so one side)
         n = 48
         s0, s1 = 0.26, 0.34
-        r0 = [part.add(_on_top(s0, j / n * TAU, lift), C.RED, (0, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
-        r1 = [part.add(_on_top(s1, j / n * TAU, lift), C.RED, (1, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
+        r0 = [part.add(_on_top(s0, j / n * TAU, lift), C.RED_DEEP, (0, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
+        r1 = [part.add(_on_top(s1, j / n * TAU, lift), C.RED_DEEP, (1, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
         for j in range(n):
             j1 = (j + 1) % n
             part.f.append((r0[j], r0[j1], r1[j1], r1[j]))
@@ -566,13 +577,18 @@ def hat_band():
                 s = lerp(0.35, 0.995, i / m)
                 p = _on_top(s, a, lift * 0.8)
                 across = Vector((-math.sin(a), -math.cos(a), 0.0))
-                rows.append([part.add(p + across * (w * (k - 1)), C.RED, (s, k / 2),
+                rows.append([part.add(p + across * (w * (k - 1)), C.RED_DEEP, (s, k / 2),
                                       (M_CLOTH, 0.0), {'seg': 'hat'}) for k in range(3)])
             for i in range(m):
                 for k in range(2):
                     part.f.append((rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]))
+        # (the sheet's ribbon tail hanging from the brim: left out for now. Rigid with the hat, which the
+        # game tips away from the camera whichever way she faces, it hung in the air beside her as a
+        # one-pixel red line; it needs its own spring chain, second step)
     seat = B.HAT_SEAT
     for i, p in enumerate(part.v):
+        if p.z < seat.z - B.HAT_SINK - 0.01:
+            continue                      # the hanging tail: its own normals
         d = Vector(((p - seat).x, (p - seat).y, 0.0))
         part.nrm[i] = (d.normalized() * 0.95 + Vector((0, 0, 1.0))).normalized() if d.length > 1e-4 else Vector((0, 0, 1))
     return part

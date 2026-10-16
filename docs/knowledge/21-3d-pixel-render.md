@@ -182,7 +182,9 @@ bash tools/world3d/preview_asset.sh res://world3d/assets/trees/x/x.tscn <输出�
 - **画出来的阴影**（`w3_paint_shade`）：环境光看到的颜色 = 反照率的色相往冷的一侧转、彩度保留（`w3_shadow_hue`，第三轮的做法）× `w3_shade_tint`（第三轮的值：白天略冷，黄金时刻蓝紫）。天空只带两成颜色（`ambient_day_hue` 0.2：引擎的天光半球按亮度给，蓝天乘暖土会发灰，§6 #7）。夜里不转色相（第四轮）。引擎的天光给朝上的面只有天色的约四分之三到五分之四，所以白天乘 1.2（`ambient_day_gain`，见 §6 #34）。
 - **叶子的贴图走第三轮的调色板**（`w3_ukiyo_tex`，叶片材质的 `ukiyo`，默认 1）：第一到第三轮叶片、旧精灵的贴图被转了两次 sRGB（§6 #20 的错），画面上比画的深、中间调更浓；第四轮修了错，颜色变浅变鲜。现在把那个结果当成调色板**有意地**做回来：贴图的 sRGB 值先过一次 sRGB 曲线再正常转线性。只用于第三轮就有的贴图；第四轮以后画的（按一次转换画的：大楠的新叶、furusugi、茅屋的卡片、篱笆的藤、菜园、地被）`ukiyo` = 0（`sample.gd` 的 `ONE_CONVERSION_LEAVES`，`grass.gd`），否则暗部发黑。夜里不用（`w3_ukiyo_tex` 按 `w3_night` 退掉）。
 - **叶子的处理**（`toon_foliage_body`）：第三轮的：绿的彩度 ×0.8、鲜的黄绿在膝点 0.06 以上压缩；受光的一面彩度 ×0.72、亮度 ×0.88；正对太阳的一面亮一点暖一点（`hi_band`，连续）；逆光透光只留 0.35（夜里全）。
-- **`lush`**（第四轮的鲜绿）白天不再生效（乘 `w3_night`）；地形的 `dry_bias` 退回 0（第三轮的干草斑）。
+- **`lush`**（第四轮的鲜绿）白天不再生效（乘 `w3_night`）。
+- **雨天不压平阴影里的细节**（`w3_flatten`，G5R3-5 "茅屋在雨天……全是色塊"）：第四轮的 `shade_flatten`（阴影里压掉一部分画出来的细节：大块明暗、细节在受光面）在有太阳时成立；雨天的光几乎全是天光，满画面都是"阴影"，于是所有表面成了平的色块。现在压平的份额乘 (1 − 0.85 × 雨量)（地形、实体、草场）。
+- **草地只有一个颜色场**（`render3d/shaders/sward.gdshaderinc`，主管 2026-10-16）：要第三轮的草色，不要第三轮的斑。第三轮的宏观明暗按整级跳（fbm 7.5 米，点状接缝）、干草按阈值切（1–3 米一块、硬边），读出来就是用户说的"一块深一块浅"（G5R3-2）。现在干度（`w3_sward_dry`：m3.g 加 9 米的噪声，宽的 smoothstep）和宏观明暗（`w3_sward_tone`：10 米与 4.6 米两层，连续，通常 ±0.6 级）都是几米的渐变，颜色在调色板第 0、1 行之间、相邻两级之间插值（`w3_sward_col`）。地形（mat 0）和场景代理的草场（`world3d/grass_field.gdshader`）都从这里取色，草根就是脚下地面的颜色；草的光也和地面一字不差（`w3_sun_level`，地面曲线，wrap 0.15）。细节（单根深色草叶、地面字形、草尖亮一级）仍按整级叠在上面。`dry_bias` 0。干草色在平地上出现多少由干度图（`materials.py`，场景代理）决定。
 - **验证**（`render3d/dev/asset_preview` 同一素材过两个渲染器：worktree 20e91e6 的第三轮渲染器、现在的渲染器）：杉 sugi_a 受光 / 半影 / 阴影 / 地上的影子 ΔE2000 ≤ 1.7（07:36、12:30）；枹栎 konara_a ≤ 3.8；平地（实体材质）≤ 2.6。场景里的差别主要来自素材和布局（新茅屋、新路面、地被卡片、东边的杉挡住了早晨的太阳），见 §7.0b。
 
 ### 5.4 第四轮的光（Forward+）
@@ -264,8 +266,16 @@ TextureRect（整数倍、最近邻、位置 = −1 像素 − 余数），compo
 33. **`render3d/dev/asset_preview` 的图从第四轮起是线性的（太暗）**：3D 视口改成 HDR 以后，它直接把视口存成 PNG，存的是线性浮点、没有调色：同一块地 PNG 上 L\* 40，游戏里 L\* 73。第五轮改成存窗口里调过色的画面（和样章的 `--shots` 一样，按整数倍取原生像素）。比颜色只能用调过色的图。
 34. **引擎的天光比"天色"暗**：环境光来自 `ambient_sky.gdshader` 的半球，引擎按它的辐射图（32 像素、滤过）给漫反射的环境光；朝上的平地实际拿到的约是天色的 3/4–4/5（第三轮在着色器里直接用天色的亮度）。同一素材过两个渲染器比：白天乘 1.2 时影子和第三轮差 ΔE ≤ 4。
 35. **`pkill -f` 和 `pgrep -f | kill` 都会杀掉自己**（第 5 条的又一次）：命令行里含有要找的字符串时，自己的 shell 也匹配。只杀可执行文件是 Godot 的：`readlink /proc/$p/exe` 等于 Godot 的路径才杀（scratchpad `bin/killgodot.sh`）。
+36. **VoxelGI 会把 MultiMesh 的每个实例按它的变换画进体素**（`VoxelGI::_find_meshes` 对 `MultiMeshInstance3D` 取 `get_meshes()`）。实例在着色器里才摆开的（草场：变换都是单位矩阵，顶点着色器按 `INSTANCE_ID` 铺满 16 米区块），烘焙时 2500 个小片全叠在区块角上：GI 里多出错的亮/暗块，烘焙也白白变长。这类节点要 `gi_mode = GI_MODE_DISABLED`（`grass.gd` 已设）。
+37. **手柄在容器里没法走操作系统那一路验证**：没有 `/dev/uinput`，Xvfb 也不发手柄事件。能做的是把 `InputEventJoypadMotion` / `InputEventJoypadButton` 交给 `Input.parse_input_event`（设备 0），走 Godot 自己的输入那一段（`render3d/dev/shell_check.gd`）；`Input.get_connected_joypads()` 这时是空的，所以读手柄的代码在没有连接的手柄时也读 0 号。真手柄要在 Windows 上再验一次。
 
 ## 7. 样章的状态
+
+### 7.0b 第五轮（2026-10-16，色彩退回第三轮，G5R3-1）
+
+进度、三联对照和颜色统计在 scratchpad 的 `sample3d/final5/`（`progress.md`、`progress/`），不进仓库。做了：白天的颜色在第四轮的渲染器里按第三轮重现、夜里保持第四轮（§5.5）；同一素材在两个渲染器里比（第三轮的 worktree 20e91e6 与现在），杉 ΔE2000 ≤ 1.7、枹栎多数 ≤ 5、平地 ≤ 1.1（12:30）；草地的颜色场（§5.5，去掉第三轮的斑）；眺望去掉城市（楼、窗、电车、城里的灯、烟），树木植被与前景岩回到第三轮的摆放（替身图集与 `round3_props.json` 从 20e91e6 合并：`tools/world3d/vista_merge_r3.py`），遠化与すやり霞、视角（每弧度 371 像素）回到第三轮，新云按第三轮的色调上色，聚落改成暖灰褐 + 白墙（和河的 ΔE2000 3.1 → 11.6）；`render3d/dev/asset_preview` 存图改成调过色的画面（§6 #33）。量色的工具：`tools/world3d/metrics/zones.py`（同一材质两张图逐区比 L\*、C\*、h、ΔE2000）、`frame_stats.py`（整画面）。
+
+场景里剩下的差别主要是素材与布局（第四轮的新茅屋、路面、地被、东边的杉挡住早晨的太阳），不是渲染器的。
 
 ### 7.0 第四轮（2026-10-15，渲染器与光照）
 
@@ -356,6 +366,15 @@ TextureRect（整数倍、最近邻、位置 = −1 像素 − 余数），compo
   - **叶的受光面更安静**（`toon_foliage_body`）：叶子的绿色先降 20% 彩度，过了一个拐点再压（竹、嫩叶这种鲜黄绿）；太阳照到的那一面再降一些彩度、暗 12%（叶子透光、表面泛着天光），亮边的暖色也收了。原来整片阔叶林、竹林在正午读成青柠色（8×8 块的彩度 p95 近 40），现在 29–30；院子不受影响。
   - **黄昏的阴面偏蓝紫**：`w3_shade_tint` 在 17.7 点前后（±1.3 小时）转向蓝紫，调色的暗部色调也更蓝、少红。受光的土仍是赭黄（色相 71–73），阴面的土是偏紫的灰，石头的阴面是暗的灰紫，不是粉色。
   - 蕨改用无描边叶类（`toon_foliage_noline`，`w3a/species/plants.py`）：地面的蕨带着描边像贴纸；竹叶保留描边（竹丛之间要分得开，换了几乎看不出差别）。
+- 2026-10-16 v1.8（第五轮，渲染器；白天的颜色回到第三轮，夜里不变；素材不用改，观感会变）：
+  - `pixel_toon`：方向光的新函数 `w3_sun_level(n, l, light_col, atten, ground, wrap)`（白天第三轮的亮度曲线、连续；夜里第四轮的包裹 Lambert）；画出来的阴影 `w3_paint_shade(albedo)`；叶的调色板映射 `w3_ukiyo_tex(srgb, k)`。**新写的着色器，方向光请用 `w3_sun_level`（地面类 `ground = true`），阴影的反照率用 `w3_paint_shade`**，否则白天比别的东西亮、颜色不一样（`w3_direct` 现在只给灯）。
+  - 叶材质（`toon_foliage*`）、`sprite_char` 新 uniform **`ukiyo`**（默认 1）：第三轮就有的贴图过一次第三轮的调色板映射；第四轮以后按一次转换画的贴图设 0（`sample.gd` 的 `ONE_CONVERSION_LEAVES`、`grass.gd` 的地被），大楠 0.4。新画的叶贴图：按画面上要的颜色画，设 `ukiyo` 0。
+  - 新文件 `render3d/shaders/sward.gdshaderinc`：草地的颜色场（§5.5）。地形和 `world3d/grass_field.gdshader` 共用；草地的颜色只在这里改。
+  - 地形 `dry_bias` 0（草场同）；`lush` 只在夜里；`shade_flatten` 经 `w3_flatten()` 按雨量退掉（新写的着色器若有 `shade_flatten`，也请用 `w3_flatten(shade_flatten)`）。
+  - `world_env.gd`：KEYS 白天是第三轮、夜里第四轮；`ambient_day_gain` 1.2、`ambient_day_hue` 0.2（白天的天光只带两成颜色）。
+  - `render3d/dev/asset_preview.gd` 存的是窗口里调过色的画面（§6 #33：第四轮起预览图是线性的、偏暗）。
+  - `sample.gd`：外壳用的公开接口 `set_hours(h, instant)`、`set_rain(r)`（名字和意思不再改）；手柄左摇杆（圆形死区 0.2）和十字键走路、在眺望里转头。草场的区块不进 VoxelGI 烘焙（`grass.gd`，实例都在区块角上）。
+  - 眺望：城市的代码不再调用（`_build_city`、电车删了）；替身用 `impostors_r5_*`（第三轮的树 + 现在的大楠等）、树和岩用 `round3_props.json`；视角 `FOV` 51.78；遠化的亮边 `band_edge`、开发参数 `--vband=0|1|2`（すやり霞的三种对照，等主管定）。
 - 2026-10-15 v1.7（第四轮，渲染器；素材不用改，观感会变）：
   - `toon_foliage` 的 `leaf_tex` 去掉 `source_color`（修 sRGB 双转，§6 第 20 条）：叶片、地被卡片现在按画的颜色出现，比之前亮、软。人物精灵 `sprite_char`、`sprite_xray` 同样。
   - `toon_terrain`、`toon_solid` 新 uniform `shade_flatten`（默认 0.6 / 0.55）：阴影里压平的细节份额；要在阴影里保留花纹的材质设 0。

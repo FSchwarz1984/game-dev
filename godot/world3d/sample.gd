@@ -505,6 +505,32 @@ func _instance(path: String) -> Node3D:
 	return ps.instantiate() as Node3D
 
 
+## For a shell around the sample (godot/showcase): the time of day, 0..24 (wraps). instant: a jump
+## (everything at once); false: time passing in play (the lanterns are lit one after another).
+## Names and meaning stay; the internals below may change.
+func set_hours(h: float, instant := true) -> void:
+	_set_hours(fposmod(h, 24.0), instant)
+
+
+## For a shell: the rain, 0 (dry) .. 1 (a steady rain); the sky, the light, the wet ground and the
+## puddles follow at once, at the present time of day.
+func set_rain(r: float) -> void:
+	env.rain = clampf(r, 0.0, 1.0)
+	_set_hours(env.hours, true)
+
+
+## For a shell: the picture's cost. 1 (the default) is the full picture; 0 is for a weak graphics card:
+## the air's fog volume an eighth of the cells (64^3), the sun's shadow map half as fine (2048: a
+## shadow texel about 1.4 screen pixels, so the shadows' edges can step), no SSAO. The colours, the
+## GI and everything in the picture stay; the world is drawn at 640x360 whatever the window, so the
+## window's size costs next to nothing.
+func set_quality(level: int) -> void:
+	var full := level >= 1
+	RenderingServer.environment_set_volumetric_fog_volume_size(128 if full else 64, 128 if full else 64)
+	RenderingServer.directional_shadow_atlas_set_size(4096 if full else 2048, false)
+	env.environment.ssao_enabled = full
+
+
 ## The time of day for the world, the dressing's lights and the lit variants of the lanterns.
 ## instant: a still or a jump in time; otherwise (time passing in play) the lanterns are lit one
 ## after another as their light fades in (render3d/lamps.gd).
@@ -737,6 +763,8 @@ func _lay(shadow: MeshInstance3D, p: Vector3) -> void:
 	shadow.global_transform = Transform3D(Basis(b.x, n, b.z).orthonormalized(), p + n * 0.04)
 
 
+## Where she is asked to walk (world x/z, length 0..1): the keys (WASD, arrows), else a pad's left
+## stick (its tilt is her pace) or its D-pad.
 func _input_dir() -> Vector2:
 	var d := Vector2.ZERO
 	if _key(KEY_A) or _key(KEY_LEFT):
@@ -747,7 +775,33 @@ func _input_dir() -> Vector2:
 		d.y -= 1.0
 	if _key(KEY_S) or _key(KEY_DOWN):
 		d.y += 1.0
-	return d.normalized() if d.length() > 0.0 else d
+	if d.length() > 0.0:
+		return d.normalized()
+	return _pad_dir()
+
+
+const PAD_DEADZONE := 0.2
+
+## The pads (any connected): the left stick past a round dead zone (as tilted, at most 1; so a slight
+## tilt is a slow walk, and anything past the dead zone is at least 0.2, enough to turn her), else the
+## D-pad. Zero when nothing is held.
+func _pad_dir() -> Vector2:
+	var devs: Array[int] = Input.get_connected_joypads()
+	if devs.is_empty():
+		devs = [0]      # (events given to Input for device 0 count too: render3d/dev/shell_check.gd)
+	var best := Vector2.ZERO
+	for dev in devs:
+		var v := Vector2(Input.get_joy_axis(dev, JOY_AXIS_LEFT_X), Input.get_joy_axis(dev, JOY_AXIS_LEFT_Y))
+		if v.length() > PAD_DEADZONE and v.length() > best.length():
+			best = v.limit_length(1.0)
+	if best != Vector2.ZERO:
+		return best
+	for dev in devs:
+		var dp := Vector2(float(Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_RIGHT)) - float(Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_LEFT)),
+			float(Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_DOWN)) - float(Input.is_joy_button_pressed(dev, JOY_BUTTON_DPAD_UP)))
+		if dp != Vector2.ZERO:
+			return dp.normalized()
+	return Vector2.ZERO
 
 
 func _key(k: Key) -> bool:
@@ -934,11 +988,13 @@ func _update_vista(dt: float, dir: Vector2) -> void:
 		if not route.is_empty():
 			_autopan(dt)
 		elif vista.shown:
-			if _key(KEY_A) or _key(KEY_LEFT):
+			# (a pad: the stick or the D-pad left and right turns her head, up or down steps away)
+			var pad := _pad_dir()
+			if _key(KEY_A) or _key(KEY_LEFT) or pad.x < -0.5:
 				vista.turn(-1.0, dt)
-			if _key(KEY_D) or _key(KEY_RIGHT):
+			if _key(KEY_D) or _key(KEY_RIGHT) or pad.x > 0.5:
 				vista.turn(1.0, dt)
-			if _key(KEY_W) or _key(KEY_S) or _key(KEY_UP) or _key(KEY_DOWN):
+			if _key(KEY_W) or _key(KEY_S) or _key(KEY_UP) or _key(KEY_DOWN) or (absf(pad.y) > 0.6 and absf(pad.y) > absf(pad.x)):
 				vista.active = false
 				_still = -1.0         # she has to step off before she looks out again
 				print("VISTA off f=%d yaw=%.1f" % [frame, vista.yaw_target])

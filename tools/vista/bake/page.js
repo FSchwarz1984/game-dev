@@ -4,6 +4,7 @@
 //   window.BAKE.preview(shot, opts) -> PNG data URL of the static layers (a quick look, not exported)
 
 import { bakeSouth } from './south.js';
+import { setW3 } from './plain.js';
 import { bakeTitle } from './title.js';
 import { bakeTower } from './tower.js';
 import { b64 } from './common.js';
@@ -37,7 +38,20 @@ function lutPal(space, lut, row) {
   };
 }
 
+// the 3D lookout's land for the south shot's plain (written next to the page by tools/vista/bake.mjs)
+async function loadW3() {
+  const json = await (await fetch('w3.json')).json();
+  const map = async (k) => {
+    const data = new Uint8Array(await (await fetch(`w3_${k}.bin`)).arrayBuffer());
+    const [w, h] = json[k + 'Size'];
+    return { w, h, x0: json[k].x0, z0: json[k].z0, cell: json[k].cell, data };
+  };
+  setW3({ json, far: await map('far'), mid: await map('mid'), plain: await map('plain') });
+  return true;
+}
+
 window.BAKE = {
+  loadW3,
   south(opts) { const d = bakeSouth(opts); cache.south = d; return serialize(d); },
   title(opts) { const d = bakeTitle(opts); cache.title = d; return serialize(d); },
   tower(opts) { const d = bakeTower(opts); cache.tower = d; return serialize(d); },

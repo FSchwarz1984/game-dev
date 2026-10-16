@@ -38,8 +38,10 @@ uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
 uniform float lush : hint_range(0.0, 1.0) = 0.45;            // fresh greens over the palette (w3_lush; at night only since round 5)
-uniform float dry_bias = 0.0;                               // raises the dry-grass threshold (round 4: 0.12, fewer dry patches; round 5: round 3's patches of dry grass again)
+uniform float dry_bias = 0.0;                               // raises the dry-grass threshold (round 4: 0.12, fewer dry patches; round 5: round 3's dry grass again, as soft changes over metres)
 uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;    // how much of the painted detail the shade drops
+// the sward's colour field, shared with the grass field's tufts (needs `palette` above)
+#include "res://render3d/shaders/sward.gdshaderinc"
 
 varying vec3 v_wp;
 varying vec3 v_wn;
@@ -140,10 +142,14 @@ void fragment() {
 	float tone;
 	float base_tone = -100.0;     // the tone before the painted grain (grass): the shade keeps only this
 	float porous = 0.8;
+	float dryk = 0.0;             // grass: how dry, 0..1 (the sward's field)
 	if (mat == 0) {
-		float dry = e3.g + (w3_fbm(v_wp.xz / 3.0 + 7.0) - 0.5) * 0.25;
-		row = dry > 0.5 + dry_bias + (stip - 0.5) * 0.2 ? 1.0 : 0.0;   // dry grass, stippled edge
-		tone = 3.6 + mstep;
+		// (round 5, lead 2026-10-16: round 3's greens and dry grass without its blotches: how dry and
+		// the macro tone change only over metres, as soft gradients; render3d/shaders/sward.gdshaderinc,
+		// which the grass field's tufts read too, so their roots are this colour)
+		dryk = w3_sward_dry(v_wp.xz, e3.g, dry_bias);
+		row = 0.0;
+		tone = w3_sward_tone(v_wp.xz);
 		base_tone = tone;
 		// painted grain: single darker blades and a few lit ones scattered through the sward
 		float gr = w3_hash(cell * 0.73 + 17.0);
@@ -225,16 +231,16 @@ void fragment() {
 	}
 	// the flat colour of the ground here (its macro tone, without the grain and the glyphs): what
 	// the shade shows (big masses of light and shade, detail in the light; G5R2 review)
-	vec3 flat_alb = pal(row, base_tone > -50.0 ? base_tone : tone);
+	vec3 flat_alb = mat == 0 ? w3_sward_col(dryk, base_tone) : pal(row, base_tone > -50.0 ? base_tone : tone);
 	if (hit && g_acc >= 0) {
 		alb = accent(g_acc);
 	} else {
 		float t = tone + (hit ? g_tone : 0.0);
-		alb = pal(row, t);
+		alb = mat == 0 ? w3_sward_col(dryk, t) : pal(row, t);
 	}
-	// grass, dry grass and moss: fresh greens (w3_lush)
+	// grass, dry grass and moss: fresh greens (w3_lush; at night only)
 	if (row < 1.5 || abs(row - 5.0) < 0.5) {
-		float lk = (row > 0.5 && row < 1.5 ? lush * 0.7 : lush) * w3_night;
+		float lk = lush * (1.0 - 0.3 * dryk) * w3_night;
 		if (!(hit && g_acc >= 0)) alb = w3_lush(alb, lk);
 		flat_alb = w3_lush(flat_alb, lk);
 	}
@@ -287,7 +293,7 @@ void fragment() {
 	// and the painter's shade colour (w3_shade_tint, blue-green by day): only the ambient sees it,
 	// v_detail undoes it in the direct light
 	// (round 5: the round-3 painted shade, w3_paint_shade: the hue turned cool, the chroma kept)
-	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, shade_flatten));
+	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, w3_flatten(shade_flatten)));
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;
 	AO = ao;

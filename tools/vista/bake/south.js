@@ -20,8 +20,8 @@
 import { clamp, lerp, smooth, rng, hash2, mix3, TAU, run } from '../../../src/vista/util.js';
 import { todEnv, palette, skyAt } from '../../../src/vista/tod.js';
 import { makeStars, CloudDeck, cloudPalette, CLOUD_MATS } from '../../../src/vista/sky.js';
-import { buildGroundGen, GROUND_MATS, G, TOWN, HEADMAN, HAMLETS, RIVER, SWITCHBACKS } from '../../../src/vista/ground.js';
-import { paintBuildings, roadLanterns } from '../../../src/vista/buildings.js';
+import * as PL from './plain.js';
+import { GROUND_MATS, G, buildPlainGen, paintHouses, plainLanterns, paintViaduct } from './plain.js';
 import { paintCanopy, paintCanopyGen, FOLIAGE_MATS } from '../../../src/vista/foliage.js';
 import { Wave } from '../../../src/vista/wave.js';
 import { nearCrown } from './near.js';
@@ -32,6 +32,9 @@ const REF_W = 480, REF_H = 270;
 const P = { far: 0.1, canopy: 1, front: 2.4 };
 const CT = 66;
 const KINDS = ['window', 'lantern', 'star', 'fire', 'bonfire'];
+// HEAD's draws from its sequence before the canopy (river lanterns and its procession plan, on HEAD's
+// map): frozen, so the crown's clumps stay the ones the user approved whatever the plain becomes
+export const HEAD_DRAWS = 1768;
 
 // counting RNG: the shipped variant replays the canon variant's draw count before the canopy
 function crng(seed) {
@@ -60,36 +63,50 @@ export function bakeSouth(o = {}) {
   const R8 = crng(seed * 7 + 3);              // 8196ebf's sequence: river lanterns, rising plan
   const RX = rng(seed * 101 + 17);            // extensions outside the reference frame
 
-  // ---------------- ground, buildings, lights on the ground (HEAD south.js L40-76)
-  const ground = run(buildGroundGen({ w: Wc, h: GH, cx: Cx, yh: YL, f, S, sun, seed }));
+  // ---------------- ground, buildings, lights on the ground: the plain of the 3D lookout (G5R3-10;
+  // tools/vista/bake/plain.js): the river out of the western canyon, the railway's red viaduct, the
+  // town where they meet, the 3D view's villages, roads and street lamps, the ring of mountains
+  if (!PL.haveW3()) throw new Error('south: the 3D lookout\'s land is not loaded (plain.js setW3)');
+  const ground = run(buildPlainGen({ w: Wc, h: GH, cx: Cx, yh: YL, f, S, sun, seed }));
   const cam = { cx: Cx, yh: YL, f, height: ground.height };
-  const lights = paintBuildings(ground.layer, ground.X, ground.Z, cam, ground.hamlets, seed);
-  lights.push(...roadLanterns(cam, ground.Z, Wc, GH));
-  for (let i = 0; i < SWITCHBACKS.length - 1; i++) {
-    const [ax, az] = SWITCHBACKS[i], [bx, bz] = SWITCHBACKS[i + 1], len = Math.hypot(bx - ax, bz - az);
-    for (let d = 0.05; d < len; d += 0.17) {
+  const lights = paintHouses(ground.layer, ground.X, ground.Z, cam, seed);
+  lights.push(...plainLanterns(cam, ground.Z, Wc, GH));
+  // the old road's switchbacks down the pass, an Obon lantern every ~40 m
+  const SW = PL.switchbacks();
+  for (let i = 0, acc = 0; i < SW.length - 1; i++) {
+    const [ax, az] = SW[i], [bx, bz] = SW[i + 1], len = Math.hypot(bx - ax, bz - az), step = 40 / PL.U;
+    for (let d = acc; d < len; d += step) {
       const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
       const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f * (1 - ground.height(X, Z)) / Z) - 1;
       if (x < 0 || x >= Wc || y < 0 || y >= GH) continue;
       if (ground.Z[(y + 1) * Wc + x] < Z * 0.85) continue;
       lights.push({ x, y, X, Z, kind: 'lantern', path: true });
     }
+    acc = (acc - len) % step; if (acc < 0) acc += step;
   }
-  for (const u of [3.2, 5.6, 8.4]) {
-    const i = Math.floor(u), t = u - i, [ax, az] = RIVER[i], [bx, bz] = RIVER[i + 1];
-    const X = lerp(ax, bx, t) + 0.16, Z = lerp(az, bz, t);
+  paintViaduct(ground.layer, ground.X, ground.Z, cam);
+  // bonfires on the river bank by the town (where the lanterns are set on the water)
+  const RIV = PL.RIVER, near = [];
+  for (let i = 0; i < RIV.length; i++) if (Math.hypot(RIV[i][0] - PL.TOWN.X, RIV[i][1] - PL.TOWN.Z) < 3.4) near.push(i);
+  for (const q of [0.15, 0.5, 0.85]) {
+    const i = near[Math.min(near.length - 1, Math.floor(q * near.length))];
+    const X = RIV[i][0] + 0.16, Z = RIV[i][1];
     const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f / Z);
-    if (x > 0 && x < Wc && ground.Z[y * Wc + x] > Z * 0.9) lights.push({ x, y, X, Z, kind: 'bonfire', river: true });
+    if (x > 0 && x < Wc && y > 0 && y < GH && ground.Z[y * Wc + x] > Z * 0.9) lights.push({ x, y, X, Z, kind: 'bonfire', river: true });
   }
+  // the floating lanterns (灯籠流し): HEAD's 26 draws, set on the stretch from just above the town to
+  // ~7 points downstream. The river flows away from us (out of the canyon, off to the south-east):
+  // Godot moves a lantern toward the start of meta.river, so that list runs from the far end back
+  const riverRev = RIV.slice().reverse(), uTown = RIV.length - 1 - near[0];
   const river = [];
-  for (let k = 0; k < 26; k++) { const v = { u0: 3 + RH() * 7.5, ph: RH(), side: (RH() - 0.5) * 0.06 }; river.push(v); }
+  for (let k = 0; k < 26; k++) { const v = { u0: 3 + RH() * 7.5, ph: RH(), side: (RH() - 0.5) * 0.06 }; v.u0 = uTown + 0.5 - (v.u0 - 3) / 7.5 * 7; river.push(v); }
   R8.skip(78);
   const stars = makeStars(Wc, YL, seed * 3 + 1);
   const paddyStars = [];
   for (let y = YL + 2; y < GH; y++) for (let x = 0; x < Wc; x++) {
     const v = ground.layer.idx[y * Wc + x], m = v >> 8;
     if (m !== G.paddy && m !== G.pond && m !== G.river) continue;
-    if (hash2(x, y, 211) < 0.05 * (1 - smooth(60, 110, y - YL))) paddyStars.push({ x, y, X: ground.X[y * Wc + x], Z: ground.Z[y * Wc + x], kind: 'star', ph: hash2(x, y, 212) * TAU });
+    if (hash2(x, y, 211) < 0.03 * (1 - smooth(60, 110, y - YL))) paddyStars.push({ x, y, X: ground.X[y * Wc + x], Z: ground.Z[y * Wc + x], kind: 'star', ph: hash2(x, y, 212) * TAU });
   }
   lights.push(...paddyStars);
 
@@ -135,12 +152,13 @@ export function bakeSouth(o = {}) {
 
   // ---------------- HEAD's procession plan, run only to consume the JS random sequence (the canopy
   // clumps after it must match the JS frame); its result is thrown away
-  let headDraws;
-  if (o.headDraws == null) { headPlanConsume(RH, lights.map(L => ({ ...L })), paddyStars.map(L => ({ ...L })), T, ground, Wc, YL, GH, Cx, f); headDraws = RH.count(); }
-  else { headDraws = o.headDraws; RH.skip(headDraws - RH.count()); }
+  // (the count is frozen: the plain's lights no longer come from HEAD's map, and the crown the user
+  // approved must keep every clump)
+  const headDraws = o.headDraws ?? HEAD_DRAWS;
+  RH.skip(headDraws - RH.count());
 
   // ---------------- rising: the plan of 8196ebf (south.js@8196ebf L106-154), verbatim but for x - ox
-  const clusters = [{ X: TOWN.X, Z: TOWN.Z }, { X: HEADMAN.X, Z: HEADMAN.Z }, ...HAMLETS.map(h => ({ X: h.X, Z: h.Z }))];
+  const TOWN = PL.TOWN, clusters = [{ X: TOWN.X, Z: TOWN.Z }, { X: PL.HEAD.X, Z: PL.HEAD.Z }, ...PL.VILLAGES.filter(v => v !== TOWN).map(v => ({ X: v.X, Z: v.Z }))];
   for (const L of lights) {
     let best = 0, bd = 1e9;
     for (let k = 0; k < clusters.length; k++) { const d = Math.hypot(L.X - clusters[k].X, L.Z - clusters[k].Z); if (d < bd) { bd = d; best = k; } }
@@ -150,7 +168,7 @@ export function bakeSouth(o = {}) {
   }
   const byCl = new Map();
   for (const L of lights) { if (!byCl.has(L.cl)) byCl.set(L.cl, []); byCl.get(L.cl).push(L); }
-  const first = lights.find(L => L.kind === 'window' && Math.abs(L.X - HEADMAN.X) < 0.3 && Math.abs(L.Z - HEADMAN.Z) < 0.3);
+  const first = lights.find(L => L.kind === 'window' && L.head);
   const second = lights.find(L => L.kind === 'bonfire' && L !== first) || lights[1];
   for (const [k, arr] of byCl) {
     arr.sort(() => R8() - 0.5);
@@ -185,9 +203,11 @@ export function bakeSouth(o = {}) {
   }
 
   // ---------------- the wave (HEAD L214-220)
-  const Xc = TOWN.X + 0.2, Zc = TOWN.Z - 0.6;
+  // the far spreads from the plain under the gate (HEAD's town lay under it; the 3D town is right of it
+  // now): the ground point under the gate's tip ~4.7 km out, so the ring crosses the whole plain
+  const Zc = 26, Xc = (T[0] - Cx) / f * Zc;
   const noFront = new Uint8Array(Wc * GH);
-  for (let i = 0; i < noFront.length; i++) { const m = ground.layer.idx[i] >> 8; noFront[i] = m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood ? 1 : 0; }
+  for (let i = 0; i < noFront.length; i++) { const m = ground.layer.idx[i] >> 8; noFront[i] = m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron ? 1 : 0; }
   const wave = new Wave({ w: Wc, h: GH, X: ground.X, Z: ground.Z, mask: ground.mask, Xc, Zc, R: Math.hypot(Xc, Zc) - 0.05, f, cx: Cx, yl: YL, noFront });
   for (const L of lights) L.arr = wave.arrivalOf(L.X, L.Z);
 
@@ -237,7 +257,7 @@ export function bakeSouth(o = {}) {
   const farPal = palette(GROUND_MATS, envG(envs[0]), { haze: envs[0].mist, far: true });
   const farLut = lutRows(gSpace, [farPal, v => {           // row 1: the bright front (houses keep the far colour)
     const p = farPal(v), m = v >> 8;
-    if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood) return p;
+    if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron) return p;
     const c = mix3([p & 255, (p >> 8) & 255, (p >> 16) & 255], [222, 230, 250], 0.34);
     return ((255 << 24) | (Math.round(c[2]) << 16) | (Math.round(c[1]) << 8) | Math.round(c[0])) >>> 0;
   }]);
@@ -282,7 +302,7 @@ export function bakeSouth(o = {}) {
       classes: classes.map(c => ({ H: c.H, yh: c.yh, D: c.D, padTop: c.padTop, S: r3(c.S), Hs: r3(c.Hs), Fn: c.Fn, T: c.T.map(r2), hole: c.hole, hazeEdgeY: c.hazeEdgeY, shoreH: c.shoreH, y0: c.y0, fade: c.fade })),
       oyC, CH, CHc, nearH, headDraws, anchors, tod0: TOD0, todStep: TOD_STEP, todRows: TOD_ROWS,
       deckScale: 8192, zFixed: [0, 1024], counts: { lights: lights.length, stars: stars.length, paddyStars: paddyStars.length },
-      river: RIVER, riverLanterns: river.map(v => [r3(v.u0), r3(v.ph), r3(v.side)]),
+      river: riverRev, riverLanterns: river.map(v => [r3(v.u0), r3(v.ph), r3(v.side)]), plainU: PL.U,
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },
@@ -328,76 +348,6 @@ export function bakeSouth(o = {}) {
   // for quick previews in the page (not exported): the layers with their palettes
   out._layers = { ground, shore, deck, back, frontC, nearL, stir, lights, gSpace, fSpace, sSpace };
   return out;
-}
-
-// ---------------------------------------------------------------- HEAD's procession plan (consumed)
-
-// src/vista/south.js (HEAD) L112-212, verbatim except for the canvas variables; only its draws from R
-// matter here (the canopy is painted after it with the same R).
-function headPlanConsume(R, lights, paddyStars, T, ground, W, yl, gh, cx, f) {
-  const MERGE = 14, SPEED = 6.5, PACE = 1.25;
-  const colX = T[0], colTop = T[1] + 2;
-  const tall = Math.max(1, (yl - colTop) / 90);
-  const projG = (X, Z) => [cx + f * X / Z, yl + f * (1 - ground.height(X, Z)) / Z];
-  const visible = ([x, y]) => x > 6 && x < W - 6 && y > yl + 2 && y < gh - 2 && ground.Z[Math.round(y) * W + Math.round(x)] > 0;
-  const fires = lights.filter(L => L.kind === 'bonfire' && L.river).sort((a, b2) => a.x - b2.x);
-  const stretch = (xa, xb) => {
-    const pts = paddyStars.filter(L => L.x > xa && L.x < xb && L.y > yl + 10 && L.y < yl + 44);
-    let best = null, bn = 0;
-    for (const P of pts) {
-      let n = 0;
-      for (const Q of pts) if (Math.abs(Q.x - P.x) < 12 && Math.abs(Q.y - P.y) < 4) n++;
-      if (n > bn) { bn = n; best = P; }
-    }
-    return best ? [best.x, best.y] : null;
-  };
-  const spread = Math.min(W * 0.24, 104);
-  const near = p => p && Math.abs(p[0] - colX) < spread * 1.08;
-  const hamletAt = (side, k) => {
-    const cands = [];
-    for (const h of HAMLETS) {
-      if (h.Z > 30) continue;
-      const p = projG(h.X, h.Z), dx = (p[0] - colX) * side;
-      if (visible(p) && near(p) && dx > 20) cands.push([dx, p]);
-    }
-    cands.sort((u, v) => v[0] - u[0]);
-    return cands[k] ? cands[k][1] : null;
-  };
-  const streams = [];
-  const addStream = (at, r0) => {
-    if (!at || !visible(at) || !near(at)) return null;
-    for (const O of streams) if (Math.abs(O.sx - at[0]) < 20 && Math.abs(O.sy - at[1]) < 14) return null;
-    const S = { sx: at[0], sy: at[1] - 1, r0, r1: 0.9 + R() * 0.05 };
-    streams.push(S);
-    return S;
-  };
-  addStream(projG(HEADMAN.X, HEADMAN.Z), 0.21);
-  if (fires[0]) addStream([fires[0].x, fires[0].y - 1], 0.24);
-  addStream(projG(TOWN.X, TOWN.Z + 0.4), 0.26);
-  addStream(stretch(colX - spread, colX - 28), 0.28);
-  for (const F of fires.slice(1)) addStream([F.x, F.y - 1], 0.3);
-  addStream(stretch(colX + 28, colX + spread), 0.33);
-  addStream(hamletAt(-1, 0), 0.36);
-  addStream(hamletAt(1, 0), 0.4);
-  addStream(hamletAt(-1, 1), 0.44);
-  addStream(hamletAt(1, 1), 0.47);
-  for (const S of streams) {
-    S.e = [];
-    for (let r = S.r0; r <= S.r1; r += PACE / Math.sqrt(tall) / 30) S.e.push(r);
-    S.ph = R() * TAU;
-  }
-  for (const L of lights) {
-    let best = null, bd = 1e9;
-    for (const S of streams) { const d = Math.hypot(L.x - S.sx, (L.y - S.sy) * 2.2); if (d < bd) { bd = d; best = S; } }
-    L.st = best; L.sd = bd;
-    L.on = L.kind === 'star' ? 19.4 + R() * 0.6 : L.kind === 'window' ? 18.25 + R() * 1.1 : L.kind === 'lantern' ? 18.6 + R() * 0.7 : 19.0 + R() * 0.7;
-    L.ph = L.ph ?? R() * TAU;
-  }
-  for (const S of streams) {
-    const mine = lights.filter(L => L.st === S).sort((a, b2) => b2.sd - a.sd);
-    mine.forEach((L, i) => { L.r = S.r0 + 0.02 + (S.r1 - S.r0) * (i + R() * 0.7) / Math.max(1, mine.length); });
-  }
-  void MERGE; void SPEED;
 }
 
 // ---------------------------------------------------------------- canopy (HEAD L697-758)

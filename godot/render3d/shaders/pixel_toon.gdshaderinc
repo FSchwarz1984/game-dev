@@ -225,6 +225,14 @@ vec3 w3_paint_shade(vec3 alb) {
 	// (round 4's night is kept: no hue turn in the dark)
 	return max(mix(w3_shadow_hue(alb, 0.38), alb, w3_night) * w3_shade_tint, alb * 0.05);
 }
+
+// How much of a material's painted detail its shade drops (its `shade_flatten`): big masses of light
+// and shade with the detail in the sun (G5R2) holds while there is a sun. Under a rain's overcast
+// nearly all the light is the sky's, so a flattened shade turned every surface into flat colour (the
+// user, G5R3-5: the hut in the rain "全是色塊"); the detail comes back as the rain sets in.
+float w3_flatten(float k) {
+	return k * (1.0 - 0.85 * w3_wet);
+}
 float w3_r3_ground(float ndl) {
 	return 0.5 * smoothstep(-0.08, 0.16, ndl) + 0.18 * smoothstep(0.18, 0.42, ndl)
 		+ 0.18 * smoothstep(0.46, 0.70, ndl) + 0.14 * smoothstep(0.70, 0.90, ndl);

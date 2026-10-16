@@ -88,15 +88,17 @@ def fields(L, W, F, Xs, Zs, Hs, cs, seed):
 
 
 def _blade(img, x0, h, lean, curve, tip_from, root_y=15):
-    """One 1 px blade from the root row up; tone offset 0 below tip_from (fraction of its height),
-    +1 above it."""
+    """One 1 px blade from the root row up, in three tones: the ground's at the root, one lighter from
+    a little below its middle, two lighter at the tip (the ramp's lights lean warm)."""
+    mid_from = tip_from * 0.75
     for k in range(h):
         t = k / max(h - 1, 1)
         x = x0 + lean * t * h * 0.5 + curve * (t ** 2) * h * 0.5
         xi = int(round(x))
         y = root_y - k
         if 0 <= xi < CELL and 0 <= y < CELL:
-            img[y, xi] = (4 + (1 if t >= tip_from else 0), 0, 0, 255)
+            tone = 2 if t >= tip_from else (1 if t >= mid_from else 0)
+            img[y, xi] = (4 + tone, 0, 0, 255)
 
 
 def _tuft(rng, H, n, spread, tip_from=0.5, arch=0.0):
@@ -136,13 +138,13 @@ def make_atlas(seed=7300):
     rng = np.random.default_rng(seed)
     cells = []
     for _ in SHORT:
-        cells.append(_tuft(rng, int(rng.integers(4, 7)), int(rng.integers(3, 5)), 1.3, 0.45))
+        cells.append(_tuft(rng, int(rng.integers(4, 7)), int(rng.integers(3, 6)), 1.3, 0.62))
     for _ in MID:
-        cells.append(_tuft(rng, int(rng.integers(7, 10)), int(rng.integers(4, 6)), 1.2, 0.5))
+        cells.append(_tuft(rng, int(rng.integers(7, 10)), int(rng.integers(4, 7)), 1.2, 0.66))
     for _ in TALL:
-        cells.append(_tuft(rng, int(rng.integers(10, 13)), int(rng.integers(4, 7)), 1.15, 0.52, arch=0.25))
+        cells.append(_tuft(rng, int(rng.integers(10, 13)), int(rng.integers(5, 8)), 1.15, 0.68, arch=0.25))
     for _ in TALLER:
-        cells.append(_tuft(rng, int(rng.integers(12, 15)), int(rng.integers(5, 7)), 1.1, 0.55, arch=0.4))
+        cells.append(_tuft(rng, int(rng.integers(12, 15)), int(rng.integers(5, 8)), 1.1, 0.7, arch=0.4))
     for k in "BYPWBYPW":
         cells.append(_flower(rng, k))
     for _ in THIN:

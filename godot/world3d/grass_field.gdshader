@@ -41,7 +41,7 @@ uniform vec2 bend_extent = vec2(160.0, 208.0);
 uniform int lattice = 50;
 uniform float chunk = 16.0;
 uniform int cols = 8;
-uniform float dry_bias = 0.12;                              // as the terrain's
+uniform float dry_bias = 0.0;                               // as the terrain's (round 5: 0)
 uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;   // as the terrain's
 uniform float tip_lift = 1.0;                               // palette tones from root to tip
 uniform float flower_k = 0.03;                              // flowers per tuft in a full flower patch
@@ -50,9 +50,12 @@ uniform float gust_len = 11.0;                              // metres between gu
 uniform float gust_speed = 3.4;                             // m/s
 uniform float push_px = 3.0;                                // how far her feet push the tips aside
 
+// the sward's colour field, the ground's own (renderer, round 5; needs `palette` above)
+#include "res://render3d/shaders/sward.gdshaderinc"
+
 varying vec3 v_wp;
 varying flat float v_cellk;
-varying flat vec3 v_col;      // palette row, the root's tone, gust 0..1
+varying flat vec3 v_col;      // how dry 0..1, the root's tone (continuous), gust 0..1
 varying flat float v_ao;
 varying float v_fleck;
 varying vec3 v_detail;        // albedo / the shade's flattened albedo (light() restores the detail)
@@ -140,10 +143,9 @@ void vertex() {
 		// the ground's colour at the root: its row (grass or dry grass) and its macro tone, as the terrain
 		vec4 e2 = textureLod(m2, suv, 0.0);
 		vec4 e3 = textureLod(m3, suv, 0.0);
-		float dry = e3.g + (w3_fbm(xz / 3.0 + 7.0) - 0.5) * 0.25;
-		float row = dry > 0.5 + dry_bias ? 1.0 : 0.0;
-		float macro = w3_fbm(xz / 7.5) * 2.6 - 1.3;
-		v_col = vec3(row, 3.6 + floor(macro + 0.5), g);
+		// (renderer, round 5: the sward's field, render3d/shaders/sward.gdshaderinc: how dry and the
+		// macro tone, both soft over metres, exactly as the ground's)
+		v_col = vec3(w3_sward_dry(xz, e3.g, dry_bias), w3_sward_tone(xz), g);
 		v_ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));
 	}
 }
@@ -164,8 +166,8 @@ void fragment() {
 	float lift = t.r * 255.0 - 4.0;
 	// in a gust the bent tips show their lighter backs
 	float tone = v_col.y + lift * tip_lift + ((lift > 0.5 && v_col.z > 0.4) ? 1.0 : 0.0);
-	vec3 alb = acc >= 0 ? w3_srgb_to_linear(texelFetch(palette, ivec2(acc % 8, 11 + acc / 8), 0).rgb) : pal(v_col.x, tone);
-	vec3 flat_alb = pal(v_col.x, v_col.y);
+	vec3 alb = acc >= 0 ? w3_srgb_to_linear(texelFetch(palette, ivec2(acc % 8, 11 + acc / 8), 0).rgb) : w3_sward_col(v_col.x, tone);
+	vec3 flat_alb = w3_sward_col(v_col.x, v_col.y);
 	alb = w3_wetten(alb, 0.6);
 	flat_alb = w3_wetten(flat_alb, 0.6);
 	// sun flecks in the canopy's shade, as on the ground under it
@@ -180,7 +182,7 @@ void fragment() {
 		float cluster = w3_vnoise(v_wp.xz / 2.6 + 9.0);
 		v_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
 	}
-	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, shade_flatten));
+	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, w3_flatten(shade_flatten)));
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;
 	AO = v_ao;
@@ -191,7 +193,8 @@ void light() {
 	// lit as the ground it grows from (toon_terrain's light)
 	if (LIGHT_IS_DIRECTIONAL) {
 		float sh = max(ATTENUATION, v_fleck * 0.85);
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, sh, 0.15) * v_detail;
+		// (renderer, round 5: round 3's levels, continuous, as the ground: w3_sun_level)
+		DIFFUSE_LIGHT += w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, sh, true, 0.15) * v_detail;
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail;
 	}

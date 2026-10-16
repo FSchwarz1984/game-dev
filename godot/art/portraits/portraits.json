@@ -274,7 +274,10 @@
     "embarrassed",
     "serious",
     "tired",
-    "calm"
+    "calm",
+    "mischievous",
+    "afraid",
+    "cry_loud"
    ],
    "sources": {
     "neutral": "C_10",
@@ -292,7 +295,10 @@
     "embarrassed": "C_21",
     "serious": "C_25",
     "tired": "C_19",
-    "calm": "C_29"
+    "calm": "C_29",
+    "mischievous": "X1_mischievous",
+    "afraid": "X1_afraid",
+    "cry_loud": "X1_cry"
    },
    "eye_mid": {
     "neutral": [
@@ -358,13 +364,28 @@
     "calm": [
      64.0,
      60.2
+    ],
+    "mischievous": [
+     64.0,
+     60.2
+    ],
+    "afraid": [
+     64.0,
+     60.2
+    ],
+    "cry_loud": [
+     64.0,
+     60.2
     ]
    },
    "edited": [
+    "afraid",
     "angry",
     "cry",
+    "cry_loud",
     "doubt",
     "grin",
+    "mischievous",
     "neutral",
     "pout",
     "sad",

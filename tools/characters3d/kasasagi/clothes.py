@@ -328,16 +328,21 @@ def sleeve_frame(side):
     sh = Vector((B.SHOULDER.x * side, B.SHOULDER.y, B.SHOULDER.z))
     hem = D['sleeve_hem']
     out = D['sleeve_w']
-    inner = 0.118
+    inner = SLEEVE_IN
     return sh, hem, side * (out + inner) / 2, (out - inner) / 2, 0.05
+
+
+# the sleeve's inner edge at the hem: just outside the robe, so the hand at the hem's inner corner
+# shows beside the robe (as in the sprite)
+SLEEVE_IN = 0.19
 
 
 def _sleeve_edges(u):
     """Inner and outer edge (|x|) of the panel at u (0 the shoulder .. 1 the hem)."""
     sw = B.SHOULDER.x
-    x_in = lerp(sw - 0.030, 0.118, smooth(u * 1.6) ** 0.8)
-    top_out = sw + 0.70 * (D['sleeve_w'] - sw)
-    x_out = lerp(top_out, D['sleeve_w'], u ** 0.9)
+    x_in = lerp(sw - 0.030, SLEEVE_IN, smooth(u * 1.6) ** 0.8)
+    top_out = sw + D['sleeve_top'] * (D['sleeve_w'] - sw)
+    x_out = lerp(top_out, D['sleeve_w'], u ** D['sleeve_flare'])
     # the shoulder seam rounds off into the outer edge
     x_out = lerp(x_in + 0.5 * (top_out - x_in), x_out, smooth(u / 0.12) ** 0.6)
     return x_in, x_out
@@ -348,7 +353,9 @@ def sleeve_point(side, u, s, face):
     front / -1 back."""
     x_in, x_out = _sleeve_edges(u)
     x = lerp(x_in, x_out, s)
-    z_top = B.SHOULDER.z + 0.030 - 0.075 * s
+    # the shoulder seam slopes down outward (a dropped, rounded shoulder: from above the panel's top
+    # must not read as a ledge, the round-5 first panels looked like wings)
+    z_top = B.SHOULDER.z + 0.030 - D['shoulder_drop'] * (s ** 0.8)
     hem = D['sleeve_hem'] - D['sleeve_slant'] * s
     # rounded bottom corners (the outer one rounder)
     r_out, r_in = 0.085, 0.03
@@ -361,6 +368,10 @@ def sleeve_point(side, u, s, face):
     half *= 1.0 - 0.5 * smooth((u - 0.9) / 0.1)
     yc = 0.010 + 0.012 * u
     return Vector((side * x, yc - face * half, z))
+
+
+# the lining's band at the hem: about 0.04 m tall (one native pixel and a bit)
+BAND_U = 0.04 / max(D['shoulder_z'] - D['sleeve_hem'], 0.2)
 
 
 def sleeve(side):
@@ -400,12 +411,12 @@ def sleeve(side):
         for j in range(ns + 1):
             s = j / ns
             lo = sleeve_point(side, 1.0, s, face)
-            hi = sleeve_point(side, 0.955, s, face)
+            hi = sleeve_point(side, 1.0 - BAND_U, s, face)
             off = Vector((0, -face * 0.004, 0))
             brow.append((band.add(lo + off, C.NAVY_LINING, (1, s), (M_CLOTH, LINED),
                                   {'seg': 'sleeve', 'side': side, 'u': 1.0, 's': s}),
-                         band.add(hi + off, C.NAVY_LINING, (0.955, s), (M_CLOTH, LINED),
-                                  {'seg': 'sleeve', 'side': side, 'u': 0.955, 's': s})))
+                         band.add(hi + off, C.NAVY_LINING, (1.0 - BAND_U, s), (M_CLOTH, LINED),
+                                  {'seg': 'sleeve', 'side': side, 'u': 1.0 - BAND_U, 's': s})))
         for j in range(ns):
             (l0, h0), (l1, h1) = brow[j], brow[j + 1]
             quad = (h0, h1, l1, l0)

@@ -88,7 +88,7 @@ void fragment() {
 	// and the painter's shade colour (w3_shade_tint, blue-green by day): only the ambient sees it,
 	// v_detail undoes it in the direct light
 	// (round 5: the round-3 painted shade, w3_paint_shade: the hue turned cool, the chroma kept)
-	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, shade_flatten));
+	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, w3_flatten(shade_flatten)));
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;
 	AO = ao;

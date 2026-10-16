@@ -1,0 +1,4 @@
+# Shione, think, talking (a little open): her small mouth line with the pink of a parted mouth under all of it. The
+# rule (talkblink.py) leaves this mouth still: two line pixels and a pink one, too faint to measure.
+@ 73 78
+nn

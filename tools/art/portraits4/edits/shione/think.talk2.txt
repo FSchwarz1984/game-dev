@@ -1,0 +1,5 @@
+# Shione, think, talking (more open): a dark opening under the line, the pink of the tongue below it.
+o $6e2434  mouth cavity (config.MOUTH_CAVITY)
+@ 73 78
+oo
+nn

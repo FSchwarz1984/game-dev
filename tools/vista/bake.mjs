@@ -17,6 +17,7 @@ import path from 'node:path';
 import url from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { build } from 'esbuild';
+import { readPNG } from './pngread.mjs';
 
 const ROOT = path.resolve(path.dirname(url.fileURLToPath(import.meta.url)), '../..');
 const args = process.argv.slice(2);
@@ -42,11 +43,26 @@ const variant = canonDir ? 'canon' : 'ship';
 
 const site = path.join(RAW, 'site');
 fs.mkdirSync(site, { recursive: true });
+// the 3D lookout's land (tools/world3d/w3terrain/vista.py output), which the south shot's plain is
+// made from (tools/vista/bake/plain.js): its maps decoded here, byte for byte, for the page to fetch
+if (shots.includes('south')) {
+  const W3DIR = path.join(ROOT, 'godot/world3d/terrain/saddle');
+  const json = JSON.parse(fs.readFileSync(path.join(W3DIR, 'vista.json'), 'utf8'));
+  const keep = {};
+  for (const k of ['far', 'mid', 'plain', 'villages', 'plain_houses', 'plain_lamps', 'railway', 'road', 'landmarks']) keep[k] = json[k];
+  fs.writeFileSync(path.join(site, 'w3.json'), JSON.stringify(keep));
+  for (const k of ['far', 'mid', 'plain']) {
+    const p = readPNG(path.join(W3DIR, json[k].file));
+    fs.writeFileSync(path.join(site, `w3_${k}.bin`), p.data);
+    keep[k + 'Size'] = [p.w, p.h];
+  }
+  fs.writeFileSync(path.join(site, 'w3.json'), JSON.stringify(keep));
+}
 await build({ entryPoints: [path.join(ROOT, 'tools/vista/bake/page.js')], bundle: true, format: 'iife', target: 'es2020', charset: 'ascii', outfile: path.join(site, 'bake.js'), logLevel: 'warning' });
 fs.writeFileSync(path.join(site, 'index.html'), '<!doctype html><html><head><meta charset="utf-8"></head><body><script src="bake.js"></script></body></html>');
 const server = http.createServer((req, res) => {
   const p = path.join(site, decodeURIComponent(req.url.split('?')[0]).replace(/^\/$/, '/index.html'));
-  fs.readFile(p, (e, d) => { if (e) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'content-type': p.endsWith('.html') ? 'text/html' : 'text/javascript' }); res.end(d); });
+  fs.readFile(p, (e, d) => { if (e) { res.writeHead(404); res.end(); return; } res.writeHead(200, { 'content-type': p.endsWith('.html') ? 'text/html' : p.endsWith('.js') ? 'text/javascript' : 'application/octet-stream' }); res.end(d); });
 });
 await new Promise(r => server.listen(0, '127.0.0.1', r));
 const browser = await chromium.launch({ args: ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
@@ -55,6 +71,7 @@ const errors = [];
 page.on('pageerror', e => errors.push(String(e)));
 await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
 await page.waitForFunction(() => window.BAKE_READY === true);
+if (shots.includes('south')) await page.evaluate(() => window.BAKE.loadW3());
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(RAW, { recursive: true });
@@ -62,11 +79,8 @@ let headDraws = null;
 for (const shot of shots) {
   const t0 = Date.now();
   const o = { ...VARIANTS[variant][shot] };
-  if (shot === 'south' && variant === 'ship') {
-    // the canopy's clumps come from the same random draws as the 480x270 JS frame: run canon first
-    const c = await page.evaluate(() => window.BAKE.south({}).meta.headDraws);
-    o.headDraws = c; headDraws = c;
-  }
+  // (the south canopy's clumps come from the same random draws as the 480x270 JS frame: bakeSouth skips
+  // to HEAD's frozen count, HEAD_DRAWS, before painting them)
   const d = await page.evaluate(([s, o2]) => window.BAKE[s](o2), [shot, o]);
   if (errors.length) { console.error(errors.join('\n')); process.exit(1); }
   const images = {};

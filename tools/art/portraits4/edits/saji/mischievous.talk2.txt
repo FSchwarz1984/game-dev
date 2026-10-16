@@ -1,0 +1,13 @@
+# Saji, mischievous, talking (more open): the gap one row deeper with the tongue below it.
+o $6e2430  mouth cavity (config.MOUTH_CAVITY)
+@ 58 76
+.oo
+qnn
+.qq
+@ 61 77
+oo
+nn
+qq
+@ 63 78
+o
+q
