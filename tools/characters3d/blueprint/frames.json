@@ -1,0 +1,5 @@
+{"front": {"yaw": 0, "axis": 218, "ground": 660},
+ "q_front": {"yaw": -45, "axis": 189, "ground": 660},
+ "side": {"yaw": -90, "axis": 192, "ground": 657},
+ "q_back": {"yaw": -135, "axis": 196, "ground": 659},
+ "back": {"yaw": 180, "axis": 205, "ground": 662}}

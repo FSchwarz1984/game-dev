@@ -19,7 +19,7 @@
 //   usual view, less only on the sides an ultra-wide view adds; mountainFit).
 // The town is the 3D town; the lamps of the Obon night are where the 3D view has its villages, its
 // houses and its street lamps by day. The far (遠化) peels the land like a print losing its colour
-// blocks (G5R3-18): fadeMats / fadeMaps at the end of this file.
+// blocks (G5R3-18): fadePalette / fadeInk / fadeMaps at the end of this file.
 
 import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, bayer, IndexLayer, I } from '../../../src/vista/util.js';
 import { marchGen, sunShadows } from '../../../src/vista/terrain.js';
@@ -501,73 +501,86 @@ export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt }
 
 // ---------------------------------------------------------------- 遠化 as plates peeled off (G5R3-18)
 //
-// Land gone far is an ukiyo-e print losing its colour blocks one by one: first the bokashi (the haze
-// and the gradations), then the greens, then the water's blue, then the earth colours; what is left is
-// the key block's ink lines and the paper, with the relief pressed into it (空摺: no ink, only the
-// shading of the land). Things stay sharp and readable (no fog); the water does not reflect; at night
-// the paper is the night's dark paper and the lines only just show; there are no lights.
-// Stage 0 is the land as it is; 1 no bokashi (and no reflection); 2 no greens; 3 no water blue; 4 no
-// earth colours: ink and paper. How far a place has gone (the stage it ends at) grows with its
-// distance beyond the region's rim (the 3D view's mist ellipse, vista.py MIST), in patches.
+// Land gone far is a woodblock print losing its colour blocks, one after another (the 3D lookout's
+// rule, godot/render3d/shaders/vista_common.gdshaderinc "褪版", to which this is matched): first the
+// gradations and fine tones (bokashi: the light's modelling, the water's sky): the surfaces print
+// flat, two tones to a block; then the green block (grass, rice, woods); then the water's blue; then
+// the earths and ochres (soil, roads, dry fields, rock, roofs, wood); at last only the key block's
+// ink lines on the paper, with its blind embossing (空摺: the relief pressed into the white). A block
+// is printed or not, its seam dithered over a couple of pixels (no fading toward white), so the
+// blocks read one by one. Paper, ink and the blocks' tones are the 3D view's (its terrain palette:
+// far_white, the ink K, grass, the view's forest, fallow, bank earth), lit by the hour's light on
+// level ground; no haze; at night the paper as dark as the night, the lines just legible, no lamps.
+// Stages: 0 as drawn; 1 flat (the gradations gone); 2 + the green gone; 3 + the blue gone; 4 + the
+// earths gone (ink and paper).
 export const FADE_STAGES = 4;
-const PAPER = [0.86, 0.84, 0.78];
-// the night's paper: the blocks are printed on paper the dark has taken (纸白压暗); 1 by day
-let PAPER_K = 1;
-export function setPaperK(k) { PAPER_K = k; }
-const PLATE = { green: [0.42, 0.6, 0.3], deep: [0.3, 0.42, 0.2], blue: [0.4, 0.55, 0.74], earth: [0.8, 0.64, 0.44], bengara: [0.74, 0.38, 0.3] };
-const PLATE_GONE = { green: 2, deep: 2, blue: 3, earth: 4, bengara: 4 };     // the stage that removes it
-const RECIPE = [];   // material -> [[plate, coverage]] (coverage: the plate's ink to that power)
-RECIPE[G.riceA] = [['green', 1], ['earth', 0.3]];
-RECIPE[G.riceB] = [['green', 0.85], ['earth', 0.45]];
-RECIPE[G.riceC] = [['green', 1.15], ['earth', 0.3]];
-RECIPE[G.crop] = [['green', 0.5], ['earth', 0.8]];
-RECIPE[G.fallow] = [['green', 0.15], ['earth', 1.4]];
-RECIPE[G.levee] = [['green', 0.4], ['earth', 0.8]];
-RECIPE[G.meadow] = [['green', 0.45], ['earth', 0.65]];
-RECIPE[G.bank] = [['green', 0.35], ['earth', 0.75]];
-RECIPE[G.road] = [['earth', 1.1]];
-RECIPE[G.path] = [['earth', 1.0]];
-RECIPE[G.townGround] = [['earth', 1.3], ['blue', 0.2]];
-RECIPE[G.paddy] = [['blue', 0.9], ['green', 0.6]];
-RECIPE[G.river] = [['blue', 1.1]];
-RECIPE[G.pond] = [['blue', 1.0], ['green', 0.2]];
-RECIPE[G.forest] = [['deep', 1], ['earth', 0.2]];
-RECIPE[G.grove] = [['deep', 1.2], ['earth', 0.2]];
-RECIPE[G.hillForest] = [['deep', 1.05], ['earth', 0.15]];
-RECIPE[G.farForest] = [['deep', 0.95], ['blue', 0.2]];
-RECIPE[G.cedar] = [['deep', 1.2], ['blue', 0.3]];
-RECIPE[G.rock] = [['earth', 0.6], ['blue', 0.35]];
-RECIPE[G.farRock] = [['earth', 0.5], ['blue', 0.3]];
-RECIPE[G.roof] = [['earth', 0.6], ['blue', 0.9]];
-RECIPE[G.roofLit] = [['earth', 0.35], ['blue', 0.5]];
-RECIPE[G.thatch] = [['earth', 1.3]];
-RECIPE[G.wall] = [['earth', 0.15]];
-RECIPE[G.kura] = [];
-RECIPE[G.wood] = [['earth', 1.6], ['bengara', 0.6]];
-RECIPE[G.iron] = [['bengara', 1.6]];
-
-/** The albedo (0..1) of a material printed with the blocks still on at stage s (>= 2: the recipe;
- *  0 and 1: its own albedo, water by its blue block, as it no longer reflects). */
-export function fadeAlbedo(mat, s) {
-  const base = GROUND_MATS[mat];
-  if (!base) return null;
-  if (s <= 1 && !base.water) return base.albedo;
-  const c = PAPER.map(v => v * PAPER_K);
-  for (const [p, a] of RECIPE[mat] || []) {
-    if (s >= PLATE_GONE[p]) continue;
-    for (let k = 0; k < 3; k++) c[k] *= Math.pow(PLATE[p][k], a);
-  }
-  return c;
+export const V_PAPER = 0, V_GREEN = 1, V_BLUE = 2, V_EARTH = 3;
+const GONE_AT = [99, 2, 3, 4];                               // the stage a block is gone at
+const BLOCK = [];                                            // material -> [block, tone: 1 light, 0 dark]
+for (const m of [G.riceA, G.riceB, G.riceC, G.meadow, G.levee]) BLOCK[m] = [V_GREEN, 1];
+for (const m of [G.forest, G.grove, G.hillForest, G.farForest, G.cedar]) BLOCK[m] = [V_GREEN, 0];
+for (const m of [G.paddy, G.river, G.pond]) BLOCK[m] = [V_BLUE, 1];
+for (const m of [G.crop, G.fallow, G.road, G.path, G.townGround, G.rock, G.farRock, G.bank, G.thatch, G.roofLit]) BLOCK[m] = [V_EARTH, 1];
+for (const m of [G.roof, G.wood, G.iron]) BLOCK[m] = [V_EARTH, 0];
+for (const m of [G.wall, G.kura]) BLOCK[m] = [V_PAPER, 1];
+const lin1 = v => (v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4));
+const lin = c => c.map(v => lin1(v / 255));
+const srgb1 = v => (v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1 / 2.4) - 0.055);
+const srgb = c => c.map(v => clamp(Math.round(srgb1(Math.max(0, v)) * 255), 0, 255));
+// (vista3d.gd _print_colours: the terrain palette's cells, sRGB)
+const PRINT = { [V_GREEN]: [lin([51, 74, 41]), lin([85, 96, 75])], [V_EARTH]: [lin([88, 75, 61]), lin([129, 119, 103])] };
+const INK_K = lin([58, 46, 38]);
+// the paper as the 3D view shows it: vista3d.gd's far_white goes from (0.66, 0.635, 0.59) by day to
+// (0.04, 0.044, 0.063) at night (linear), then the 3D view's grade lifts the night: on its screen the
+// night's paper is sRGB (65, 71, 93) and the ink (30, 33, 53) (measured on the renderer's 21.5 h
+// render of the lookout, scratchpad sample3d/r5/v5/vista02_180_21.5h.png). The prologue's far comes at
+// night only (20.3 h), so it takes those night colours as they reach the screen; by day it would be
+// far_white itself.
+const PAPER_DAY = [0.66, 0.635, 0.59], PAPER_NIGHT_ON = lin([65, 71, 93]), INK_NIGHT_ON = lin([30, 33, 53]);
+export function farWhite(env) {
+  const n = clamp(env.night, 0, 1);
+  return PAPER_DAY.map((v, k) => lerp(v, PAPER_NIGHT_ON[k], n));
 }
+// a block's tone printed on that paper (the paper's light, the block's albedo against a paper of
+// about 0.32: the 3D view's night blocks read at about 0.6 of the paper's light for the light ochre)
+const BLOCK_REF = 0.32;
 
-/** Materials as printed at stage s (no water, no emission, no rim: flat blocks on paper). */
-export function fadeMats(s) {
-  const out = [];
-  for (let m = 0; m < GROUND_MATS.length; m++) {
-    const a = fadeAlbedo(m, s);
-    if (a) out[m] = { albedo: a };
-  }
-  return out;
+/**
+ * The colours of the print at stage s for every ground id (a palette: id -> packed sRGB): the
+ * blocks' flat tones in the hour's light (no modelling), the water's block its sky as drawn but flat,
+ * the paper with its embossing from the id's light level. waterPal: the normal palette, for the
+ * water's flat colour (its band 3, open sky).
+ */
+export function fadePalette(s, env, waterPal) {
+  const paper = farWhite(env), light = paper.map(v => v / BLOCK_REF);
+  const cache = new Map();
+  return v => {
+    let out = cache.get(v);
+    if (out !== undefined) return out;
+    const mat = v >> 8, sun = (v >> 5) & 7, b = BLOCK[mat];
+    if (!b) { cache.set(v, 0); return 0; }
+    let c;
+    if (b[0] === V_PAPER || s >= GONE_AT[b[0]]) {
+      // the paper, the relief pressed into it: a face to the sun's direction a little lighter
+      const water = GROUND_MATS[mat] && GROUND_MATS[mat].water;
+      const k = water ? 1 : 1 + 0.25 * clamp(sun / 7 - 0.375, -0.4, 0.3);
+      c = paper.map(q => q * k);
+    } else if (b[0] === V_BLUE) {
+      const p = waterPal((mat << 8) | (3 << 5) | (3 << 3)) >>> 0;
+      out = p; cache.set(v, out); return out;
+    } else c = PRINT[b[0]][b[1]].map((q, k) => q * light[k]);
+    const o = srgb(c);
+    out = ((255 << 24) | (o[2] << 16) | (o[1] << 8) | o[0]) >>> 0;
+    cache.set(v, out);
+    return out;
+  };
+}
+/** The key block's ink in the hour's light (sRGB 0..255): the palette's K over the paper, 78 % (by
+ *  night as the 3D view shows it). */
+export function fadeInk(env) {
+  const n = clamp(env.night, 0, 1), paper = PAPER_DAY, pl = 0.2126 * paper[0] + 0.7152 * paper[1] + 0.0722 * paper[2];
+  const day = paper.map((q, k) => lerp(q, INK_K[k] * pl / 0.75, 0.78));
+  return srgb(day.map((v, k) => lerp(v, INK_NIGHT_ON[k], n)));
 }
 
 // boundary classes (for the key block's lines) and which side of a boundary carries the line
@@ -580,14 +593,18 @@ CLS[G.rock] = 7; CLS[G.farRock] = 7;
 for (const m of [G.roof, G.roofLit, G.thatch, G.wall, G.kura, G.wood]) CLS[m] = 8;
 CLS[G.iron] = 9;
 const PRIO = [0, 1, 2, 5, 6, 4, 3, 2, 8, 9];        // by class: the line goes on the higher side
+// metres past the region's rim where the gradations, the green, the blue, the earths are gone (the 3D
+// view's plate_at is 300, 1500, 3000, 5000 m past its front, spaced about evenly on its screen; here
+// spaced so that each block's band reads in this frame), each wandering a fifth either way
+export const PLATE_AT = [300, 1200, 2200, 4200];
 
 /**
- * Per ground pixel (RGBA8): R the key block's ink (0..255): silhouettes (the top edge of anything in
- * front of what lies behind it: ridges, crowns, roofs, the viaduct), the edges between kinds of
- * ground (river and pond banks, roads, the town, woods, houses), the edges of fields only where they
- * are a few pixels wide, and the shaded side of the crowns in a wood; G the stage that place ends at
- * (50 per stage, from its distance beyond the region's rim, jittered by patch so that the blocks come
- * off in pieces); B the patch's delay (0..255) for the peeling after the front; A 255 on ground.
+ * Per ground pixel (RGBA8): R the key block's ink (0 or 255: the skyline and the top edge of whatever
+ * stands in front of the land behind it, the borders between kinds of ground on one side, the edges
+ * of fields where they are a few pixels across, the near woods' crowns); G the stage that place
+ * prints at once the far has come (50 per stage, 0..4: which blocks are gone there, by its distance
+ * past the region's rim against each block's own wandering front, the seams dithered over about two
+ * pixels); B a small delay (0..255) for the blocks coming off after the tide; A 255 on ground.
  */
 export function fadeMaps(L, Xb, Zb, mask, W, H, f) {
   const out = new Uint8Array(W * H * 4), idx = L.idx;
@@ -596,57 +613,55 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f) {
     const i = y * W + x;
     if (!mask[i]) continue;
     const Z = Zb[i], X = Xb[i], c = cl(i), m = idx[i] >> 8;
-    const near = clamp(1.3 - Z / 25, 0.35, 1);              // minor lines thin out with distance
     let ink = 0;
     // silhouette: the skyline, and the top edge of whatever stands well in front of the land behind it
-    // (ridges, the edge of a terrace of land, a wood's crown line, a roof, the viaduct)
     const up = y > 0 ? i - W : -1;
     if (up < 0 || !mask[up]) ink = 1;
     else {
       const Zu = Zb[up], flat = Z * Z / f;
-      if (Zu > Z * 1.3 && Zu - Z > 8 * flat + 0.05) ink = Z > 40 ? 0.7 : 1;
+      if (Zu > Z * 1.3 && Zu - Z > 8 * flat + 0.05) ink = 1;
     }
-    // boundaries between kinds of ground: the line on the higher side only; far away only the river,
-    // the town and the houses keep theirs
-    if (ink < 1) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
+    // borders between kinds of ground: the line on the higher side only. The farther, the fewer: a row
+    // of pixels there spans hundreds of metres, and every border drawn would make a mesh of lines (the
+    // 3D view's far land has few): past ~1.5 km only the water, the roads, the town and the viaduct keep
+    // theirs, and the houses their roofs to ~3 km
+    if (!ink) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
       if (n < 0 || !mask[n]) continue;
       const cn = cl(n);
       if (cn === c || (c <= 2 && cn <= 2)) {
-        // the edges of fields and paddies (levees): near only, where a field is a few pixels across
-        if (c <= 2 && (idx[n] >> 8) !== m && Z < 5.5 && n === up) ink = Math.max(ink, 0.4);
+        // the edges of fields and paddies: near only, where a field is a few pixels across
+        if (c <= 2 && (idx[n] >> 8) !== m && Z < 5.5 && n === up) ink = 1;
         continue;
       }
       if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
-      if (Z > 30 && c !== 3 && c < 5) continue;
-      ink = Math.max(ink, (c >= 8 ? 0.85 : c === 3 ? 0.8 : 0.6) * near);
+      const keep = c === 3 || c === 4 || c === 5 || c === 9;
+      if (Z > 8 && !keep && !(c === 8 && Z < 16 && n === up)) continue;
+      ink = 1;
     }
-    // the crowns' shaded sides in a near wood (the bake's crown texture, tex -1), lightly
-    if (c === 6 && ink < 0.3 && Z > 600 / U && Z < 14) {
+    // the crowns in a near wood (the bake's crown cells: their shaded side)
+    if (!ink && c === 6 && Z > 600 / U && Z < 10) {
       const t = heightBase(X, Z), cs = 0.06 * Math.max(1, Z / 6), u = X / cs, v = (Z + t * 4) / (cs * 1.6);
       const fu = u - Math.floor(u) - 0.5, fv = v - Math.floor(v) - 0.5;
-      if (fu + fv * 0.6 < -0.36) ink = Math.max(ink, 0.3);
+      if (fu + fv * 0.6 < -0.4) ink = 1;
     }
-    // how far it has gone: its distance beyond the rim, in patches of about 140 m
+    // which blocks are gone here: metres past the rim against each block's front, wandering with the
+    // bearing; the seam dithered over two pixels of ground at this distance
     const xm = -X * U, zm = Z * U;
     const e = Math.hypot((xm - MIST.cx) / MIST.rx, (zm - MIST.cz) / MIST.rz);
-    const beyond = Math.max(0, e - 1) * 400;
-    const px = Math.floor(xm / 140 + vnoise(xm / 300, zm / 300, 611) * 1.2), pz = Math.floor(zm / 140 + vnoise(xm / 300 + 7, zm / 300, 612) * 1.2);
-    const jit = (hash2(px, pz, 613) - 0.5) * 0.9;
-    const s = clamp(fadeStageAt(beyond) + jit, 1, FADE_STAGES);
+    const past = Math.max(0, e - 1) * 400;
+    const ang = Math.atan2(xm, zm), seam = 2 * Z * Z / f * U;
+    let st = 0;
+    for (let k = 0; k < 4; k++) {
+      const w = vnoise(ang * 3.3 + k * 17, k * 5 + 1, 620) * 0.7 + vnoise(ang * 9.1 + k * 3, 9, 621) * 0.3;
+      if (past >= PLATE_AT[k] * (0.8 + 0.4 * w) + (hash2(x, y, 622 + k) - 0.5) * seam) st = k + 1;
+    }
     const o = i * 4;
-    out[o] = Math.round(clamp(ink, 0, 1) * 255);
-    out[o + 1] = Math.round(s * 50);
-    out[o + 2] = Math.round(hash2(px, pz, 614) * 255);
+    out[o] = ink ? 255 : 0;
+    out[o + 1] = st * 50;
+    out[o + 2] = Math.round(hash2(Math.floor(xm / 90), Math.floor(zm / 90), 614) * 255);
     out[o + 3] = 255;
   }
   return out;
 }
 // the region's rim (vista.py MIST: the mist ellipse round the walkable region)
 const MIST = { cx: -50, cz: 100, rx: 430, rz: 370 };
-/** The stage (1..4, continuous) a place ends at, from its distance beyond the rim in metres. */
-export function fadeStageAt(beyond) {
-  const K = [[0, 1], [900, 2], [2400, 3], [5000, 4]];
-  if (beyond <= 0) return 1;
-  for (let k = 0; k < K.length - 1; k++) if (beyond <= K[k + 1][0]) return K[k][1] + (beyond - K[k][0]) / (K[k + 1][0] - K[k][0]);
-  return 4;
-}

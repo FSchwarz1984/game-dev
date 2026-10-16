@@ -98,9 +98,13 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     # under the canopy the grass thins and moss creeps in among the leaves
     W["moss"] = np.maximum(W["moss"], canopy * geom.smoothstep(0.5, 0.68, n1) * 0.55 * (1.0 - dirt))
     # the trails' bitten verges: leaves where trees stand over the path, moss in the barrier and in
-    # the shade, otherwise the grass (the default) takes them
-    W["litter"] = np.maximum(W["litter"], bite * 0.85 * geom.smoothstep(0.15, 0.5, canopy))
-    W["moss"] = np.maximum(W["moss"], bite * 0.8 * np.maximum(sanct, faces_north * 0.7) * (1.0 - geom.smoothstep(0.15, 0.5, canopy)))
+    # the shade, otherwise the grass (the default) takes them; under trees the margins are leaf-strewn
+    # all along (feet keep only the middle bare: 落葉が寄る), with gaps
+    under = geom.smoothstep(0.15, 0.5, canopy)
+    margin = edge * geom.smoothstep(0.4, 0.55, nb) * under
+    W["litter"] = np.maximum(W["litter"], np.maximum(bite * 0.85 * under, margin * 0.75))
+    W["dirt"] = W["dirt"] * (1.0 - 0.5 * margin)
+    W["moss"] = np.maximum(W["moss"], bite * 0.8 * np.maximum(sanct, faces_north * 0.7) * (1.0 - under))
 
     # the paddies (round 5: the yard's trodden paths are no longer paddy mud: they read as dark olive
     # bands; they are the yard's own packed earth, worn lighter, below: m2.b)

@@ -1,6 +1,7 @@
 # 对话演出：静态立绘 + 漫符 + 动作
 
 状态：**草案**（2026-10-16，回应 G5R3-13）。主管已按推荐定了 D1、D3、D4、D5、D6、D7（技术实现）；**D2（词表与整体观感）和第 2.5 节的两个可选项给用户定**。研究与出处见 `docs/knowledge/28-dialogue-staging.md`。预览动图在会话 scratchpad 的 `portraits5/staging/`（主管验收用；是在 scratchpad 里搭的原型渲染出来的，不是游戏里的实现）。
+给用户看的精选在 `portraits5/staging/user/`：8 个动图，一页纸说明图 `overview.png`。
 
 ## 0. 一句话
 

@@ -598,7 +598,8 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
         # the kerb (round 5, iron rule: a path has edges): field stones every metre or three, in ones,
         # twos and threes, bigger on the downhill side
         st = max(float(stones), 0.4)
-        tris += edge_stones(sink, ground, route, s0, s1, R, every=(1.0 / st, 3.2 / st), size=(0.14, 0.34), cluster=0.45)
+        tris += edge_stones(sink, ground, route, s0, s1, R, every=(0.8 / st, 2.4 / st), size=(0.22, 0.44), cluster=0.5,
+                            moss=(0.1, 0.45), bury=0.45, out=0.08)
     for k in range(n):
         s = s0 + R.uniform(0, L)
         t = R.uniform(0.45, 0.85) * width * 0.5 * (1 if R.uniform() < 0.5 else -1)
@@ -609,6 +610,25 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
         poly = np.stack([c[0] + np.cos(ang) * r * R.uniform(0.7, 1.2, m), c[1] + np.sin(ang) * r * R.uniform(0.7, 1.1, m)], 1)
         tris += slab(sink, ground, chaikin(poly, 1), R.uniform(0.02, 0.06), 0.06, GRANITE * (0.75 + 0.2 * R.uniform()),
                      R.uniform(0.2, 0.8), R, layer='solid', dome=0.02)
+    # where the trail climbs: a root or a log held by two pegs across it now and then (a natural step,
+    # 根っこの段), every metre and a half or so where the grade passes one in six
+    s = s0 + R.uniform(0.4, 1.2)
+    while s < s1 - 0.4:
+        P1, T1, N1 = route.at(np.array([s]))
+        P2, _, _ = route.at(np.array([min(s + 0.6, s1)]))
+        g = abs(float(ground.height(*P2[0])) - float(ground.height(*P1[0]))) / 0.6
+        if g > 0.17:
+            hw = float(route.width_at(np.array([s]))[0]) * 0.5
+            a = P1[0] - N1[0] * (hw + 0.1) + T1[0] * R.normal(0, 0.05)
+            b = P1[0] + N1[0] * (hw + 0.1) + T1[0] * R.normal(0, 0.05)
+            ya = float(ground.height(*a)) + 0.02
+            yb = float(ground.height(*b)) + 0.02
+            r = R.uniform(0.05, 0.075)
+            tris += cylinder(sink, [a[0], ya, a[1]], [b[0], yb, b[1]], r, ROOT * (0.95 + 0.2 * R.uniform()), ROOT * 1.15, R, n=6,
+                             moss=0.2, ao=0.9)
+            s += R.uniform(1.1, 1.8)
+        else:
+            s += 0.5
     # roots: from trees within 3.5 m of the path, a root or two crossing it, half buried
     for (tx, tz, tr) in trees:
         P = route.P

@@ -114,6 +114,9 @@ func setup(p_data: VistaData) -> void:
 	ground.set_param("lut", data.tex("lutGround"))
 	ground.set_param("lut_far", data.tex("lutFar"))
 	ground.set_param("fade_map", data.tex("groundFade"))
+	var fd: Dictionary = m.get("fade", {})
+	if fd.has("ink"):
+		ground.set_param("ink_col", Vector3(fd["ink"][0], fd["ink"][1], fd["ink"][2]))
 	add_main_root.add_child(lights.layer("lamps"))
 	add_main_root.add_child(lights.layer("river"))
 	wave_fx = VistaSouthWave.new()

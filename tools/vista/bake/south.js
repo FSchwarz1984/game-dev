@@ -41,8 +41,8 @@ const KINDS = ['window', 'lantern', 'star', 'fire', 'bonfire'];
 // HEAD's draws from its sequence before the canopy (river lanterns and its procession plan, on HEAD's
 // map): frozen, so the crown's clumps stay the ones the user approved whatever the plain becomes
 export const HEAD_DRAWS = 1768;
-// the hour the far comes (the prologue's state from the lights' leaving on) and the night's paper
-const WAVE_TOD = 20.3, PAPER_NIGHT = 1.0;
+// the hour the far comes (the prologue's state from the lights' leaving on)
+const WAVE_TOD = 20.3;
 
 // counting RNG: the shipped variant replays the canon variant's draw count before the canopy
 function crng(seed) {
@@ -288,14 +288,14 @@ export function bakeSouth(o = {}) {
   const gSpace = new IdSpace().add(ground.layer.idx);
   const groundLut = lutRows(gSpace, envs.map(e => palette(GROUND_MATS, envG(e), { haze: e.mist })));
   // the far (遠化, G5R3-18): row 0 the white of the front as it passes (the event itself: HEAD's pale
-  // front, houses keep the pale), rows 1..4 the land as a print losing its blocks (plain.js FADE_*),
-  // printed on the night's paper at the hour the far comes (20.3 h: it does not change meanwhile)
+  // front, houses keep the pale), rows 1..4 the land as a print losing its blocks (plain.js: the 3D
+  // view's blocks and colours), in the light of the hour the far comes (20.3 h: it does not change
+  // meanwhile); the key block's ink in that light goes to meta.fade
   const farPal = palette(GROUND_MATS, envG(envs[0]), { haze: envs[0].mist, far: true });
   const envW = envG(todEnv(WAVE_TOD));
-  PL.setPaperK(PAPER_NIGHT);
+  const waterPal = palette(GROUND_MATS, envW, { haze: envW.mist });
   const stagePals = [];
-  for (let st = 1; st <= PL.FADE_STAGES; st++) { const p = palette(PL.fadeMats(st), envW, { haze: envW.mist }); stagePals.push(v => p(v & ~7)); }
-  PL.setPaperK(1);
+  for (let st = 1; st <= PL.FADE_STAGES; st++) stagePals.push(PL.fadePalette(st, envW, waterPal));
   const farLut = lutRows(gSpace, [v => {
     const p = farPal(v), m = v >> 8;
     if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron) return p;
@@ -346,6 +346,8 @@ export function bakeSouth(o = {}) {
       river: riverRev, riverLanterns: river.map(v => [r3(v.u0), r3(v.ph), r3(v.side)]), plainU: PL.U,
       // how far the mountains were lowered to stay clear of the sky shore (plain.js mountainFit)
       mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
+      // the far as a print (plain.js): the key block's ink at the hour, the blocks' fronts past the rim
+      fade: { ink: PL.fadeInk(envW), plateAt: PL.PLATE_AT, tod: WAVE_TOD },
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },

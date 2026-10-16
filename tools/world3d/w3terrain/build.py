@@ -224,7 +224,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
                 # round 5 (G5R3-4, the paths' iron rule): the width breathes at two scales (pinched by a
                 # root or a stone, wider where people step round a puddle) ...
                 wob2 = (noise.fbm(arc / 1.4, np.full(arc.shape, 5.3), 2, seed_i + 74) - 0.5) * 0.3 * hw
-                v = geom.smoothstep(hw + 0.07, hw - 0.12, d - wob * 1.3 - wob2 - fine)
+                v = geom.smoothstep(hw + 0.07, hw - 0.12, d - wob * 1.6 - wob2 - fine)
                 trail_k[sel] = np.maximum(trail_k[sel], v[sel])
                 # ... the feet keep to a line that wanders inside it (trodden lighter, no pebbles), and
                 # the outer part is where the verge bites in (materials.py)
@@ -234,7 +234,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
                 sd = np.where(np.isfinite(d), d, 99.0) * side
                 tr = geom.smoothstep(0.62 * hw, 0.1 * hw, np.abs(sd - off)) * v
                 tread_k[sel] = np.maximum(tread_k[sel], tr[sel])
-                ed = v * geom.smoothstep(0.55 * hw, 1.0 * hw, d - wob * 1.3 - wob2)
+                ed = v * geom.smoothstep(0.5 * hw, 0.95 * hw, d - wob * 1.6 - wob2)
                 edge_k[sel] = np.maximum(edge_k[sel], ed[sel])
             elif kind == "lane":
                 # two trodden tracks, grass along the middle where neither feet nor wheels go

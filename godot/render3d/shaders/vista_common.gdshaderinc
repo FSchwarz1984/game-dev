@@ -213,9 +213,9 @@ const int V_EARTH = 3;
 // metres past the front where the gradations, the green, the blue, the earths are gone (each block's
 // own front wanders a fifth either way). The front lies 4.4-6.2 km from the lookout, the far ranges
 // 10-16 km: the blocks' fronts are about evenly spaced in 1 / distance (so on the screen), the
-// flat print from the front, the green gone by about 6.5 km, the blue by 8, the earths by 11.5; the
+// flat print from the front, the green gone by about 6.5 km, the blue by 8, the earths by 10; the
 // farthest ranges are the key block alone
-uniform vec4 plate_at = vec4(300.0, 1500.0, 3000.0, 6500.0);
+uniform vec4 plate_at = vec4(300.0, 1500.0, 3000.0, 5000.0);
 uniform vec3 ink_k = vec3(0.216, 0.184, 0.157);   // the palette's ink (K, sRGB; vista3d.gd sets it from the palette)
 // the blocks' flat colours (linear; vista3d.gd sets them from the terrain's palette and the view's own
 // colours): two tones to a block, light and dark
@@ -267,10 +267,12 @@ vec3 v_flat(int plate, vec3 alb) {
 	if (plate == V_EARTH) return l > 0.05 ? print_earth_lt : print_earth_dk;
 	return alb;
 }
-// the paper, with its blind embossing (the relief by the normal, a few hundredths)
+// the paper, with its blind embossing: the relief pressed into it, read by the light on the slope
+// against the light on level ground (a level paper is the paper; a face to the light a few
+// hundredths lighter, one away a few darker)
 vec3 v_emboss(vec3 n) {
 	vec3 sd = normalize(w3_sun_dir);
-	return far_white * (1.0 + 0.1 * clamp(dot(n, sd) - 0.45, -0.6, 0.6));
+	return far_white * (1.0 + 0.25 * clamp(dot(n, sd) - max(sd.y, 0.2), -0.4, 0.3));
 }
 // the key block's ink: the palette's K, printed (lit like the paper), a little of the paper through it
 vec3 v_ink() {

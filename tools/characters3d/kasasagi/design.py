@@ -92,7 +92,8 @@ D = {
     # v 150, 105 px at v 450, the end at v 490; side: the back of the hair f -0.40)
     'hair_out_w': [(1.62, 0.300), (1.47, 0.318), (1.25, 0.278), (1.10, 0.300), (1.00, 0.330),
                    (0.80, 0.300), (0.62, 0.230), (0.50, 0.170)],
-    'back_hair_end': hf(490, 662),             # 0.495
+    'back_hair_end': hf(490, 662) + 0.055,     # 0.550: the sheet's end (v 490, h 0.495) less the
+                                               # point the mantle's middle hangs below its edge
     'lock_x': 0.196,                           # the side locks' centres (front: u 130..170, 268..308)
     'lock_w': 40 * S,                          # 0.115
     'lock_tie_h': hf(237),                     # 1.218: the white-red-white tie (v 222..252)

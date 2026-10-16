@@ -58,6 +58,8 @@ varying flat float v_cellk;
 varying flat vec3 v_col;      // how dry 0..1, the root's tone (continuous), gust 0..1
 varying flat float v_ao;
 varying float v_fleck;
+varying flat float v_root_fleck;   // (scene, round 5) the sun fleck at the tuft's root: a whole tuft is lit
+                                   // or not, as the ground under it (per pixel, the blades lit in streaks)
 varying vec3 v_detail;        // albedo / the shade's flattened albedo (light() restores the detail)
 
 vec3 pal(float row, float tone) {
@@ -70,6 +72,7 @@ float ground_h(vec2 xz) {
 }
 
 void vertex() {
+	v_root_fleck = 0.0;
 	vec3 corner = MODEL_MATRIX[3].xyz;
 	int i = INSTANCE_ID % lattice;
 	int j = INSTANCE_ID / lattice;
@@ -147,6 +150,18 @@ void vertex() {
 		// macro tone, both soft over metres, exactly as the ground's)
 		v_col = vec3(w3_sward_dry(xz, e3.g, dry_bias), w3_sward_tone(xz), g);
 		v_ao = mix(0.55, 1.0, smoothstep(0.45, 1.0, e2.r));
+		// sun flecks in the canopy's shade, as on the ground under it, taken at the root
+		vec3 sdir = normalize(w3_sun_dir);
+		vec2 proj = xz + sdir.xz / max(sdir.y, 0.25) * 11.0;
+		float can = textureLod(m3, (proj - splat_origin) / splat_cell / splat_size, 0.0).a;
+		v_root_fleck = 0.0;
+		if (can > 0.2 && w3_night < 0.5) {
+			float swy = sin(w3_time * 0.8 + w3_hash(floor(xz / 1.5)) * 6.28) * 0.35 * w3_wind.z;
+			vec2 fq = xz / 0.42 + vec2(swy, swy * 0.5);
+			float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
+			float cluster = w3_vnoise(xz / 2.6 + 9.0);
+			v_root_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
+		}
 	}
 }
 
@@ -170,18 +185,8 @@ void fragment() {
 	vec3 flat_alb = w3_sward_col(v_col.x, v_col.y);
 	alb = w3_wetten(alb, 0.6);
 	flat_alb = w3_wetten(flat_alb, 0.6);
-	// sun flecks in the canopy's shade, as on the ground under it
-	vec3 sdir = normalize(w3_sun_dir);
-	vec2 proj = v_wp.xz + sdir.xz / max(sdir.y, 0.25) * 11.0;
-	float can = texture(m3, (proj - splat_origin) / splat_cell / splat_size).a;
-	v_fleck = 0.0;
-	if (can > 0.2 && w3_night < 0.5) {
-		float swy = sin(w3_time * 0.8 + w3_hash(floor(v_wp.xz / 1.5)) * 6.28) * 0.35 * w3_wind.z;
-		vec2 fq = v_wp.xz / 0.42 + vec2(swy, swy * 0.5);
-		float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
-		float cluster = w3_vnoise(v_wp.xz / 2.6 + 9.0);
-		v_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
-	}
+	// sun flecks: the root's (vertex), so a tuft is lit whole, as the ground it stands on
+	v_fleck = v_root_fleck;
 	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, w3_flatten(shade_flatten)));
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;

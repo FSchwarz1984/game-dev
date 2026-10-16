@@ -1,24 +1,26 @@
 // The ground of the treetop vista (painted by the bake: since round 5 the 3D lookout's plain) with the
 // wave of distance (src/vista/wave.js): every pixel knows when the ring reaches it (B channel, bucket of
 // w * 250). On the front (two buckets) the land flashes white, the event itself (lut_far row 0). Behind
-// it the land has gone far (遠化, G5R3-18): a print losing its colour blocks, one by one, patch by
-// patch, down to the stage that place ends at (lut_far rows 1..4: no bokashi, no greens, no water
-// blue, no earth colours), with the key block's ink lines over it; at night the paper is dark and the
-// lines only just show. `settled`: the far has been and gone, every place at its final stage.
+// it the land has gone far (遠化, G5R3-18), drawn as the 3D lookout draws it (vista_common "褪版"): a
+// woodblock print whose colour blocks come away one after another, the gradations first (flat
+// prints), then the green, the water's blue, the earths, down to the key block's ink lines on the
+// paper; how many are gone at a place is baked (fade_map G: its stage); after the tide they come off
+// one by one over a moment (lut_far rows 1..4). `settled`: the far has been and gone, every place at
+// its stage. At night the paper is as dark as the night and the lines only just show.
 shader_type canvas_item;
 #include "res://vista/shaders/vista.gdshaderinc"
 
 uniform sampler2D ids : filter_nearest, repeat_disable;     // R, G id; B arrival (255 never); A mask
 uniform sampler2D lut : filter_nearest, repeat_disable;     // per time of day
 uniform sampler2D lut_far : filter_nearest, repeat_disable; // row 0 the front, rows 1..4 the stages
-uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink, G final stage x 50, B patch delay
+uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink (0 | 1), G stage x 50, B delay
 uniform float tod_row;
 uniform float wave = -1.0;
 uniform float settled = 0.0;
+uniform vec3 ink_col = vec3(27.0, 27.0, 32.0);   // the key block's ink in the hour's light (sRGB 0..255)
 
 const float PEEL = 5.0;      // buckets of the wave between one block and the next coming off
-const float DELAY = 8.0;     // buckets: the longest a patch waits before its first block goes
-const float INK = 0.7;       // how dark the key block's lines are on the paper
+const float DELAY = 4.0;     // buckets: the longest a place waits before its first block goes
 
 varying vec2 px;
 
@@ -34,8 +36,8 @@ void fragment() {
 	vec3 c = lut_rgb(lut, id, tod_row);
 	if (wave >= 0.0 || settled > 0.5) {
 		vec4 fm = texelFetch(fade_map, p, 0);
-		float fin = clamp(floor(fm.g * 255.0 / 50.0 + 0.001), 1.0, 4.0);
-		float st = -1.0;
+		float fin = clamp(floor(fm.g * 255.0 / 50.0 + 0.001), 0.0, 4.0);
+		float st = 0.0;
 		if (settled > 0.5) {
 			st = fin;
 		} else {
@@ -43,15 +45,14 @@ void fragment() {
 			float arr = floor(t.b * 255.0 + 0.5);
 			if (arr <= b - 2.0) {
 				float since = b - 2.0 - arr - floor(fm.b * DELAY + 0.5);
-				st = clamp(1.0 + floor(max(since, 0.0) / PEEL), 1.0, fin);
+				st = since < 0.0 ? min(fin, 1.0) : min(fin, 1.0 + floor(since / PEEL));
 			} else if (arr <= b) {
 				c = texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0;
 			}
 		}
 		if (st >= 1.0) {
 			c = texelFetch(lut_far, ivec2(id, int(st)), 0).rgb * 255.0;
-			float vis = st < 1.5 ? 0.5 : st < 2.5 ? 0.7 : st < 3.5 ? 0.85 : 1.0;
-			c *= 1.0 - INK * vis * fm.r;
+			if (fm.r > 0.5) c = ink_col;
 		}
 	}
 	COLOR = vec4(lin255(c), 1.0);

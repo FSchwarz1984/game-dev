@@ -65,6 +65,11 @@ def fields(L, W, F, Xs, Zs, Hs, cs, seed):
     # on the paths, the paving, the stepping stones and steps, the yard's packed earth or in water
     dens = geom.smoothstep(0.3, 0.62, grass) + geom.smoothstep(0.4, 0.8, moss) * 0.22 + geom.smoothstep(0.4, 0.8, litter) * 0.12
     dens *= 1.0 - geom.smoothstep(0.35, 0.75, np.maximum(wear, trail * 0.9))
+    # (round 5, the paths' iron rule) short sparse tufts on a trail's untrodden margins: its edge is
+    # not a line where the sward stops
+    edge = F.get("edge_k", zero)
+    tread = F.get("tread_k", zero)
+    dens = np.maximum(dens, 0.42 * edge * (1.0 - tread) * (1.0 - 0.6 * geom.smoothstep(0.3, 0.9, canopy)) * (1.0 - geom.smoothstep(0.15, 0.6, pave)))
     dens *= 1.0 - geom.smoothstep(0.15, 0.6, pave)
     dens *= 1.0 - geom.smoothstep(0.2, 0.6, stone)
     dens *= 1.0 - yard * 0.97
