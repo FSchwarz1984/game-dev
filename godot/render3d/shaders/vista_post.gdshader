@@ -95,7 +95,8 @@ void fragment() {
 		if (gk0 > 0.05) {
 			vec2 p = floor(uv * VIEWPORT_SIZE);
 			float t = cloud_time;
-			float n = sin(p.x / 11.0 + t * 0.7 + sin(p.y / 5.0 - t * 0.9) * 1.6) * 0.6 + sin(p.x / 29.0 - p.y / 13.0 + t * 0.45) * 0.4;
+			// (p.y runs down the screen: + t moves the bands up, as the prologue's 2D view has them)
+			float n = sin(p.x / 11.0 + t * 0.7 + sin(p.y / 5.0 + t * 0.9) * 1.6) * 0.6 + sin(p.x / 29.0 - p.y / 13.0 + t * 0.45) * 0.4;
 			float dy = floor(n * 1.15 * pow(gk0, 1.5) + 0.5);
 			if (dy != 0.0) {
 				vec2 o = uv + vec2(0.0, dy * px.y);
