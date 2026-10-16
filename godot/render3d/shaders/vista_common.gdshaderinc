@@ -155,6 +155,20 @@ const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
 // screen shows it (the town there sRGB about (118, 126, 145), luma 126; through this view's night grade
 // the same numbers came out at luma 133, a little bluer: vista_display's gain and lift)
 uniform float ghost_night_gain = 0.89;
+// the day's 遠化 (see v_ghost): where it is, by k, coming in early and quickly (its edge where the
+// night's is); its key, contrast and shoulder in display terms, before the view's grade
+uniform float ghost_day_w0 = 0.025;
+uniform float ghost_day_w1 = 0.09;
+uniform float ghost_day_key = 0.77;
+uniform float ghost_day_key_town = 0.82;
+uniform float ghost_day_contrast = 1.4;
+uniform float ghost_day_mid = 0.5;
+uniform float ghost_day_top = 0.86;
+uniform float ghost_day_lref = 1.19;          // the white surface's light at noon (the key is set for it)
+const vec3 V_GHOST_TINT_DAY = vec3(0.96, 0.98, 1.015);
+float v_ghost_day_w(float k) {
+	return smoothstep(ghost_day_w0, ghost_day_w1, k);
+}
 
 // how far gone a point is: 1 at the heart .. 0 (as it is)
 float v_ghost_k(vec2 xz) {
@@ -230,40 +244,36 @@ float v_light_ref() {
 }
 // a colour as the 遠化 shows it (k: v_ghost_k). WHERE the 遠化 is does not change with the hour: it
 // is a fact of the world (the rings); by day, at dusk and at night the same land is seen to be gone
-// far, only how the ghost looks changes (the user saw the day's 遠化 cover the town alone and the
-// night's the whole plain, and it was wrong: the lead). The night's extent is the measure (the
-// prologue's), and the day matches it. Two looks, the same numbers as the prologue's 2D view
-// (tools/vista/bake/plain.js GHOST_LOOKS), from its lightness against the hour's light (display: ld):
+// far, only how the ghost looks changes (G5R3-29: the user saw the day's 遠化 cover the town alone and
+// the night's the whole plain). The night's extent is the measure (the prologue's); the day matches
+// it. The same numbers as the prologue's 2D view at night (tools/vista/bake/plain.js GHOST_LOOKS).
 // - at night the silver-grey (round 2's ghost() lifted a third wider): ld -> 0.2 + 0.74 ld^0.85, the
 //   silver (0.86, 0.92, 1.07) mixed a tenth with its own colour; a light of its own, not the hour's
 //   (the user, G5R3-26: the silver-white was too bright at night; the silver-grey of the prologue
-//   "在夜間的表現還是不錯的"); it takes the land by k, as the prologue's night does;
-// - by day two parts: the colour drawn out toward the cool silver at the land's own lightness, by
-//   k^0.6 (rising early at low k, so that the day's edge, where a change can be seen, lies where the
-//   night's does: measured, dE > 5 between the 遠化 on and off, the three hours' areas overlap by an
-//   IoU of 0.89-0.96; capped at 0.65 the plain kept more colour but the day's edge fell short by 20
-//   px toward the lookout); and the lift toward the silver-white (ld -> 0.34 + 0.6 ld^0.8, the
-//   cool silver (0.88, 0.93, 1.05), a tenth of its own colour, keeping the hour's light) by
-//   k^ghost_day_gamma, steep, so that the town is whitest and the heart reads (the plain before
-//   the town is bright by day already: lifted by k it was one pale wash). The lift decides where it
-//   is heaviest, never where it is. Its lightness is not pressed down (that greys it: the 褪版).
+//   "在夜間的表現還是不錯的"); it takes the land by k, as the prologue's night does.
+// - by day (the user: "还要额外考虑对比度、明度和饱和度"; the lead's measures, G5R3-29): the land
+//   there has no air (v_haze_k), so its own light and shade are back; on them it is turned high key
+//   and kept sharp: its lightness (display, against the hour's light) spread about the middle by
+//   ghost_day_contrast and set on a key a step above the land round it (the town a step more, steep,
+//   by k^ghost_day_gamma), under a soft shoulder (never blown white); the colour drawn out to a faint
+//   cool silver (chroma near none), a little of its own. All of it comes in by v_ghost_day_w(k): early
+//   and quickly at low k, so the day's edge is the night's, and a clear step of lightness there.
 // - at dusk and dawn the one turns into the other with the night (w3_night).
 const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
 uniform float ghost_day_gamma = 4.0;
-uniform float ghost_day_drain = 0.6;       // the drawing out: k^ghost_day_drain
 vec3 v_ghost(vec3 col, float k) {
 	if (k <= 0.0) return col;
 	float lref = max(v_light_ref(), 1e-4);
 	float l = w3_luma(col) / lref;
 	float ld = pow(clamp(l, 0.0, 1.6), 1.0 / 2.2);
-	// by day: drawn out (its own lightness, the cool silver, a tenth of its own colour) ...
-	vec3 tint = w3_srgb_to_linear(V_GHOST_TINT);
-	vec3 gs = mix(w3_luma(col) * tint / w3_luma(tint), col, 0.1);
-	// ... and lifted toward the silver-white
-	float l2 = 0.34 + 0.6 * pow(ld, 0.8);
-	vec3 gd = w3_srgb_to_linear(clamp(vec3(l2) * V_GHOST_TINT, vec3(0.0), vec3(1.0))) * lref;
-	gd = mix(gd, col * (w3_luma(gd) / max(w3_luma(col), 1e-5)), 0.1);
-	vec3 day = mix(mix(col, gs, pow(k, ghost_day_drain)), gd, pow(k, ghost_day_gamma));
+	// by day
+	float key = mix(ghost_day_key, ghost_day_key_town, pow(k, ghost_day_gamma));
+	float lo = key + ghost_day_contrast * (ld - ghost_day_mid);
+	float sh = ghost_day_top, room = (1.0 - sh) * 0.5;
+	lo = lo < sh ? max(lo, 0.0) : sh + room * (1.0 - exp(-(lo - sh) / room));
+	vec3 gd = w3_srgb_to_linear(clamp(lo * V_GHOST_TINT_DAY, vec3(0.0), vec3(1.0))) * clamp(lref / ghost_day_lref, 0.5, 1.0);
+	gd = mix(gd, col * (w3_luma(gd) / max(w3_luma(col), 1e-5)), 0.03);
+	vec3 day = mix(col, gd, v_ghost_day_w(k));
 	// at night
 	float ln = clamp(0.2 + 0.74 * pow(min(ld, 1.0), 0.85), 0.0, 1.0);
 	vec3 own = pow(clamp(col / lref, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
@@ -282,8 +292,11 @@ float v_haze_k(vec3 wp, vec3 cam) {
 	// the air thins with height: far peaks stay legible above the lowland's haze
 	float thin = mix(1.0, 0.35, smoothstep(-100.0, 700.0, wp.y));
 	float h = 1.0 - exp(-d / haze_dist * thin);
-	// (the 遠化 is no air: over it half the haze, so its fields and roads keep their shapes)
-	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - 0.5 * v_ghost_k(wp.xz));
+	// (the 遠化 is no air. At night over it half the haze, so its fields and roads keep their shapes;
+	// by day none: what has gone far is seen clearer than the land round it, not hazier (the lead,
+	// G5R3-29), coming in with the day's weight, so its edge is where the 遠化's is)
+	float gk = v_ghost_k(wp.xz);
+	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - mix(v_ghost_day_w(gk), 0.5 * gk, w3_night));
 }
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
 	return mix(col, haze_col, v_haze_k(wp, cam));
