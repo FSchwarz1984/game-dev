@@ -42,9 +42,9 @@ func _init() -> void:
 func _ready() -> void:
 	clock = _label(12, TEXT)
 	keys = _label(12, DIM)
-	keys.text = "WASD 移动　Q/E 时刻　1–4 晨午昏夜　T 时间流动　R 雨　H 隐藏　Esc 菜单"
+	keys.text = "WASD 走　Q/E 时刻　1–4 晨午昏夜　T 时间流动　R 雨　H 隐藏　Esc 菜单"
 	tip = _label(12, DIM)
-	tip.text = "走上岩石，站定一会儿就会远眺；A/D 转向，W/S 回来" if lookout else ""
+	tip.text = "走上岩石，站定一会儿就会远眺；A/D 转头，W/S 回来" if lookout else ""
 	resized.connect(_layout)
 	_layout()
 

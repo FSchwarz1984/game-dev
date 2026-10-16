@@ -108,9 +108,9 @@ func _open_sample(m: String) -> void:
 	# are its defaults here and the command line still wins
 	var a: Dictionary = inst.get("args")
 	a["hours"] = "9.5" if m == "home" else "16.5"
-	# G5R3-21: this delivery has no character (her model is being redone): an unseen walker carries
-	# the camera, nothing stands in for her
-	a["nochar"] = "1"
+	# G5R3-24: her 3D model is being redone; this delivery shows the round-3 (V3) figure in its place,
+	# baked again at the world's 30 px per metre, so she can be seen and her effects on the world judged
+	a["sprites"] = "1"
 	if m == "lookout":
 		var lk := _lookout_start()
 		if lk != Vector2.INF:
@@ -126,8 +126,8 @@ func _open_sample(m: String) -> void:
 	hud_layer.add_child(hud)
 
 
-## A point on the path a few steps before the lookout rock: walking onto it and standing still there
-## turns the view out over the land (the sample's W3Vista).
+## A point on the path a few steps before the lookout rock, so she walks onto it herself and looks
+## out when she stands still there (the sample's W3Vista).
 func _lookout_start() -> Vector2:
 	var f := FileAccess.open("res://world3d/terrain/saddle/terrain.json", FileAccess.READ)
 	if f == null:
