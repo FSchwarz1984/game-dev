@@ -14,8 +14,8 @@
 | 2026-10-14 | G5 第一段成品：标题、序章「送魂夜」、第一天早上 | <https://claude.ai/artifact/We1nnVFD9GUdcWUT78uKaa> | 已交付，用户已答复（E-1 迁移 Godot、R-1…R-8、F-1…F-3） |
 | 2026-10-14 | G5 开工前评审：身体材质、「移」的规则、操作、地图、小地图、美术标杆、立绘、字体、剧本语气、授权（十个决定） | <https://claude.ai/artifact/QcemFFSjDfjdyJR93yCtUw> | 已答复（decision-log G5R-1…10）：菅笠、地图迷雾、样章、像素字、授权通过；名字、「移」、操作、地图、立绘、剧本要重做 |
 | 2026-10-15 | G5 第二轮评审：美术样章（3D 场景按像素画渲染）、第三版立绘、精灵图（R-4）、远景灯火（R-8）、主角的名、「移」v2、操作 v2、地图 v3、剧本第三版、两件小事（十个决定） | <https://claude.ai/artifact/PD8KPonn2V7QhQPPEtr9Gm> | 已答复（decision-log G5R2-1…11）：路线继续但大改；名 A、「移」v2、操作、地图通过；立绘、人物模型、剧本要重做 |
-| 2026-10-15 | 立绘与 3D 人物模型的素材清单（给用户用 ChatGPT 生成；含可复制的提示词；第二版按立绘第四版重排） | <https://claude.ai/artifact/1oFkdMqddgN7Y3CmxSAGvX> | 等用户发回素材 |
-| 2026-10-15 | G5 第三轮评审：美术样章第四轮、小鹊的 3D 模型（含刘海、屏幕上的大小）、立绘第四版、序章远景三个 bug、结界与爬树（四个决定）、剧本第四版 | <https://claude.ai/artifact/UCWS16k9yeLRXytTAbotr8> | 待答复（第二版已加入重做后的眺望） |
+| 2026-10-15 | 立绘与 3D 人物模型的素材清单（给用户用 ChatGPT 生成；含可复制的提示词；第二版按立绘第四版重排） | <https://claude.ai/artifact/1oFkdMqddgN7Y3CmxSAGvX> | 用户已生成两版素材，放在 Google Drive（G5R3）；"露出眉"的要求作废（G5R3-8） |
+| 2026-10-15 | G5 第三轮评审：美术样章第四轮、小鹊的 3D 模型（含刘海、屏幕上的大小）、立绘第四版、序章远景三个 bug、结界与爬树（四个决定）、剧本第四版 | <https://claude.ai/artifact/UCWS16k9yeLRXytTAbotr8> | 已答复（decision-log G5R3-0…12）：色彩退回第三轮，草、构图、道路重做；3D 模型彻底重做；刘海照原画；3 倍不变；立绘通过；结界与爬树全选 A；剧本要更出彩；这一轮后交 Windows 版 |
 
 ## 文档
 
@@ -37,5 +37,5 @@
 | [controls-v2-draft.md](controls-v2-draft.md) | 操作 v2：先指后做，鼠标、手柄、触屏的精确指向 | 已批准（G5R2-7）；触屏随安卓一起放弃 |
 | [map-v3-natural-draft.md](map-v3-natural-draft.md) | 地图 v3（自然地形）：好奇点三层、不靠镜头的引导、迷雾小地图 | 基本通过（G5R2-8）；加：自然地爬上大楠、神社一带的结界（G5R2-1） |
 | [script-03-draft.md](script-03-draft.md) | 开场剧本第三版（含场景事实表、症状结构、盲审对照） | 仍有 AI 味、缺幽默（G5R2-9），要写第四版 |
-| [script-04-draft.md](script-04-draft.md) | 开场剧本第四版：七十岁的婆婆、乌鸦和收音机、团子与饭团两条线、乌鸦回窝引她上树 | 草案（盲审后修订），进第三轮评审页 |
-| [realm-and-climb-draft.md](realm-and-climb-draft.md) | 结界只认盂兰盆的灯、里面的光走得慢（烂柯）、乌鸦叼团子回树顶的窝 | 草案（盲审后修订），进第三轮评审页 |
+| [script-04-draft.md](script-04-draft.md) | 开场剧本第四版：七十岁的婆婆、乌鸦和收音机、团子与饭团两条线、乌鸦回窝引她上树 | 方向认可但"不夠出彩"（G5R3-12），要写第五版 |
+| [realm-and-climb-draft.md](realm-and-climb-draft.md) | 结界只认盂兰盆的灯、里面的光走得慢（烂柯）、乌鸦叼团子回树顶的窝 | 已批准（G5R3-11，全部 A） |
