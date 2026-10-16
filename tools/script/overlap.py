@@ -1,4 +1,4 @@
-"""Overlap check for a script draft (G5R3-12, second blind review of v5).
+"""Overlap check for a script draft (G5R3-12; second and third blind reviews of v5).
 
 Two checks:
 
@@ -10,13 +10,25 @@ Two checks:
    punctuation are removed, a shared continuous fragment of N characters or more
    (default 7) is flagged, with the longest shared fragment and where it comes from.
 
+   A second pass folds notation before comparing (numeral + counter and a few common
+   words written in kanji become kana, 一人 -> ひとり, 一つ -> ひとつ, 今朝 -> けさ ...;
+   katakana becomes hiragana), so a reference sentence that comes back in a different
+   spelling is caught too. A third pass (--sim, default 0.4) lists draft lines made of
+   pieces of one reference sentence: after folding, the shared blocks of 3 characters or
+   more add up to at least 4 characters and cover --sim of the shorter side. It catches a
+   sentence frame reused with one word swapped, which a long-substring check misses. It is
+   a reading list, not a verdict; grammatical endings land there too.
+
 2. Chinese draft vs the fourth draft. Every Chinese line of the draft ("**中文演出稿**"
    blocks) is compared with every line of script-04 (which has only Chinese). Lines that
    are the same after punctuation is removed are counted, with and without the speaker.
+   Near-identical lines are counted too: for each new line, the best
+   difflib.SequenceMatcher ratio against any fourth-draft line, after punctuation is
+   removed; lines with --near <= ratio < 1 are listed (default 0.75).
 
 Usage:
   python3 -I tools/script/overlap.py DRAFT [--refs K26 K27] [--v4 V4] [--min 7]
-                                      [--prev-ja OLD_DRAFT]
+                                      [--prev-ja OLD_DRAFT] [--sim 0.4] [--near 0.75]
 Defaults: refs = docs/knowledge/26-human-dialogue-japanese.md and
 docs/knowledge/27-japanese-literature-close-reading.md; v4 = docs/design/script-04-draft.md.
 --prev-ja also reports which Japanese lines of DRAFT are the same as a Japanese line of
@@ -27,6 +39,7 @@ import re
 import sys
 import unicodedata
 from collections import defaultdict
+from difflib import SequenceMatcher
 
 KANA = re.compile(r"[ぁ-ゖァ-ヺゝゞヽヾ]")
 QUOTE = re.compile(r"[「『]([^「」『』]*)[」』]")
@@ -41,6 +54,28 @@ CN_LINE = re.compile(r"^>\s*([^：（「]+?)(（[^）]*）)?：「(.*)」\s*$")
 def norm(s):
     """Letters and digits only: drops whitespace, punctuation and symbols."""
     return "".join(c for c in s if unicodedata.category(c)[0] in "LN")
+
+
+# Notation variants folded to one spelling for the second pass. Longest keys first.
+FOLD = [
+    ("お一人", "おひとり"), ("一人", "ひとり"), ("二人", "ふたり"),
+    ("一つ", "ひとつ"), ("二つ", "ふたつ"), ("三つ", "みっつ"), ("四つ", "よっつ"),
+    ("五つ", "いつつ"), ("六つ", "むっつ"), ("七つ", "ななつ"), ("八つ", "やっつ"),
+    ("九つ", "ここのつ"), ("一本", "いっぽん"), ("一度", "いちど"), ("一晩", "ひとばん"),
+    ("今朝", "けさ"), ("昨夜", "ゆうべ"), ("今年", "ことし"), ("今日", "きょう"),
+    ("今夜", "こんや"), ("明日", "あした"), ("何処", "どこ"), ("誰", "だれ"),
+    ("下さ", "くださ"), ("頂", "いただ"), ("戴", "いただ"), ("致", "いた"), ("御", "お"),
+    ("降り", "おり"), ("下り", "おり"), ("帰", "かえ"), ("戻", "もど"),
+    ("食べ", "たべ"), ("食う", "くう"), ("食っ", "くっ"), ("一杯", "いっぱい"),
+]
+
+
+def fold(n):
+    """Second-pass spelling: katakana to hiragana, then the FOLD table."""
+    n = "".join(chr(ord(c) - 0x60) if "ァ" <= c <= "ヶ" else c for c in n)
+    for a, b in FOLD:
+        n = n.replace(a, b)
+    return n
 
 
 def first_quote(s):
@@ -151,14 +186,15 @@ def longest_common(a, b):
     return a[best_end - best:best_end]
 
 
-def check_japanese(draft, refs, n):
+def check_japanese(draft, refs, n, key=lambda x: x):
+    rkeys = [key(r[3]) for r in refs]
     grams = defaultdict(set)
-    for k, (_, _, _, rn) in enumerate(refs):
+    for k, rn in enumerate(rkeys):
         for i in range(len(rn) - n + 1):
             grams[rn[i:i + n]].add(k)
     flagged = []
     for item in draft:
-        dn = item[5]
+        dn = key(item[5])
         hits = set()
         for i in range(len(dn) - n + 1):
             hits |= grams.get(dn[i:i + n], set())
@@ -167,11 +203,41 @@ def check_japanese(draft, refs, n):
         best = ""
         src = None
         for k in hits:
-            frag = longest_common(dn, refs[k][3])
+            frag = longest_common(dn, rkeys[k])
             if len(frag) > len(best):
                 best, src = frag, refs[k]
         flagged.append((item, best, src))
     return flagged
+
+
+def similar_japanese(speech, refs, threshold, block=3, shared_min=4):
+    """Draft speech lines built from pieces of one reference sentence.
+
+    After folding, the matching blocks of `block` characters or more between a draft line
+    and a reference segment (both at least 6 characters) are added up; coverage is that
+    sum over the shorter of the two. Lines whose best coverage is >= threshold and share
+    at least `shared_min` characters are listed. The list is for reading, not a verdict:
+    grammatical endings (〜ません, 〜ました) also land here.
+    """
+    cands = [(r, fold(r[3])) for r in refs if len(r[3]) >= 6]
+    out = []
+    for item in speech:
+        dn = fold(item[5])
+        if len(dn) < 6:
+            continue
+        best = None
+        for r, rn in cands:
+            sm = SequenceMatcher(None, dn, rn, autojunk=False)
+            shared = sum(b.size for b in sm.get_matching_blocks() if b.size >= block)
+            if shared < shared_min:
+                continue
+            cov = shared / min(len(dn), len(rn))
+            if best is None or cov > best[0]:
+                best = (cov, shared, r)
+        if best and best[0] >= threshold:
+            out.append((best[0], best[1], item, best[2]))
+    out.sort(key=lambda x: -x[0])
+    return out
 
 
 def main():
@@ -183,6 +249,8 @@ def main():
     ap.add_argument("--v4", default="docs/design/script-04-draft.md")
     ap.add_argument("--min", type=int, default=7)
     ap.add_argument("--prev-ja", default=None)
+    ap.add_argument("--sim", type=float, default=0.4)
+    ap.add_argument("--near", type=float, default=0.75)
     a = ap.parse_args()
 
     refs = ref_segments(a.refs)
@@ -197,6 +265,23 @@ def main():
     for (scene, no, kind, who, text, _), frag, src in flagged:
         where = f"{src[0].split('/')[-1]}:{src[1]}" if src else "?"
         print(f"- [{kind}] l.{no} {scene} {who}「{text}」 共有「{frag}」({len(frag)} 字) ← {where}「{src[2][:40]}」")
+
+    literal = {f[0][1] for f in flagged}
+    folded = check_japanese(draft, refs, a.min, key=fold)
+    extra = [f for f in folded if f[0][1] not in literal]
+    print(f"\n## 1c. 折算写法后（汉字数词、常用词改假名，片假名改平假名）再比，连续 {a.min} 字以上")
+    print(f"标出：台词 {sum(1 for f in folded if f[0][2] == '台词')} 句，舞台说明 "
+          f"{sum(1 for f in folded if f[0][2] != '台词')} 条；其中字面比时没标出的 {len(extra)} 条")
+    for (scene, no, kind, who, text, _), frag, src in extra:
+        where = f"{src[0].split('/')[-1]}:{src[1]}" if src else "?"
+        print(f"- [{kind}] l.{no} {scene} {who}「{text}」 共有「{frag}」({len(frag)} 字) ← {where}「{src[2][:40]}」")
+
+    sims = similar_japanese(speech, refs, a.sim)
+    print(f"\n## 1d. 拼件相似（折算写法后，和同一条参照共有的 3 字以上片段合计 ≥ 4 字，"
+          f"占较短一方的 {a.sim:.0%} 以上；供人读，语法尾巴也会进来）：{len(sims)} 句")
+    for cov, shared, (scene, no, kind, who, text, _), src in sims:
+        where = f"{src[0].split('/')[-1]}:{src[1]}"
+        print(f"- {cov:.2f}（{shared} 字）l.{no} {who}「{text}」 ← {where}「{src[2][:50]}」")
 
     if a.prev_ja:
         prev = draft_japanese(a.prev_ja)
@@ -218,6 +303,19 @@ def main():
     for no, who, text, _ in same_text:
         mark = "" if (who, norm(text)) in v4_pairs else "（第四版是别人说的）"
         print(f"- l.{no} {who}：「{text}」{mark}")
+
+    near = []
+    for no, who, text, n in new:
+        if n in v4_texts:
+            continue
+        best = max(((SequenceMatcher(None, n, t).ratio(), w, t) for _, w, _, t in v4),
+                   key=lambda x: x[0])
+        if best[0] >= a.near:
+            near.append((best[0], no, who, text, best[1], best[2]))
+    print(f"\n## 2b. 很接近的（去掉标点后 difflib.SequenceMatcher ratio，{a.near} ≤ r < 1，"
+          f"每句取和第四版最像的一句）：{len(near)} 句")
+    for r, no, who, text, w4, t4 in sorted(near, key=lambda x: -x[0]):
+        print(f"- {r:.2f} l.{no} {who}：「{text}」 ← 第四版 {w4}「{t4}」")
 
 
 if __name__ == "__main__":
