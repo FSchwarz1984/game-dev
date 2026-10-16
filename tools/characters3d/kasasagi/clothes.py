@@ -214,12 +214,12 @@ def arm_z(x):
 
 
 SLEEVE_X0 = 0.195                # the coat's shoulder seam (sheet front: the sleeves begin at x 0.20)
-SLEEVE_X1 = 0.475
+SLEEVE_X1 = 0.500                # the cuff's outer corner (sheet front: the navy diamond's outer point)
 
 
 def sleeve_bottom(x):
-    tab = [(0.195, 0.92), (0.24, 0.80), (0.30, 0.66), (0.36, 0.56), (0.405, 0.518), (0.44, 0.56),
-           (0.475, 0.70)]
+    tab = [(0.195, 0.92), (0.24, 0.80), (0.30, 0.66), (0.36, 0.56), (0.405, 0.518), (0.45, 0.545),
+           (0.50, 0.600)]
     return interp(tab, x)
 
 
