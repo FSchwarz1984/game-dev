@@ -259,7 +259,10 @@ func update(st: Dictionary, t: float) -> void:
 	env = VistaEnv.at(etod)
 	var row := tod_row(tod)
 	var pan_k := VistaEnv.smoothj(0.0, 1.0, clampf(float(st.get("pan", 1.0)), 0.0, 1.0))
-	var dy := (1.0 - pan_k) * pan_d
+	# (past the JS frame's end the crane rises craneEnd px more over the crown, G5R3-23; not in the JS
+	# parity checks)
+	var crane_end := 0.0 if exact else float(m.get("craneEnd", 0.0))
+	var dy := (1.0 - pan_k) * pan_d - crane_end * pan_k
 	var sky_k := clampf(float(st.get("sky", 0.0)), 0.0, 1.0)
 	var wave := float(st.get("wave", -1.0))
 	# the far has been and gone (G5R3-18): the land at its final stage of peeled blocks, no lamps, no

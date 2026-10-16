@@ -11,6 +11,7 @@ The stamps are mirrored for the other side so the highlight always sits toward t
 
 from __future__ import annotations
 
+import geom as G
 from model import stamp
 
 
@@ -74,6 +75,62 @@ MOUTHS = {
 }
 
 
+# The same stamps on a finer pixel grid (build.py --ppm 26.7 .. 30: the head has 1.33 .. 1.5 times
+# as many pixels each way, the features' positions scale with it): each part keeps its proportion of
+# the face, so a 2 x 3 eye becomes 3 x 4 (the lash row, the highlight a pixel wide and two tall at
+# the top left, the iris, the lighter lower iris) and two-pixel mouths three; strokes (a closed lid,
+# the happy arc, the squeezed > ) stay one pixel thick, and the one-pixel marks (a closed mouth, the
+# blush) stay one pixel. Anchors scale with the stamp.
+EYES_HI = {
+    'open': {
+        'front': (['EEE', 'lee', 'lee', 'eqq'], (1.5, 1.33)),
+        'three': (['EEE', 'lee', 'lee', 'eqq'], (1.5, 1.33)),
+        'squeeze': (['E', 'e', 'e', 'q'], (0.5, 1.33)),
+        'side': (['E', 'l', 'l', 'e'], (0.5, 1.33)),
+    },
+    'blink': {
+        'front': (['...', '...', 'EEE'], (1.5, 1.33)),
+        'three': (['...', '...', 'EEE'], (1.5, 1.33)),
+        'squeeze': (['.', '.', 'E'], (0.5, 1.33)),
+        'side': (['.', '.', 'E'], (0.5, 1.33)),
+    },
+    'happy': {
+        'front': (['...', '.E.', 'E.E'], (1.5, 1.33)),
+        'three': (['...', '.E.', 'E.E'], (1.5, 1.33)),
+        'squeeze': (['.', 'E', '.'], (0.5, 1.33)),
+        'side': (['.', 'E', '.'], (0.5, 1.33)),
+    },
+    'shut': {
+        'front': (['E..', '.EE', 'E..'], (1.5, 1.33)),
+        'three': (['E..', '.EE', 'E..'], (1.5, 1.33)),
+        'squeeze': (['.', 'E', '.'], (0.5, 1.33)),
+        'side': (['E', '.', 'E'], (0.5, 1.33)),
+    },
+    'down': {
+        'front': (['...', '...', 'EEE', 'eqq'], (1.5, 1.33)),
+        'three': (['...', '...', 'EEE', 'eqq'], (1.5, 1.33)),
+        'squeeze': (['.', '.', 'E', 'q'], (0.5, 1.33)),
+        'side': (['.', '.', 'E', 'e'], (0.5, 1.33)),
+    },
+}
+EYES_HI['wide'] = EYES_HI['open']
+
+MOUTHS_HI = {
+    'none': {},
+    'closed': MOUTHS['closed'],
+    'open': MOUTHS['open'],
+    'talk': {'front': (['MMM'], (1.5, 0.5)), 'three': (['M'], (0.5, 0.5)), 'side': (['M'], (0.5, 0.5))},
+    'shout': {'front': (['MMM', 'MMM', 'MMM'], (1.5, 0.75)), 'three': (['M', 'M', 'M'], (0.5, 0.75)),
+              'side': (['M', 'M', 'M'], (0.5, 0.75))},
+    'chew': {'front': (['mmm'], (1.5, 0.5)), 'three': (['m'], (0.5, 0.5)), 'side': (['m'], (0.5, 0.5))},
+}
+
+
+def hi_res():
+    """True on a grid fine enough for the larger stamps (build.py --ppm 25 and up)."""
+    return G.K >= 1.25
+
+
 def mirror(grid):
     return [row[::-1] for row in grid]
 
@@ -82,7 +139,8 @@ def paint_face(img, px, feats, cmap, expr='open', mouth='closed', blush=True, ex
                eye_dx=0.0):
     """feats: name -> (X, Y, depth, normal) with eyeL, eyeR (her left / right), mouth, blushL/R.
     The far eye of a turned face uses the squeezed stamp; the near one the full stamp."""
-    eyes = EYES.get(expr, EYES['open'])
+    eye_set, mouth_set = (EYES_HI, MOUTHS_HI) if hi_res() else (EYES, MOUTHS)
+    eyes = eye_set.get(expr, eye_set['open'])
     eL, eR = feats.get('eyeL'), feats.get('eyeR')
     classes = {}
     for nm, f in (('eyeL', eL), ('eyeR', eR)):
@@ -116,10 +174,10 @@ def paint_face(img, px, feats, cmap, expr='open', mouth='closed', blush=True, ex
             grid = mirror(grid)
         stamp(img, px, X + eye_dx, Y, grid, cmap, anchor, depth=d)
     m = feats.get('mouth')
-    if m is not None and mouth in MOUTHS:
+    if m is not None and mouth in mouth_set:
         vc = view_class(m[3][2])
-        if vc in MOUTHS[mouth]:
-            grid, anchor = MOUTHS[mouth][vc]
+        if vc in mouth_set[mouth]:
+            grid, anchor = mouth_set[mouth][vc]
             stamp(img, px, m[0], m[1], grid, cmap, anchor, depth=m[2], only_on=skin_ids)
     if blush:
         for nm in ('blushL', 'blushR'):

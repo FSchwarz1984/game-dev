@@ -98,6 +98,32 @@ function mtnK(t) {
 }
 const toH = (r, t = 0) => (r <= EYE_REL ? r / EYE_REL : 1 + (r - EYE_REL) / U * mtnK(t));
 export const P = (x, z) => [-x / U, z / U];
+
+// Below the eye, the picture's depression (G5R3-23): option C kept the prologue's band by drawing every
+// depression at 0.48 of the 3D's (the plain flat and its edges' hills flattened with it). Now the screen
+// depression is G(t) of the true one (t = tan, from the crown), piecewise linear through DEP: as before
+// out to ~4 km; the plain's nearer half and the hills along its sides (the frame the lookout sees) at
+// 0.70; the foot of the pass and the lower layer below it at 0.40; nearer still at 0.25. Only the
+// projection (the march, houses, lamps, the viaduct) uses it; the land's relief (land use, light) does
+// not.
+const DEP0 = [[0, 0], [0.1, 0.048], [0.25, 0.153], [0.45, 0.233], [1.5, 0.496]];
+let DEP = DEP0;
+export function depKnots() { return DEP.map(k => k.slice()); }
+/** For tools: another mapping (knots after [0, 0]); the railway's projection is redone. */
+export function setDepression(knots) { DEP = knots ? [[0, 0], ...knots] : DEP0; if (W3) prepare(); }
+export function depG(t) {
+  for (let i = 0; i < DEP.length - 1; i++) {
+    const [t0, g0] = DEP[i], [t1, g1] = DEP[i + 1];
+    if (t <= t1 || i === DEP.length - 2) return g0 + (t - t0) * (g1 - g0) / (t1 - t0);
+  }
+  return 0;
+}
+/** relief height h (prologue units: r / EYE_REL below the eye) -> the height that projects to the
+ *  picture's depression at Z */
+export function warpH(h, Z) {
+  if (h >= 1) return h;
+  return 1 - Z * depG((1 - h) * EYE_REL / Math.max(1e-6, Z * U));
+}
 /** prologue height at X, Z (the plain at 0) */
 function heightBase(X, Z) {
   const y = landY(-X * U, Z * U);
@@ -141,7 +167,7 @@ function prepare() {
     if (acc >= 1.5 || i === dense.length - 1) { riv.push([+X.toFixed(3), +Z.toFixed(3)]); acc = 0; }
   }
   RIVER = riv;
-  RAILWAY = J.railway.map(([x, dk, z, gy]) => { const [X, Z] = P(x, z); return [X, Z, toH(Math.max(0, dk - Y_PLAIN)), toH(Math.max(0, gy - Y_PLAIN - FLAT))]; });
+  RAILWAY = J.railway.map(([x, dk, z, gy]) => { const [X, Z] = P(x, z); return [X, Z, warpH(toH(Math.max(0, dk - Y_PLAIN)), Z), warpH(toH(Math.max(0, gy - Y_PLAIN - FLAT)), Z)]; });
   ROAD = J.road.map(([x, z]) => P(x, z));
   VILLAGES = J.villages.map(([x, z, r, n], i) => { const [X, Z] = P(x, z); return { i, X, Z, r: r / U, n, x, z }; });
   HOUSES = J.plain_houses.map(([x, y, z, rot, w, d, hgt, roof, seed, vi]) => { const [X, Z] = P(x, z); return { X, Z, w, roof, seed, vi }; });
@@ -231,6 +257,8 @@ export function makeHeight() {
     return t;
   };
   height.base = base;
+  // (the projection's height: the relief drawn at the picture's depression)
+  height.warp = (X, Z) => warpH(height(X, Z), Z);
   return height;
 }
 
@@ -304,7 +332,7 @@ function midUse(x, z) {
 export function* buildPlainGen({ w, h, cx, yh, f, S, sun, seed }) {
   const height = makeHeight();
   const t0 = performance.now();
-  const m = yield* marchGen({ w, h, cx, yh, f, camY: 1, z0: 0.22, z1: 900, height, k: 0.008, kFar: 0.02, zFar: 70 });
+  const m = yield* marchGen({ w, h, cx, yh, f, camY: 1, z0: 0.22, z1: 900, height: height.warp, k: 0.008, kFar: 0.02, zFar: 70 });
   yield;
   const shadow = sunShadows(height, { xa: -70, xb: 70, za: 0.3, zb: 160, nx: 900, nz: 260, slope: sun.slope, soft: 0.05 });
   yield;
@@ -371,7 +399,8 @@ export function* buildPlainGen({ w, h, cx, yh, f, S, sun, seed }) {
   }
   yield;
   L.despeckle(() => true);
-  return { layer: L, X: m.X, Z: m.Z, mask: m.mask, height, ms: { total: Math.round(performance.now() - t0) } };
+  // height: the projection's (for anything placed in the picture: houses, lamps); relief: the land's
+  return { layer: L, X: m.X, Z: m.Z, mask: m.mask, height: height.warp, relief: height, ms: { total: Math.round(performance.now() - t0) } };
 }
 
 // ---------------------------------------------------------------- houses and their lamps
@@ -521,7 +550,7 @@ export function riverBonfires(ground, cam, W, H) {
   for (const q of [0.15, 0.5, 0.85]) {
     const i = near[Math.min(near.length - 1, Math.floor(q * near.length))];
     const X = RIVER[i][0] + 0.16, Z = RIVER[i][1];
-    const x = Math.round(cx + f * X / Z), y = Math.round(yh + f / Z);
+    const x = Math.round(cx + f * X / Z), y = Math.round(yh + f * (1 - warpH(0, Z)) / Z);
     if (x > 0 && x < W && y > 0 && y < H && ground.Z[y * W + x] > Z * 0.9) out.push({ x, y, X, Z, kind: 'bonfire', river: true });
   }
   return { fires: out, near };

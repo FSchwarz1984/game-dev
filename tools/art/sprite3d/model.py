@@ -57,10 +57,14 @@ class Model:
         self.sk = Hu.build_skeleton(self.P)
         self.pal = self.palette()
         self.chains = self.chain_specs()
+        if G.K != 1.0:
+            # a finer pixel grid (build.py --ppm): the cell and the pivot, in pixels, grow with it
+            self.FRAME = (int(round(self.FRAME[0] * G.K)), int(round(self.FRAME[1] * G.K)))
+            self.PIVOT = (int(round(self.PIVOT[0] * G.K)), int(round(self.PIVOT[1] * G.K)))
         if G.PITCH > 20.0:
             # a steeper camera shows ground depth deeper (tan(pitch) instead of tan 20): feet put
             # forward and bodies lying toward the camera reach further down and up the cell
-            extra = int(math.ceil((math.tan(math.radians(G.PITCH)) - math.tan(math.radians(20.0))) * 15))
+            extra = int(math.ceil((math.tan(math.radians(G.PITCH)) - math.tan(math.radians(20.0))) * 15 * G.K))
             self.FRAME = (self.FRAME[0], self.FRAME[1] + 2 * extra)
             self.PIVOT = (self.PIVOT[0], self.PIVOT[1] + extra)
 
@@ -165,7 +169,7 @@ class Model:
         cam = G.camera() @ G.M4(G.Ry(yaw))
         c = math.cos(math.radians(G.PITCH))
         hp = cam @ bw['head'] @ np.array([0, 0, 0, 1.0])
-        return (hp[0], -hp[1] / c)
+        return (G.K * hp[0], -G.K * hp[1] / c)
 
     def rest_pose(self):
         return {}
@@ -181,21 +185,22 @@ class Model:
         if snap_head is not None:
             # move the head unit so its screen position keeps the reference sub-pixel phase
             hp = cam @ bw['head'] @ np.array([0, 0, 0, 1.0])
-            u, v = hp[0], -hp[1] / c
+            u, v = G.K * hp[0], -G.K * hp[1] / c          # pixels on this sheet's grid
             du = (round(u - snap_head[0]) + snap_head[0]) - u
             dv = (round(v - snap_head[1]) + snap_head[1]) - v
-            # screen offset -> body-frame offset (x along camera x, y up = -v * cos / ... )
+            # screen offset (pixels) -> body-frame offset (model units: K pixels each)
             inv = np.linalg.inv(cam[:3, :3])
-            off = inv @ np.array([du, -dv * c, 0.0])
+            off = inv @ np.array([du / G.K, -dv * c / G.K, 0.0])
             for b in self.head_bones_all(bw):
                 m = bw[b].copy(); m[:3, 3] += off; bw[b] = m
         shapes = self.shapes(dict(ctx, bones=bw, yaw=yaw))
         part_ids, group_ids = {}, {}
         prims = G.assemble(shapes, bw, cam, self.pal.ids, part_ids, group_ids, ground=ctx.get('ground', -0.3))
-        x0 = -PVX - 0.5
-        y0 = PVY * c
+        # the cell's top left in camera units; a pixel is 1 / K model units (build.py --ppm)
+        x0 = (-PVX - 0.5) / G.K
+        y0 = PVY * c / G.K
         zs, rs = prims[:, 32], prims[:, 33]
-        buf = render(prims, FW * S, FH * S, x0, y0, 1.0 / S, c / S, float((zs + rs).max() + 1),
+        buf = render(prims, FW * S, FH * S, x0, y0, 1.0 / (S * G.K), c / (S * G.K), float((zs + rs).max() + 1),
                      float((zs - rs).min() - 1), self.pal.L.astype(np.float32), ao_dist=self.P.get('ao', 2.4),
                      shadow_k=self.P.get('shadow_k', 8.0), block=S)
         px = St.stylize(buf, S, self.pal, cover=self.P.get('cover', 0.5))
@@ -226,7 +231,7 @@ class Model:
             q = cam @ bw[bone] @ np.array([p[0], p[1], p[2], 1.0])
             # px relative to her ground point = the pivot pixel's top-left corner (the node origin in
             # the engine); x right, y down. Her centre line runs at x = +0.5 (the pivot column's middle).
-            anchors[name] = [round(q[0] + 0.5, 1), round(-q[1] / c, 1)]
+            anchors[name] = [round(G.K * q[0] + 0.5, 1), round(-G.K * q[1] / c, 1)]
         return img, nrm, anchors, px
 
     def head_bones_all(self, bw):
@@ -254,7 +259,7 @@ class Model:
             # would be there, so another pitch keeps the same stamps for the same pose
             nn = G.Rx(20.0 - G.PITCH) @ nn
             nn /= max(np.linalg.norm(nn), 1e-9)
-            out[name] = (q[0] + PVX + 0.5, -q[1] / c + PVY, q[2], nn)
+            out[name] = (G.K * q[0] + PVX + 0.5, -G.K * q[1] / c + PVY, q[2], nn)
         return out
 
 

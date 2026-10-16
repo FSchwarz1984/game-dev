@@ -1,5 +1,6 @@
 """Geometry for the 3D character models: rotations, a bone hierarchy, SDF shapes attached to bones,
-and the camera. Units: one model unit = one native pixel. Model frame: X = her left, Y = up,
+and the camera. Units: one model unit = one native pixel of a 20 px/m sheet (K = PPM / 20 pixels
+on a finer one, build.py --ppm). Model frame: X = her left, Y = up,
 Z = forward (right-handed). World frame: X east, Y up, Z south; facing 'front' = facing south,
 toward the camera, so the model frame equals the world frame.
 
@@ -186,6 +187,11 @@ def skirt(bone, h, r_hem, r_waist, mat, sx=1.0, sz=1.0, wave=(0, 0, 0), flare=(0
 # Camera and assembly
 
 PITCH = float(os.environ.get('TENGAN_SPRITE_PITCH', '20.0'))
+# Pixels per metre of the sheets (build.py --ppm). The models stay in their own units (one unit =
+# 1/20 m = one pixel of the 20 px/m sets); a finer grid draws K = PPM / 20 pixels per unit (30 for
+# the 3D world's 30 px per metre: the same figure, half again as many pixels each way).
+PPM = float(os.environ.get('TENGAN_SPRITE_PPM', '20.0'))
+K = PPM / 20.0
 
 
 def camera(pitch=PITCH):

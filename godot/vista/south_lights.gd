@@ -239,6 +239,10 @@ func update(rise_k: float, t: float) -> void:
 ## east, so they drift away from us; dimmer as they go (a trail into the distance, not a blob where
 ## the river turns away and they crowd on screen).
 func update_river(t: float, tod: float, rise_k: float, wave: float) -> void:
+	if dep.is_empty():
+		dep = s.m.get("dep", [])
+		eye_rel = float(s.m.get("eyeRel", 380.0))
+		plain_u = float(s.m.get("plainU", 182.0))
 	var ra := VistaEnv.smoothj(19.1, 19.5, tod) * (1.0 - VistaEnv.smoothj(0.12, 0.6, rise_k))
 	river.visible = ra > 0.02
 	if not river.visible:
@@ -265,7 +269,7 @@ func update_river(t: float, tod: float, rise_k: float, wave: float) -> void:
 			var X := lerpf(A[0], B[0], kk) + float(fl[2])
 			var Z := lerpf(A[1], B[1], kk)
 			x = floor(cx + f * X / Z + 0.5)
-			y = floor(yl + f / Z + 0.5)
+			y = floor(yl + f * floor_dep(Z) + 0.5)
 			if x >= 0 and x < w and y >= 0 and y < h:
 				var o := (int(y) * w + int(x)) * 2
 				var zg := (zb[o] + zb[o + 1] * 256) * 1024.0 / 65535.0
@@ -290,3 +294,22 @@ static func wave_at(r: float) -> float:
 		if r <= RK[i + 1][1]:
 			return lerpf(RK[i][0], RK[i + 1][0], (r - RK[i][1]) / (RK[i + 1][1] - RK[i][1]))
 	return 1.01
+
+
+var dep: Array = []          # the picture's depression below the eye (plain.js depG): knots (t, g)
+var eye_rel := 380.0
+var plain_u := 182.0
+
+
+## The plain's floor at depth Z (prologue units) as the picture draws it: its depression / f (plain.js
+## depG of the true depression; without knots the old proportional one, 1 / Z).
+func floor_dep(Z: float) -> float:
+	if dep.size() < 2:
+		return 1.0 / Z
+	var t := eye_rel / maxf(1e-6, Z * plain_u)
+	for i in dep.size() - 1:
+		var a: Array = dep[i]
+		var b: Array = dep[i + 1]
+		if t <= float(b[0]) or i == dep.size() - 2:
+			return float(a[1]) + (t - float(a[0])) * (float(b[1]) - float(a[1])) / (float(b[0]) - float(a[0]))
+	return 0.0

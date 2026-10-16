@@ -37,6 +37,10 @@ import { IdSpace, lutRows, idImage, fixed16, fixedS16, rows, todOfRow, TOD_ROWS,
 const REF_W = 480, REF_H = 270;
 const P = { far: 0.1, canopy: 1, front: 2.4 };
 const CT = 66;
+// the crane goes on a little past the crown at its end (G5R3-23): the canopy settles this many px
+// lower than the JS frame had it, so that the lower layer below the pass (the farm, the 溜池, the
+// terraces, the switchbacks; the mid-ground the lookout sees) shows between the plain and the leaves
+const CRANE_END = 30;
 const KINDS = ['window', 'lantern', 'star', 'fire', 'bonfire'];
 // HEAD's draws from its sequence before the canopy (river lanterns and its procession plan, on HEAD's
 // map): frozen, so the crown's clumps stay the ones the user approved whatever the plain becomes
@@ -305,12 +309,14 @@ export function bakeSouth(o = {}) {
 
   const out = {
     meta: {
-      shot: 'south', seed, refW: REF_W, refH: REF_H, Wc, ox, YL, GH, dyC, Cx, f, S, yh0, D0, padTop0, CT, P,
+      shot: 'south', seed, refW: REF_W, refH: REF_H, Wc, ox, YL, GH, dyC, Cx, f, S, yh0, D0, padTop0, CT, craneEnd: CRANE_END, P,
       Hcl, deckRows, deckYa: deck.ya, Xc, Zc, waveR: Math.hypot(Xc, Zc) - 0.05,
       classes: classes.map(c => ({ H: c.H, yh: c.yh, D: c.D, padTop: c.padTop, S: r3(c.S), Hs: r3(c.Hs), Fn: c.Fn, T: c.T.map(r2), hole: c.hole, hazeEdgeY: c.hazeEdgeY, shoreH: c.shoreH, y0: c.y0, fade: c.fade })),
       oyC, CH, CHc, nearH, headDraws, anchors, tod0: TOD0, todStep: TOD_STEP, todRows: TOD_ROWS,
       deckScale: 8192, zFixed: [0, 1024], counts: { lights: lights.length, stars: stars.length, paddyStars: paddyStars.length },
       river: riverRev, riverLanterns: river.map(v => [r3(v.u0), r3(v.ph), r3(v.side)]), plainU: PL.U,
+      // the picture's depression below the eye (plain.js depG): knots (t, g); the eye's height in m
+      dep: PL.depKnots(), eyeRel: PL.EYE_REL,
       // how far the mountains were lowered to stay clear of the sky shore (plain.js mountainFit)
       mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
       // the far as a print (plain.js): the key block's ink at the hour, the blocks' fronts past the rim

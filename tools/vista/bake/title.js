@@ -58,7 +58,7 @@ export function bakeTitle(o = {}) {
       const a = RL(), ph = RL(), sd = RL();
       const u = near[0] - 0.5 + a * a * 18, i0 = Math.max(0, Math.min(RIV.length - 2, Math.floor(u))), t = clamp(u - i0, 0, 1);
       const X = lerp(RIV[i0][0], RIV[i0 + 1][0], t) + (sd - 0.5) * 0.06, Z = lerp(RIV[i0][1], RIV[i0 + 1][1], t);
-      const x = Math.round(cx + f * X / Z), y = Math.round(YH + f / Z);
+      const x = Math.round(cx + f * X / Z), y = Math.round(YH + f * (1 - PL.warpH(0, Z)) / Z);
       if (x < 0 || x >= Wc || y < 0 || y >= Hc || ground.Z[y * Wc + x] < Z * 0.9) continue;
       lights.push({ x, y, X, Z, kind: 'float', ph: ph * TAU });
     }

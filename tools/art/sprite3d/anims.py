@@ -10,13 +10,15 @@ from __future__ import annotations
 
 import math
 
+import geom as G
 import humanoid as Hu
 from model import FrameSpec
 
 
 def snap_pelvis(P, pose):
+    # whole pixels of the sheet's grid (1 / K model units, build.py --ppm)
     if 'pelvis_y' in pose:
-        pose['pelvis_y'] = P['hip'] + round(pose['pelvis_y'] - P['hip'])
+        pose['pelvis_y'] = P['hip'] + round((pose['pelvis_y'] - P['hip']) * G.K) / G.K
     return pose
 
 
@@ -43,7 +45,7 @@ def idle(model, frames=12, blink=(9,), extra=None):
         pose = dict(base)
         breath = 1 if 0.30 <= ph < 0.70 else 0
         if breath:
-            pose['offset_spine'] = (0.0, 1.0, 0.0)
+            pose['offset_spine'] = (0.0, 1.0 / G.K, 0.0)      # one pixel of the sheet's grid
         lag = 1 if 0.38 <= ph < 0.78 else 0
         for s, sx in (('L', 1), ('R', -1)):
             u = base.get('uarm' + s, (0, 0, 0))
@@ -61,7 +63,7 @@ def idle(model, frames=12, blink=(9,), extra=None):
 # and for locomotion its nominal ground speed in m/s (the engine scales playback to the real
 # speed so the feet do not skate).
 
-PPM = 20.0
+PPM = 20.0                  # model units per metre (not the sheet's pixels: geom.PPM)
 
 
 def loco_spec(kind, frames, fps, views, sheets, wind):

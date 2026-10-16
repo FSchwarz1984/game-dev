@@ -209,7 +209,11 @@ class Shione(Model):
             if f is None or Face.view_class(f[3][2]) is None:
                 return
             vc = Face.view_class(f[3][2])
-            grid = ['k.k'] if vc == 'front' else (['kk'] if vc == 'three' else ['k'])
+            if Face.hi_res():
+                # a finer grid (build.py --ppm): the strokes stay a pixel, the gap between them grows
+                grid = ['k..k'] if vc == 'front' else (['k.k'] if vc == 'three' else ['k'])
+            else:
+                grid = ['k.k'] if vc == 'front' else (['kk'] if vc == 'three' else ['k'])
             stamp(img, px, f[0], f[1], grid, cmap, (len(grid[0]) / 2, 0.5), depth=f[2], only_on=skin)
         Face.paint_face(img, px, feats, cmap, expr=ctx.get('expr', 'open'), mouth=ctx.get('mouth', 'closed'),
                         blush=False, skin_ids=skin, extra=marks)

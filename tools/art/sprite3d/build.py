@@ -6,6 +6,10 @@
     python3 -I tools/art/sprite3d/build.py --jobs 4           # worker processes (default: CPUs)
     python3 -I tools/art/sprite3d/build.py --pitch 39.33 --out DIR --anims idle,walk,run
                                                               # another camera pitch, elsewhere
+    python3 -I tools/art/sprite3d/build.py --pitch 39.33 --ppm 30 --out DIR --anims idle,walk,run
+                                                              # and a finer pixel grid (the 3D world's
+                                                              # 30 px per metre): the same figures,
+                                                              # rendered again, never scaled
 
 Outputs (deterministic: the same sources give byte-identical PNGs):
     assets/sprites/<character>_<sheet>.png     albedo, RGBA, alpha 0/255
@@ -131,7 +135,8 @@ def build(names, jobs, preview=None, out_dir=None, only_anims=None):
             results = [render_job(w) for w in work]
         res = {r[0]: r for r in results}
         man = {'frame': [FW, FH], 'pivot': list(m.PIVOT),
-               'camera': {'pitch': round(G.PITCH, 3), 'ppm': 20}, 'anims': {}, 'sheets': {}}
+               'camera': {'pitch': round(G.PITCH, 3), 'ppm': 20 if G.PPM == 20.0 else round(G.PPM, 3)},
+               'anims': {}, 'sheets': {}}
         for anim, spec in mod.ANIMS.items():
             if only_anims and anim not in only_anims:
                 continue
@@ -235,11 +240,18 @@ def main():
     ap.add_argument('--pitch', type=float, default=None, help='camera pitch in degrees (default 20)')
     ap.add_argument('--out', default=None, help='output directory (default assets/sprites)')
     ap.add_argument('--anims', default=None, help='only these animations (comma separated)')
+    ap.add_argument('--ppm', type=float, default=None,
+                    help='pixels per metre of the sheets (default 20): the models are rendered again on a '
+                         'finer grid, with stamps sized for it (face.py), never scaled')
     args = ap.parse_args()
     if args.pitch is not None:
         if args.out is None:
             sys.exit('--pitch needs --out: the sheets in assets/sprites are the 20 degree set')
         os.environ['TENGAN_SPRITE_PITCH'] = str(args.pitch)
+    if args.ppm is not None and args.ppm != 20.0:
+        if args.out is None:
+            sys.exit('--ppm needs --out: the sheets in assets/sprites are the 20 px per metre set')
+        os.environ['TENGAN_SPRITE_PPM'] = str(args.ppm)
     names = args.only.split(',') if args.only else CHARACTERS
     build(names, args.jobs, args.preview, args.out, set(args.anims.split(',')) if args.anims else None)
 

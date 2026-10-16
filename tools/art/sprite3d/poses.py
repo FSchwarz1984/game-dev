@@ -85,7 +85,8 @@ def frames(m, poses, ctxs=None, wind=None, snap=True):
     for i, p in enumerate(poses):
         p = dict(p)
         if snap and 'pelvis_y' in p:
-            p['pelvis_y'] = m.P['hip'] + round(p['pelvis_y'] - m.P['hip'])
+            # whole pixels of the sheet's grid (1 / K model units, build.py --ppm)
+            p['pelvis_y'] = m.P['hip'] + round((p['pelvis_y'] - m.P['hip']) * G.K) / G.K
         ctx = dict(ctxs[i]) if ctxs else {}
         w = wind[i] if wind else (0, 0, 0)
         out.append(FrameSpec(p, ctx, wind=w))
