@@ -157,17 +157,17 @@ const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
 uniform float ghost_night_gain = 0.89;
 // the day's 遠化 (see v_ghost): where it is, by k, coming in early and quickly (its edge where the
 // night's is); its key, contrast and shoulder in display terms, before the view's grade
-uniform float ghost_day_w0 = 0.025;
-uniform float ghost_day_w1 = 0.09;
-uniform float ghost_day_key = 0.684;
-uniform float ghost_day_key_town = 0.82;
-uniform float ghost_day_contrast = 1.6;
+uniform float ghost_day_w0 = 0.035;
+uniform float ghost_day_w1 = 0.045;
+uniform float ghost_day_key = 0.77;
+uniform float ghost_day_key_town = 1.14;
+uniform float ghost_day_contrast = 2.8;
 uniform float ghost_day_mid = 0.5;
 // (a soft shoulder from the knee up to the ceiling: through the view's grade the ceiling lands near
 // L* 94, so nothing is blown white; the light and shade stay below it, darker strokes on a bright
 // ground, as cut)
-uniform float ghost_day_knee = 0.70;
-uniform float ghost_day_ceiling = 0.81;
+uniform float ghost_day_knee = 0.72;
+uniform float ghost_day_ceiling = 0.815;
 uniform float ghost_day_lref = 1.19;          // the white surface's light at noon (the key is set for it)
 const vec3 V_GHOST_TINT_DAY = vec3(0.955, 0.975, 1.02);
 float v_ghost_day_w(float k) {
@@ -265,14 +265,23 @@ float v_light_ref() {
 // - at dusk and dawn the one turns into the other with the night (w3_night).
 const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
 uniform float ghost_day_gamma = 4.0;
-vec3 v_ghost(vec3 col, float k) {
+vec3 v_ghost_at(vec3 col, float k, float dist) {
 	if (k <= 0.0) return col;
 	float lref = max(v_light_ref(), 1e-4);
 	float l = w3_luma(col) / lref;
 	float ld = pow(clamp(l, 0.0, 1.6), 1.0 / 2.2);
 	// by day
 	float key = mix(ghost_day_key, ghost_day_key_town, pow(k, ghost_day_gamma));
-	float lo = key + ghost_day_contrast * (ld - ghost_day_mid);
+	// (far off, past ~2.5 km, the spread halves by ~5 km and the middle it turns on comes down to the
+	// far land's own: once its air is gone the far land is darker than the near, and turned on the
+	// near's middle it fell to the lightness of the hazy land round it, so that the 遠化's far edge
+	// did not read)
+	float far = smoothstep(2500.0, 5000.0, dist);
+	// (and with the sun low the shadows of the far slopes are long and deep: spread as at noon they went
+	// black and the 遠化 read dirty; the spread eases to 0.55 as the sun goes down to the hills)
+	float sun_hi = smoothstep(0.08, 0.35, normalize(w3_sun_dir).y);
+	float con = ghost_day_contrast * mix(1.0, 0.5, far) * mix(0.55, 1.0, sun_hi);
+	float lo = key + con * (ld - mix(ghost_day_mid, 0.455, far));
 	float kn = ghost_day_knee, room = ghost_day_ceiling - ghost_day_knee;
 	lo = lo < kn ? max(lo, 0.0) : kn + room * (1.0 - exp(-(lo - kn) / room));
 	vec3 gd = w3_srgb_to_linear(clamp(lo * V_GHOST_TINT_DAY, vec3(0.0), vec3(1.0))) * clamp(lref / ghost_day_lref, 0.5, 1.0);
@@ -283,6 +292,9 @@ vec3 v_ghost(vec3 col, float k) {
 	vec3 own = pow(clamp(col / lref, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
 	vec3 gn = w3_srgb_to_linear(clamp(0.9 * ln * V_GHOST_TINT_NIGHT + 0.1 * own, vec3(0.0), vec3(1.0))) * ghost_night_gain;
 	return mix(day, mix(col, gn, k), w3_night);
+}
+vec3 v_ghost(vec3 col, float k) {
+	return v_ghost_at(col, k, 0.0);
 }
 // lamps go out in the 遠化 (and smoke and cloud stand still there: vista_puff, vista_cloud)
 float v_drain(vec2 xz, float y) {

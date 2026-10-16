@@ -129,7 +129,7 @@ void fragment() {
 		col = mix(col, base * tint, strength * keep * (1.0 - smoothstep(1500.0, 6000.0, c)) * mix(1.0, 0.7, smoothstep(0.5, 0.75, lb)));
 	}
 	// ---- the 遠化's colour (vista_common v_ghost)
-	col = v_ghost(col, gk);
+	col = v_ghost_at(col, gk, c < 20000.0 ? length(wp - eye) : 0.0);
 
 	// ---- the marks
 	if (marks) {
