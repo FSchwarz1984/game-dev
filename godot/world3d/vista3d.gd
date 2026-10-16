@@ -291,7 +291,7 @@ func _tex_lin(path: String) -> ImageTexture:
 # the 遠化 (G5R3-22): its heart is the town in the middle of the plain, where the prologue's tide
 # burst; heaviest there, thinner ring by ring outward (vista_common v_ghost_k, the same numbers as the
 # prologue's 2D view: coord/to_vista2d)
-const GHOST_R := Vector4(400.0, 1100.0, 2600.0, 5500.0)   # full to r0; 0.75 at r1; 0.4 at r2; none past r3 (m)
+const GHOST_R := Vector4(350.0, 900.0, 2000.0, 4200.0)   # full to r0; 0.6 at r1; 0.3 at r2; none past r3 (m)
 var _ghost_c := Vector2.INF
 
 
@@ -320,11 +320,11 @@ func ghost_k(x: float, z: float) -> float:
 	if r < GHOST_R.x:
 		k = 1.0
 	elif r < GHOST_R.y:
-		k = lerpf(1.0, 0.75, smoothstep(GHOST_R.x, GHOST_R.y, r))
+		k = lerpf(1.0, 0.6, smoothstep(GHOST_R.x, GHOST_R.y, r))
 	elif r < GHOST_R.z:
-		k = lerpf(0.75, 0.4, smoothstep(GHOST_R.y, GHOST_R.z, r))
+		k = lerpf(0.6, 0.3, smoothstep(GHOST_R.y, GHOST_R.z, r))
 	else:
-		k = lerpf(0.4, 0.0, smoothstep(GHOST_R.z, GHOST_R.w, r))
+		k = lerpf(0.3, 0.0, smoothstep(GHOST_R.z, GHOST_R.w, r))
 	var me: Dictionary = data["mist"]
 	var e := Vector2((x - float(me["cx"])) / float(me["rx"]), (z - float(me["cz"])) / float(me["rz"])).length()
 	return k * smoothstep(1.15, 1.8, e)

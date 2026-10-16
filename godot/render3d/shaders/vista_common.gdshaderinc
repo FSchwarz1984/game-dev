@@ -145,10 +145,11 @@ float v_mist_e(vec2 xz) {
 
 // (the 遠化's heart and rings: see the 遠化 below)
 // The town and the rings (vista3d.gd sets them from vista.json; the prologue's 2D view keeps the same
-// numbers: coord/to_vista2d): full within r0, 0.75 at r1, 0.4 at r2, nothing past r3 (metres), each
-// ring's radius wandering a tenth either way round the town.
+// numbers: coord/to_vista2d): full within r0, 0.6 at r1, 0.3 at r2, nothing past r3 (metres), each
+// ring's radius wandering a tenth either way round the town. (The plain in front of the town lies
+// within two kilometres of it: wider rings drew the whole plain one pale silver, with no heart.)
 uniform vec2 ghost_c = vec2(-260.0, 2160.0);
-uniform vec4 ghost_r = vec4(400.0, 1100.0, 2600.0, 5500.0);
+uniform vec4 ghost_r = vec4(350.0, 900.0, 2000.0, 4200.0);
 const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
 
 // how far gone a point is: 1 at the heart .. 0 (as it is)
@@ -159,9 +160,9 @@ float v_ghost_k(vec2 xz) {
 	float r = length(d) / w;
 	float k;
 	if (r < ghost_r.x) k = 1.0;
-	else if (r < ghost_r.y) k = mix(1.0, 0.75, smoothstep(ghost_r.x, ghost_r.y, r));
-	else if (r < ghost_r.z) k = mix(0.75, 0.4, smoothstep(ghost_r.y, ghost_r.z, r));
-	else k = mix(0.4, 0.0, smoothstep(ghost_r.z, ghost_r.w, r));
+	else if (r < ghost_r.y) k = mix(1.0, 0.6, smoothstep(ghost_r.x, ghost_r.y, r));
+	else if (r < ghost_r.z) k = mix(0.6, 0.3, smoothstep(ghost_r.y, ghost_r.z, r));
+	else k = mix(0.3, 0.0, smoothstep(ghost_r.z, ghost_r.w, r));
 	// (the region's ring round home stays as it is)
 	return k * smoothstep(1.15, 1.8, v_mist_e(xz));
 }
@@ -222,12 +223,13 @@ float v_cloud_shade(vec3 wp) {
 float v_light_ref() {
 	return w3_luma(vec3(w3_luma(w3_sky)) * w3_shade_tint + w3_sun * w3_lit_tint * (0.78 / W3_PI));
 }
-// The 遠化's own light (the lead, after the prologue matched: round 2's "lit by nothing in particular"):
-// by day about the hour's own (a little under it: with the lift its silver sits level with the land
-// round it or a touch above), but never under a light of its own (V_GHOST_OWN), so at night it is a
-// bright silver one or two steps above the dark land; little of the hour shows in it.
-const float V_GHOST_DAY = 0.8;
-const float V_GHOST_OWN = 0.3;
+// The 遠化's own light (the lead, after the prologue matched: round 2's "lit by nothing in particular";
+// G5R3-26: at night a silver grey, not a glare, as the prologue's v6, the town about sRGB 110-150):
+// by day the hour's own (with the lift its silver sits a touch above the land round it), but never
+// under a light of its own (V_GHOST_OWN), so at night it is a silver grey a step or two above the
+// dark land, and at dusk between the two.
+const float V_GHOST_DAY = 1.0;
+const float V_GHOST_OWN = 0.5;
 float v_ghost_light() {
 	float d = v_light_ref() * V_GHOST_DAY;
 	return sqrt(d * d + V_GHOST_OWN * V_GHOST_OWN);
@@ -258,7 +260,8 @@ float v_haze_k(vec3 wp, vec3 cam) {
 	// the air thins with height: far peaks stay legible above the lowland's haze
 	float thin = mix(1.0, 0.35, smoothstep(-100.0, 700.0, wp.y));
 	float h = 1.0 - exp(-d / haze_dist * thin);
-	return clamp(h, 0.0, 1.0) * mist_max;
+	// (the 遠化 is no air: over it half the haze, so its fields and roads keep their shapes)
+	return clamp(h, 0.0, 1.0) * mist_max * (1.0 - 0.5 * v_ghost_k(wp.xz));
 }
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
 	return mix(col, haze_col, v_haze_k(wp, cam));
