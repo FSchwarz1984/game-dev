@@ -527,9 +527,10 @@ for (const m of [G.wall, G.kura]) BLOCK[m] = [V_PAPER, 1];
 // each block's tones: the material whose colour (as the night draws it, on level ground, open sky, no
 // haze) the block prints in
 const TONE_OF = { [V_GREEN]: [G.forest, G.riceA], [V_EARTH]: [G.wood, G.fallow] };
-// the paper and the ink by night (sRGB): neutral, a step above the night's colours (its fields are
-// about L* 15-20 here, the paper about L* 31), and the ink nearly black, warm like the palette's K
-export const PAPER_NIGHT = [76, 76, 75], INK_NIGHT = [15, 13, 13];
+// the paper and the ink by night (sRGB): washi in the moon, a step above the night's colours (its
+// fields are about L* 15-20 here, the paper about L* 32), a little cool so that beside the blue night
+// it reads as paper and not as a dirty brown-grey; the ink nearly black, warm like the palette's K
+export const PAPER_NIGHT = [74, 77, 84], INK_NIGHT = [15, 13, 13];
 const pack3 = (c, a = 255) => ((a << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
 /** The far's paper flag: a lutFar entry with this alpha is paper (the shader embosses it). */
 export const PAPER_ALPHA = 128;
@@ -575,53 +576,103 @@ const PRIO = [0, 1, 2, 5, 6, 4, 3, 2, 8, 9];        // by class: the line goes o
 export const PLATE_AT = [300, 900, 1400, 1900], PLATE_SPREAD = 320;
 
 /**
- * Per ground pixel (RGBA8): R the key block's ink (0 or 255: the skyline and every ridge, the top edge
- * of whatever stands in front of the land behind it (woods, roofs, the viaduct), the borders between
- * kinds of ground on one side (river banks, roads, the town, woods, houses), the levees between fields
- * while the fields are a few pixels deep); G the stage that place prints at once the far has come (50
- * per stage, 0..4), decided per piece of land so that the blocks come off in pieces; B the paper's
- * blind embossing (128 = level; the big relief only, from a smoothed slope); A a small delay for the
+ * Per ground pixel (RGBA8): R the key block's ink (0 or 255); G the stage that place prints at once the
+ * far has come (50 per stage, 0..4), decided per piece of land so that the blocks come off in pieces;
+ * B the paper's surface: its blind embossing (the land's relief, smoothed) and its fibres (a faint
+ * mottle of long and short flecks, fixed to the land), 128 = plain paper; A a small delay for the
  * blocks coming off after the tide.
+ *
+ * The key block is drawn as a block is cut: deliberate, continuous lines. Main lines (2 px near, 1 px
+ * far): the skyline and the ridges, the top edge of whatever stands in front of the land behind it
+ * (a wood's crest, a terrace of land, the viaduct), river and pond banks, roads, the town's and the
+ * villages' outline, the woods' edges near by; fine lines (1 px): the levees between fields, roofs,
+ * the crowns in a near wood. Then the cut is cleaned: pieces shorter than a few pixels go (more far
+ * away: only the big structures stay), one-pixel gaps along a line are closed.
  */
 export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
-  const out = new Uint8Array(W * H * 4), idx = L.idx;
+  const N = W * H, out = new Uint8Array(N * 4), idx = L.idx;
   const cl = i => CLS[idx[i] >> 8] || 0;
+  const isMtn = m => m === G.farRock || m === G.farForest || m === G.hillForest;
   const sd = sunDir || [0.85, 0.27, -0.45], sl = Math.hypot(...sd), lx = sd[0] / sl, ly = sd[1] / sl, lz = sd[2] / sl;
+  const kind = new Uint8Array(N);                 // 0 none, 1 fine, 2 main
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     if (!mask[i]) continue;
-    const Z = Zb[i], X = Xb[i], c = cl(i), m = idx[i] >> 8;
-    let ink = 0;
-    // the skyline and the top edge of whatever stands in front of the land behind it
+    const Z = Zb[i], X = Xb[i], c = cl(i), m = idx[i] >> 8, mtn = isMtn(m);
+    let k = 0;
     const up = y > 0 ? i - W : -1;
-    if (up < 0 || !mask[up]) ink = 1;
+    if (up < 0 || !mask[up]) k = 2;                                    // the skyline
     else {
       const Zu = Zb[up], flat = Z * Z / f;
-      if (Zu > Z * 1.25 && Zu - Z > 6 * flat + 0.04) ink = 1;
+      if (mtn) {
+        // the ranges: their ridges and spurs, one in front of the next (fewer the farther)
+        const r = Z > 60 ? 1.12 : 1.05;
+        if (Zu > Z * r && Zu - Z > 1.5 * flat) k = 2;
+      } else if (Zu > Z * 1.25 && Zu - Z > 6 * flat + 0.04) k = 2;    // crests, terraces, the viaduct
     }
-    // borders between kinds of ground (the line on the higher side only). Far off a row of pixels spans
-    // hundreds of metres and every border would close into a scribble: past ~3 km only the water, the
-    // roads, the town and the viaduct keep their lines, the houses theirs to ~3.6 km (the ridges and the
-    // woods' crests are drawn by the silhouettes above)
-    if (!ink) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
+    if (k < 2) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
       if (n < 0 || !mask[n]) continue;
       const cn = cl(n);
       if (cn === c || (c <= 2 && cn <= 2)) {
         // the levees between fields and paddies, while a field is a few pixels deep
-        if (c <= 2 && (idx[n] >> 8) !== m && Z < 9 && n === up) ink = 1;
+        if (c <= 2 && (idx[n] >> 8) !== m && Z < 9 && n === up) k = Math.max(k, 1);
         continue;
       }
       if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
-      const keep = c === 3 || c === 4 || c === 5 || c === 9 || (c === 8 && Z < 20);
-      if (Z > 16 && !keep) continue;
-      ink = 1;
+      if (c === 3 || c === 4 || c === 5 || c === 9) k = 2;              // banks, roads, the town, the viaduct
+      else if (c === 6 && !mtn && (Z < 8 || (n === up && Z < 16))) k = 2;   // the woods' edges, then crests
+      else if (c === 8 && Z < 16) k = Math.max(k, 1);                   // roofs
+      else if (c === 7 && Z < 8) k = Math.max(k, 1);
     }
     // the crowns in a near wood (the bake's crown cells: their shaded side)
-    if (!ink && c === 6 && Z > 600 / U && Z < 9) {
+    if (!k && c === 6 && Z > 600 / U && Z < 8) {
       const t = heightBase(X, Z), cs = 0.06 * Math.max(1, Z / 6), u = X / cs, v = (Z + t * 4) / (cs * 1.6);
       const fu = u - Math.floor(u) - 0.5, fv = v - Math.floor(v) - 0.5;
-      if (fu + fv * 0.6 < -0.4) ink = 1;
+      if (fu + fv * 0.6 < -0.4) k = 1;
     }
+    kind[i] = k;
+  }
+  // clean the cut: one-pixel gaps along a line closed (a gap between two line pixels of the same kind,
+  // across: left-right, up-down or a diagonal), then the pieces shorter than a few pixels dropped
+  const fill = new Uint8Array(N);
+  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
+    const i = y * W + x;
+    if (kind[i] || !mask[i]) continue;
+    for (const [a, b2] of [[i - 1, i + 1], [i - W, i + W], [i - W - 1, i + W + 1], [i - W + 1, i + W - 1]]) {
+      const ka = kind[a], kb = kind[b2];
+      if (ka && ka === kb) { fill[i] = ka; break; }
+    }
+  }
+  for (let i = 0; i < N; i++) if (fill[i]) kind[i] = fill[i];
+  const comp = new Int32Array(N).fill(-1), stack = [];
+  for (let i0 = 0; i0 < N; i0++) {
+    if (!kind[i0] || comp[i0] >= 0) continue;
+    const piece = [];
+    stack.push(i0); comp[i0] = i0;
+    let zmin = 1e9;
+    while (stack.length) {
+      const i = stack.pop(); piece.push(i);
+      if (Zb[i] < zmin) zmin = Zb[i];
+      const y = (i / W) | 0, x = i - y * W;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        if (!dx && !dy) continue;
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const j = yy * W + xx;
+        if (kind[j] && comp[j] < 0) { comp[j] = i0; stack.push(j); }
+      }
+    }
+    // the shortest piece kept: 4 px near, 6 past ~3 km, 9 in the far ranges
+    const min = zmin < 16 ? 4 : zmin < 40 ? 6 : 9;
+    if (piece.length < min) for (const i of piece) kind[i] = 0;
+  }
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (!mask[i]) continue;
+    const Z = Zb[i], X = Xb[i];
+    // the main lines near by are two pixels: the line and the pixel under it (if that is land)
+    let ink = kind[i] ? 1 : 0;
+    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < 8 && Zb[i] < Zb[i - W] * 1.4) ink = 1;
     // which blocks are gone here: metres past the rim against each block's front (wandering with the
     // bearing), per piece of land
     const xm = -X * U, zm = Z * U;
@@ -635,16 +686,20 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir) {
       const spread = k === 0 ? 0 : (hash2(pxc, pzc, 700 + k) - 0.5) * 2 * PLATE_SPREAD;
       if (past >= PLATE_AT[k] * (0.8 + 0.4 * w) + spread) st = k + 1;
     }
-    // the blind embossing: the slope of the land smoothed over ~3 pixels (and at least 120 m), lit from
-    // the sun's side against level ground; only the big relief, a few hundredths either way
-    const sm = Math.max(120, 3 * Z * Z / f * U) / U;
+    // the blind embossing: the land's slope (over ~2 pixels near, ~150 m on the ranges, so that their
+    // faces read and the plain stays level), lit from the sun's side against level ground, within 5 %
+    const far = Z > 30;
+    const sm = (far ? 150 : Math.max(120, 2 * Z * Z / f * U)) / U;
     const hx = heightBase(X + sm, Z) - heightBase(X - sm, Z), hz = heightBase(X, Z + sm) - heightBase(X, Z - sm);
     const nl = Math.hypot(hx, 2 * sm, hz), lam = (-hx * lx + 2 * sm * ly - hz * lz) / nl;
-    const emb = clamp((lam - ly) * 0.35, -0.07, 0.07);
+    const emb = clamp((lam - ly) * (far ? 0.6 : 0.35), -0.05, 0.05);
+    // the paper's fibres: long flecks along the sheet and short ones, about 2.5 % either way, fixed to
+    // the land (the canvas moves with it by whole pixels)
+    const fib = ((vnoise(x / 7, y / 1.6, 631) - 0.5) * 0.6 + (vnoise(x / 2.2, y / 1.4, 632) - 0.5) * 0.4) * 0.09;
     const o = i * 4;
     out[o] = ink ? 255 : 0;
     out[o + 1] = st * 50;
-    out[o + 2] = Math.round(128 + emb / 0.07 * 120);
+    out[o + 2] = Math.round(clamp(128 + (emb + clamp(fib, -0.025, 0.025)) / 0.08 * 120, 0, 255));
     out[o + 3] = Math.round(hash2(pxc, pzc, 614) * 255);
   }
   return out;

@@ -13,7 +13,7 @@ shader_type canvas_item;
 uniform sampler2D ids : filter_nearest, repeat_disable;     // R, G id; B arrival (255 never); A mask
 uniform sampler2D lut : filter_nearest, repeat_disable;     // per time of day
 uniform sampler2D lut_far : filter_nearest, repeat_disable; // row 0 the front, rows 1..4 the stages
-uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink (0 | 1), G stage x 50, B emboss, A delay
+uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink (0 | 1), G stage x 50, B paper (emboss, fibres), A delay
 uniform float tod_row;
 uniform float wave = -1.0;
 uniform float settled = 0.0;
@@ -53,8 +53,8 @@ void fragment() {
 		if (st >= 1.0) {
 			vec4 pc = texelFetch(lut_far, ivec2(id, int(st)), 0);
 			c = pc.rgb * 255.0;
-			// the paper (flagged by its alpha): its blind embossing, the big relief pressed in
-			if (pc.a < 0.75) c *= 1.0 + (fm.b * 255.0 - 128.0) / 120.0 * 0.07;
+			// the paper (flagged by its alpha): its blind embossing (the land's relief) and its fibres
+			if (pc.a < 0.75) c *= 1.0 + (fm.b * 255.0 - 128.0) / 120.0 * 0.08;
 			if (fm.r > 0.5) c = ink_col;
 		}
 	}
