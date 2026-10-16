@@ -671,8 +671,12 @@ const SUNLV = [0, 0.1, 0.22, 0.36, 0.5, 0.66, 0.83, 1], SKYLV = [0.42, 0.62, 0.8
 const lum3 = c => c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114;
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-/** The ghost's colour for a ground id (packed sRGB, alpha 255): v0.2's ghost(), its lightness spread a
- *  third wider and its haze kept to half, so that the land's shapes stay clear. */
+/** The ghost's colour for a ground id (packed sRGB, alpha 255): v0.2's ghost(), lit by nothing in
+ *  particular (the material's own lightness under a middling light, whatever the hour: at night too it
+ *  keeps a light of its own), lifted by the 3D lookout's curve (vista_common v_ghost: display lightness
+ *  l -> 0.34 + 0.6 l^0.8; the lead, G5R3-22: "银白", not "银灰"), the lookout's cool silver
+ *  (0.88, 0.93, 1.05) with a tenth of its own colour at the same lightness; v0.2's haze kept to half. */
+const GHOST_TINT = [0.88, 0.93, 1.05];
 export function ghostPalette() {
   const cache = new Map();
   return v => {
@@ -685,8 +689,9 @@ export function ghostPalette() {
     if (mat.water) c = [0.6, 0.66, 0.76].map(q => q * (0.62 + (mat.refl ?? 0.6) * 0.4));
     else if (mat.rim) c = mat.albedo.map(q => q * 1.2);
     else c = mat.albedo.map(q => q * (0.66 + 0.42 * SUNLV[s] + 0.12 * SKYLV[k]));
-    const l = clamp(lum3(c), 0, 1), L2 = clamp(0.2 + 0.74 * Math.pow(l, 0.85), 0, 1);
-    let g = mix3([L2 * 0.86, L2 * 0.92, L2 * 1.07], c, 0.1);
+    const lc = lum3(c), L2 = 0.34 + 0.6 * Math.pow(clamp(lc, 0, 1.6), 0.8);
+    let g = GHOST_TINT.map(t => clamp(L2 * t, 0, 1));
+    if (lc > 1e-5) { const lg = lum3(g); g = mix3(g, c.map(q => q * lg / lc), 0.1); }
     if (h) g = mix3(g, GHOST_HAZE, HAZELV[h] * 0.3);
     const q = g.map(x => Math.round(clamp(x, 0, 1) * 255));
     out = ((255 << 24) | (q[2] << 16) | (q[1] << 8) | q[0]) >>> 0;

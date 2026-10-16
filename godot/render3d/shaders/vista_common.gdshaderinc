@@ -215,27 +215,35 @@ float v_cloud_shade(vec3 wp) {
 // every surface goes the same way); water there is the light of a sky that is not there; no lamp
 // burns; nothing moves (the smoke stands, a bank of cloud over it and its shade keep their place:
 // vista_puff, vista_cloud, v_cloud_shade); the air over it trembles a little (vista_post, by whole
-// pixels, slowly) and small silver lights rise from it (vista3d.gd _motes). At night it keeps a little
-// light of its own, a step above the land round it.
-// the light a level white surface has at this hour (the sky above, the sun at round 3's middle level):
-// the 遠化's lightness is taken against it, so it keeps the hour (bright by day, dim at night)
+// pixels, slowly) and small silver lights rise from it (vista3d.gd _motes). It is lit by a light of its
+// own more than by the hour's (v_ghost_light): at night a bright silver one or two steps above the
+// dark land, by day level with the land round it or a touch above.
+// the light a level white surface has at this hour (the sky above, the sun at round 3's middle level)
 float v_light_ref() {
 	return w3_luma(vec3(w3_luma(w3_sky)) * w3_shade_tint + w3_sun * w3_lit_tint * (0.78 / W3_PI));
 }
-// a colour as the 遠化 shows it (k: v_ghost_k): its lightness against the hour's light lifted (round
-// 2's curve, display l -> 0.2 + 0.58 l^0.85, raised toward white: here 0.34 + 0.6 l^0.8), a tenth of
-// its colour left, the rest a cool silver; at night a little light of its own
+// The 遠化's own light (the lead, after the prologue matched: round 2's "lit by nothing in particular"):
+// by day about the hour's own (a little under it: with the lift its silver sits level with the land
+// round it or a touch above), but never under a light of its own (V_GHOST_OWN), so at night it is a
+// bright silver one or two steps above the dark land; little of the hour shows in it.
+const float V_GHOST_DAY = 0.8;
+const float V_GHOST_OWN = 0.3;
+float v_ghost_light() {
+	float d = v_light_ref() * V_GHOST_DAY;
+	return sqrt(d * d + V_GHOST_OWN * V_GHOST_OWN);
+}
+// a colour as the 遠化 shows it (k: v_ghost_k): its lightness (against the hour's light: about its
+// albedo and its shading) lifted toward white in display terms, 0.34 + 0.6 l^0.8 (round 2's was 0.2 +
+// 0.58 l^0.85: silver, not silver-grey), a tenth of its own colour left, the rest a cool silver, in
+// the 遠化's own light (v_ghost_light)
 vec3 v_ghost(vec3 col, float k) {
 	if (k <= 0.0) return col;
-	float lref = max(v_light_ref(), 1e-4);
-	float l = w3_luma(col) / lref;
+	float l = w3_luma(col) / max(v_light_ref(), 1e-4);
 	float ld = pow(clamp(l, 0.0, 1.6), 1.0 / 2.2);
 	float l2 = 0.34 + 0.6 * pow(ld, 0.8);
-	vec3 g = w3_srgb_to_linear(clamp(vec3(l2) * V_GHOST_TINT, vec3(0.0), vec3(1.0))) * lref;
+	vec3 g = w3_srgb_to_linear(clamp(vec3(l2) * V_GHOST_TINT, vec3(0.0), vec3(1.0))) * v_ghost_light();
 	// a tenth of its own colour, at the same lightness
 	g = mix(g, col * (w3_luma(g) / max(w3_luma(col), 1e-5)), 0.1);
-	// (at night a light of its own, from nowhere: a step above the dark land)
-	g += w3_srgb_to_linear(V_GHOST_TINT * 0.5) * 0.012 * w3_night;
 	return mix(col, g, k);
 }
 // lamps go out in the 遠化 (and smoke and cloud stand still there: vista_puff, vista_cloud)
