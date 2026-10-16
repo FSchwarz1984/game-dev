@@ -49,7 +49,7 @@ if (shots.includes('south') || shots.includes('title')) {
   const W3DIR = path.join(ROOT, 'godot/world3d/terrain/saddle');
   const json = JSON.parse(fs.readFileSync(path.join(W3DIR, 'vista.json'), 'utf8'));
   const keep = {};
-  for (const k of ['far', 'mid', 'plain', 'villages', 'plain_houses', 'plain_lamps', 'railway', 'road', 'landmarks']) keep[k] = json[k];
+  for (const k of ['far', 'mid', 'plain', 'villages', 'plain_houses', 'plain_lamps', 'railway', 'road', 'landmarks', 'mist']) keep[k] = json[k];
   fs.writeFileSync(path.join(site, 'w3.json'), JSON.stringify(keep));
   for (const k of ['far', 'mid', 'plain']) {
     const p = readPNG(path.join(W3DIR, json[k].file));

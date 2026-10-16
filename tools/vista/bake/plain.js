@@ -616,19 +616,56 @@ export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt }
 // v0.2; the user: "幽灵一样银白色的"): everything still there in its own place and shape, the fields,
 // roads and roofs keeping their own lightness and their light and shade, drained of colour, lifted, a
 // bluish silver-white lit by nothing in particular; its lamps out, nothing reflected in its water.
-// Ground zero is the town (the tide bursts from it): the nearer the town, the more a ghost; farther
-// out a little of the night's colour stays, in steps (GHOST_GRADES, their edges wandering with the
-// bearing). The 3D lookout draws the same point and the same steps. Over the land gone far the air
-// shimmers a little, as over heat (a whole-pixel sway up and down, most near the town: the ghost map's
-// G), and silver motes rise from it (Godot).
+// Ground zero is the town (the tide bursts from it): the nearer the town, the more a ghost, thinner
+// ring by ring outward, nothing left past the last ring (the land there as it was, its lamps lit);
+// the region's ring round home untouched. These are the 3D lookout's own numbers and its own function
+// (godot/world3d/vista3d.gd ghost_k, vista_common v_ghost_k), so the prologue and the lookout show the
+// same 遠化. Over the land gone far the air shimmers a little, as over heat (a whole-pixel sway up
+// and down, the more the more a ghost), and silver motes rise from it (Godot).
 // (Tried and rejected: the 褪版, the land as a woodblock print losing its colour blocks down to the
 // key block's lines on the paper, G5R3-18; the user, G5R3-22: "太脏、像灰模".)
-/** ground zero (m, the 3D frame): the town */
-export function ghostZero() { return [-TOWN.X * U, TOWN.Z * U]; }
-/** [radius (m from ground zero), how much a ghost (0..1)]: the last step holds beyond */
-export const GHOST_GRADES = [[900, 1.0], [2000, 0.86], [3500, 0.74], [1e9, 0.62]];
-/** the shimmer's reach (m from ground zero) */
-export const MIRAGE_R = 4200;
+/** ground zero (m, the 3D frame): the town, vista.json's largest village */
+export function ghostZero() { const v = VILLAGES.reduce((a, b) => (b.n > a.n ? b : a)); return [v.x, v.z]; }
+/** the rings (m from ground zero): full within r0, 0.75 at r1, 0.4 at r2, nothing past r3 (vista3d.gd GHOST_R) */
+export const GHOST_R = [400, 1100, 2600, 5500];
+/** the region's ellipse round home (vista.json mist: cx, cz, rx, rz in m) */
+export function ghostHome() { const m = W3.json.mist; return { cx: m.cx, cz: m.cz, rx: m.rx, rz: m.rz }; }
+// pixel_toon's w3_hash and vista3d.gd _vnoise (fposmod = the GLSL fract)
+const fract = x => x - Math.floor(x);
+function w3hash(x, y) {
+  let p0 = fract(x * 0.1031), p1 = fract(y * 0.1031), p2 = fract(x * 0.1031);
+  const d = p0 * (p1 + 33.33) + p1 * (p2 + 33.33) + p2 * (p0 + 33.33);
+  p0 += d; p1 += d; p2 += d;
+  return fract((p0 + p1) * p2);
+}
+function w3vnoise(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  return lerp(lerp(w3hash(ix, iy), w3hash(ix + 1, iy), ux), lerp(w3hash(ix, iy + 1), w3hash(ix + 1, iy + 1), ux), uy);
+}
+/** How much a ghost a point of the land is (x, z in m, the 3D frame): 1 at the town .. 0, each ring's
+ *  radius wandering a tenth either way with the bearing; 0 inside the region's ring round home,
+ *  coming in from 1.15 to 1.8 times it. Exactly vista3d.gd ghost_k. */
+export function ghostK(x, z) {
+  const [cx, cz] = ghostZero();
+  const dx = x - cx, dz = z - cz;
+  const a = Math.atan2(dx, -dz);
+  const w = 0.9 + 0.2 * (w3vnoise(a * 2.6 + 4.0, 1.7) * 0.7 + w3vnoise(a * 7.3 + 1.0, 5.1) * 0.3);
+  const r = Math.hypot(dx, dz) / w, [r0, r1, r2, r3] = GHOST_R;
+  let k;
+  if (r < r0) k = 1;
+  else if (r < r1) k = lerp(1, 0.75, smooth(r0, r1, r));
+  else if (r < r2) k = lerp(0.75, 0.4, smooth(r1, r2, r));
+  else k = lerp(0.4, 0, smooth(r2, r3, r));
+  const h = ghostHome(), e = Math.hypot((x - h.cx) / h.rx, (z - h.cz) / h.rz);
+  return k * smooth(1.15, 1.8, e);
+}
+/** Whether a lamp at X, Z (prologue units) goes out as the tide passes: as the lookout's lamps do
+ *  (vista_common v_drain, smoothstep(0.2, 0.35, k)), one lamp at a time by its own draw. */
+export function lampDrained(X, Z, seed) {
+  const dr = smooth(0.2, 0.35, ghostK(-X * U, Z * U));
+  return dr > 0 && hash2(Math.round(X * 1000), Math.round(Z * 1000), 947 + (seed | 0)) < dr;
+}
 const GHOST_HAZE = [0.6, 0.66, 0.78];
 const SUNLV = [0, 0.1, 0.22, 0.36, 0.5, 0.66, 0.83, 1], SKYLV = [0.42, 0.62, 0.82, 1], HAZELV = [0, 0.12, 0.24, 0.37, 0.5, 0.63, 0.77, 0.9];
 const lum3 = c => c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114;
@@ -659,27 +696,17 @@ export function ghostPalette() {
 }
 
 /**
- * Per ground pixel (RGBA8): R how much a ghost the place is once the tide has passed (its step from
- * ground zero, 0..255); G how much the air over it shimmers (0..255, most at ground zero, none past
- * MIRAGE_R); B, A 0.
+ * Per ground pixel (RGBA8): R how much a ghost the place is once the tide has passed (ghostK, 0..255);
+ * G how much the air over it shimmers (k^1.5, as the lookout's: most at the town, next to none below
+ * 0.5); B, A 0.
  */
 export function ghostMaps(L, Xb, Zb, mask, W, H) {
   const N = W * H, out = new Uint8Array(N * 4);
-  const [gx, gz] = ghostZero();
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x;
+  for (let i = 0; i < N; i++) {
     if (!mask[i]) continue;
-    const xm = -Xb[i] * U, zm = Zb[i] * U, d = Math.hypot(xm - gx, zm - gz);
-    // the steps' edges wander a tenth either way with the bearing, and break up over a pixel or two
-    const ang = Math.atan2(xm - gx, zm - gz);
-    const w = 1 + 0.1 * ((vnoise(ang * 2.6 + 3, 1.5, 941) - 0.5) * 1.4 + (vnoise(ang * 7.9, 4.5, 942) - 0.5) * 0.6);
-    const dj = d / w * (1 + (hash2(x, y, 943) - 0.5) * 0.04);
-    let g = GHOST_GRADES[GHOST_GRADES.length - 1][1];
-    for (const [r, a] of GHOST_GRADES) if (dj < r) { g = a; break; }
-    const m = Math.pow(clamp(1 - d / MIRAGE_R, 0, 1), 1.5);
-    const o = i * 4;
-    out[o] = Math.round(g * 255);
-    out[o + 1] = Math.round(m * 255);
+    const k = ghostK(-Xb[i] * U, Zb[i] * U);
+    out[i * 4] = Math.round(k * 255);
+    out[i * 4 + 1] = Math.round(Math.pow(k, 1.5) * 255);
   }
   return out;
 }

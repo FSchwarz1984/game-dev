@@ -188,7 +188,11 @@ REIMPORT=1 bash tools/godot/test.sh                         # 换了 PNG 一定�
 bash tools/godot/playtest.sh <目录>                         # 真实输入的试玩
 # 另一个俯角（不覆盖仓库里的图）：
 python3 -I tools/art/sprite3d/build.py --pitch 39.33 --out <目录> [--anims idle,walk,run] [--preview <目录>]
+# 更细的像素格（3D 世界每米 30 像素，G5R3-24）：同一套模型重新渲染，不缩放
+python3 -I tools/art/sprite3d/build.py --pitch 39.33 --ppm 30 --out <目录> --anims idle,walk,run
 ```
+
+- **`--ppm`（2026-10-16，G5R3-24）**：模型的单位不变（1 单位 = 1/20 米），像素格变细，每单位 K = ppm/20 个像素：格子和枢轴乘 K，光线按 1/(S·K) 采样，锚点、五官位置、头部的亚像素相位按像素算；骨盆和吸气的起伏仍是整像素（1/K 单位）。五官印章另有一套 K ≥ 1.25 用的（`face.py` 的 `EYES_HI`、`MOUTHS_HI`：2×3 的眼成 3×4，两像素的嘴成三像素，线条和 1 像素的记号仍是 1 像素）。默认 20 时输出和以前逐字节相同（重出 さぢ 的 39.33° 表对比过）。3D 世界用 `bash tools/world3d/sync_sprites.sh 55 idle,walk,run 30`（`godot/world3d/sprites/`）；眺望里的身影用 `bash tools/world3d/sync_sprites.sh 55 idle 26.66 vista`（她站的地方远景每米 26.66 像素，`vista3d.gd` 的 `fig_ppm`，贴图逐像素）。
 
 同样的输入总是得到字节相同的 PNG（没有随机数；多进程的结果按固定顺序拼）。`--preview` 写每张表的 ×4 接触表（每个动画、每个方向一行）和每个动画的 GIF（所有方向并排）。出图时碰到格子边缘的帧会逐个打印出来。
 

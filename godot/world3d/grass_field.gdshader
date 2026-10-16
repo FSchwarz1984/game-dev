@@ -59,6 +59,7 @@ varying flat vec3 v_col;      // how dry 0..1, the root's tone (continuous), gus
 varying flat float v_ao;
 varying float v_fleck;
 varying flat float v_root_fleck;   // (scene, round 5) the sun fleck at the tuft's root: a whole tuft is lit
+varying flat float v_root_open;    // (renderer, round 5) the canopy's openness at the root (pixel_toon w3_canopy_open)
                                    // or not, as the ground under it (per pixel, the blades lit in streaks)
 varying vec3 v_detail;        // albedo / the shade's flattened albedo (light() restores the detail)
 
@@ -73,6 +74,7 @@ float ground_h(vec2 xz) {
 
 void vertex() {
 	v_root_fleck = 0.0;
+	v_root_open = 1.0;
 	vec3 corner = MODEL_MATRIX[3].xyz;
 	int i = INSTANCE_ID % lattice;
 	int j = INSTANCE_ID / lattice;
@@ -156,6 +158,7 @@ void vertex() {
 		float can = textureLod(m3, (proj - splat_origin) / splat_cell / splat_size, 0.0).a;
 		// (renderer, round 5: the same soft spots as the ground's, pixel_toon w3_fleck)
 		v_root_fleck = (can > 0.2 && w3_night < 0.5) ? w3_fleck(proj, can) : 0.0;
+		v_root_open = w3_canopy_open(can);
 	}
 }
 
@@ -191,10 +194,11 @@ void fragment() {
 void light() {
 	// lit as the ground it grows from (toon_terrain's light)
 	if (LIGHT_IS_DIRECTIONAL) {
-		float sh = max(ATTENUATION, v_fleck);
+		float att = ATTENUATION * v_root_open;
+		float sh = max(att, v_fleck);
 		// (renderer, round 5: round 3's levels, continuous, as the ground: w3_sun_level)
 		DIFFUSE_LIGHT += w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, sh, true, 0.15) * v_detail;
-		DIFFUSE_LIGHT += w3_shadow_fill(ATTENUATION);
+		DIFFUSE_LIGHT += w3_shadow_fill(att);
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail;
 	}

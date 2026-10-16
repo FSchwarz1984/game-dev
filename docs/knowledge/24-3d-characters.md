@@ -8,6 +8,7 @@
 用户原话（G5R3-20）："這完全沒有人的感覺，她像一個外星人很詭異，而且也不像立繪的效果，更重要的是像素遊戲在表達人物上面有自己的一套方法，你去生搬硬套立繪肯定是行不通的，現在的感覺甚至不如V三版那種小立方塊小飛蟲樣的小Minecraft小人感覺自然"。"V三版"按我们的理解是 V3 精灵（knowledge/20，`godot/world3d/sprites/tsuzumi_plain.png`，G5R2-3 里被说成"小飛蟲""Minecraft 方塊"的那一版）。
 
 ### R7.1 现状
+- **这一版 Windows（G5R3-24，用户授权的例外）**：showcase 让样章用 V3 精灵顶替她（`sample.gd` 的 `sprites`，`W3Walker.use_sprites`），さぢ照旧跟着她；V3 的 SDF 模型按世界的每米 30 像素重烘（`tools/art/sprite3d/build.py --ppm 30`，knowledge/20 §9），眺望里的身影按每米 26.66 像素另烘一套。正式版仍是真 3D。
 - 游戏默认：第四轮（`walker.gd` 的 `MODELS`、`vista3d.gd` 读 `godot/characters/kasasagi/`）。第五、六轮在 Godot 侧加的开关缺省都等于第四轮：`c3_depth_scale`（1）、`hat_mode`（缺省 → HatTilt）、face.json 的 `view_cuts`、`level_pairs`（缺省 true）、`eye_shift`、嘴的 pivot。
 - 生成器：`tools/characters3d/kasasagi/` 是第六轮；第四轮的只在 git：`git archive 81dfb0f tools/characters3d | tar -x -C <别处>`。
 - **保护**：`build.sh` 在目标是主树里已有的模型时退出（码 2，不启动 Blender），`build.py` 不导出（打印 NOT EXPORTED）；要替换主树的模型必须设 `C3D_MAIN=1`。平时用 `C3D_PROJ=<工程视图>`。

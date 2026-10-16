@@ -157,6 +157,13 @@ vec3 w3_shadow_fill(float att) {
 // (its image through a gap lies stretched on the ground); toward a crown's rim (thinner) many and
 // larger, in its heart few. Lit as the same ground in the open (light(): the sun, and the sky's fill
 // kept in them).
+// Under a dense crown the sun reaches the ground only as these flecks: the shadow map's own sunlit
+// gaps there (where the leaf cards happen to leave a hole: hard-edged blotches, the yellow patches on
+// the gravel) give way, over the crown's edge, softly (the canopy map is smooth): the sun's share is
+// multiplied by this (1 open .. 0 under a dense crown).
+float w3_canopy_open(float can) {
+	return 1.0 - smoothstep(0.3, 0.7, can);
+}
 float w3_fleck(vec2 proj, float can) {
 	vec3 sdir = normalize(w3_sun_dir);
 	float sway = sin(w3_time * 0.8 + w3_hash(floor(proj / 1.5)) * 6.28) * 0.35 * w3_wind.z;
@@ -165,8 +172,8 @@ float w3_fleck(vec2 proj, float can) {
 	vec2 fq = q / 0.5 + vec2(sway, sway * 0.5);
 	float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
 	float cluster = w3_vnoise(proj / 2.6 + 9.0);
-	float th = 0.67 + can * 0.05;
-	return smoothstep(th, th + 0.06, fn) * smoothstep(0.32 + can * 0.22, 0.4 + can * 0.22, cluster);
+	float th = 0.64 + can * 0.05;
+	return smoothstep(th, th + 0.06, fn) * smoothstep(0.28 + can * 0.2, 0.36 + can * 0.2, cluster);
 }
 
 // ------------------------------------------------------------------------------------------------

@@ -82,8 +82,8 @@ export function bakeSouth(o = {}) {
   // the old road's switchbacks and the old road to the town, lit for the night (plain.js)
   PL.roadLanterns(lights, ground, cam, Wc, GH);
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
-  // the far (G5R3-22): how much a ghost each place is (its step from the town, ground zero) and how
-  // much the air shimmers over it
+  // the far (G5R3-22): how much a ghost each place is (by its distance from the town, ground zero:
+  // plain.js ghostK, the lookout's) and how much the air shimmers over it
   const ghostMap = PL.ghostMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
   const RIV = PL.RIVER, { fires: riverFires, near } = PL.riverBonfires(ground, cam, Wc, GH);
@@ -210,7 +210,9 @@ export function bakeSouth(o = {}) {
   const noFront = new Uint8Array(Wc * GH);
   for (let i = 0; i < noFront.length; i++) { const m = ground.layer.idx[i] >> 8; noFront[i] = m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron ? 1 : 0; }
   const wave = new Wave({ w: Wc, h: GH, X: ground.X, Z: ground.Z, mask: ground.mask, Xc, Zc, R: Math.hypot(Xc, Zc) - 0.05, f, cx: Cx, yl: YL, noFront });
-  for (const L of lights) L.arr = wave.arrivalOf(L.X, L.Z);
+  // a lamp goes out as the tide passes it where the land is left a ghost (plain.js lampDrained, as the
+  // lookout's lamps); past the 遠化 (and in the region's ring round home) it burns on (arr 9: never)
+  for (const L of lights) L.arr = L.X == null || PL.lampDrained(L.X, L.Z) ? wave.arrivalOf(L.X, L.Z) : 9;
 
   // ---------------- the canopy (HEAD L233-253), reference clumps exact, extensions with RX
   const Dmax = o.Dmax ?? D0;
@@ -257,7 +259,8 @@ export function bakeSouth(o = {}) {
   const groundLut = lutRows(gSpace, envs.map(e => palette(GROUND_MATS, envG(e), { haze: e.mist })));
   // the far (遠化, G5R3-22): row 0 the white of the front as it passes (the event itself: HEAD's pale
   // front, houses keep the pale), row 1 the land's silver-white ghost (plain.js ghostPalette: v0.2's,
-  // its shapes kept clear); Godot mixes the night with it by the place's step from the town
+  // its shapes kept clear); Godot mixes the night with it (in linear light) by how much a ghost the
+  // place is (ghostK)
   const farPal = PL.ghostPalette();
   const farLut = lutRows(gSpace, [v => {
     const p = farPal(v), m = v >> 8;
@@ -311,9 +314,9 @@ export function bakeSouth(o = {}) {
       dep: PL.depKnots(), eyeRel: PL.EYE_REL,
       // how far the mountains were lowered to stay clear of the sky shore (plain.js mountainFit)
       mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
-      // the far as a print (plain.js): the key block's ink at the hour, the blocks' fronts past the rim
-      // the far (G5R3-22): ground zero (the town, m in the 3D frame), the steps [m, amount], the shimmer's reach
-      ghost: { zero: PL.ghostZero().map(r2), grades: PL.GHOST_GRADES.map(([r, a]) => [r >= 1e8 ? -1 : r, a]), mirageR: PL.MIRAGE_R },
+      // the far (G5R3-22): ground zero (the town, m in the 3D frame), the rings (m: full, 0.75, 0.4, none),
+      // the region's ellipse round home (untouched): plain.js ghostK, the 3D lookout's ghost_k
+      ghost: { zero: PL.ghostZero().map(r2), r: PL.GHOST_R, home: PL.ghostHome() },
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },

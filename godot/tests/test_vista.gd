@@ -102,7 +102,7 @@ func test_the_standalone_play_ends_held_on_the_far_plain() -> void:
 	v.advance(DT)
 	eq(float(mat.get_shader_parameter("wash_a")), 0.0, "no white left")
 	eq(v._figure.pose, "stand")
-	eq(float((south.ground.material as ShaderMaterial).get_shader_parameter("settled")), 1.0, "the ground at its final stages")
+	eq(float((south.ground.material as ShaderMaterial).get_shader_parameter("settled")), 1.0, "the ground left a ghost (as much as each place is)")
 	check(not south.wave_fx.curtain.visible and not south.wave_fx.motes.visible, "no front, no curtain")
 	v.queue_free()
 

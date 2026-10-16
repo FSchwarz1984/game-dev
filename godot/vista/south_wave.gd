@@ -7,8 +7,8 @@ extends RefCounted
 ## camera (endmotes.gdshader).
 ## The JS let up to 1600 motes live; "low" quality (phones) keeps 700.
 ## Over the land gone far (G5R3-22) small silver motes rise slowly from the ground and drift off,
-## thickest near the town (ground zero: the ghost map's shimmer, G), behind the tide and in the hold
-## after it (ghost_motes, the same mote shader, slower and fainter).
+## thickest over the town (ground zero), behind the tide and in the hold after it (ghost_motes, the
+## mote shader's ghost mode): the 3D lookout's motes (vista3d.gd _motes), the same numbers.
 
 var s: VistaSouth
 var curtain: VistaQuad
@@ -26,9 +26,10 @@ var n_motes := 1600
 var n_end := 900
 var ghost_motes: VistaPoints
 var rng_ghost := RandomNumberGenerator.new()
-var n_ghost := 360
+var n_ghost := 220
 var next_ghost := 0
 var ghost_acc := 0.0
+var ghost_warm := false
 var aimg: PackedByteArray           # the ground's ids (B: the bucket the tide reaches each pixel in)
 var zimg: PackedByteArray
 var zw := 0
@@ -76,13 +77,16 @@ func setup(p_s: VistaSouth, quality: String) -> void:
 	end_motes.name = "EndMotes"
 	_clear_end()
 	rng_ghost.seed = 6151
-	n_ghost = 360 if quality == "high" else 160
+	n_ghost = 220 if quality == "high" else 110
 	ghost_motes = VistaPoints.new(n_ghost, preload("res://vista/shaders/motes.gdshader"))
 	ghost_motes.name = "GhostMotes"
 	ghost_motes.set_param("zmap", s.data.tex("groundZ"))
 	ghost_motes.set_param("cx", cx)
 	ghost_motes.set_param("yl", yl)
 	ghost_motes.set_param("f", f)
+	ghost_motes.set_param("ghost", true)
+	ghost_motes.set_param("u", float(s.m.get("plainU", 182.0)))
+	# (at night, as the lookout's: 0.7, each its own 0.8-1.15 of it)
 	ghost_motes.set_param("alpha", 0.7)
 	for i in n_ghost:
 		ghost_motes.put(i, [0, 1, 0, 0, 0, 0], Color(0, 0, -1.0e9, 0))
@@ -170,46 +174,108 @@ func _spawn(wave: float, t: float, dt: float) -> void:
 	motes.commit()
 
 
-## Silver motes off the land gone far: about fifteen a second, each from a point of the ground round
-## the town (ground zero) the tide has passed (any, in the hold), most of them close in (a third
-## within ~600 m, few past ~3 km), where that ground is in sight; they rise 2.5-5.5 px a second for
-## 2.5-5 s, drifting a little either way, and fade.
+## Silver motes off the land gone far, as the lookout's (vista3d.gd _spawn_mote, _step_motes): about
+## n/9 a second, each from a point within the last ring taken by the cube of how much a ghost it is
+## (most of them over the town), where that ground is in sight and the tide has passed it; 1-24 m off
+## the ground, rising 4.5-10 m a second (a pixel or two a second there) and slowing, drifting a metre
+## a second aside, living 6-12 s, faded in and out (motes.gdshader, ghost mode); one pixel, one in ten
+## two. On the first frame of a hold not reached through the tide the lights are already there, at
+## all ages (the view opens on lights risen, not on all of them starting together).
 func _spawn_ghost(wave: float, t: float, dt: float, settled: bool) -> void:
 	if aimg.is_empty():
 		return
 	var b := 254 if settled else int(clampf(floor(wave * 250.0), -1.0, 254.0)) - 2
 	if b < 0:
 		return
-	ghost_acc += minf(dt, 0.1) * (15.0 if n_ghost >= 360 else 7.0)
-	var xc := float(s.m["Xc"])
-	var zc := float(s.m["Zc"])
+	var warm := settled and not ghost_warm
+	ghost_warm = true
+	ghost_acc = minf(ghost_acc + minf(dt, 0.1) * float(n_ghost) / 9.0, 3.0)
+	if warm:
+		ghost_acc = float(n_ghost)
 	var u := float(s.m.get("plainU", 182.0))
-	var tries := 0
+	var g: Dictionary = s.m.get("ghost", {})
+	var zero: Array = g.get("zero", [-260.0, 2160.0])
+	var R: Array = g.get("r", [400.0, 1100.0, 2600.0, 5500.0])
 	var put := false
-	while ghost_acc >= 1.0 and tries < 60:
-		tries += 1
-		var r := 3200.0 / u * pow(rng_ghost.randf(), 1.6)
-		var a := rng_ghost.randf() * TAU
-		var X := xc + r * cos(a)
-		var Z := zc + r * sin(a)
-		if Z < 2.0:
-			continue
-		var x := int(floor(cx + f * X / Z + 0.5))
-		var y := int(floor(yl + f * s.lights.floor_dep(Z) + 0.5))
-		if x < 0 or y < 0 or x >= zw or y >= zh:
-			continue
-		var z := _z_at(x, y)
-		if z <= 0.0 or absf(z - Z) > Z * 0.12:
-			continue                                  # that ground is not in sight there
-		if aimg[(y * zw + x) * 4 + 2] > b:
-			continue                                  # the tide has not passed it yet
+	while ghost_acc >= 1.0:
 		ghost_acc -= 1.0
-		var hg := 1.0 - (y - yl) * z / f
-		var life := 2.5 + rng_ghost.randf() * 2.5
-		ghost_motes.put(next_ghost, [X + (rng_ghost.randf() - 0.5) * z * 0.004, z, 0.0, hg,
-			(rng_ghost.randf() - 0.5) * 0.012 * z, 0.0],
-			Color((2.5 + rng_ghost.randf() * 3.0) * z / f, life, t, 0.0))
-		next_ghost = (next_ghost + 1) % n_ghost
-		put = true
+		for _try in 8:
+			var r := sqrt(rng_ghost.randf()) * float(R[3])
+			var a := rng_ghost.randf() * TAU
+			var xm := float(zero[0]) + cos(a) * r
+			var zm := float(zero[1]) + sin(a) * r
+			var k := ghost_k(xm, zm)
+			if rng_ghost.randf() >= k * k * k:
+				continue
+			var X := -xm / u
+			var Z := zm / u
+			if Z < 2.0:
+				continue
+			var x := int(floor(cx + f * X / Z + 0.5))
+			var y := int(floor(yl + f * s.lights.floor_dep(Z) + 0.5))
+			if x < 0 or y < 0 or x >= zw or y >= zh:
+				continue
+			var z := _z_at(x, y)
+			if z <= 0.0 or absf(z - Z) > Z * 0.12:
+				continue                              # that ground is not in sight there
+			if aimg[(y * zw + x) * 4 + 2] > b:
+				continue                              # the tide has not passed it yet
+			var hg := 1.0 - (y - yl) * z / f
+			var life := rng_ghost.randf_range(6.0, 12.0)
+			var age0 := rng_ghost.randf() * life if warm else 0.0
+			var size := 2.0 if rng_ghost.randf() < 0.1 else 1.0
+			var br := lerpf(0.8, 1.15, rng_ghost.randf())
+			# instance: X0 Z0 | H0 hg | vX seed ; colour: vH life t0 (brightness + 10 per extra pixel)
+			ghost_motes.put(next_ghost, [X, z, rng_ghost.randf_range(1.0, 24.0) / u, hg,
+				rng_ghost.randf_range(-1.2, 1.2) / u, rng_ghost.randf()],
+				Color(rng_ghost.randf_range(4.5, 10.0) / u, life, t - age0, br + (size - 1.0) * 10.0))
+			next_ghost = (next_ghost + 1) % n_ghost
+			put = true
+			break
 	if put:
 		ghost_motes.commit()
+
+
+## How much a ghost a point of the land is (x, z in m, the 3D frame): 1 at the town .. 0 past the last
+## ring and in the region's ring round home (meta.ghost; plain.js ghostK, vista3d.gd ghost_k).
+func ghost_k(x: float, z: float) -> float:
+	var g: Dictionary = s.m.get("ghost", {})
+	var zero: Array = g.get("zero", [-260.0, 2160.0])
+	var R: Array = g.get("r", [400.0, 1100.0, 2600.0, 5500.0])
+	var dx := x - float(zero[0])
+	var dz := z - float(zero[1])
+	var a := atan2(dx, -dz)
+	var w := 0.9 + 0.2 * (_vnoise(a * 2.6 + 4.0, 1.7) * 0.7 + _vnoise(a * 7.3 + 1.0, 5.1) * 0.3)
+	var r := sqrt(dx * dx + dz * dz) / w
+	var k := 0.0
+	if r < float(R[0]):
+		k = 1.0
+	elif r < float(R[1]):
+		k = lerpf(1.0, 0.75, smoothstep(float(R[0]), float(R[1]), r))
+	elif r < float(R[2]):
+		k = lerpf(0.75, 0.4, smoothstep(float(R[1]), float(R[2]), r))
+	else:
+		k = lerpf(0.4, 0.0, smoothstep(float(R[2]), float(R[3]), r))
+	var h: Dictionary = g.get("home", {})
+	if not h.is_empty():
+		var e := Vector2((x - float(h["cx"])) / float(h["rx"]), (z - float(h["cz"])) / float(h["rz"])).length()
+		k *= smoothstep(1.15, 1.8, e)
+	return k
+
+
+# (pixel_toon's w3_hash, vista3d.gd _hash2 / _vnoise)
+static func _hash2(x: float, y: float) -> float:
+	var p3 := Vector3(fposmod(x * 0.1031, 1.0), fposmod(y * 0.1031, 1.0), fposmod(x * 0.1031, 1.0))
+	var d := p3.dot(Vector3(p3.y + 33.33, p3.z + 33.33, p3.x + 33.33))
+	p3 += Vector3(d, d, d)
+	return fposmod((p3.x + p3.y) * p3.z, 1.0)
+
+
+static func _vnoise(x: float, y: float) -> float:
+	var ix := floorf(x)
+	var iy := floorf(y)
+	var fx := x - ix
+	var fy := y - iy
+	var ux := fx * fx * (3.0 - 2.0 * fx)
+	var uy := fy * fy * (3.0 - 2.0 * fy)
+	return lerpf(lerpf(_hash2(ix, iy), _hash2(ix + 1.0, iy), ux), lerpf(_hash2(ix, iy + 1.0), _hash2(ix + 1.0, iy + 1.0), ux), uy)

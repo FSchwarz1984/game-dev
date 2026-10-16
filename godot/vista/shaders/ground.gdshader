@@ -3,10 +3,13 @@
 // w * 250). On the front (two buckets) the land flashes white, the event itself (lut_far row 0). Behind
 // it the land has gone far (遠化, G5R3-22): its own silver-white ghost (lut_far row 1: v0.2's ghost,
 // everything in its place and shape, its lightness kept, drained of colour, lifted), mixed with the
-// night by how much a ghost the place is: the nearer the town (ground zero, where the tide bursts
-// from), the more (ghost_map R, in steps); and over it the air shimmers a little, as over heat: the
-// land sways up and down by whole pixels, slowly, most near the town (ghost_map G). `settled`: the far
-// has been and gone over all the land in sight (the art sample's last frame).
+// night in linear light by how much a ghost the place is (ghost_map R: plain.js ghostK, the 3D
+// lookout's ghost_k: 1 round the town, ground zero, 0.75 at 1.1 km, 0.4 at 2.6 km, nothing past
+// 5.5 km, nothing in the region's ring round home); and over it the air trembles a little, as over
+// heat: the picture there is taken from a whole pixel above or below in slow bands that drift upward,
+// the more the more a ghost (ghost_map G = k^1.5; the lookout's vista_post, its numbers scaled from
+// its 640x360 to our 480x270), only from the 遠化's own land. `settled`: the far has been and gone
+// over all the land in sight (the hold).
 shader_type canvas_item;
 #include "res://vista/shaders/vista.gdshaderinc"
 
@@ -18,7 +21,7 @@ uniform float tod_row;
 uniform float wave = -1.0;
 uniform float settled = 0.0;
 uniform float t = 0.0;                 // the vista clock (the shimmer)
-uniform float mirage_px = 1.6;         // the shimmer's sway at ground zero (whole pixels after rounding)
+uniform float mirage_amp = 1.15;      // the lookout's: a pixel at most, where k^1.5 n > 0.43
 
 varying vec2 px;
 
@@ -38,16 +41,16 @@ void fragment() {
 	float b = wave >= 0.0 ? clamp(floor(wave * 250.0), -1.0, 254.0) : -10.0;
 	bool far_on = wave >= 0.0 || settled > 0.5;
 	if (far_on && gone(tex, b)) {
-		// the shimmer: whole-pixel sway, a slow swell along the row with a slower beat over it
+		// the trembling air (the lookout's bands, in its pixels: ours are 4/3 of its)
 		float m = texelFetch(ghost_map, p, 0).g;
 		if (m > 0.004) {
-			float x = float(p.x);
-			float s = sin(x * 0.19 + t * 1.25 + sin(x * 0.043 - t * 0.37) * 2.1) * 0.7 + sin(x * 0.071 - t * 0.83) * 0.3;
-			int off = int(floor(mirage_px * m * s + 0.5));
+			vec2 q3 = vec2(p) * (4.0 / 3.0);
+			float n = sin(q3.x / 11.0 + t * 0.7 + sin(q3.y / 5.0 + t * 0.9) * 1.6) * 0.6 + sin(q3.x / 29.0 - q3.y / 13.0 + t * 0.45) * 0.4;
+			int off = int(floor(n * mirage_amp * m + 0.5));
 			if (off != 0) {
 				ivec2 q = p + ivec2(0, off);
 				vec4 tq = texelFetch(ids, q, 0);
-				if (tq.a > 0.5 && gone(tq, b)) {
+				if (tq.a > 0.5 && gone(tq, b) && texelFetch(ghost_map, q, 0).r > 0.05) {
 					p = q;
 					tex = tq;
 				}
@@ -55,15 +58,14 @@ void fragment() {
 		}
 	}
 	int id = int(tex.r * 255.0 + 0.5) + int(tex.g * 255.0 + 0.5) * 256;
-	vec3 c = lut_rgb(lut, id, tod_row);
+	vec3 c = lin255(lut_rgb(lut, id, tod_row));
 	if (far_on) {
 		if (gone(tex, b)) {
 			float g = texelFetch(ghost_map, p, 0).r;
-			vec3 gc = texelFetch(lut_far, ivec2(id, 1), 0).rgb * 255.0;
-			c = mix(c, gc, g);
+			c = mix(c, lin255(texelFetch(lut_far, ivec2(id, 1), 0).rgb * 255.0), g);
 		} else if (wave >= 0.0 && floor(tex.b * 255.0 + 0.5) <= b) {
-			c = texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0;
+			c = lin255(texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0);
 		}
 	}
-	COLOR = vec4(lin255(c), 1.0);
+	COLOR = vec4(c, 1.0);
 }
