@@ -38,7 +38,7 @@ uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
 uniform float lush : hint_range(0.0, 1.0) = 0.45;            // fresh greens over the palette (w3_lush; at night only since round 5)
-uniform float dry_bias = 0.0;                               // raises the dry-grass threshold (round 4: 0.12, fewer dry patches; round 5: round 3's dry grass again, as soft changes over metres)
+uniform float dry_bias = 0.12;                              // raises the dry-grass threshold: dry grass only on baked steep south faces and by the rock (G5R2-1 "去掉枯草黄"; lead 2026-10-16: kept in round 5), now with soft edges (sward.gdshaderinc)
 uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;    // how much of the painted detail the shade drops
 // the sward's colour field, shared with the grass field's tufts (needs `palette` above)
 #include "res://render3d/shaders/sward.gdshaderinc"

@@ -20,7 +20,7 @@ render_mode unshaded, depth_draw_never, depth_test_disabled, cull_disabled, skip
 uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 uniform float strength = 0.75;
-uniform float band_edge = 1.0;          // the 遠化's bright edge (round 3: 1)
+uniform float band_edge = 0.0;          // the 遠化's bright edge (round 3: 1; round 5: 0, the lead's choice)
 uniform vec3 eye = vec3(0.0);
 uniform sampler2D glyphs : filter_nearest;  // 16 x 16 glyphs of 8 x 8 (R tone + 4, G accent + 1, A)
 uniform sampler2D tufts : filter_nearest;   // 4 x 4 tufts of 16 x 16
@@ -119,7 +119,7 @@ void fragment() {
 	// ---- the 遠化's edge (round 3's; back in round 5): where the white meets land that keeps its
 	// colour on the same ground (not where something nearer stands in front of it), a line of light
 	// one pixel wide on the white's side, wherever it runs: across the plain, up and over the hills
-	// (it glows a little). band_edge: 1 as round 3 drew it, 0 none (the variants for the lead)
+	// (it glows a little). band_edge: 1 as round 3 drew it, 0 none (round 5: none, lead 2026-10-16)
 	if (c < 20000.0 && band_edge > 0.0) {
 		vec3 wc = world_at(uv, ip, VIEWPORT_SIZE);
 		if (v_drain(wc.xz, wc.y) > 0.99) {

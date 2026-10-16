@@ -61,7 +61,9 @@ export function landY(x, z) {
     return f == null ? m : lerp(f, m, clamp(e / 64, 0, 1));
   }
   const f = bil(FARH, W3.far, x, z);
-  return f == null ? Y_PLAIN + 1500 : f;
+  // (beyond the 3D far grid, 16 km out, there is no land in the 3D view either: the ring of mountains
+  // at its edge closes the horizon; the plain level here never shows over it)
+  return f == null ? Y_PLAIN : f;
 }
 // the plain map's channels at x, z (bilinear): river m, road m, village 0..1, railway m
 const PLN = [0, 0, 0, 0];

@@ -80,10 +80,6 @@ var kiln_glow: ShaderMaterial
 var rng := RandomNumberGenerator.new()
 var _t := 0.0
 var _vdebug: PackedStringArray = []   # --vdebug=nodrain,nohaze,nocloud (looking into the layers)
-# the 遠化's band beside the new clouds (round 5: variants for the lead, --vband=N): 0 round 3's (a
-# warm paper white with a bright edge), 1 the same without the bright edge, 2 without the edge and
-# its white the clouds' light (one white for the band and the clouds)
-var band_variant := 0
 
 
 func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
@@ -94,8 +90,6 @@ func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--vdebug="):
 			_vdebug = a.substr(9).split(",")
-		if a.begins_with("--vband="):
-			band_variant = int(a.substr(8))
 	var f := FileAccess.open(DATA, FileAccess.READ)
 	if f:
 		data = JSON.parse_string(f.get_as_text())
@@ -205,7 +199,9 @@ func _marks_setup(pm: ShaderMaterial) -> void:
 		pm.set_shader_parameter("marks", false)
 	if _vdebug.has("nooutline"):
 		pm.set_shader_parameter("strength", 0.0)
-	pm.set_shader_parameter("band_edge", 1.0 if band_variant == 0 else 0.0)
+	# the 遠化's band without round 3's bright edge (lead 2026-10-16, of three variants: beside the new
+	# clouds the edge read as cut paper, the hardness the user disliked in round 3's clouds)
+	pm.set_shader_parameter("band_edge", 0.0)
 
 
 var post_mat: ShaderMaterial
@@ -1786,12 +1782,6 @@ func update(dt: float) -> void:
 	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.105, 0.11, 0.15), night)
 	if env.hours > 16.5 and env.hours < 19.5:
 		fw = fw.lerp(Color(0.68, 0.6, 0.52), clampf(1.0 - absf(env.hours - 17.8) / 1.3, 0.0, 1.0) * (1.0 - night))
-	if band_variant == 2:
-		# (the clouds' light, a little under it: one white for the band and the clouds; vista_cloud
-		# paints its lit tone x0.84 in sRGB)
-		var cl: Color = k[4]
-		var cw := Color(cl.r * 0.84, cl.g * 0.84, cl.b * 0.84).srgb_to_linear()
-		fw = fw.lerp(cw, 0.8)
 	for m in mats:
 		m.set_shader_parameter("haze_col", hz)
 		m.set_shader_parameter("mist_col", k[3])
