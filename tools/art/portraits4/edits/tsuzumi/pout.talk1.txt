@@ -1,4 +1,0 @@
-# Kasasagi, pout, talking (a little open): the pursed mouth keeps its wavy line and opens a small dark hole in its dip.
-o $6e2a38  mouth cavity (config.MOUTH_CAVITY)
-@ 57 76
-oo

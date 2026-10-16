@@ -1,8 +1,7 @@
 class_name ShowcaseGallery
 extends Control
 ## The portraits (v4, 128 x 128, art/portraits): each character's expressions, the portrait shown at
-## twice its size in the dialogue box's card colours. The portrait blinks now and then, and Space (pad X)
-## makes it talk for a few seconds, with the dialogue box's overlays and timing (DialogueBox).
+## twice its size in the dialogue box's card colours.
 ## Up / down: expression; left / right: character; the mouse picks either.
 
 const DATA := "res://art/portraits/portraits.json"
@@ -14,8 +13,6 @@ const LABELS := {
 	"embarrassed": "害羞", "serious": "认真", "determined": "坚定", "tired": "困", "calm": "平静",
 	"blank": "茫然", "mischievous": "坏笑", "afraid": "害怕", "cry_loud": "大哭",
 }
-const TALK_S := 3.0              # Space: how long the portrait talks
-const TALK_REST := [0.8, 0.25]   # talk 0.8 s, rest 0.25 s (like a comma), and again
 const BG := Color8(18, 15, 22)
 const PANEL := Color8(14, 12, 18, 238)
 const BORDER := Color8(214, 182, 120, 150)
@@ -34,18 +31,8 @@ var kana_label: Label
 var tabs: Array[Label] = []
 var rows: Array[Label] = []
 var hint: Label
-var mouth_layer: TextureRect     # the talk overlay over the portrait
-var eye_layer: TextureRect       # the blink overlay
-var overlays := {}
 var _origin := Vector2.ZERO
 var _stick_t := 0.0
-var _talk_t := 0.0
-var _mouth := 0
-var _mouth_t := 0.0
-var _mouth_i := 0
-var _eye := 0
-var _eye_t := 2.0
-var _eye_i := -1
 
 
 func _init() -> void:
@@ -59,11 +46,9 @@ func _ready() -> void:
 	if f != null:
 		data = JSON.parse_string(f.get_as_text())
 	big = _tex()
-	mouth_layer = _tex()
-	eye_layer = _tex()
 	kana_label = _label(12, DIM)
 	hint = _label(12, DIM)
-	hint.text = "↑↓ 表情　←→ 人物　Space 说话　Esc 菜单"
+	hint.text = "↑↓ 表情　←→ 人物　Esc 菜单"
 	for i in ORDER.size():
 		var l := _label(12, DIM)
 		l.text = String(_char(ORDER[i]).get("name", ORDER[i]))
@@ -127,10 +112,6 @@ func _set_expr(k: int) -> void:
 	var path := "res://art/portraits/%s/%s.png" % [ORDER[ci], String(exprs[ei])]
 	var tex := load(path) as Texture2D
 	big.texture = tex
-	overlays = StoryUI.portrait_overlays(ORDER[ci], String(exprs[ei]))
-	_mouth = 0
-	_mouth_i = 0
-	_show_overlays()
 	for r in rows.size():
 		rows[r].add_theme_color_override("font_color", TEXT if r == ei else DIM)
 	_layout()
@@ -143,9 +124,6 @@ func _layout() -> void:
 	var o := _origin
 	big.position = o + Vector2(48, 52)
 	big.size = Vector2(256, 256)
-	for layer in [mouth_layer, eye_layer]:
-		layer.position = big.position
-		layer.size = big.size
 	for t in tabs.size():
 		var x := 0.0
 		for j in t:
@@ -193,42 +171,6 @@ func _process(dt: float) -> void:
 			_stick_t = 0.22
 	else:
 		_stick_t = 0.0
-	_animate(dt)
-
-
-## The portrait's mouth while it talks (Space) and its blinks, as in the dialogue box.
-func _animate(dt: float) -> void:
-	var before := Vector2i(_mouth, _eye)
-	var talking := false
-	if _talk_t > 0.0:
-		_talk_t -= dt
-		talking = _talk_t > 0.0 and fmod(TALK_S - _talk_t, TALK_REST[0] + TALK_REST[1]) < TALK_REST[0]
-	if talking:
-		_mouth_t += dt
-		if _mouth_t >= DialogueBox.MOUTH_STEP:
-			_mouth_t -= DialogueBox.MOUTH_STEP
-			_mouth_i = (_mouth_i + 1) % DialogueBox.MOUTH_CYCLE.size()
-			_mouth = DialogueBox.MOUTH_CYCLE[_mouth_i]
-	else:
-		_mouth = 0
-		_mouth_t = 0.0
-	_eye_t -= dt
-	if _eye_t <= 0.0:
-		_eye_i += 1
-		if _eye_i >= DialogueBox.BLINK_FRAMES.size():
-			_eye_i = -1
-			_eye = 0
-			_eye_t = randf_range(2.5, 6.0)
-		else:
-			_eye = DialogueBox.BLINK_FRAMES[_eye_i][0]
-			_eye_t = DialogueBox.BLINK_FRAMES[_eye_i][1]
-	if Vector2i(_mouth, _eye) != before:
-		_show_overlays()
-
-
-func _show_overlays() -> void:
-	mouth_layer.texture = overlays.get("talk%d" % _mouth) if _mouth > 0 else null
-	eye_layer.texture = overlays.get("blink%d" % _eye) if _eye > 0 else null
 
 
 func _unhandled_input(e: InputEvent) -> void:
@@ -242,8 +184,6 @@ func _unhandled_input(e: InputEvent) -> void:
 				_set_char(ci - 1)
 			KEY_RIGHT, KEY_D:
 				_set_char(ci + 1)
-			KEY_SPACE:
-				_talk_t = TALK_S
 			_:
 				return
 		get_viewport().set_input_as_handled()
@@ -257,8 +197,6 @@ func _unhandled_input(e: InputEvent) -> void:
 				_set_char(ci - 1)
 			JOY_BUTTON_DPAD_RIGHT:
 				_set_char(ci + 1)
-			JOY_BUTTON_X:
-				_talk_t = TALK_S
 			_:
 				return
 		get_viewport().set_input_as_handled()

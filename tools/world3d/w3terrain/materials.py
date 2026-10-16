@@ -40,6 +40,8 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     bank = geom.smoothstep(26.0, 34.0, slope + (n1 - 0.5) * 6.0) * (1.0 - rock)
     bank = np.maximum(bank, F["road_bank"] * geom.smoothstep(14.0, 24.0, slope) * (1.0 - rock))
     bank = np.maximum(bank, F["terrace_bank"])
+    # the lane's ditch: damp dark earth
+    bank = np.maximum(bank, F.get("ditch_k", 0.0) * 0.9)
     W["bank"] = bank
 
     # --- worn dirt: the trails and the earth stretches of the road, the yard. Crisp edges (round 4:
@@ -57,6 +59,12 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     gravel = np.maximum(gravel, F["stream_bed"] * 0.9)
     gravel = np.maximum(gravel, F["graves_k"] * geom.smoothstep(0.3, 0.6, n1))
     gravel = np.maximum(gravel, F.get("gutter_k", 0.0) * 0.95)
+    # round 5: the forecourt's fine gravel (境内, moss creeping in at its rim) and the gravel strips
+    # either side of the cut-stone 真 path
+    fc = np.asarray(F.get("forecourt_k", 0.0)) * np.ones_like(Hs)
+    rim = geom.smoothstep(0.35, 0.75, fc) * (1.0 - geom.smoothstep(0.75, 0.98, fc))
+    gravel = np.maximum(gravel, fc * 0.92 * (1.0 - 0.7 * rim * geom.smoothstep(0.4, 0.6, n1)))
+    gravel = np.maximum(gravel, F.get("border_k", 0.0) * 0.95)
     W["gravel"] = gravel * (1.0 - rock * 0.7)
 
     # --- moss: wet and shaded ground; in the joints of the paving and between stepping stones; and

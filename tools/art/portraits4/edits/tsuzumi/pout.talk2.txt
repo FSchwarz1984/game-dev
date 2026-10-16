@@ -1,6 +1,0 @@
-# Kasasagi, pout, talking (more open): the hole one row deeper, a lower lip under it (a small "o" in the pout).
-o $6e2a38  mouth cavity (config.MOUTH_CAVITY)
-@ 57 76
-oo
-oo
-qq

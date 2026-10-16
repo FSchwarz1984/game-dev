@@ -61,15 +61,29 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     h, road_d, road_arc, road_h = edits.cut_corridor(h, X, Z, RP, rprof, R["width"], R["bank"], bank_slope=0.95, wobble_seed=int(L["seed"]) + 5)
     # pads (yard, shrine terrace, graves bench, lookout top)
     pad_sdf = {}
+    pads_done = {}
     for p in L["pads"]:
-        h, sdf = edits.apply_pad(h, X, Z, p, int(L["seed"]) + 9)
+        h, sdf = edits.apply_pad(h, X, Z, p, int(L["seed"]) + 9, pads_done)
         pad_sdf[p["id"]] = sdf
+        pads_done[p["id"]] = p
     # footpaths after the pads so they meet them
     path_fields = []
+    from . import roads as RO
     for P in L["paths"]:
         pts = geom.catmull(np.asarray(P["points"], np.float64), 8)
-        h, d, arc = edits.flatten_path(h, X, Z, pts, P["width"], cell=cell)
+        wmean = float(np.mean(P["widths"])) if P.get("widths") else P["width"]
+        h, d, arc = edits.flatten_path(h, X, Z, pts, wmean, cell=cell)
         path_fields.append((P, pts, d))
+        # a lane's ditch on its uphill side: a shallow swale beside the tread (round 5, road iron rule)
+        for sg in P.get("segments", []):
+            if sg.get("kind") == "lane" and sg.get("ditch"):
+                rt = RO.Route(P["points"], 8, widths=P.get("widths"), width=P["width"], seed=len(P["id"]))
+                dd, aa, _ = geom.polyline_field(X, Z, rt.P[::4])
+                Pn, Tn, Nn = rt.at(aa)
+                side = np.sign((X - Pn[..., 0]) * Nn[..., 0] + (Z - Pn[..., 1]) * Nn[..., 1])
+                hw = rt.width_at(aa) * 0.5
+                cut = 0.11 * geom.smoothstep(0.5, 0.12, np.abs(dd - (hw + 0.45))) * (side == np.sign(sg["ditch"]))
+                h = h - cut
     step_info = []
     for st in L["steps"]:
         h, hh = edits.apply_steps(h, X, Z, st)
@@ -116,6 +130,14 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     walk |= road_core
     for p in L["pads"]:
         walk |= pad_sdf[p["id"]] < -0.2
+    # round 5: the planted masses and the hedges are walls she cannot walk into (what reads as a thicket
+    # is one: G5R3-3 "能走与不能走一目了然，碰撞与画面一致")
+    for g in L.get("plantings", []):
+        if g.get("solid", True) and "sode" not in g.get("layers", {}):
+            walk &= ~(geom.polygon_sdf(X, Z, np.asarray(g["poly"], np.float64)) < -0.45)
+    for hd in L.get("hedges", []):
+        dh_, _, _ = geom.polyline_field(X, Z, np.asarray(hd["pts"], np.float64))
+        walk &= ~(dh_ < 0.42)
     walk = ndimage.binary_opening(walk, iterations=1)
     log("water & walk", f"{time.time() - t0:.1f}s", "walkable", f"{walk.mean() * 100:.1f}%")
 
@@ -177,10 +199,14 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     gutter_k = np.zeros_like(Hs)
     seed_i = int(L["seed"])
 
+    ditch_k = np.zeros_like(Hs)
+    border_k = np.zeros_like(Hs)
+
     def footprint(route, ranges, width):
         d, arc, k = RO.kinds_on_grid(route, ranges, Xs, Zs, width)
-        hw = width * 0.5
-        wob = (noise.fbm(arc / 4.5, np.full(arc.shape, 3.7), 2, seed_i + 71) - 0.5) * 0.22 * width
+        # round 5: the width follows the route's profile (wider at junctions and before yards and gates)
+        hw = np.where(np.isfinite(d), route.width_at(np.where(np.isfinite(d), arc, 0.0)) * 0.5, width * 0.5)
+        wob = (noise.fbm(arc / 4.5, np.full(arc.shape, 3.7), 2, seed_i + 71) - 0.5) * 0.22 * hw * 2
         fine = (noise.fbm(Xs / 0.7, Zs / 0.7, 2, seed_i + 72) - 0.5) * 0.08
         for idx, (a, b, sg) in enumerate(ranges):
             sel = k == idx
@@ -190,6 +216,26 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
             if kind == "trail":
                 v = geom.smoothstep(hw + 0.07, hw - 0.12, d - wob - fine)
                 trail_k[sel] = np.maximum(trail_k[sel], v[sel])
+            elif kind == "lane":
+                # two trodden tracks, grass along the middle where neither feet nor wheels go
+                v = geom.smoothstep(hw + 0.07, hw - 0.12, d - wob - fine)
+                patch = 0.55 + 0.45 * geom.smoothstep(0.35, 0.65, noise.fbm(arc / 2.5, np.full(arc.shape, 9.1), 2, seed_i + 73))
+                mid = geom.smoothstep(0.36, 0.14, d + fine * 2.0) * patch
+                v = v * (1.0 - mid)
+                trail_k[sel] = np.maximum(trail_k[sel], v[sel])
+                if sg.get("ditch"):
+                    Pn, Tn, Nn = route.at(np.where(np.isfinite(d), arc, 0.0))
+                    side = np.sign((Xs - Pn[..., 0]) * Nn[..., 0] + (Zs - Pn[..., 1]) * Nn[..., 1])
+                    dk = geom.smoothstep(0.32, 0.08, np.abs(d - (hw + 0.45)) + fine) * (side == np.sign(sg["ditch"]))
+                    ditch_k[sel] = np.maximum(ditch_k[sel], dk[sel])
+            elif kind == "nobedan":
+                v = geom.smoothstep(hw + 0.03, hw - 0.03, d)
+                pave_k[sel] = np.maximum(pave_k[sel], v[sel])
+            elif kind == "kiriishi":
+                v = geom.smoothstep(hw + 0.03, hw - 0.03, d)
+                pave_k[sel] = np.maximum(pave_k[sel], v[sel])
+                b = geom.smoothstep(hw + 0.5, hw + 0.3, d) * (1.0 - v)
+                border_k[sel] = np.maximum(border_k[sel], b[sel])
             elif kind == "ishidatami":
                 v = geom.smoothstep(hw + 0.04, hw - 0.04, d)
                 pave_k[sel] = np.maximum(pave_k[sel], v[sel])
@@ -201,11 +247,11 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
                 stone_k[sel] = np.maximum(stone_k[sel], v[sel])
                 if kind.startswith("steps"):
                     trail_k[sel] = np.maximum(trail_k[sel], geom.smoothstep(hw + 0.05, hw - 0.15, d)[sel] * 0.9)
-    road_route = RO.Route(R["points"], 10)
+    road_route = RO.Route(R["points"], 10, width=R["width"])
     footprint(road_route, RO.resolve(road_route, R["points"], R.get("segments", [])), R["width"])
     for P_ in L["paths"]:
         if P_.get("segments"):
-            rt = RO.Route(P_["points"], 8)
+            rt = RO.Route(P_["points"], 8, widths=P_.get("widths"), width=P_["width"], seed=len(P_["id"]))
             footprint(rt, RO.resolve(rt, P_["points"], P_["segments"]), P_["width"])
     for st in L.get("steps", []):
         rt = RO.Route([st["from"], st["to"]], 0)
@@ -214,6 +260,9 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     F["pave_k"] = pave_k
     F["stone_k"] = stone_k
     F["gutter_k"] = gutter_k
+    F["ditch_k"] = ditch_k
+    F["border_k"] = border_k
+    F["forecourt_k"] = geom.smoothstep(0.3, -0.4, up(pad_sdf["forecourt"])) if "forecourt" in pad_sdf else np.zeros_like(Hs)
     F["sanctum"] = up((geom.polygon_sdf(X, Z, L["zones"]["sanctum"]) < 0).astype(float)) if "sanctum" in L["zones"] else np.zeros_like(Hs)
     F["oku"] = up((geom.polygon_sdf(X, Z, L["zones"]["oku"]) < 0).astype(float)) if "oku" in L["zones"] else np.zeros_like(Hs)
     pw = np.zeros_like(Hs)
@@ -352,8 +401,9 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
                                   "top": [round(max(r[2], r[3]), 3) for r in run],
                                   "bottom": [round(min(r[2], r[3]), 3) for r in run],
                                   "cut": [bool(r[3] > r[2]) for r in run]})
+            min_step = float(sides.get("min_step", 0.6)) * 0.8 if isinstance(sides, dict) else 0.28
             for r in rows:
-                if abs(r[3] - r[2]) > 0.28:
+                if abs(r[3] - r[2]) > min_step:
                     run.append(r)
                 else:
                     flush(run)

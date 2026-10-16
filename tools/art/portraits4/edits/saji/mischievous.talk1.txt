@@ -1,9 +1,0 @@
-# Saji, mischievous, talking (a little open): the smirk parts beside the fang (a dark gap and a lower lip under the
-# middle of the line); the fang side and the far corner stay closed, so it still reads as a smirk.
-o $6e2430  mouth cavity (config.MOUTH_CAVITY)
-@ 59 76
-oo
-qq
-@ 61 77
-oo
-qq

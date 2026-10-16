@@ -48,6 +48,9 @@ var world_env: WorldEnvironment
 var view := Vector2i.ZERO
 var shots := {}
 var _current: Node2D = null
+var _own_director: Director = null   # play_standalone()'s, ticked with the vista's clock
+var _figure: VistaFigure = null      # her sprite on the limb while it runs (follows state.pose)
+var _wash_hold := -1.0               # >= 0: the white wash at this level whatever the wave (its ending)
 
 
 func _ready() -> void:
@@ -211,6 +214,10 @@ func _make(name: String) -> Node2D:
 
 
 func _process(dt: float) -> void:
+	if _own_director != null:
+		_own_director.tick(clampf(dt, 0.0, 0.1))
+	if _figure != null and is_instance_valid(_figure):
+		_figure.set_pose(String(state.get("pose", "sit")))
 	if autoplay:
 		advance(dt)
 
@@ -239,6 +246,8 @@ func _finish() -> void:
 	mat.set_shader_parameter("end_k", _current.wave_fx.end_k if "wave_fx" in _current else 0.0)
 	if not ("wave_fx" in _current):
 		mat.set_shader_parameter("wash_a", 0.0)
+	elif _wash_hold >= 0.0:
+		mat.set_shader_parameter("wash_a", _wash_hold)
 
 
 ## "high" on desktops, "low" on phones (unless set): companion sparks and the motes' count.
@@ -356,6 +365,40 @@ func play_prologue(d: Director, between: Callable = Callable()) -> void:
 	await _pause(d, between, "far", 2.6)
 	await far_arrives(d)
 	beat.emit("end")
+
+
+## The prologue's beats on their own, without the story or a host's director (the art sample's
+## entry, ShowcaseVista): its own director on the vista's clock, her sprite on the limb following
+## state.pose. When the far has washed the frame white the white holds a second, then thins back to
+## the sky shore over the dark plain (the frame where 天岸 shows: the lamps gone up into the gate, she
+## sitting on the limb) and the vista stays there, still alive. Returns then (beat "hold"); call it
+## again to play it from the start. Needs autoplay (the vista advancing itself).
+func play_standalone() -> void:
+	if _own_director == null:
+		_own_director = Director.new()
+	_own_director.reset()
+	_wash_hold = -1.0
+	show_shot("south")
+	_place_figure()
+	await play_prologue(_own_director)
+	await _own_director.wait(1.0)
+	_wash_hold = 0.97
+	state = {"tod": 20.3, "pan": 1.0, "rise": 1.0, "sky": 1.0, "wave": -1.0, "tower": 1.0, "pose": "sit"}
+	show_shot("south")
+	await _own_director.tween(2.2, func(k: float) -> void: _wash_hold = 0.97 * (1.0 - k))
+	_wash_hold = -1.0
+	beat.emit("hold")
+
+
+func _place_figure() -> void:
+	var slot := figure_slot()
+	if slot == null:
+		return
+	if _figure == null or not is_instance_valid(_figure):
+		_figure = VistaFigure.new()
+		_figure.name = "Her"
+		slot.add_child(_figure)
+	_figure.set_pose(String(state.get("pose", "sit")))
 
 
 func _pause(d: Director, between: Callable, name: String, seconds: float) -> void:

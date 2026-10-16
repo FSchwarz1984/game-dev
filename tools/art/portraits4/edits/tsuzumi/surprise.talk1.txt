@@ -1,9 +1,0 @@
-# Kasasagi, surprise, talking (half): the small "o" closes to a slit, its lower lip rises to the middle row. The rule
-# (talkblink.py) misses this mouth: its outline is the illustration's browns, not the mouth colours.
-0 $fde0cd  skin (the portrait's own)
-1 $fee8d7  skin light (the portrait's own)
-2 $8a6861  lip line (the portrait's own)
-5 $ab837c  soft lip edge (the portrait's own)
-@ 52 78
-15222
-.0000

@@ -103,11 +103,9 @@ func _show_line() -> void:
 	var who := String(line.get("who", "narr"))
 	var cast: Dictionary = CAST.get(who, CAST["narr"])
 	var tex: Texture2D = null
-	var overs := {}
 	if cast["name"] != "":
 		tex = portrait(who, String(line.get("face", "neutral")))
-		overs = portrait_overlays(who, String(line.get("face", "neutral")))
-	dlg.show_line(String(cast["name"]), tex, _bbcode(String(line.get("text", ""))), overs)
+	dlg.show_line(String(cast["name"]), tex, _bbcode(String(line.get("text", ""))))
 	_total = dlg.text.get_total_character_count()
 	_shown = 0
 	_t = 0.0
@@ -120,18 +118,6 @@ static func portrait(who: String, face: String) -> Texture2D:
 		if ResourceLoader.exists(p):
 			return load(p) as Texture2D
 	return null
-
-
-## The talk and blink overlays of the portrait that portrait() returns (same face, or neutral when the face is
-## missing): art/portraits/<who>/<face>.talk1.png etc. Only the ones that exist.
-static func portrait_overlays(who: String, face: String) -> Dictionary:
-	var f := face if ResourceLoader.exists("res://art/portraits/%s/%s.png" % [who, face]) else "neutral"
-	var out := {}
-	for k in ["talk1", "talk2", "blink1", "blink2"]:
-		var p := "res://art/portraits/%s/%s.%s.png" % [who, f, k]
-		if ResourceLoader.exists(p):
-			out[k] = load(p) as Texture2D
-	return out
 
 
 ## 「重」 and the other quality names take their quality's colour; nothing else is markup.
@@ -151,7 +137,6 @@ func advance() -> void:
 		_shown = _total
 		dlg.text.visible_characters = -1
 		dlg.done = true
-		dlg.talking = false
 		return
 	Audio.sfx("ui")
 	_i += 1
@@ -186,13 +171,8 @@ func update(dt: float) -> void:
 			if voice != "" and c != "" and not SILENT.contains(c) and _shown % 2 == 1:
 				Audio.blip(voice, _shown)
 		dlg.text.visible_characters = _shown
-		# the mouth moves while the line types and rests at punctuation and when it is done
-		var last := plain[_shown - 1] if _shown > 0 and _shown <= plain.length() else ""
-		dlg.talking = _shown < _total and not SILENT.contains(last)
 		if _shown >= _total:
 			dlg.done = true
-	elif dlg.talking:
-		dlg.talking = false
 	for key in _alpha:
 		var a: Array = _alpha[key]
 		a[0] = move_toward(a[0], a[1], dt / maxf(0.05, a[2]))
@@ -289,7 +269,6 @@ func snapshot() -> Dictionary:
 		var line: Dictionary = _lines[_i]
 		out.merge({"who": line.get("who", "narr"), "index": _i, "count": _lines.size(), "shown": _shown,
 			"total": _total, "done": dlg.done, "text": String(line.get("text", "")),
-			"face": line.get("face", "neutral"), "talking": dlg.talking, "mouth": dlg._mouth, "eye": dlg._eye,
 			"box": [dlg.box.position.x, dlg.box.position.y, dlg.box.size.x, dlg.box.size.y],
 			"card": [dlg.card.position.x, dlg.card.position.y, dlg.card.size.x, dlg.card.size.y],
 			"text_rect": [dlg.text.position.x, dlg.text.position.y, dlg.text.size.x, dlg.text.size.y]})

@@ -79,13 +79,27 @@ def rect_sdf(X, Z, centre, size, angle_deg, corner=0.0):
     return outside + inside - r, lx, lz
 
 
-def apply_pad(h, X, Z, pad, seed=0):
-    sdf, lx, lz = rect_sdf(X, Z, pad["centre"], pad["size"], pad.get("angle", 0.0), pad.get("corner", 0.0))
-    if "height_rel" in pad:
+def pad_shape(X, Z, pad):
+    """The pad's signed distance (negative inside) and local coordinates: a rotated rounded rectangle
+    (centre, size, angle, corner) or, round 5, a polygon (poly: an outline drawn to the land)."""
+    if "poly" in pad:
+        P = np.asarray(pad["poly"], np.float64)
+        sdf = geom.polygon_sdf(X, Z, P)
+        c = P.mean(axis=0)
+        return sdf, X - c[0], Z - c[1]
+    return rect_sdf(X, Z, pad["centre"], pad["size"], pad.get("angle", 0.0), pad.get("corner", 0.0))
+
+
+def apply_pad(h, X, Z, pad, seed=0, done=None):
+    sdf, lx, lz = pad_shape(X, Z, pad)
+    if "height_of" in pad and done is not None and pad["height_of"]["pad"] in done:
+        # levelled relative to another pad (the shrine's platform: so many steps above the forecourt)
+        pad["height"] = float(done[pad["height_of"]["pad"]]["height"]) + float(pad["height_of"].get("offset", 0.0))
+    elif "height_rel" in pad:
         # levelled at the mean of the land it sits on, plus an offset (raised terraces, cut benches)
         pad["height"] = float(np.mean(h[sdf < 0.0])) + float(pad["height_rel"])
-    # organic outline: the edge wanders (nobody levels a yard with a ruler)
-    sdf = sdf + (noise.fbm(X / 2.6, Z / 2.6, 3, seed) - 0.5) * 0.9
+    # organic outline: the edge wanders (nobody levels a yard with a ruler); a stone platform less
+    sdf = sdf + (noise.fbm(X / 2.6, Z / 2.6, 3, seed) - 0.5) * 2.0 * float(pad.get("wander", 0.45))
     f = pad.get("feather", 1.5)
     target = pad["height"]
     if pad.get("raised"):
@@ -95,6 +109,14 @@ def apply_pad(h, X, Z, pad, seed=0):
         return out, sdf
     k = geom.smoothstep(f, 0.0, sdf)
     walls = pad.get("wall", [])
+    if isinstance(walls, dict):
+        # round 5: field stone only where the land really steps (cut or fill deeper than min_step);
+        # elsewhere the yard runs out into the slope (no walled boxes)
+        ms = float(walls.get("min_step", 0.6))
+        steep = geom.smoothstep(ms * 0.75, ms * 1.1, np.abs(h - target))
+        k_wall = geom.smoothstep(0.35, 0.0, sdf)
+        k = k_wall * steep + k * (1.0 - steep)
+        return h * (1.0 - k) + target * k, sdf
     if walls == "auto":
         # stone-faced wherever the yard meets the land with a real step (cut or fill)
         k_wall = geom.smoothstep(0.35, 0.0, sdf)

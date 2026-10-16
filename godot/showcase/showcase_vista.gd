@@ -2,15 +2,15 @@ class_name ShowcaseVista
 extends Control
 ## The prologue's treetop vista on its own (the beats of the prologue without its lines): the camera
 ## rises out of the camphor's crown over the plain at dusk, the lamps leave the ground and gather
-## into the gate, the sky shore opens, the tower goes dark, the far comes up the mountain. Then it
-## holds on the plain; Enter / gamepad A plays it again. Her figure sits on the limb (VistaFigure).
+## into the gate, the sky shore opens, the tower goes dark, the far comes up the mountain and washes
+## the frame white. Then the white thins back to the sky shore over the dark plain and it holds there;
+## Enter / gamepad A plays it again. Vista.play_standalone() runs it (its own director, her figure on
+## the limb), so nothing here depends on the story's Director.
 
 const TEXT := Color8(243, 236, 220, 150)
 const SHADOW := Color8(8, 7, 12, 220)
 
 var vista: Vista
-var director: Director
-var figure: VistaFigure = null
 var hint: Label
 var _playing := false
 
@@ -25,7 +25,6 @@ func _ready() -> void:
 	vista = Vista.new()
 	vista.name = "PrologueVista"
 	add_child(vista)
-	director = Director.new()
 	hint = Label.new()
 	hint.add_theme_font_override("font", UiTheme.font("pixel"))
 	hint.add_theme_font_size_override("font_size", 12)
@@ -45,29 +44,12 @@ func _play() -> void:
 		return
 	_playing = true
 	hint.visible = false
-	if vista.has_method("play_standalone"):
-		await vista.call("play_standalone")
-	else:
-		director.reset()
-		vista.begin()
-		_place_figure()
-		await vista.play_prologue(director)
+	await vista.play_standalone()
 	_playing = false
 	hint.visible = true
 
 
-func _place_figure() -> void:
-	var slot := vista.figure_slot()
-	if slot == null or figure != null:
-		return
-	figure = VistaFigure.new()
-	slot.add_child(figure)
-
-
-func _process(dt: float) -> void:
-	director.tick(dt)
-	if figure != null and is_instance_valid(figure):
-		figure.set_pose(String(vista.state.get("pose", "sit")))
+func _process(_dt: float) -> void:
 	hint.position = Vector2(size.x - 8.0 - hint.get_minimum_size().x, size.y - 20.0).round()
 
 

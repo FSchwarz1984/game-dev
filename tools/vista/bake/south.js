@@ -303,6 +303,8 @@ export function bakeSouth(o = {}) {
       oyC, CH, CHc, nearH, headDraws, anchors, tod0: TOD0, todStep: TOD_STEP, todRows: TOD_ROWS,
       deckScale: 8192, zFixed: [0, 1024], counts: { lights: lights.length, stars: stars.length, paddyStars: paddyStars.length },
       river: riverRev, riverLanterns: river.map(v => [r3(v.u0), r3(v.ph), r3(v.side)]), plainU: PL.U,
+      // how far the mountains were lowered to stay clear of the sky shore (plain.js mountainFit)
+      mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },

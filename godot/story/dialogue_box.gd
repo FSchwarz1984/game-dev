@@ -6,9 +6,6 @@ extends Control
 ## bottom), and the text column starts 8 px right of the card, so the portrait can never cover a word
 ## (F-3). The name plate sits on the box's top border above the text column, always one line, as wide as
 ## the name. Narration (no speaker) has no card and uses the full width.
-## The portrait talks while its line types and blinks now and then: overlays of only the changed pixels
-## (art/portraits/<who>/<face>.talk1/.talk2/.blink1/.blink2.png, tools/art/portraits4/talkblink.py) drawn
-## over it, so at rest it is exactly the approved expression (knowledge/13 §10.9).
 ## Everything is drawn on whole native pixels; the stage scales it by an integer.
 
 const BOX_W := 624
@@ -31,25 +28,10 @@ var plate := Rect2()
 var text: RichTextLabel
 var name_label: Label
 var portrait_tex: Texture2D = null
-## Optional overlays of the current expression (only their changed pixels are opaque): "talk1", "talk2" (mouth a
-## little / more open), "blink1", "blink2" (eyes half / fully closed). They never touch the same pixels, so a
-## blink can happen while she talks. Missing ones are simply not drawn.
-var overlays: Dictionary = {}
-## Set by StoryUI while the line types; false at a pause (punctuation) and once the line is done.
-var talking := false
 var speaker := ""
 var done := false
 var _blink := 0.0
 var _kind := "pixel"
-const MOUTH_STEP := 0.09                                 # s per mouth frame while talking
-const MOUTH_CYCLE := [1, 2, 1, 0, 2, 1, 2, 0]           # 0 = the expression's own mouth
-const BLINK_FRAMES := [[1, 0.05], [2, 0.08], [1, 0.05]] # [overlay, seconds]
-var _mouth := 0
-var _mouth_t := 0.0
-var _mouth_i := 0
-var _eye := 0
-var _eye_t := 3.0
-var _eye_i := -1
 
 
 func _init() -> void:
@@ -92,13 +74,10 @@ func apply_theme(kind: String) -> void:
 	relayout()
 
 
-## who: cast id or "" for narration; portrait: the expression's texture or null; overs: its talk/blink overlays.
-func show_line(who_name: String, portrait: Texture2D, bbcode: String, overs: Dictionary = {}) -> void:
+## who: cast id or "" for narration; portrait: the expression's texture or null.
+func show_line(who_name: String, portrait: Texture2D, bbcode: String) -> void:
 	speaker = who_name
 	portrait_tex = portrait
-	overlays = overs
-	_mouth = 0
-	_mouth_i = 0
 	name_label.text = who_name
 	text.text = bbcode
 	text.visible_characters = 0
@@ -133,32 +112,6 @@ func _process(dt: float) -> void:
 	if visible and done:
 		_blink += dt
 		queue_redraw()
-	if not visible or portrait_tex == null:
-		return
-	var before := Vector2i(_mouth, _eye)
-	# mouth: steps through MOUTH_CYCLE while the text types; rests on the expression's own mouth otherwise
-	if talking:
-		_mouth_t += dt
-		if _mouth_t >= MOUTH_STEP:
-			_mouth_t -= MOUTH_STEP
-			_mouth_i = (_mouth_i + 1) % MOUTH_CYCLE.size()
-			_mouth = MOUTH_CYCLE[_mouth_i]
-	else:
-		_mouth = 0
-		_mouth_t = 0.0
-	# eyes: a blink every 2.5-6 s (half, closed, half)
-	_eye_t -= dt
-	if _eye_t <= 0.0:
-		_eye_i += 1
-		if _eye_i >= BLINK_FRAMES.size():
-			_eye_i = -1
-			_eye = 0
-			_eye_t = randf_range(2.5, 6.0)
-		else:
-			_eye = BLINK_FRAMES[_eye_i][0]
-			_eye_t = BLINK_FRAMES[_eye_i][1]
-	if Vector2i(_mouth, _eye) != before:
-		queue_redraw()
 
 
 func _draw() -> void:
@@ -173,10 +126,6 @@ func _draw() -> void:
 		draw_rect(card.grow(-1), BORDER_IN)
 		draw_rect(card.grow(-2), CARD_BG)
 		draw_texture(portrait_tex, card.position + Vector2(2, 2))
-		if _mouth > 0 and overlays.has("talk%d" % _mouth):
-			draw_texture(overlays["talk%d" % _mouth], card.position + Vector2(2, 2))
-		if _eye > 0 and overlays.has("blink%d" % _eye):
-			draw_texture(overlays["blink%d" % _eye], card.position + Vector2(2, 2))
 	if speaker != "":
 		draw_rect(plate, PLATE_BG)
 		draw_rect(plate, BORDER, false, 1.0)

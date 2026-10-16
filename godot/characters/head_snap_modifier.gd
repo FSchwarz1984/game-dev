@@ -9,6 +9,7 @@ extends SkeletonModifier3D
 
 var bone := -1
 var character: Node3D       # Character3D: its view numbers, anchor, ground
+var offset := Vector2.ZERO  # the head's origin lands this far into its pixel (0.5: the pixel's centre)
 
 
 func _process_modification() -> void:
@@ -19,7 +20,7 @@ func _process_modification() -> void:
 	var pose := sk.get_bone_global_pose(bone)
 	var wp: Vector3 = sk.global_transform * pose.origin
 	var s: Vector2 = character.call("screen_rendered", wp)
-	var d: Vector2 = s.round() - s
+	var d: Vector2 = (s - offset).round() + offset - s
 	# a screen shift (d px) of an upright point: x by d.x / ppm, height by d.y / ppm (the lean makes a
 	# vertical metre exactly ppm pixels), no change in depth along the ground
 	var w := Vector3(d.x / v.x, d.y / v.x, 0.0)

@@ -24,6 +24,7 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 uniform float sil_gap = 0.22;        // m: a neighbour this far behind is "not her"
 uniform float inner_gap = 0.07;      // m: a part of her this far behind another part
 uniform float sil_amount = 1.0;
+uniform float sil_ink = 0.55;        // how far her silhouette line goes toward the ink colour
 uniform float inner_amount = 0.55;
 uniform float fog_share = 0.33;
 uniform float seam_amount = 0.5;     // the seam: this share of the outline colour (one tone darker)
@@ -46,9 +47,16 @@ vec3 line_of(vec3 c) {
 	// violet, skin -> warm brown, cream -> grey-brown, navy -> near-black indigo)
 	// dark enough to part her from the packed earth and the grass (half as dark left the cream
 	// sleeves' edge the colour of the ground)
+	// (round 5) a step darker than round 4, toward the v0.2 sprite's ink: the cream sleeves and the hat
+	// keep a clear edge on the bright ground
 	float l = w3_luma(c);
-	vec3 d = c * vec3(0.34, 0.30, 0.40);
-	return mix(d, d * vec3(1.08, 0.92, 0.95), smoothstep(0.25, 0.6, l));
+	vec3 d = c * vec3(0.25, 0.22, 0.31);
+	return mix(d, d * vec3(1.06, 0.92, 0.98), smoothstep(0.25, 0.6, l));
+}
+
+// her silhouette: toward the v0.2 sprite's ink (#16122a), keeping a little of the colour it bounds
+vec3 sil_of(vec3 c) {
+	return mix(line_of(c), vec3(0.0085, 0.0065, 0.024), sil_ink);
 }
 
 void fragment() {
@@ -90,7 +98,7 @@ void fragment() {
 		}
 	}
 	if (sil > 0.5) {
-		col = mix(col, line_of(col), sil_amount);
+		col = mix(col, sil_of(col), sil_amount);
 	} else if (inner > 0.5) {
 		col = mix(col, line_of(col), inner_amount);
 	} else if (seam > 0.5) {

@@ -62,6 +62,47 @@ func test_the_prologue_keeps_the_js_beats_order_and_timing() -> void:
 	v.queue_free()
 
 
+## The art sample's entry (ShowcaseVista): the beats on the vista's own director, her sprite on the
+## limb following the poses, and after the white of the far a hold on the sky shore over the plain.
+func test_the_standalone_play_ends_held_on_the_sky_shore() -> void:
+	var v := _vista()
+	var beats := []
+	var at := {}
+	var clock := [0.0]
+	v.beat.connect(func(n: String) -> void:
+		beats.append(n)
+		at[n] = clock[0])
+	v.play_standalone()   # not awaited: it runs on its own director, ticked by _process as below
+	var poses := {}
+	var white := 0.0
+	var mat := v.view_rect.material as ShaderMaterial
+	for i in 4000:
+		if beats.has("hold"):
+			break
+		v._process(DT)    # autoplay is off here: this ticks its director and her pose only
+		v.advance(DT)
+		clock[0] += DT
+		if v._figure != null:
+			poses[v._figure.pose] = true
+		if beats.has("end"):
+			white = maxf(white, float(mat.get_shader_parameter("wash_a")))
+	check(beats.has("hold"), "it reaches the hold (%s)" % [beats.slice(-3)])
+	eq(beats.slice(0, 2), ["begin", "crane_up"], "it plays the prologue from the start")
+	check(beats.find("end") < beats.find("hold"), "the hold comes after the end")
+	near(float(at.get("hold", 0.0)) - float(at.get("end", 0.0)), 3.2, 0.2, "a second of white, then 2.2 s back")
+	check(white > 0.9, "the far washed the frame white (%.2f)" % white)
+	eq(poses.keys().size(), 3, "her sprite sat, stood and shouted (%s)" % [poses.keys()])
+	var south: VistaSouth = v.shots["south"]
+	check(v._figure != null and v._figure.get_parent() == south.figure, "her sprite is in the figure slot")
+	eq(v.shot, "south")
+	eq([v.state["sky"], v.state["rise"], v.state["wave"], v.state["pose"]], [1.0, 1.0, -1.0, "sit"], "held on the sky shore, the lamps gone up, she sitting")
+	v._process(DT)
+	v.advance(DT)
+	eq(float(mat.get_shader_parameter("wash_a")), 0.0, "no white left")
+	eq(v._figure.pose, "sit")
+	v.queue_free()
+
+
 func test_the_lights_leave_like_8196ebf_two_alone_then_all_into_the_gate() -> void:
 	var v := _vista()
 	var r := _run_prologue(v)

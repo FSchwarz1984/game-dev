@@ -134,10 +134,14 @@ def ccw(P):
 
 # ------------------------------------------------------------------------------------------- the route frame
 class Route:
-    """A centreline resampled every 5 cm: position, unit tangent and left normal by arc length."""
+    """A centreline resampled every 5 cm: position, unit tangent and left normal by arc length; and
+    its width along the way (round 5, the road iron rule G5R3-4: no road is one width from end to
+    end): `widths` gives a width at each control point (wider at junctions, before yards and gates),
+    interpolated along the route, with a slow wobble of a few per cent on top."""
 
-    def __init__(self, pts, smooth=8):
-        pts = np.asarray(pts, np.float64)
+    def __init__(self, pts, smooth=8, widths=None, width=1.2, seed=0):
+        cp = np.asarray(pts, np.float64)
+        pts = cp
         if len(pts) >= 3 and smooth:
             pts = geom.catmull(pts, smooth)
         P, s = geom.resample_polyline(pts, 0.05)
@@ -146,6 +150,32 @@ class Route:
         self.P, self.s, self.T = P, s, T
         self.N = np.stack([-T[:, 1], T[:, 0]], 1)          # left of the direction of travel
         self.length = float(s[-1])
+        self.base_width = float(width)
+        self.seed = seed
+        if widths is not None and len(widths) == len(cp):
+            arcs = []
+            for q in cp:
+                d = np.hypot(P[:, 0] - q[0], P[:, 1] - q[1])
+                arcs.append(float(s[int(np.argmin(d))]))
+            self._wa = np.asarray(arcs)
+            self._ww = np.asarray(widths, np.float64)
+        else:
+            self._wa = None
+
+    def width_at(self, s):
+        s = np.asarray(s, np.float64)
+        if self._wa is None:
+            w = np.full(s.shape, self.base_width)
+        else:
+            # smooth between the control widths (cosine ease, not straight ramps)
+            o = np.argsort(self._wa)
+            wa, ww = self._wa[o], self._ww[o]
+            i = np.clip(np.searchsorted(wa, s) - 1, 0, len(wa) - 2)
+            f = np.clip((s - wa[i]) / np.maximum(wa[i + 1] - wa[i], 1e-6), 0, 1)
+            f = 0.5 - 0.5 * np.cos(np.pi * f)
+            w = ww[i] * (1 - f) + ww[i + 1] * f
+        wob = (noise.fbm(s / 4.0, np.full(s.shape, 1.7 + self.seed * 0.13), 2, 61 + self.seed) - 0.5) * 0.14
+        return w * (1.0 + wob)
 
     def at(self, s):
         s = np.clip(s, 0.0, self.length)
@@ -452,7 +482,7 @@ def ishidatami(sink, ground, route, s0, s1, width, R, seed, gutter_side=0, drain
     return tris
 
 
-def steps(sink, ground, route, s0, s1, width, R, kind='stone', count=None, rise=0.17):
+def steps(sink, ground, route, s0, s1, width, R, kind='stone', count=None, rise=0.17, varied=False):
     """Steps between s0 and s1 (heights from the terrain under the centreline). kind: 'stone'
     (natural rough stones), 'log' (logs and stakes), 'cut' (dressed granite blocks, the 参道)."""
     P0 = route.at(np.array([s0]))[0][0]
@@ -476,6 +506,9 @@ def steps(sink, ground, route, s0, s1, width, R, kind='stone', count=None, rise=
         Pm, T, N = route.at(np.array([(sa + sb) / 2]))
         Pa = route.at(np.array([front]))[0][0]
         T0, N0 = T[0], N[0]
+        if varied:
+            width = float(route.width_at(np.array([(sa + sb) / 2]))[0])
+            hw = width / 2
         if kind == 'cut':
             # one dressed block per step: the whole tread, a clean front edge, chamfered
             c = Pm[0]
@@ -522,22 +555,37 @@ def steps(sink, ground, route, s0, s1, width, R, kind='stone', count=None, rise=
 
 
 def stepping_stones(sink, ground, route, s0, s1, R, spacing=(0.55, 0.7), size=(0.34, 0.5), wander=0.12):
-    s = s0 + 0.2
+    """草: stepping stones (飛石) in the garden manner: alternately left and right of the line (千鳥),
+    now and then two or three close together (二連・三連打ち), a bigger, flatter stone where the path
+    leaves another (踏分石) and where it arrives."""
     tris = 0
+    s = s0 + 0.25
     k = 0
-    while s < s1:
+    run = 0
+    while s < s1 - 0.1:
         P, T, N = route.at(np.array([s]))
-        off = (wander if k % 2 else -wander) + R.normal(0, 0.04)
+        first = k == 0
+        last = s + spacing[1] > s1
+        if run == 0 and R.uniform() < 0.22:
+            run = int(R.integers(2, 4))
+        off = (wander if k % 2 else -wander) * (0.4 if run else 1.0) + R.normal(0, 0.035)
         c = P[0] + N[0] * off
-        r = R.uniform(*size) / 2
+        big = 1.45 if (first or last) else (0.85 if run else 1.0)
+        r = R.uniform(*size) / 2 * big
         m = int(R.integers(7, 10))
         ang = np.sort(R.uniform(0, 2 * math.pi, m))
-        poly = np.stack([c[0] + np.cos(ang) * r * R.uniform(0.82, 1.12, m), c[1] + np.sin(ang) * r * 0.85 * R.uniform(0.82, 1.12, m)], 1)
-        poly = chaikin(poly, 1, 0.25)
-        colour = GRANITE * (0.86 + 0.16 * R.uniform())
-        tris += slab(sink, ground, poly, R.uniform(0.04, 0.06), 0.08, colour, R.uniform(0.1, 0.5), R, layer='flat', dome=0.015)
-        s += R.uniform(*spacing)
+        el = R.uniform(1.0, 1.35)
+        pts = np.stack([np.cos(ang) * r * el * R.uniform(0.82, 1.12, m), np.sin(ang) * r * 0.85 * R.uniform(0.82, 1.12, m)], 1)
+        rot = np.stack([N[0], T[0]], 0) if run else np.stack([T[0], N[0]], 0)
+        poly = chaikin(c + pts @ rot, 1, 0.25)
+        colour = GRANITE * (0.84 + 0.16 * R.uniform())
+        tris += slab(sink, ground, poly, R.uniform(0.04, 0.065) * (1.2 if big > 1.2 else 1.0), 0.09, colour, R.uniform(0.15, 0.55), R,
+                     layer='flat', dome=0.015)
+        step = R.uniform(*spacing) * (0.72 if run else 1.0) * (1.15 if big > 1.2 else 1.0)
+        s += step
         k += 1
+        if run:
+            run -= 1
     return tris
 
 
@@ -546,9 +594,11 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
     tris = 0
     L = s1 - s0
     n = int(L / 2.6 * stones)
+    if stones > 0:
+        tris += edge_stones(sink, ground, route, s0, s1, R, every=(1.8, 5.0), size=(0.12, 0.28), cluster=0.35)
     for k in range(n):
         s = s0 + R.uniform(0, L)
-        t = R.uniform(-width * 0.7, width * 0.7)
+        t = R.uniform(0.45, 0.85) * width * 0.5 * (1 if R.uniform() < 0.5 else -1)
         c = route.to_world(np.array([[s, t]]))[0]
         r = R.uniform(0.07, 0.16)
         m = 7
@@ -576,6 +626,194 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
                 r = 0.07 * (1 - q / len(pts)) + 0.025
                 tris += cylinder(sink, [p0[0], y0, p0[1]], [p1[0], y1, p1[1]], r, ROOT * (0.9 + 0.2 * R.uniform()), ROOT * 0.8, R, n=5,
                                  moss=0.3, ao=0.85)
+    return tris
+
+
+def edge_stones(sink, ground, route, s0, s1, R, every=(1.2, 3.5), size=(0.14, 0.32), sides=(-1, 1), out=0.04, bury=0.6,
+                colour=None, moss=(0.3, 0.9), cluster=0.45):
+    """The kerb of an earth path (路缘): half-buried field stones along its edges at uneven intervals,
+    one to three together, bigger where the path runs along a slope's downhill side."""
+    tris = 0
+    colour = GRANITE if colour is None else colour
+    for side in sides:
+        s = s0 + R.uniform(0.0, every[1])
+        while s < s1 - 0.2:
+            P, T, N = route.at(np.array([s]))
+            hw = float(route.width_at(np.array([s]))[0]) * 0.5
+            # downhill side: bigger stones (they hold the edge)
+            gl = float(ground.height(*(P[0] + N[0] * side * (hw + 0.6))))
+            gc = float(ground.height(*P[0]))
+            big = 1.0 + 0.6 * float(np.clip((gc - gl) / 0.5, 0, 1))
+            k = 1 + int(R.uniform() < cluster) + int(R.uniform() < cluster * 0.4)
+            for j in range(k):
+                ss = s + j * R.uniform(0.18, 0.32)
+                Pj, Tj, Nj = route.at(np.array([ss]))
+                c = Pj[0] + Nj[0] * side * (hw + R.uniform(-0.08, out + 0.08))
+                r = R.uniform(*size) * 0.5 * big * (0.75 if j else 1.0)
+                m = 8
+                ang = np.sort(R.uniform(0, 2 * math.pi, m))
+                el = R.uniform(1.0, 1.6)
+                pts = np.stack([np.cos(ang) * r * el * R.uniform(0.8, 1.15, m), np.sin(ang) * r * R.uniform(0.8, 1.15, m)], 1)
+                # long axis along the path
+                rot = np.stack([Tj[0], Nj[0]], 0)
+                poly = c + pts @ rot
+                tris += slab(sink, ground, chaikin(poly, 1), R.uniform(0.03, 0.08) * big * (1 - bury * 0.5), 0.1,
+                             colour * (0.72 + 0.22 * R.uniform()), R.uniform(*moss), R, layer='solid', dome=0.03 * big)
+            s += R.uniform(*every)
+    return tris
+
+
+def lane(sink, ground, route, s0, s1, R, trees=(), ditch=0):
+    """草: the village lane, packed earth (its two trodden tracks and the grass between them are the
+    ground's materials); here the stones along its kerb, a line of stones on the ditch's outer lip on
+    the uphill side, pebbles kicked to the edges and roots where trees stand near."""
+    tris = edge_stones(sink, ground, route, s0, s1, R, every=(1.4, 4.2), size=(0.16, 0.36))
+    if ditch:
+        s = s0 + R.uniform(0, 0.5)
+        while s < s1 - 0.3:
+            P, T, N = route.at(np.array([s]))
+            hw = float(route.width_at(np.array([s]))[0]) * 0.5
+            if R.uniform() < 0.55:
+                c = P[0] + N[0] * ditch * (hw + 0.62 + R.uniform(-0.05, 0.05))
+                L_ = R.uniform(0.2, 0.42)
+                tris += box_stone(sink, ground, c, T[0], (L_, R.uniform(0.12, 0.2)), float(ground.height(*c)) + R.uniform(0.03, 0.07),
+                                  GRANITE * (0.7 + 0.2 * R.uniform()), R.uniform(0.5, 1.0), R, layer='solid', jag=0.1)
+            s += R.uniform(0.35, 1.1)
+    # pebbles at the edges (feet and carts push them out of the tracks)
+    L_ = s1 - s0
+    for k in range(int(L_ * 1.6)):
+        sk = s0 + R.uniform(0, L_)
+        P, T, N = route.at(np.array([sk]))
+        hw = float(route.width_at(np.array([sk]))[0]) * 0.5
+        side = 1 if R.uniform() < 0.5 else -1
+        c = P[0] + N[0] * side * hw * R.uniform(0.65, 1.05)
+        rr = R.uniform(0.025, 0.06)
+        m = 6
+        ang = np.sort(R.uniform(0, 2 * math.pi, m))
+        poly = np.stack([c[0] + np.cos(ang) * rr * R.uniform(0.7, 1.2, m), c[1] + np.sin(ang) * rr * R.uniform(0.7, 1.1, m)], 1)
+        tris += slab(sink, ground, chaikin(poly, 1), R.uniform(0.01, 0.03), 0.03, GRANITE * (0.7 + 0.25 * R.uniform()), 0.2, R,
+                     layer='solid', dome=0.01)
+    tris += trail_details(sink, ground, route, s0, s1, float(route.width_at(np.array([(s0 + s1) / 2]))[0]), R, trees, stones=0.0)
+    return tris
+
+
+def nobedan(sink, ground, route, s0, s1, R, seed):
+    """行: 延段, a strip paved with cut stones and field stones fitted together, long dressed stones
+    along both edges; moss in the joints. The strip follows the route's width."""
+    tris = 0
+    kerb_w = 0.17
+    # interior seeds (s, t) and a few rectangular cut stones among the field stones
+    rects = []
+    s = s0 + R.uniform(0.2, 0.6)
+    while s < s1 - 0.4:
+        hw = float(route.width_at(np.array([s]))[0]) * 0.5
+        inner = hw - kerb_w - 0.03
+        L_ = R.uniform(0.38, 0.7)
+        W_ = R.uniform(0.22, min(0.42, inner * 1.2))
+        t = R.uniform(-inner + W_ / 2, inner - W_ / 2) if inner > W_ / 2 else 0.0
+        rects.append((s, t, L_, W_))
+        s += R.uniform(0.9, 1.8)
+    seeds = []
+    s = s0
+    while s < s1:
+        hw = float(route.width_at(np.array([s]))[0]) * 0.5
+        inner = hw - kerb_w - 0.03
+        t = -inner + R.uniform(0.04, 0.16)
+        while t < inner:
+            ok = all(abs(s - a) > L_ * 0.5 + 0.08 or abs(t - b) > W_ * 0.5 + 0.08 for a, b, L_, W_ in rects)
+            if ok:
+                seeds.append((s + R.normal(0, 0.05), t + R.normal(0, 0.04)))
+            t += R.uniform(0.2, 0.34)
+        s += R.uniform(0.2, 0.32)
+    seeds = np.array(seeds) if seeds else np.zeros((0, 2))
+    # rectangles as extra Voronoi seeds (so the field stones fit around them), then replaced
+    rect_seeds = np.array([(a, b) for a, b, _, _ in rects]) if rects else np.zeros((0, 2))
+    allseeds = np.concatenate([seeds, rect_seeds]) if len(rect_seeds) else seeds
+    if len(allseeds) >= 4:
+        span = s1 - s0 + 2.0
+        mir = np.concatenate([allseeds, allseeds * [1, -1] + [0, 3.0], allseeds * [1, -1] - [0, 3.0], allseeds + [span, 0], allseeds - [span, 0]])
+        vor = Voronoi(mir)
+        for i in range(len(seeds)):
+            reg = vor.regions[vor.point_region[i]]
+            if -1 in reg or len(reg) < 3:
+                continue
+            poly = ccw(vor.vertices[reg])
+            sc = float(np.mean(poly[:, 0]))
+            hw = float(route.width_at(np.array([sc]))[0]) * 0.5
+            inner = hw - kerb_w - 0.03
+            for n_, c_ in ((np.array([0.0, 1.0]), inner), (np.array([0.0, -1.0]), inner), (np.array([1.0, 0.0]), s1), (np.array([-1.0, 0.0]), -s0)):
+                if poly is None:
+                    break
+                poly = clip_halfplane(poly, n_, c_)
+            if poly is None:
+                continue
+            # keep clear of the cut stones
+            for a, b, L_, W_ in rects:
+                if poly is None:
+                    break
+                cs_ = poly.mean(axis=0)
+                if abs(cs_[0] - a) < L_ * 0.5 + 0.12 and abs(cs_[1] - b) < W_ * 0.5 + 0.12:
+                    poly = None
+            if poly is None or abs(poly_area(poly)) < 0.012:
+                continue
+            poly = shrink(poly, R.uniform(0.016, 0.026))
+            if poly is None or abs(poly_area(poly)) < 0.01:
+                continue
+            poly = chaikin(poly, 1, 0.22)
+            wp = route.to_world(poly)
+            dark = R.uniform() < 0.3
+            colour = (GRANITE * (0.8 + 0.18 * R.uniform())) * (0.82 if dark else 1.0)
+            tris += slab(sink, ground, ccw(wp), R.uniform(0.02, 0.04), 0.07, colour, R.uniform(0.35, 0.8), R, layer='flat',
+                         dome=R.uniform(0.008, 0.02))
+    for a, b, L_, W_ in rects:
+        c = route.to_world(np.array([[a, b]]))[0]
+        P, T, N = route.at(np.array([a]))
+        gy = float(ground.height(*c))
+        tris += box_stone(sink, ground, c, T[0], (L_, W_), gy + R.uniform(0.03, 0.045), GRANITE_WORN * (0.86 + 0.1 * R.uniform()),
+                          R.uniform(0.15, 0.45), R, layer='flat', jag=0.012, ao=(1.0, 0.5))
+    # the dressed edge stones
+    for side in (-1, 1):
+        s = s0 + R.uniform(0, 0.15)
+        while s < s1 - 0.15:
+            L_ = min(R.uniform(0.5, 0.95), s1 - s)
+            sm = s + L_ / 2
+            P, T, N = route.at(np.array([sm]))
+            hw = float(route.width_at(np.array([sm]))[0]) * 0.5
+            c = P[0] + N[0] * side * (hw - kerb_w / 2)
+            gy = float(ground.height(c[0], c[1]))
+            tris += box_stone(sink, ground, c, T[0], (L_ - 0.03, kerb_w * R.uniform(0.9, 1.05)), gy + R.uniform(0.04, 0.06),
+                              GRANITE * (0.84 + 0.12 * R.uniform()), R.uniform(0.4, 0.9), R, layer='solid', jag=0.02)
+            s += L_
+    return tris
+
+
+def kiriishi(sink, ground, route, s0, s1, R):
+    """真: dressed granite slabs in a running bond straight to the shrine, crisp joints, a little
+    worn in the middle where feet go."""
+    tris = 0
+    s = s0 + 0.02
+    row = 0
+    while s < s1 - 0.1:
+        L_ = min(R.uniform(0.42, 0.6), s1 - s)
+        sm = s + L_ / 2
+        P, T, N = route.at(np.array([sm]))
+        hw = float(route.width_at(np.array([sm]))[0]) * 0.5
+        W = hw * 2
+        # one slab across, or two staggered (alternating rows)
+        if row % 3 == 2:
+            parts = [(-hw, hw)]
+        else:
+            cut = (0.42 if row % 2 else 0.58) * W - hw + R.uniform(-0.05, 0.05)
+            parts = [(-hw, cut), (cut, hw)]
+        for a, b in parts:
+            c = P[0] + N[0] * ((a + b) / 2)
+            gy = float(ground.height(*c))
+            worn = 1.0 - min(abs(a + b) / (2 * hw), 1.0)
+            col = GRANITE * (0.92 + 0.08 * R.uniform()) * (1 - 0.25 * worn) + GRANITE_WORN * 0.25 * worn
+            tris += box_stone(sink, ground, c, T[0], (L_ - 0.025, (b - a) - 0.025), gy + 0.045, col, R.uniform(0.05, 0.25), R,
+                              layer='flat', jag=0.004, ao=(1.0, 0.55))
+        s += L_
+        row += 1
     return tris
 
 
@@ -642,11 +880,19 @@ def build(L, h, x0, z0, cell, placements, seed):
                 t = ishidatami(sink, ground, route, a, b, width, R, seed, gutter_side=sg.get('gutter', gutter),
                                drains=sg.get('drains', True), worn=sg.get('worn', 1.0))
             elif k in ('steps_stone', 'steps_log', 'steps_cut'):
-                t = steps(sink, ground, route, a, b, sg.get('width', width), R, kind=k.split('_')[1], count=sg.get('count'))
+                t = steps(sink, ground, route, a, b, sg.get('width', width), R, kind=k.split('_')[1], count=sg.get('count'),
+                          varied=route._wa is not None and 'width' not in sg)
             elif k == 'stepping':
                 t = stepping_stones(sink, ground, route, a, b, R)
             elif k == 'trail':
-                t = trail_details(sink, ground, route, a, b, width, R, trees, stones=sg.get('stones', 1.0))
+                t = trail_details(sink, ground, route, a, b, float(route.width_at(np.array([(a + b) / 2]))[0]), R, trees,
+                                  stones=sg.get('stones', 1.0))
+            elif k == 'lane':
+                t = lane(sink, ground, route, a, b, R, trees, ditch=sg.get('ditch', 0))
+            elif k == 'nobedan':
+                t = nobedan(sink, ground, route, a, b, R, seed)
+            elif k == 'kiriishi':
+                t = kiriishi(sink, ground, route, a, b, R)
             else:
                 t = 0
             stats[f'{name}:{k}'] = stats.get(f'{name}:{k}', 0) + t
@@ -657,7 +903,7 @@ def build(L, h, x0, z0, cell, placements, seed):
     for P in L['paths']:
         if not P.get('segments'):
             continue
-        rt = Route(P['points'], 8)
+        rt = Route(P['points'], 8, widths=P.get('widths'), width=P['width'], seed=len(P['id']))
         run(rt, resolve(rt, P['points'], P['segments']), P['width'], P['id'])
     for st in L.get('steps', []):
         rt = Route([st['from'], st['to']], 0)

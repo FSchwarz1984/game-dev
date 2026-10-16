@@ -52,9 +52,8 @@ def sprites():
 
 def portraits():
     """Pixel portraits (128x128 per expression, docs/knowledge/13-pixel-portraits.md §10) when present:
-    assets/portraits/pixel/<who>/*.png -> godot/art/portraits/<who>/: the expressions and their talk and blink
-    overlays (<expression>.talk1.png etc., tools/art/portraits4/talkblink.py), so the overlays must live in
-    assets too. PNGs that are no longer in the source folder are removed (with their .import files).
+    assets/portraits/pixel/<who>/<expression>.png -> godot/art/portraits/<who>/<expression>.png.
+    Portraits that are no longer in the source folder are removed (with their .import files).
     Without them, one crude placeholder per character is cut from <who>_bust.webp (internal only)."""
     out = os.path.join(GD, "art", "portraits")
     os.makedirs(out, exist_ok=True)
@@ -74,7 +73,7 @@ def portraits():
                 if base.endswith(".png") and base not in wanted:
                     os.remove(os.path.join(dst_dir, f))
                     print("removed stale portrait", who, f)
-            print("portraits", who, n, "files (expressions and overlays) <-", os.path.relpath(src, ROOT))
+            print("portraits", who, n, "expressions <-", os.path.relpath(src, ROOT))
             continue
         im = Image.open(os.path.join(ROOT, "assets", "portraits", who + "_bust.webp")).convert("RGBA")
         w, h = im.size

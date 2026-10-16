@@ -22,11 +22,21 @@ uniform float fill = 0.16;             // front fill (share of the sky's light, 
 uniform float rim_sky = 0.55;          // cool rim on the side away from the key
 uniform float rim_back = 0.9;          // warm rim where the real sun behind her catches an edge
 uniform float key_gain = 1.0;
+// Round 5 (docs/knowledge/24 §0): the defaults below are the round-4 look; the round-5 model's rig.json
+// ("material") sets c3_style = 5 and the values that go with it, so old data still renders as it did.
+uniform int c3_style = 4;
+uniform float key_side = 0.55;         // (5) how much of the sun's left / right her key keeps
+uniform float key_up = 0.30;           // (5) how much of its height (view space)
+uniform float key_neutral = 0.0;       // the key light's colour, this much toward its own grey on her (5:
+                                       // 0.6: her whites stay white); level and direction stay the world's
+uniform float face_rim_keep = 0.3;     // how much of the cool sky rim the face takes (5: none, one clean tone)
+uniform float face_rim_back = 1.0;     // and of the warm back rim (5: none: it lit the temples as specks)
 uniform float term = 0.02;             // terminator position (n.l) and half width: soft, not banded
 uniform float term_soft = 0.24;
 uniform vec3 lining_navy : source_color = vec3(0.21, 0.22, 0.35);
 uniform vec4 flash = vec4(1.0, 1.0, 1.0, 0.0);   // rgb, amount (hit / pick-up flashes)
 uniform float highlight_comp = 0.36;   // albedo *= 1 - k * albedo (linear)
+uniform float face_white_point = 0.62; // the face's (5: 0.76, the skin reads light and clean, as in the sprite)
 uniform float white_point = 0.62;      // the most light (linear) her brightest channel may reach: the
                                        // composite's S-curve and gain lift the lights ~20 % after this
 uniform float ink_day = 1.25;          // the face's light in full day: the stamps show their own colour there
@@ -74,25 +84,45 @@ void vertex() {
 
 vec3 hat_top(vec3 alb, vec2 uv) {
 	float s = uv.x;
+	if (c3_style >= 5) {
+		// the sugegasa's sedge (round 5): fine radial ribs and one stitched ring, faint (the v0.2 sprite's
+		// hat is a clean ivory with a few lavender streaks); the red band is geometry (model.hat_band)
+		float rib5 = fract(uv.y * 24.0);
+		alb *= (rib5 < 0.18 && s > 0.22) ? 0.93 : 1.0;
+		alb *= (abs(s - 0.62) < 0.018) ? 0.92 : 1.0;
+		alb *= (s > 0.975) ? 0.90 : 1.0;
+		return alb;
+	}
 	float a = uv.y * 2.0 * W3_PI;
 	vec2 p = vec2(cos(a), sin(a)) * s;
-	// the red band laid across the crown from rim to rim, from her front right to her back left (p.x
-	// her left, p.y her back): the half of the top that shows while the hat leans back and to her left
+	// (round 4) the red band laid across the crown from rim to rim, from her front right to her back
+	// left (p.x her left, p.y her back)
 	vec2 bd = normalize(vec2(0.62, 0.78));
 	float across = abs(p.x * bd.y - p.y * bd.x);
 	if (across < 0.10) {
 		return w3_srgb_to_linear(vec3(0.651, 0.220, 0.322));
 	}
-	// sedge weave: concentric stitched rings, radial ribs of the sedge
 	float ring = fract(s * 6.0 + 0.35);
 	if (ring < 0.16 && s > 0.08) {
 		alb *= 0.80;
 	}
 	float rib = fract(uv.y * 28.0);
 	alb *= rib < 0.5 ? 0.94 : 1.0;
-	// the rim's edge a step darker
 	alb *= s > 0.985 ? 0.82 : 1.0;
 	return alb;
+}
+
+// the long hair's sheet (UV.x across, UV.y down): a few strand highlights in vertical lines, as the
+// v0.2 sprite paints its back hair; strongest under the hat, gone toward the ends
+float hair_strands(vec2 uv) {
+	float x = uv.x;
+	float k = 0.0;
+	k = max(k, 1.0 - step(0.036, abs(x - 0.27)));
+	k = max(k, 1.0 - step(0.036, abs(x - 0.46)));
+	k = max(k, 1.0 - step(0.030, abs(x - 0.63)));
+	k = max(k, 1.0 - step(0.030, abs(x - 0.80)));
+	float fade = 1.0 - smoothstep(0.45, 0.85, uv.y + 0.08 * sin(x * 31.0));
+	return k * step(0.04, uv.y) * step(0.5, fade + 0.15 * step(0.4, fract(x * 7.0)));
 }
 
 void fragment() {
@@ -111,6 +141,9 @@ void fragment() {
 	vec2 cell = w3_ptex(v_wp);
 	if (mat == CM_HAT_TOP) {
 		alb = hat_top(alb, UV);
+	} else if (c3_style >= 5 && mat == CM_HAIR && extra > 0.1 && extra < 0.35) {
+		// the long hair's sheet: strand highlights (painted, then lit like the rest of it)
+		alb = mix(alb, w3_srgb_to_linear(vec3(0.373, 0.314, 0.443)), hair_strands(UV) * 0.85);
 	} else if (mat == CM_HAIR && extra > 0.35) {
 		// the inner layer of the long hair: the partings between the bunches, a clear step darker
 		// below the shoulders; up on the head the gaps keep the hair's own colour (dark slits there
@@ -121,8 +154,8 @@ void fragment() {
 	// long hair (extra 0.2) a band across the bunches just under the hat, which the partings break
 	// into two or three pieces (one band across a uniform mass read as a pale hole)
 	float hh = v_wu.y - c3_base_y;
-	bool long_hair = mat == CM_HAIR && extra > 0.1 && extra < 0.35;
-	if (mat == CM_HAIR && (extra < 0.1 || (long_hair && hh > 0.90 && hh < 1.00))) {
+	bool long_hair = c3_style < 5 && mat == CM_HAIR && extra > 0.1 && extra < 0.35;
+	if (mat == CM_HAIR && hair_sheen > 0.0 && (extra < 0.1 || (long_hair && hh > 0.90 && hh < 1.00))) {
 		// the anime highlight band (天使の輪): a pale violet sheen across the hair where it turns
 		// toward the light and up toward the camera; one or two pixels wide on her head
 		vec3 nvh = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
@@ -177,7 +210,11 @@ void fragment() {
 	NORMAL = nv;
 	// the key light: the sun's (moon's) side and height, brought round to the front
 	vec3 sv = normalize((VIEW_MATRIX * vec4(w3_sun_dir, 0.0)).xyz);
-	vec3 key = normalize(vec3(sv.x, sv.y, abs(sv.z) * 0.55 + 0.5));
+	// (round 5) mostly from the camera's side, a little above, the sun's left or right kept: the faces
+	// she turns to the camera (her front, the white sleeves) are lit as a sprite paints them; seen from
+	// 55 deg above, a key at the sun's own height left every upright face in the half tone
+	vec3 key = c3_style >= 5 ? normalize(vec3(sv.x * key_side, clamp(sv.y, -0.1, 1.0) * key_up, 1.0))
+			: normalize(vec3(sv.x, sv.y, abs(sv.z) * 0.55 + 0.5));
 	v_key = key;
 
 	// ambient: the sky and the ground bounce, continuous; painted shade (hue turned cool, chroma kept)
@@ -195,7 +232,7 @@ void fragment() {
 	// kept; the darks never get there and are untouched)
 	float lum_top = max(w3_luma(mix(w3_ground, w3_sky, 0.8)), 1e-4);
 	float peak = max(max(alb.r, alb.g), alb.b) * (key_full + lum_top * (1.0 + fill));
-	alb *= min(1.0, white_point / max(peak, 1e-4));
+	alb *= min(1.0, mix(white_point, face_white_point, face) / max(peak, 1e-4));
 	v_alb = alb;
 	vec3 amb_tint = mix(vec3(1.0), amb / lum, 0.2) * w3_shade_tint;
 	vec3 shade = w3_shadow_hue(alb, 0.30) * lum * amb_tint;
@@ -211,7 +248,7 @@ void fragment() {
 	// cool rim on the side away from the key (silhouette edges)
 	float fr = step(0.82, 1.0 - max(nv.z, 0.0));
 	float away = smoothstep(0.05, -0.45, dot(normalize(nv.xy + vec2(1e-4)), normalize(key.xy + vec2(1e-4))));
-	em += alb * w3_sky * rim_sky * fr * away * (1.0 - face * 0.7);
+	em += alb * w3_sky * rim_sky * fr * away * (1.0 - face * (1.0 - face_rim_keep));
 	// lamps: the same light as the world, no stipple on her
 	em += w3_lamp_light(alb, v_wu, n, cell, 0.0);
 	// the face's ink (eyes, brows, mouth): drawn colours, not lit surfaces. They take the face's
@@ -241,14 +278,16 @@ void light() {
 		float ndl = dot(NORMAL, key);
 		float lit = cel(ndl, v_face);
 		float sh = mix(shadow_dim, 1.0, ATTENUATION);
-		DIFFUSE_LIGHT += v_alb * w3_lit_tint * LIGHT_COLOR / W3_PI * lit * sh * key_gain;
+		vec3 kc = w3_lit_tint * LIGHT_COLOR / W3_PI;
+		kc = mix(kc, vec3(w3_luma(kc)), key_neutral);
+		DIFFUSE_LIGHT += v_alb * kc * lit * sh * key_gain;
 		if (c3_debug == 2) {
 			DIFFUSE_LIGHT = vec3(0.1 + 0.6 * ATTENUATION) * step(0.0, dot(NORMAL, LIGHT) + 2.0);
 		}
 		// the real sun behind her (it stands in the north most of the day) catches her edges
 		float fr = step(0.75, 1.0 - max(dot(NORMAL, VIEW), 0.0));
 		float back = step(0.3, dot(NORMAL, LIGHT)) * 0.6 * step(LIGHT.z, -0.1);
-		DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * fr * back * rim_back * ATTENUATION;
+		DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * fr * back * rim_back * ATTENUATION * mix(1.0, face_rim_back, v_face);
 	} else {
 		float a = ATTENUATION * (max(dot(NORMAL, LIGHT), 0.0) * 0.6 + 0.4);
 		DIFFUSE_LIGHT += v_alb * LIGHT_COLOR / W3_PI * a;

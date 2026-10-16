@@ -5,8 +5,7 @@
     python3 -I tools/art/portraits4/build.py build                  # 2. crops + edits -> assets/portraits/pixel
     python3 -I tools/art/portraits4/build.py build --auto DIR       #    also write the un-edited auto results to DIR
     python3 -I tools/art/portraits4/build.py check                  #    verify the PNGs against a fresh build
-    python3 -I tools/art/portraits4/talkblink.py                    # 3. talk and blink overlays (after every build)
-    python3 -I tools/godot/sync_assets.py --portraits-only          # 4. copy them into godot/art/portraits
+    python3 -I tools/godot/sync_assets.py --portraits-only          # 3. copy them into godot/art/portraits
 `build --out DIR` writes somewhere else; PORTRAITS4_CACHE=DIR caches the slow pixelising step (~5 min -> ~80 s).
 
 Dependencies: numpy, Pillow, opencv-python-headless, scipy (the same as v1's tools/art/pixel_portraits.py).

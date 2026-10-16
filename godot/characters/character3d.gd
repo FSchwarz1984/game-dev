@@ -127,6 +127,11 @@ func setup(id: String) -> void:
 	var atlas: Texture2D = load("%s/face_atlas.png" % dir)
 	mat.set_shader_parameter("c3_face_atlas", ImageTexture.create_from_image(atlas.get_image()))
 	mat.set_shader_parameter("c3_atlas_cols", int(face_meta.get("cols", 16)))
+	# the character's own material settings (rig.json "material": round 5 sets c3_style 5 and its light)
+	var mset: Dictionary = rig_meta.get("material", {})
+	for k in mset:
+		var val = mset[k]
+		mat.set_shader_parameter(k, int(val) if String(k) == "c3_style" else val)
 	_collect(model)
 	for m in meshes:
 		m.material_override = mat
@@ -314,6 +319,10 @@ func _setup_head_snap() -> void:
 	head_snap.name = "HeadSnap"
 	head_snap.bone = head_bone
 	head_snap.character = self
+	# where on the pixel the head's origin sits (rig.json head_snap: x 0.5 = a pixel centre, so a face of
+	# odd width is symmetric round its middle column)
+	var hs: Dictionary = rig_meta.get("head_snap", {})
+	head_snap.offset = Vector2(float(hs.get("x", 0.0)), float(hs.get("y", 0.0)))
 	skel.add_child(head_snap)
 	skel.move_child(head_snap, 0)          # first: the hat and the springs hang from the head
 
@@ -772,9 +781,22 @@ func _update_face(dt: float) -> void:
 	# pairs stay level: where both eyes (brows, cheeks) show, both take the mean of their projected
 	# heights (projected as they are, the far eye of a three-quarter face sat 2-3 px higher: the camera
 	# looks down); where only one shows (profile) it keeps its own projection
-	var eye_y := _pair_y("eye", hg, v)
-	var brow_y := _pair_y("brow", hg, v)
-	var cheek_y := _pair_y("cheek", hg, v)
+	# face.json "level_pairs" (round 5 writes false; older faces without the key keep the round-4 rule):
+	# the round-5 eyes sit under the bangs, whose edge tilts with the head in a three-quarter view, so
+	# each eye follows its own projection, or the near one slides under the bangs
+	var level: bool = face_meta.get("level_pairs", true)
+	var eye_y := _pair_y("eye", hg, v) if level else NAN
+	var brow_y := _pair_y("brow", hg, v) if level else NAN
+	var cheek_y := _pair_y("cheek", hg, v) if level else NAN
+	# the shader draws the stamps in order, a later one over an earlier: cheeks first, so the eyes
+	# (a squeezed-shut > reaches down into the blush's row) always stay whole
+	for side in ["R", "L"]:
+		# cheeks: a blush stamp ("soft": one pixel, always; "blush": two warm ones; "": none). Round-4
+		# expressions used "blush": true
+		var ck = ex.get("cheeks", "blush" if ex.get("blush", false) else "soft")
+		if ck is String and ck != "":
+			_feature(feats, norms, "cheek_" + side, "cheek_%s_%s" % [side, ck], hg, v, cs, c_px, 0.2, false,
+					false, false, cheek_y)
 	for side in ["R", "L"]:
 		_feature(feats, norms, "eye_" + side, "eye_%s_%s" % [side, eye_name], hg, v, cs, c_px, 0.12, false,
 				false, false, eye_y)
@@ -785,12 +807,10 @@ func _update_face(dt: float) -> void:
 		if brows is String and brows != "":
 			_feature(feats, norms, "brow_" + side, "brow_%s_%s" % [side, brows], hg, v, cs, c_px, 0.1, true,
 					false, false, brow_y)
-		if ex.get("blush", false):
-			_feature(feats, norms, "cheek_" + side, "cheek_%s_blush" % side, hg, v, cs, c_px, 0.2, false,
-					false, false, cheek_y)
 	# the mouth: chosen by the face's own facing; the narrowed variants lose columns on the screen's
 	# left (the far side when she turns to her left, +x); mirrored when she turns to her right
-	if _view_tag(face_f) != "":
+	# the mouth: none most of the time (round 5: the face speaks with the eyes)
+	if _view_tag(face_f) != "" and mouth_name != "":
 		_feature(feats, norms, "mouth", "mouth_%s" % mouth_name, hg, v, cs, c_px, 0.1, false, face_n.x < -0.05)
 	var mark: String = ex.get("mark", "")
 	if mark != "":

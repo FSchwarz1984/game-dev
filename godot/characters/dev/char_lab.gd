@@ -105,15 +105,19 @@ func _ready() -> void:
 	env.setup(pv)
 	env.rain = float(args.get("rain", "0"))
 	env.set_time(float(args.get("hours", "10.5")))
-	terrain = Terrain3D.new()
-	terrain.name = "Terrain"
-	pv.world_root.add_child(terrain)
-	terrain.load_region(SADDLE)
-	if not args.has("nograss"):
-		var grass := W3Grass.new()
-		grass.name = "Grass"
-		pv.world_root.add_child(grass)
-		grass.build(terrain)
+	if args.get("stage", "") == "grey":
+		# the shape gate (round 5): a plain grey floor instead of the saddle (no terrain, no grass)
+		_grey_stage()
+	else:
+		terrain = Terrain3D.new()
+		terrain.name = "Terrain"
+		pv.world_root.add_child(terrain)
+		terrain.load_region(SADDLE)
+		if not args.has("nograss"):
+			var grass := W3Grass.new()
+			grass.name = "Grass"
+			pv.world_root.add_child(grass)
+			grass.build(terrain)
 	ch = Character3D.new()
 	ch.name = "Character"
 	pv.world_root.add_child(ch)
@@ -158,7 +162,7 @@ func _ready() -> void:
 	var stills := args.has("shots") or args.has("exprs") or args.has("turn")
 	ch.blink_enabled = not stills
 	ch.idle_variants_enabled = not stills and not args.has("show")
-	var at := Vector2(-17.6, 17.2)
+	var at := Vector2(-17.6, 17.2) if terrain != null else Vector2.ZERO
 	if args.has("at"):
 		var p := String(args["at"]).split(",")
 		at = Vector2(float(p[0]), float(p[1]))
@@ -179,8 +183,29 @@ func _ready() -> void:
 	_plan()
 
 
+## A flat floor, a neutral warm grey (the v0.2 sprite sheets' ground), lit by the world's light so her
+## shadow falls on it.
+func _grey_stage() -> void:
+	var floor_mi := MeshInstance3D.new()
+	floor_mi.name = "GreyFloor"
+	var pm := PlaneMesh.new()
+	pm.size = Vector2(60.0, 60.0)
+	floor_mi.mesh = pm
+	var m := StandardMaterial3D.new()
+	var g := String(args.get("grey", "0.50,0.51,0.53")).split(",")
+	m.albedo_color = Color(float(g[0]), float(g[1]), float(g[2]))
+	m.roughness = 1.0
+	m.specular_mode = BaseMaterial3D.SPECULAR_DISABLED
+	floor_mi.material_override = m
+	pv.world_root.add_child(floor_mi)
+
+
+func _height(x: float, z: float) -> float:
+	return terrain.height_at(x, z) if terrain != null else 0.0
+
+
 func _place(at: Vector2) -> void:
-	var y := terrain.height_at(at.x, at.y)
+	var y := _height(at.x, at.y)
 	ch.position = Vector3(at.x, y, at.y)
 	ch.ground_y = y
 
@@ -210,7 +235,10 @@ func _plan() -> void:
 	if args.has("exprs"):
 		var ep := String(args["exprs"]).split(":")
 		var yaw := ep[1] if ep.size() > 1 else "0"
-		var names: Dictionary = ch.face_meta.get("expressions", {})
+		var names: Array = ch.face_meta.get("expressions", {}).keys()
+		if args.has("expr_list"):
+			# --expr_list=a,b,c: these expressions, in this order
+			names = Array(String(args["expr_list"]).split(","))
 		for n in names:
 			_queue.append(["still", ep[0], "%s,%s,%s" % [yaw, String.num(env.hours, 2), n]])
 	if args.has("frames"):
@@ -346,7 +374,7 @@ func _move(want: Vector3, dt: float) -> void:
 	if want == Vector3.ZERO and _vel.length() < 0.05:
 		_vel = Vector3.ZERO
 	var np := Vector2(ch.position.x, ch.position.z) + Vector2(_vel.x, _vel.z) * dt
-	var y := terrain.height_at(np.x, np.y)
+	var y := _height(np.x, np.y)
 	ch.ground_y = y
 	var lift := ch.position.y - ch.ground_y if _jump_t >= 0.0 or _climb_left > 0.0 else 0.0
 	ch.position = Vector3(np.x, y + lift, np.y)

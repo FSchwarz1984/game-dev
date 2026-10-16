@@ -107,13 +107,15 @@ def build(char):
             at.add('brow_R_%s_%s' % (name, view), r, piv)
             ml = mirror(r, keep_highlight_left=False)
             at.add('brow_L_%s_%s' % (name, view), ml, (len(ml[0]) - 1 - piv[0], piv[1]))
+    mouth_pivots = getattr(F, 'MOUTH_PIVOTS', {})
     for name, rows in F.MOUTHS.items():
         rows = pad(rows)
+        mp = mouth_pivots.get(name, F.MOUTH_PIVOT)
         for view, drop in F.MOUTH_VIEW_DROP.items():
             r = drop_cols(rows, drop)
             kept = [c for c in range(len(rows[0])) if c not in drop]
-            px = kept.index(min(kept, key=lambda c: abs(c - F.MOUTH_PIVOT[0])))
-            at.add('mouth_%s_%s' % (name, view), r, (px, F.MOUTH_PIVOT[1]))
+            px = kept.index(min(kept, key=lambda c: abs(c - mp[0])))
+            at.add('mouth_%s_%s' % (name, view), r, (px, mp[1]))
     for name, rows in F.BLUSH.items():
         rows = pad(rows)
         at.add('cheek_R_%s_f' % name, rows, F.BLUSH_PIVOT)

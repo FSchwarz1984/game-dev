@@ -81,18 +81,17 @@ function plainAt(x, z) {
 // above the eye: the true elevation times a factor. The mountains keep the 3D view's outline (bearings,
 // shape); their height is lowered only as far as it takes for the skyline to stay clear of the sky
 // shore when it opens (its lowest row is 22 px over the horizon at the 270-row class, which every
-// usual window gets: the peaks stay at or under SKY_SHORE_CLEAR px at f = 360). One factor (k0) over
-// the bearings every usual view shows (the 640-wide one: |tan| <= 320 / 360); only the sides that an
-// ultra-wide view adds (to the far canvas's edge, 512 / 360) ramp to a lower one where their nearer,
-// taller flanks need it. Computed in prepare() (mountainFit); 1 where nothing needs lowering.
+// usual window gets: the peaks stay at or under SKY_SHORE_CLEAR px at f = 360). One factor, k0, over
+// all the bearings a view up to 533 px wide shows (16:9 and 16:10 windows; |column - 512| <= 267);
+// only the sides a wider view adds ramp smoothly to lower factors where their nearer, taller flanks
+// need it. Computed in prepare() (mountainFit); 1 where nothing needs lowering.
 export const SKY_SHORE_CLEAR = 20;
-const MTN_F = 360, MTN_T0 = 320 / 360, MTN_T1 = 512 / 360;
-let MTN = { k0: 1, kl: 1, kr: 1 };
+const MTN_F = 360, MTN_KEEP = 267, MTN_FREE = 315, MTN_R = 24;
+let MTN_COL = null, MTN_INFO = { k0: 1 };
 function mtnK(t) {
-  const a = Math.abs(t);
-  if (a <= MTN_T0) return MTN.k0;
-  const s = Math.min(1, (a - MTN_T0) / (MTN_T1 - MTN_T0)), w = s * s * (3 - 2 * s);
-  return MTN.k0 + ((t < 0 ? MTN.kl : MTN.kr) - MTN.k0) * w;
+  if (!MTN_COL) return 1;
+  const c = Math.min(1023, Math.max(0, 512 + MTN_F * t - 0.5)), i = Math.min(1022, Math.floor(c)), u = c - i;
+  return MTN_COL[i] * (1 - u) + MTN_COL[i + 1] * u;
 }
 const toH = (r, t = 0) => (r <= EYE_REL ? r / EYE_REL : 1 + (r - EYE_REL) / U * mtnK(t));
 export const P = (x, z) => [-x / U, z / U];
@@ -145,15 +144,15 @@ function prepare() {
   const near = VILLAGES.filter(v => v.i !== 0 && v.Z > 4 && v.X > 0.2 && v.X / v.Z < 0.4).sort((a, b) => a.Z - b.Z)[0];
   const hs = HOUSES.filter(h => h.vi === near.i).sort((a, b) => b.w - a.w);
   HEAD = { X: hs[0].X, Z: hs[0].Z, vi: near.i };
-  MTN = { k0: 1, kl: 1, kr: 1 };
-  MTN = mountainFit(SKY_SHORE_CLEAR);
+  MTN_COL = null;
+  mountainFit(SKY_SHORE_CLEAR);
 }
 
 /** The skyline at factor 1: per far-canvas column (1024, centre 512, f = 360), the highest point over
  *  the horizon in px. */
 export function skyline1(f = MTN_F) {
-  const keep = MTN;
-  MTN = { k0: 1, kl: 1, kr: 1 };
+  const keep = MTN_COL;
+  MTN_COL = null;
   const top = new Float64Array(1024);
   for (let c = 0; c < 1024; c++) {
     const t = (c + 0.5 - 512) / f;
@@ -164,37 +163,35 @@ export function skyline1(f = MTN_F) {
     }
     top[c] = m;
   }
-  MTN = keep;
+  MTN_COL = keep;
   return top;
 }
 
-/** The factors: k0 brings the highest point within |tan| <= MTN_T0 to `limit` px; each side then ramps
- *  to the highest factor that keeps its own columns under `limit` (never above k0: one shape). */
+/** The factor per column. k0 brings the highest point within MTN_KEEP of the centre to `limit` px.
+ *  Outward of MTN_FREE (where the sides still need no more than k0) each side takes the running
+ *  minimum of what its columns need, eroded and then averaged over MTN_R columns (so it is smooth and
+ *  never above what any column needs); the result never reaches inside MTN_KEEP. */
 export function mountainFit(limit, f = MTN_F) {
   const top = skyline1(f);
   let c0 = 0;
-  for (let c = 0; c < 1024; c++) if (Math.abs((c + 0.5 - 512) / f) <= MTN_T0) c0 = Math.max(c0, top[c]);
+  for (let c = 0; c < 1024; c++) if (Math.abs(c + 0.5 - 512) <= MTN_KEEP) c0 = Math.max(c0, top[c]);
   const k0 = c0 > limit ? limit / c0 : 1;
-  const fits = (side, k) => {
-    const save = MTN;
-    MTN = side < 0 ? { k0, kl: k, kr: k0 } : { k0, kl: k0, kr: k };
-    let ok = true;
-    for (let c = 0; c < 1024 && ok; c++) {
-      const t = (c + 0.5 - 512) / f;
-      if (Math.sign(t) === side && Math.abs(t) > MTN_T0 && top[c] * mtnK(t) > limit) ok = false;
-    }
-    MTN = save;
-    return ok;
-  };
-  const sideK = side => {
-    if (fits(side, k0)) return k0;
-    let lo = 0.02, hi = k0;
-    for (let i = 0; i < 30; i++) { const m = (lo + hi) / 2; if (fits(side, m)) lo = m; else hi = m; }
-    return lo;
-  };
-  return { k0, kl: sideK(-1), kr: sideK(1), limit, top0: c0, topL: Math.max(...top.slice(0, 512)), topR: Math.max(...top.slice(512)) };
+  const need = Array.from(top, v => (v > limit ? Math.min(k0, limit / v) : k0));
+  const m = new Float64Array(1024).fill(k0);
+  for (let c = 512 + MTN_FREE, run = k0; c < 1024; c++) { run = Math.min(run, need[c]); m[c] = run; }
+  for (let c = 511 - MTN_FREE, run = k0; c >= 0; c--) { run = Math.min(run, need[c]); m[c] = run; }
+  const at = (A, c) => A[Math.min(1023, Math.max(0, c))];
+  const ero = Float64Array.from(m, (_, c) => { let v = Infinity; for (let d = -MTN_R; d <= MTN_R; d++) v = Math.min(v, at(m, c + d)); return v; });
+  const col = Float64Array.from(ero, (_, c) => { let v = 0; for (let d = -MTN_R; d <= MTN_R; d++) v += at(ero, c + d); return v / (2 * MTN_R + 1); });
+  for (let c = 0; c < 1024; c++) if (Math.abs(c + 0.5 - 512) <= MTN_KEEP) col[c] = k0;
+  MTN_COL = col;
+  let after = 0;
+  for (let c = 0; c < 1024; c++) after = Math.max(after, top[c] * col[c]);
+  MTN_INFO = { k0, kMin: Math.min(...col), limit, top0: c0, topAll: Math.max(...top), after, kLeft: col[0], kRight: col[1023] };
+  return MTN_INFO;
 }
-export const mountainFactors = () => ({ ...MTN });
+export const mountainInfo = () => ({ ...MTN_INFO });
+export const mountainColumns = () => MTN_COL && Array.from(MTN_COL, v => +v.toFixed(4));
 
 // ---------------------------------------------------------------- height with the villages' groves
 

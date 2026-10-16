@@ -32,7 +32,7 @@ PALETTE = {
     'c': (128, 172, 230, 255),    # tear
     'V': (214, 64, 78, 255),      # anger mark
     'D': (200, 236, 255, 200),    # sweat drop (glow)
-    'Z': (226, 232, 255, 200),    # sleepy 'z' (glow)
+    'Z': (132, 160, 226, 200),    # sleepy 'z' (glow): a mid blue (a near-white z vanished on the ivory hat)
 }
 
 # eyes mirror without moving the light (both lights on the inner side)
@@ -117,6 +117,9 @@ MOUTHS = {
              'M'],
     'smirk': ['.m'],             # one corner up: a pale dot off-centre (her left)
 }
+# the landmark is the chin's lowest row: a two-row mouth grows up from it (pivot on its lower pixel),
+# or its second pixel fell on the neck below the face
+MOUTH_PIVOTS = {'open': (0, 1), 'wail': (0, 1)}
 MOUTH_VIEW_DROP = {'f': [], 't': [], 's': []}
 
 # ------------------------------------------------------------------------------------------------
@@ -125,9 +128,16 @@ BLUSH_PIVOT = (0, 0)
 BLUSH = {'soft': ['B'], 'blush': ['bb']}
 MARK_PIVOT = (1, 1)
 MARKS = {
-    'anger': ['V.V', '.V.', 'V.V'],
+    'anger': ['.V.V.',           # the four bent corners of the anger vein
+              'VV.VV',
+              '.....',
+              'VV.VV',
+              '.V.V.'],
     'sweat': ['.D', 'DD', 'D.'],
-    'zzz': ['ZZZ', '.Z.', 'ZZZ'],
+    'zzz': ['ZZZZ',              # a 3 x 3 z read as an I
+            '..Z.',
+            '.Z..',
+            'ZZZZ'],
 }
 
 # ------------------------------------------------------------------------------------------------

@@ -84,6 +84,10 @@ def place(L, ctx, rng):
     # thins what is right around her; it cannot rescue a home hidden behind a pine.
     keep_areas = []
     for pd in L["pads"]:
+        if "poly" in pd:
+            pp = np.asarray(pd["poly"], np.float64)
+            keep_areas.append((float(pp[:, 0].min()), float(pp[:, 0].max()), float(pp[:, 1].max())))
+            continue
         c, sz = pd["centre"], pd["size"]
         keep_areas.append((c[0] - sz[0] * 0.5, c[0] + sz[0] * 0.5, c[1] + sz[1] * 0.5))
     keep_areas.append((-10.0, 10.0, 10.8))            # the path in front of the great tree
@@ -109,11 +113,20 @@ def place(L, ctx, rng):
     # the great camphor and the named trees
     out.append({"kind": "camphor", "x": M["camphor"][0], "z": M["camphor"][1], "rot": 0.4, "scale": 1.0, "variant": 0})
     out.append({"kind": "persimmon", "x": M["persimmon"][0], "z": M["persimmon"][1], "rot": 1.1, "scale": 1.0, "variant": 0})
-    out.append({"kind": "choppable", "x": M["choppable_tree"][0], "z": M["choppable_tree"][1], "rot": 2.0, "scale": 1.0, "variant": 0})
+    # the tree she may fell for firewood (marker choppable_tree): a young coppice oak in full leaf
+    # (round 5, G5R3-5: the dead stand-in read as "a bare, dead tree" left of the house)
+    out.append({"kind": "konara", "x": M["choppable_tree"][0], "z": M["choppable_tree"][1], "rot": 2.0, "scale": 0.58, "variant": 1,
+                "role": "choppable"})
     # the old trees the gates' michikiri ropes are tied to (layout gate_trees)
     for gt in L.get("gate_trees", []):
         out.append({"kind": gt["kind"], "x": float(gt["x"]), "z": float(gt["z"]), "rot": float(gt.get("rot", 0.0)),
                     "scale": float(gt.get("scale", 1.0)), "variant": int(gt.get("variant", 0)), "fixed": True})
+
+    # round 5 (G5R3-3, composition plan approved 2026-10-16): inside the barrier everything is planted
+    # by hand: masses in four layers with a forest edge, and single specimen trees; the random scatter
+    # below keeps out of the barrier
+    out.extend(authored(L, ctx, rng))
+    sanct = (lambda x, z: ctx["in_zone"]("sanctum", x, z)) if "sanctum" in L["zones"] else (lambda x, z: False)
 
     # cedars: the far side of the gully and the north-west woods, with glades
     def cedar_ok(x, z):
@@ -137,7 +150,10 @@ def place(L, ctx, rng):
         return n > 0.5 and ctx["height"](x, z) > -26.0
     for p in poisson(rng, (b[0], -36.0, b[2], 104.0), 6.5, broad_ok):
         kind = "maple" if rng.uniform() < 0.3 else ("beech" if rng.uniform() < 0.5 else "broadleaf")
-        out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.15)), "variant": int(rng.integers(0, 8))})
+        var = int(rng.integers(0, 8))
+        if kind == "maple" and var % 4 == 3:
+            var -= 1           # (variant 3 mod 4 is the red accent: in August only where placed on purpose)
+        out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.8, 1.15)), "variant": var})
 
     # red pines on the spur and the rocky rim above the ravine. Looking back home from the lookout
     # (the view from the lookout, godot/world3d/vista3d.gd: the camera 18.1 m out over the drop,
@@ -187,6 +203,8 @@ def place(L, ctx, rng):
 
     # shrubs along edges (azalea, hydrangea), ferns in the shade, boulders where the ground is rough
     def shrub_ok(x, z):
+        if sanct(x, z):
+            return False
         pd = ctx["path_dist"](x, z)
         if pd < 1.6 or pd > 7.0 or ctx["pad_dist"](x, z) < 1.0 or ctx["water_dist"](x, z) < 1.0:
             return False
@@ -201,6 +219,8 @@ def place(L, ctx, rng):
     # hydrangeas and azaleas close together, a few maples on its southern end; nothing tall where it
     # would hide the approach or the graves
     def belt_ok(x, z):
+        if L.get("plantings"):
+            return False          # (round 5: the sacred grove is planted by hand, authored())
         inz = ("chinju" in L["zones"] and ctx["in_zone"]("chinju", x, z)) or ("chinju_south" in L["zones"] and ctx["in_zone"]("chinju_south", x, z))
         return inz and ctx["slope_deg"](x, z) < 34 and keep_clear(x, z, 1.3) and far_from_markers(x, z, 2.5)
     for p in poisson(rng, (2.0, -14.0, 16.0, 21.0), 1.55, belt_ok):
@@ -211,6 +231,8 @@ def place(L, ctx, rng):
         out.append({"kind": kind, "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.85, 1.15)), "variant": int(rng.integers(0, 8))})
     # inside the barrier: hydrangeas along the approach and round the shrine's terrace
     def sanct_flowers(x, z):
+        if L.get("plantings"):
+            return False
         if "oku" not in L["zones"] or not (ctx["in_zone"]("oku", x, z) or ctx["in_zone"]("home", x, z)):
             return False
         pd = ctx["path_dist"](x, z)
@@ -219,6 +241,8 @@ def place(L, ctx, rng):
         out.append({"kind": "hydrangea", "x": float(p[0]), "z": float(p[1]), "rot": float(rng.uniform(0, 6.28)), "scale": float(rng.uniform(0.75, 1.05)), "variant": int(rng.integers(0, 8))})
 
     def fern_ok(x, z):
+        if L.get("plantings") and sanct(x, z):
+            return False
         shade = ctx["in_zone"]("cedar", x, z) or ctx["water_dist"](x, z) < 6.0 or np.hypot(x, z) < 13.0
         return shade and keep_clear(x, z, 1.2) and ctx["slope_deg"](x, z) < 40 and far_from_markers(x, z, 2.5)
     for p in poisson(rng, (b[0], -60.0, 40.0, 20.0), 2.2, fern_ok)[:420]:
@@ -269,3 +293,83 @@ def place(L, ctx, rng):
 
 CANOPY_R = {"camphor": 13.0, "cedar": 2.6, "furusugi": 1.8, "maple": 3.4, "beech": 3.6, "broadleaf": 3.4, "pine": 3.0,
             "persimmon": 3.2, "choppable": 1.6, "bamboo": 1.6}
+
+
+# ------------------------------------------------------------------------------------------------
+# authored plantings (round 5)
+LAYER_DEFAULTS = {
+    # layer: spacing (m), where in the mass (inset from its edge, m; negative: outside it), scale range
+    "canopy": (4.2, (1.6, 99.0), (0.85, 1.15)),
+    "sub": (2.3, (0.5, 99.0), (0.8, 1.15)),
+    "shrub": (1.35, (0.0, 1.9), (0.75, 1.1)),       # the mantle (マント群落): dense along the edge
+    "ground": (1.15, (0.3, 99.0), (0.8, 1.2)),
+    "sode": (0.9, (-1.1, 0.1), (0.75, 1.1)),          # the sleeve (ソデ群落): tall herbs just outside
+}
+CROWN_R = 14.0      # the great camphor's crown: no other canopy tree under it
+
+
+def authored(L, ctx, rng):
+    """Masses ("plantings": polygon, layers {name: {kinds: {kind: weight}, spacing, inset, scale}}) and
+    specimens ("specimens": exact kinds or asset names at exact places). A kind may be a placement
+    kind (cedar, broadleaf, shrub, hydrangea, ...) or an asset name (tsubaki_a, maple_a, ...)."""
+    out = []
+    specs = L.get("specimens", [])
+    for sp in specs:
+        out.append({"kind": sp["kind"], "x": float(sp["x"]), "z": float(sp["z"]), "rot": float(sp.get("rot", rng.uniform(0, 6.28))),
+                    "scale": float(sp.get("scale", 1.0)), "variant": int(sp.get("variant", 0)), "fixed": True,
+                    **({"role": sp["role"]} if "role" in sp else {})})
+    keep_out = [(float(sp["x"]), float(sp["z"]), float(sp.get("clear", 1.4))) for sp in specs]
+    for g in L.get("plantings", []):
+        poly = np.asarray(g["poly"], np.float64)
+        R = np.random.default_rng(int(g.get("seed", 0)) + 9100 + len(g["id"]) * 31)
+        bx0, bz0 = poly.min(axis=0) - 1.5
+        bx1, bz1 = poly.max(axis=0) + 1.5
+        placed = []
+
+        def sdf_at(x, z):
+            return float(geom.polygon_sdf(np.array([[x]]), np.array([[z]]), poly)[0, 0])
+        for lname, spec in g["layers"].items():
+            sp_d, inset_d, sc_d = LAYER_DEFAULTS[lname]
+            spacing = float(spec.get("spacing", sp_d))
+            ins = spec.get("inset", inset_d)
+            scl = spec.get("scale", sc_d)
+            kinds = spec["kinds"]
+            names = list(kinds)
+            w = np.array([kinds[k] for k in names], np.float64)
+            w /= w.sum()
+
+            def ok(x, z, ins=ins, lname=lname, spacing=spacing):
+                d = -sdf_at(x, z)                     # depth inside the mass (m)
+                if not (ins[0] <= d <= ins[1]):
+                    return False
+                if lname == "canopy" and np.hypot(x, z) < CROWN_R:
+                    return False
+                if ctx["path_dist"](x, z) < (0.9 if lname in ("ground", "sode") else 1.3):
+                    return False
+                if ctx["water_dist"](x, z) < 0.8 or ctx["slope_deg"](x, z) > 42 or ctx["pad_dist"](x, z) < 0.5:
+                    return False
+                for (cx, cz, cr) in keep_out:
+                    if np.hypot(x - cx, z - cz) < cr:
+                        return False
+                # nothing tall right on top of a smaller plant already there
+                for (px, pz, pr) in placed:
+                    if np.hypot(x - px, z - pz) < min(pr, spacing) * 0.7:
+                        return False
+                return True
+            pts = poisson(R, (bx0, bz0, bx1, bz1), spacing, ok)
+            for q in pts:
+                k = names[int(R.choice(len(names), p=w))]
+                var = int(R.integers(0, 8))
+                if k == "maple" and var % 4 == 3:
+                    var -= 1
+                out.append({"kind": k, "x": float(q[0]), "z": float(q[1]), "rot": float(R.uniform(0, 6.28)),
+                            "scale": float(R.uniform(scl[0], scl[1])), "variant": var, "planted": g["id"]})
+                placed.append((float(q[0]), float(q[1]), spacing))
+        # hedges: a clipped evergreen line along a polyline (生垣)
+    for hd in L.get("hedges", []):
+        pts = np.asarray(hd["pts"], np.float64)
+        P, s = geom.resample_polyline(pts, float(hd.get("step", 0.85)))
+        for q in P:
+            out.append({"kind": hd.get("kind", "shrub"), "x": float(q[0]), "z": float(q[1]), "rot": float(rng.uniform(0, 6.28)),
+                        "scale": float(hd.get("scale", 0.9)), "variant": int(rng.integers(0, 8)), "planted": "hedge"})
+    return out
