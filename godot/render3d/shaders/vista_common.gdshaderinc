@@ -247,7 +247,7 @@ float v_light_ref() {
 //   is heaviest, never where it is. Its lightness is not pressed down (that greys it: the 褪版).
 // - at dusk and dawn the one turns into the other with the night (w3_night).
 const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
-uniform float ghost_day_gamma = 8.0;
+uniform float ghost_day_gamma = 4.0;
 uniform float ghost_day_drain = 0.6;
 vec3 v_ghost(vec3 col, float k) {
 	if (k <= 0.0) return col;
