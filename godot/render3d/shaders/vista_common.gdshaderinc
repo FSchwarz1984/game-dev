@@ -159,13 +159,17 @@ uniform float ghost_night_gain = 0.89;
 // night's is); its key, contrast and shoulder in display terms, before the view's grade
 uniform float ghost_day_w0 = 0.025;
 uniform float ghost_day_w1 = 0.09;
-uniform float ghost_day_key = 0.77;
+uniform float ghost_day_key = 0.684;
 uniform float ghost_day_key_town = 0.82;
-uniform float ghost_day_contrast = 1.4;
+uniform float ghost_day_contrast = 1.6;
 uniform float ghost_day_mid = 0.5;
-uniform float ghost_day_top = 0.86;
+// (a soft shoulder from the knee up to the ceiling: through the view's grade the ceiling lands near
+// L* 94, so nothing is blown white; the light and shade stay below it, darker strokes on a bright
+// ground, as cut)
+uniform float ghost_day_knee = 0.70;
+uniform float ghost_day_ceiling = 0.81;
 uniform float ghost_day_lref = 1.19;          // the white surface's light at noon (the key is set for it)
-const vec3 V_GHOST_TINT_DAY = vec3(0.96, 0.98, 1.015);
+const vec3 V_GHOST_TINT_DAY = vec3(0.955, 0.975, 1.02);
 float v_ghost_day_w(float k) {
 	return smoothstep(ghost_day_w0, ghost_day_w1, k);
 }
@@ -269,8 +273,8 @@ vec3 v_ghost(vec3 col, float k) {
 	// by day
 	float key = mix(ghost_day_key, ghost_day_key_town, pow(k, ghost_day_gamma));
 	float lo = key + ghost_day_contrast * (ld - ghost_day_mid);
-	float sh = ghost_day_top, room = (1.0 - sh) * 0.5;
-	lo = lo < sh ? max(lo, 0.0) : sh + room * (1.0 - exp(-(lo - sh) / room));
+	float kn = ghost_day_knee, room = ghost_day_ceiling - ghost_day_knee;
+	lo = lo < kn ? max(lo, 0.0) : kn + room * (1.0 - exp(-(lo - kn) / room));
 	vec3 gd = w3_srgb_to_linear(clamp(lo * V_GHOST_TINT_DAY, vec3(0.0), vec3(1.0))) * clamp(lref / ghost_day_lref, 0.5, 1.0);
 	gd = mix(gd, col * (w3_luma(gd) / max(w3_luma(col), 1e-5)), 0.03);
 	vec3 day = mix(col, gd, v_ghost_day_w(k));
