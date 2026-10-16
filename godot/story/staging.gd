@@ -10,6 +10,9 @@ extends RefCounted
 ##   span   [抖]..[/抖] shaky   [波]..[/波] wavy   [大]..[/大] 24 px (twice the pixel font)   [轻]..[/轻] faint (55%)
 ##          [慢]..[/慢] half speed   [快]..[/快] double speed
 ##   point  [停0.5] stop typing for 0.5 s here
+##          [等] stop here until the player presses advance, then go on in the same box (KAG's [l], Ren'Py's {w}:
+##               the player's own press is the beat; docs/knowledge/28 §9)
+##          [脸:smile] the face changes here, with its default beat (Ren'Py's extend; docs/knowledge/28 §9)
 ##   beat   fires when the typing reaches the character it stands before:
 ##          card  [入场] [弹] [笑] [横抖] [跳] [沉] [颤]     box [框抖]     view [震屏] [闪白]
 ##          marks [漫符:怒] (怒 汗 惊 问 红晕 阴影 闪光 叹气 音符 点点), another anchor: [漫符:汗@cheek]
@@ -104,14 +107,17 @@ var _flashes: Array[float] = []
 var _flashed_this_line := false
 var _marks: Array = []      # [{name, at, t0, frames?: per-face rects}]
 var _tone := {}
+var _waits: Array = []      # character indices where the typing waits for a press ([等])
+var _wait_passed := -1      # the last wait the player has pressed through
+var _quiet := false
 
 
 # ------------------------------------------------------------------ parsing
 
 ## A line's text -> {bb: BBCode for the RichTextLabel (the words escaped), plain: the words, speed: per character,
-## pause: {after n characters: seconds}, events: [[n, tag, arg]], quiet: [静] was given}.
+## pause: {after n characters: seconds}, waits: [n, ...] ([等]), events: [[n, tag, arg]], quiet: [静] was given}.
 static func parse(raw: String) -> Dictionary:
-	var acc := {"bb": "", "plain": "", "speed": [], "pause": {}, "events": [], "quiet": false, "rate": 1.0}
+	var acc := {"bb": "", "plain": "", "speed": [], "pause": {}, "waits": [], "events": [], "quiet": false, "rate": 1.0}
 	var re := RegEx.create_from_string("\\[(/?)([^\\[\\]]+)\\]")
 	var pos := 0
 	for m in re.search_all(raw):
@@ -135,6 +141,9 @@ static func parse(raw: String) -> Dictionary:
 				acc["rate"] = 1.0 if close else 2.0
 			"静":
 				acc["quiet"] = true
+			"等":
+				if n > 0 and not (acc["waits"] as Array).has(n):
+					acc["waits"].append(n)
 			_:
 				if close:
 					_lit(acc, m.get_string())
@@ -143,13 +152,15 @@ static func parse(raw: String) -> Dictionary:
 					acc["pause"][n] = float(acc["pause"].get(n, 0.0)) + sec
 				elif tag.begins_with("漫符:") or tag.begins_with("漫符："):
 					acc["events"].append([n, "漫符", tag.substr(3)])
+				elif tag.begins_with("脸:") or tag.begins_with("脸："):
+					acc["events"].append([n, "脸", tag.substr(2).strip_edges()])
 				elif tag in BEATS:
 					acc["events"].append([n, tag, ""])
 				else:
 					_lit(acc, m.get_string())
 	_lit(acc, raw.substr(pos))
 	return {"bb": acc["bb"], "plain": acc["plain"], "speed": PackedFloat32Array(acc["speed"]), "pause": acc["pause"],
-		"events": acc["events"], "quiet": acc["quiet"]}
+		"waits": acc["waits"], "events": acc["events"], "quiet": acc["quiet"]}
 
 
 static func _lit(acc: Dictionary, s: String) -> void:
@@ -194,6 +205,9 @@ func _clear_line() -> void:
 	_flashed_this_line = false
 	_marks = []
 	_tone = {}
+	_waits = []
+	_wait_passed = -1
+	_quiet = false
 	beats_log = []
 
 
@@ -212,6 +226,8 @@ func begin(cast_id: String, new_face: String, parsed: Dictionary, card: bool, sl
 	total = plain.length()
 	_speed = parsed["speed"]
 	_pause = parsed["pause"]
+	_waits = parsed.get("waits", [])
+	_quiet = quiet
 	_cps = SLOW_CPS if slow else CPS
 	var pre: Array = []
 	if card:
@@ -238,8 +254,11 @@ func step(dt: float, rate: float = 1.0) -> Array:
 	if shown < total:
 		_acc += dt * rate
 		while shown < total:
+			if waiting:
+				_acc = 0.0
+				break
 			var need := 1.0 / (_cps * (_speed[shown] if shown < _speed.size() else 1.0))
-			if _acc < need:
+			if _acc + 1e-6 < need:
 				break
 			_acc -= need
 			var c := plain[shown]
@@ -258,21 +277,41 @@ func step(dt: float, rate: float = 1.0) -> Array:
 	return out
 
 
-## The line comes out at once (the player pressed advance while it typed): the beats still to come are applied in
-## their settled state (a held hop, a mark already up, the dot screen); the ones that are only a moment are dropped.
+## The line comes out at once (the player pressed advance while it typed), up to its next [等] if it has one: the
+## beats on the way are applied in their settled state (a held hop, a mark already up, the dot screen); the ones that
+## are only a moment are dropped.
 func complete() -> void:
-	if shown < total:
-		shown = total
+	if waiting:
+		return
+	var stop := total
+	for w in _waits:
+		if int(w) > shown and int(w) > _wait_passed and int(w) < stop:
+			stop = int(w)
+	shown = maxi(shown, stop)
+	if shown >= total:
 		_done_at = time
-	while _fired < _events.size():
+	while _fired < _events.size() and _due(int(_events[_fired][0])):
 		var e: Array = _events[_fired]
 		_fired += 1
 		_fire(String(e[1]), String(e[2]), true)
 
 
+## The player pressed advance at a [等]: the typing goes on.
+func resume() -> void:
+	if waiting:
+		_wait_passed = shown
+		_acc = 0.0
+
+
 var typed_out: bool:
 	get:
 		return shown >= total
+
+
+## Stopped at a [等], waiting for the player.
+var waiting: bool:
+	get:
+		return shown < total and shown > _wait_passed and _waits.has(shown)
 
 
 func _due(n: int) -> bool:
@@ -312,6 +351,8 @@ func _fire(tag: String, arg: String, skipped: bool) -> void:
 					_flashed_this_line = true
 		"颤":
 			_tremble = true
+		"脸":
+			_change_face(arg, skipped)
 		_:
 			if CARD_TRACKS.has(tag):
 				var tr: Array = CARD_TRACKS[tag]
@@ -321,6 +362,31 @@ func _fire(tag: String, arg: String, skipped: bool) -> void:
 				elif tr.size() > 2:
 					_card = {}
 					_hold = (tr[1] as Array)[-1]
+
+
+## [脸:x]: the face changes in the middle of the line. Pieces drawn for the old face are redrawn for the new one; the new
+## face brings its default beat and mark as a new line would (not under [静]).
+func _change_face(new_face: String, skipped: bool) -> void:
+	if not has_card or new_face == "" or new_face == face:
+		return
+	face = new_face
+	faces[who] = new_face
+	var keep: Array = []
+	for m in _marks:
+		if m.has("frames"):
+			var piece := face_piece(who, new_face, String(m["name"]))
+			if piece.is_empty():
+				continue
+			m["frames"] = piece
+		keep.append(m)
+	_marks = keep
+	if _quiet:
+		return
+	var fb := String(FACE_BEAT.get(new_face, ""))
+	if fb != "":
+		_fire(fb, "", skipped)
+	if FACE_MARK.has(new_face):
+		_fire("漫符", String(FACE_MARK[new_face]), skipped)
 
 
 func _add_mark(n: String, anchor: String, skipped: bool) -> void:
@@ -341,9 +407,15 @@ func _add_mark(n: String, anchor: String, skipped: bool) -> void:
 
 # ------------------------------------------------------------------ what it looks like now
 
+## Whole steps of `per` seconds in `age`. The clock is a sum of frame times (1/30 + 1/30 + ... is a hair under 2/30),
+## so a step boundary is taken a ten-thousandth early; without that, every step after the first lasted two frames.
+static func _n(age: float, per: float) -> int:
+	return int(floorf(age / per + 1e-4))
+
+
 func _track_value(tr: Array, age: float) -> Variant:
 	var steps: Array = tr[1]
-	var i := int(age / float(tr[0]))
+	var i := _n(age, float(tr[0]))
 	if i < steps.size():
 		return steps[i]
 	return steps[-1] if tr.size() > 2 else null
@@ -437,9 +509,9 @@ func _mark_state(n: String, age: float) -> Array:
 		return [mark_frames(n).size() - 1, Vector2.ZERO]
 	match n:
 		"gloom":
-			return [mini(3, int(age / 0.1)), Vector2.ZERO]
+			return [mini(3, _n(age, 0.1)), Vector2.ZERO]
 		"blush":
-			return [mini(2, int(age / 0.07)), Vector2.ZERO]
+			return [mini(2, _n(age, 0.07)), Vector2.ZERO]
 		"focus":
 			var acc := 0.0
 			for st in [[0, 0.05], [1, 0.15], [2, 0.12], [1, 0.12], [2, 0.12]]:
@@ -454,27 +526,27 @@ func _mark_state(n: String, age: float) -> Array:
 		"sweat":
 			if age < 0.06:
 				return [0, Vector2(1, 1)]
-			return [1, Vector2(0, mini(3, int((age - 0.06) / 0.18)))]
+			return [1, Vector2(0, mini(3, _n(age - 0.06, 0.18)))]
 		"surprise":
 			return [0 if age < 0.04 else (1 if age < 0.34 else (2 if age < 0.44 else -1)), Vector2.ZERO]
 		"question":
 			if age < 0.12:
-				return [0, Vector2(0, 2 - int(age / 0.04))]
+				return [0, Vector2(0, 2 - _n(age, 0.04))]
 			return [0, Vector2(0, -1 if fmod(age - 0.12, 0.8) < 0.25 else 0)]
 		"sparkle":
 			var seq := [0, 1, 2, 3, 2, 1, 0]
-			var i := int(fmod(age, 1.2) / 0.06)
+			var i := _n(fmod(age + 1e-5, 1.2), 0.06)
 			return [seq[i] if i < seq.size() else -1, Vector2.ZERO]
 		"sigh":
-			var j := int(age / 0.12)
+			var j := _n(age, 0.12)
 			if j > 5:
 				return [-1, Vector2.ZERO]
 			return [mini(3, j), Vector2(j, -j)]
 		"note":
-			var k := int(age / 0.25) % 2
+			var k := _n(age, 0.25) % 2
 			return [k, Vector2(0, -k)]
 		"dots":
-			return [mini(2, int(age / 0.18)), Vector2.ZERO]
+			return [mini(2, _n(age, 0.18)), Vector2.ZERO]
 	return [-1, Vector2.ZERO]
 
 
@@ -487,7 +559,7 @@ func draw_under(ci: CanvasItem, at: Vector2) -> void:
 	var fr: Array = art_meta().get("tone", [])
 	if fr.is_empty():
 		return
-	var k := fr.size() - 1 if reduce_motion else mini(fr.size() - 1, int((time - float(_tone["t0"])) / 0.12))
+	var k := fr.size() - 1 if reduce_motion else mini(fr.size() - 1, _n(time - float(_tone["t0"]), 0.12))
 	_blit(ci, atlas("marks"), fr[k], at)
 
 

@@ -445,6 +445,55 @@ export function plainLanterns(cam, Zb, W, H) {
   return out;
 }
 
+/** The night's lanterns along the roads that the frame shows, appended to lights (prologue and title
+ *  share them): the old road's switchbacks down the pass, an Obon lantern every ~40 m; and the old
+ *  road on across the plain to the town, where on the night of the 送魂 paper lanterns hang between
+ *  its street lamps, one every ~12 m, so that from the crown it is a thread of light winding into the
+ *  town (HEAD's procession road was one). ground: { Z, height }; cam: { cx, yh, f }. */
+export function roadLanterns(lights, ground, cam, W, H) {
+  const { cx, yh, f } = cam;
+  const SW = ROAD;
+  for (let i = 0, acc = 0; i < SW.length - 1; i++) {
+    const [ax, az] = SW[i], [bx, bz] = SW[i + 1], len = Math.hypot(bx - ax, bz - az), step = 40 / U;
+    for (let d = acc; d < len; d += step) {
+      const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
+      const x = Math.round(cx + f * X / Z), y = Math.round(yh + f * (1 - ground.height(X, Z)) / Z) - 1;
+      if (x < 0 || x >= W || y < 0 || y >= H) continue;
+      if (ground.Z[(y + 1) * W + x] < Z * 0.85) continue;
+      lights.push({ x, y, X, Z, kind: 'lantern', path: true });
+    }
+    acc = (acc - len) % step; if (acc < 0) acc += step;
+  }
+  const OR = oldRoad(), taken = new Set(lights.map(L => L.x + ':' + L.y));
+  for (let i = 0, acc = 0; i < OR.length - 1; i++) {
+    const [ax, az] = OR[i], [bx, bz] = OR[i + 1], len = Math.hypot(bx - ax, bz - az), step = 12 / U;
+    for (let d = acc; d < len; d += step) {
+      const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
+      const x = Math.round(cx + f * X / Z), y = Math.round(yh + f * (1 - ground.height(X, Z)) / Z) - 1;
+      if (x < 0 || x >= W || y < 0 || y >= H || taken.has(x + ':' + y)) continue;
+      if (ground.Z[(y + 1) * W + x] < Z * 0.85) continue;
+      taken.add(x + ':' + y);
+      lights.push({ x, y, X, Z, kind: 'lantern', path: true });
+    }
+    acc = (acc - len) % step; if (acc < 0) acc += step;
+  }
+  return lights;
+}
+
+/** Bonfires on the river bank by the town, where the lanterns are set on the water (three); and the
+ *  river's points near the town (indices into RIVER), for the floating lanterns. */
+export function riverBonfires(ground, cam, W, H) {
+  const { cx, yh, f } = cam, near = [], out = [];
+  for (let i = 0; i < RIVER.length; i++) if (Math.hypot(RIVER[i][0] - TOWN.X, RIVER[i][1] - TOWN.Z) < 3.4) near.push(i);
+  for (const q of [0.15, 0.5, 0.85]) {
+    const i = near[Math.min(near.length - 1, Math.floor(q * near.length))];
+    const X = RIVER[i][0] + 0.16, Z = RIVER[i][1];
+    const x = Math.round(cx + f * X / Z), y = Math.round(yh + f / Z);
+    if (x > 0 && x < W && y > 0 && y < H && ground.Z[y * W + x] > Z * 0.9) out.push({ x, y, X, Z, kind: 'bonfire', river: true });
+  }
+  return { fires: out, near };
+}
+
 function roadDist(X, Z) {
   let best = 1e9;
   for (let i = 0; i < ROAD.length - 1; i++) {
@@ -530,7 +579,7 @@ const TONE_OF = { [V_GREEN]: [G.forest, G.riceA], [V_EARTH]: [G.wood, G.fallow] 
 // the paper and the ink by night (sRGB): washi in the moon, a step above the night's colours (its
 // fields are about L* 15-20 here, the paper about L* 32), a little cool so that beside the blue night
 // it reads as paper and not as a dirty brown-grey; the ink nearly black, warm like the palette's K
-export const PAPER_NIGHT = [74, 77, 84], INK_NIGHT = [15, 13, 13];
+export const PAPER_NIGHT = [73, 77, 87], INK_NIGHT = [15, 13, 13];
 const pack3 = (c, a = 255) => ((a << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
 /** The far's paper flag: a lutFar entry with this alpha is paper (the shader embosses it). */
 export const PAPER_ALPHA = 128;
@@ -548,8 +597,11 @@ export function fadePalette(s, nightPal) {
     let out = cache.get(v);
     if (out !== undefined) return out;
     const mat = v >> 8, b = BLOCK[mat];
+    // (the viaduct's bents, its shaded underside: a colour block is not cut that fine; the key block
+    // draws the bents that are strokes, the rest leave the paper, so the far trestle is no comb)
+    const bent = mat === G.iron && ((v >> 5) & 7) === 1;
     if (!b) out = 0;
-    else if (b[0] === V_PAPER || s >= GONE_AT[b[0]]) out = pack3(PAPER_NIGHT, PAPER_ALPHA);
+    else if (b[0] === V_PAPER || s >= GONE_AT[b[0]] || bent) out = pack3(PAPER_NIGHT, PAPER_ALPHA);
     else if (b[0] === V_BLUE) out = (flat(mat) & 0xffffff) | 0xff000000;
     else out = (flat(TONE_OF[b[0]][b[1]]) & 0xffffff) | 0xff000000;
     out >>>= 0;
@@ -582,12 +634,16 @@ export const PLATE_AT = [300, 900, 1400, 1900], PLATE_SPREAD = 320;
  * mottle of long and short flecks, fixed to the land), 128 = plain paper; A a small delay for the
  * blocks coming off after the tide.
  *
- * The key block is drawn as a block is cut: deliberate, continuous lines. Main lines (2 px nearest us,
- * 1 px beyond): the skyline and the ridges, the top edge of whatever stands in front of the land
- * behind it (a crest, a terrace of land, the viaduct), river and pond banks, roads, the town's outline;
- * fine lines (1 px): the woods' edges, the levees between fields, roofs, the crowns in a near wood.
- * Then the cut is cleaned: one-pixel gaps along a line are closed, pieces shorter than a few pixels go
- * (more far away: only the big structures stay).
+ * The key block is drawn as a block is cut: deliberate, continuous lines, denser near, only the big
+ * structures far. Main lines (2 px nearer than ~1.6 km, 1 px beyond): the skyline; the ranges' ridges, one range
+ * in front of the next (where the line of sight truly breaks over a crest), each drawn as one smoothed
+ * stroke, a few to a range and kept clear of each other; the ranges' spurs from their peaks; crests
+ * and terraces of land; the viaduct's deck (its long bents near); river and pond banks, roads (to
+ * ~2.9 km), the town's outline. Fine lines (1 px, to ~1.6 km): the woods' edges, the levees between
+ * fields deep enough to show paper between, roofs, the crowns in a near wood. Then the cut is cleaned:
+ * two lines never lie on one another (nor, far, two rows apart), gaps along a line are closed (and
+ * behind the viaduct's bents), pieces too short to be cut on purpose go (longer far).
+ * cam: the frame's { cx, yh } (for the spurs; without it none are cut).
  */
 export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
   const N = W * H, out = new Uint8Array(N * 4), idx = L.idx;
@@ -632,7 +688,8 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
     const den = f * (dh * Z + 1 - h);
     return den > 1e-6 ? Z * Z / den : 0;
   };
-  // 1. where the block's lines are cut. kind: 1 fine, 2 main, 3 a fold in the ranges (chosen below)
+  // 1. where the block's lines are cut. kind: 1 fine, 2 main, 4 a spur, 5 a ridge in the ranges (4, 5
+  // chosen below)
   const kind = new Uint8Array(N);
   const SRC = FADE_STATS.wantSrc ? (FADE_STATS.src = new Uint8Array(N)) : null;   // (diagnostics: what cut each line)
   const weak = new Uint8Array(N);
@@ -646,10 +703,10 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
     let k = 0, sc = 0;
     if (c === 9) {
       // the viaduct: its deck (the top edge always; both rows of it near) and, near, its bents where a
-      // bent is a stroke of 4 px or more
+      // bent is a stroke of 5 px or more under the deck (shorter ones would print as a comb)
       if (!isIron(up)) k = 2;
       else if (Z < 9 && ironAcross[i] >= 3) k = 2;
-      else if (Z < 9 && ironAcross[i] < 3 && runUp[i] + runDn[i] - 1 >= 5) k = 2;
+      else if (Z < 8 && ironAcross[i] < 3 && runUp[i] + runDn[i] - 1 >= 7) k = 2;
       sc = 12;
     } else if (mtn) {
       // a ridge in front of the next: the land seen over it is farther than this face, if it went on,
@@ -669,6 +726,8 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
         continue;
       }
       if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
+      // (a bank running just under the viaduct's deck, past ~1.6 km, is left to the deck's line)
+      if (c === 3 && Z >= 9 && (isIron(i - W) || isIron(i - 2 * W) || isIron(i - 3 * W))) continue;
       if (c === 3 || c === 5) { k = 2; sc = c === 3 ? 4 : 5; }            // banks, the town
       else if (c === 4 && Z < 16) { k = 2; sc = 6; }                      // roads
       else if (c === 6 && !mtn && (Z < 9 || (n === up && Z < 16))) { k = Math.max(k, 1); sc = sc || 7; }   // the woods' edges
@@ -699,13 +758,12 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
       }
     }
   }
-  // 1b. the ranges' spurs and creases, as a print draws a mountain: from each peak of the skyline the
-  // crest of a spur followed down toward us (the highest way down, one bearing left and one right),
-  // from each saddle the crease followed down (the lowest way down); cut where they are the land in
-  // sight. Fewer the farther: past FOLD_FAR only one spur to a peak and no creases.
+  // 1b. the ranges' spurs, as a print draws a mountain: from each peak of the skyline the crest of a
+  // spur followed down toward us and to the side (the highest way down, one bearing left and one
+  // right); cut where they are the land in sight. Fewer the farther: past FOLD_FAR one spur to a peak.
   const top = new Int16Array(W).fill(-1);
   for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (mask[y * W + x]) { top[x] = y; break; }
-  const trace = (X, Z, mode, side) => {
+  const trace = (X, Z, side) => {
     const pts = [[X, Z, heightBase(X, Z)]];
     const h0 = pts[0][2];
     for (let n = 0; n < 120; n++) {
@@ -717,7 +775,7 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
         const r = a * Math.PI / 180, cx = ux * Math.cos(r) - uz * Math.sin(r), cz = ux * Math.sin(r) + uz * Math.cos(r);
         const X1 = Xc + cx * ds, Z1 = Zc + cz * ds, h1 = heightBase(X1, Z1);
         if (h1 >= hc) continue;
-        if (!best || (mode > 0 ? h1 > best[2] : h1 < best[2])) best = [X1, Z1, h1];
+        if (!best || h1 > best[2]) best = [X1, Z1, h1];
       }
       if (!best) break;
       pts.push(best);
@@ -727,12 +785,11 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
   };
   const cxF = cam ? cam.cx : 0, yhF = cam ? cam.yh : 0;
   const cut = (pts, tag) => {
-    // a spur seen end-on (straight down the frame) or edge-on (along the skyline) is not drawn
+    // a spur seen edge-on (along the skyline) is not drawn
     if (pts.length < 3) return 0;
     const proj = ([X, Z, h]) => [cxF + f * X / Z, yhF + f * (1 - h) / Z];
     const [x0, y0] = proj(pts[0]), [x1, y1] = proj(pts[pts.length - 1]);
     if (Math.abs(y1 - y0) < 0.3 * Math.abs(x1 - x0)) return 0;
-    FADE_STATS.spurs = (FADE_STATS.spurs || 0) + 1;
     let drawn = 0;
     for (let q = 0; q < pts.length - 1; q++) {
       const [Xa, Za, ha] = pts[q], [Xb2, Zb2, hb2] = pts[q + 1];
@@ -753,28 +810,32 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
     for (let x = R; x < W - R; x++) {
       const t = top[x];
       if (t < 0 || !isMtn(mat(t * W + x))) continue;
-      let pk = true, sd = true, lmax = t, rmax = t, lmin = t, rmin = t;
-      for (let d = -2 * R; d <= 2 * R; d++) {
+      // a peak: the highest point of the skyline within R px, standing 2 px (4 far) over it on both sides
+      let pk = true, lmax = t, rmax = t;
+      for (let d = -2 * R; d <= 2 * R && pk; d++) {
         const u = top[Math.min(W - 1, Math.max(0, x + d))];
-        if (u < 0) { pk = sd = false; break; }
-        if (Math.abs(d) <= R) { if (u < t || (u === t && d < 0)) pk = false; if (u > t || (u === t && d < 0)) sd = false; }
-        if (d < 0) { lmax = Math.max(lmax, u); lmin = Math.min(lmin, u); } else { rmax = Math.max(rmax, u); rmin = Math.min(rmin, u); }
+        if (u < 0) { pk = false; break; }
+        if (Math.abs(d) <= R && (u < t || (u === t && d < 0))) pk = false;
+        if (d < 0) lmax = Math.max(lmax, u); else rmax = Math.max(rmax, u);
       }
       const i = t * W + x, Z = Zb[i], X = Xb[i], far = Z > FOLD_FAR;
       if (pk && Math.min(lmax - t, rmax - t) >= (far ? 4 : 2)) {
-        cut(trace(X, Z, 1, -1), 4);
-        if (!far) cut(trace(X, Z, 1, 1), 4);
+        cut(trace(X, Z, -1), 4);
+        if (!far) cut(trace(X, Z, 1), 4);
       }
     }
   }
 
   // 2. lines never lie on one another: where two lines running across touch one above the other (they
   // would print as a band), the lower gives way: a fine line to any line, a main line to a main line
+  // (past ~1.6 km, where a row is tens of metres deep, two lines running across two rows apart are one
+  // line doubled: the lower goes too)
   for (let y = 1; y < H; y++) for (let x = 1; x < W - 1; x++) {
-    const i = y * W + x, k = kind[i], a = kind[i - W];
-    if (!k || k >= 3 || !a || a >= 3) continue;
-    if (!(kind[i - 1] || kind[i + 1]) || !(kind[i - W - 1] || kind[i - W + 1])) continue;   // a line going down
-    if (k === 1 || a === 2) kind[i] = 0;
+    const i = y * W + x, k = kind[i];
+    if (!k || k >= 3 || !(kind[i - 1] || kind[i + 1])) continue;
+    const a = kind[i - W];
+    if (a && a < 3 && (kind[i - W - 1] || kind[i - W + 1])) { if (k === 1 || a === 2) kind[i] = 0; continue; }
+    if (y > 1 && !a && Zb[i] >= 9 && kind[i - 2 * W] === 2 && (kind[i - 2 * W - 1] || kind[i - 2 * W + 1])) kind[i] = 0;
   }
 
   // 3. the cut cleaned: gaps along a line closed (one pixel across or on a diagonal; two or three
@@ -897,18 +958,18 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
     }
     if (ok) for (const i of r.piece) { kind[i] = 2; taken[i] = 1; if (SRC && !SRC[i]) SRC[i] = 2; }
   }
-  // the ranges' spurs and creases: pieces of FOLD_MIN px or more
+  // the ranges' spurs: pieces of FOLD_MIN px or more
   FADE_STATS.folds = folds.map(fo => [fo.n, fo.tall, Math.round(fo.x), +fo.z.toFixed(1)]);
   for (const fo of folds) for (const i of fo.piece) kind[i] = fo.n >= FOLD_MIN ? 2 : 0;
 
-  // 6. out: the ink (main lines nearest us two pixels: the line and the pixel under it, if that is land
-  // and no line), the stage, the paper
+  // 6. out: the ink (main lines nearer than LINE2_Z two pixels: the line and the pixel under it, if that
+  // is land and no line; the viaduct's deck is two rows of its own), the stage, the paper
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     if (!mask[i]) continue;
     const Z = Zb[i], X = Xb[i];
     let ink = kind[i] ? 1 : 0;
-    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < 6 && Zb[i] < Zb[i - W] * 1.4 && !(y < H - 1 && kind[i + W])) ink = 1;
+    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < LINE2_Z && !isIron(i - W) && Zb[i] < Zb[i - W] * 1.4 && !(y < H - 1 && kind[i + W])) ink = 1;
     // which blocks are gone here: metres past the rim against each block's front (wandering with the
     // bearing), per piece of land
     const xm = -X * U, zm = Z * U;
@@ -937,13 +998,15 @@ export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
   }
   return out;
 }
-// the ranges: the relief's smoothing (m); the shortest spur or crease piece cut (px); past FOLD_FAR
-// (units) one spur to a peak and no creases
+// the ranges: the relief's smoothing (m); the shortest spur piece cut (px); past FOLD_FAR (units) one
+// spur to a peak; a ridge: the break in the line of sight (the land seen over it this much farther,
+// relatively: ranges, hills nearer than ~8 km), its shortest stroke (px; ranges past ~12.7 km 1.4x),
+// the rows of paper kept clear round it
 const FOLD_SMOOTH = 300, FOLD_MIN = 4, FOLD_FAR = 70, RIDGE_MIN = 10, RIDGE_MIN_HILLS = 16;
-let RIDGE_JUMP = 0.025, RIDGE_JUMP_HILLS = 0.15;
-export function _setRidgeJump(a, b) { RIDGE_JUMP = a; RIDGE_JUMP_HILLS = b; }
-let RIDGE_CLEAR = [-2, -1, 1, 2];
-export function _setRidgeClear(a) { RIDGE_CLEAR = a; }
+// the main lines are two pixels nearer than this (units: ~1.6 km, where a row is ~40 m deep)
+const LINE2_Z = 9;
+const RIDGE_JUMP = 0.025, RIDGE_JUMP_HILLS = 0.15, RIDGE_CLEAR = [-2, -1, 1, 2];
+/** Diagnostics (tools): set wantSrc before fadeMaps to get src (what cut each line); folds (spurs). */
 export const FADE_STATS = {};
 // the region's rim (vista.py MIST: the mist ellipse round the walkable region)
 const MIST = { cx: -50, cz: 100, rx: 430, rz: 370 };

@@ -2,6 +2,10 @@
 // moon half hidden in its leaves, the plain below with its lamps, fires and flooded paddies holding
 // the stars, a few pale jade reflections whose source is nowhere in the sky. Visual only: the title
 // menu belongs to the core. A fixed hour, so the layers are finished RGBA images.
+// The plain is the prologue's (tools/vista/bake/plain.js, from the 3D lookout's land: the river out of
+// the western canyon, the railway's viaduct, the town, the villages, the ring of mountains) on the
+// night of the 送魂 before 遠化, every lamp lit: windows, the street lamps hung with paper lanterns,
+// the old road a thread of light into the town, the bonfires by the river and the lanterns set on it.
 //
 // Layout: the JS 480x270 frame on a larger canvas (any logical view up to 1024 x 560):
 //   back group (sky + still stars, the plain, its still lamps and the pool of moonlight): stands on
@@ -14,8 +18,8 @@
 import { clamp, lerp, smooth, rng, hash2, vnoise, makeCanvas, ctx2d, scale3, TAU, pack, run } from '../../../src/vista/util.js';
 import { todEnv, palette } from '../../../src/vista/tod.js';
 import { makeStars } from '../../../src/vista/sky.js';
-import { buildGroundGen, GROUND_MATS, G } from '../../../src/vista/ground.js';
-import { paintBuildings, roadLanterns } from '../../../src/vista/buildings.js';
+import * as PL from './plain.js';
+import { GROUND_MATS, G, buildPlainGen, paintHouses, plainLanterns, paintViaduct } from './plain.js';
 import { paintCanopy, paintCanopyGen, paintGrass, FOLIAGE_MATS } from '../../../src/vista/foliage.js';
 import { COL, glow, px } from '../../../src/vista/lights.js';
 
@@ -35,10 +39,28 @@ export function bakeTitle(o = {}) {
   const envG = { ...env, ...lift, sun: env.sun.map(v => v * 0.62), amb: env.amb.map(v => v * 1.08) };
   const sun = { dir: norm([0.6, 0.45, -0.35]), slope: 0.45 };
   const YH = yh + oy;                                           // horizon row in the back canvas
-  const ground = run(buildGroundGen({ w: Wc, h: Hc, cx, yh: YH, f, S, sun, seed }));
+  if (!PL.haveW3()) throw new Error('title: the 3D lookout\'s land is not loaded (plain.js setW3)');
+  const ground = run(buildPlainGen({ w: Wc, h: Hc, cx, yh: YH, f, S, sun, seed }));
   const cam = { cx, yh: YH, f, height: ground.height };
-  const lights = paintBuildings(ground.layer, ground.X, ground.Z, cam, ground.hamlets, seed);
-  lights.push(...roadLanterns(cam, ground.Z, Wc, Hc));
+  const lights = paintHouses(ground.layer, ground.X, ground.Z, cam, seed);
+  lights.push(...plainLanterns(cam, ground.Z, Wc, Hc));
+  PL.roadLanterns(lights, ground, cam, Wc, Hc);
+  paintViaduct(ground.layer, ground.X, ground.Z, cam);
+  const { fires: riverFires, near } = PL.riverBonfires(ground, cam, Wc, Hc);
+  lights.push(...riverFires);
+  // the lanterns set on the river by the town (灯籠流し), carried down the stretch below it and
+  // thinning out downstream (the prologue's draws, held still: the title's hour does not move)
+  {
+    const RIV = PL.RIVER, RL = rng(seed * 13 + 5);
+    for (let k = 0; k < 40; k++) {
+      const a = RL(), ph = RL(), sd = RL();
+      const u = near[0] - 0.5 + a * a * 18, i0 = Math.max(0, Math.min(RIV.length - 2, Math.floor(u))), t = clamp(u - i0, 0, 1);
+      const X = lerp(RIV[i0][0], RIV[i0 + 1][0], t) + (sd - 0.5) * 0.06, Z = lerp(RIV[i0][1], RIV[i0 + 1][1], t);
+      const x = Math.round(cx + f * X / Z), y = Math.round(YH + f / Z);
+      if (x < 0 || x >= Wc || y < 0 || y >= Hc || ground.Z[y * Wc + x] < Z * 0.9) continue;
+      lights.push({ x, y, X, Z, kind: 'float', ph: ph * TAU });
+    }
+  }
   const moonR = Math.max(8, Math.round(H * 0.044));
   const moon = { x: Math.round(W * 0.7), y: 0, r: moonR };          // reference coords (top group)
   moon.y = Math.round(canopyEdge(W, H, moon.x) + moonR * 2.0);
@@ -49,19 +71,32 @@ export function bakeTitle(o = {}) {
     if ((m === G.paddy || m === G.pond || m === G.river) && hash2(x, y, 41) < 0.11 * (1 - smooth(50, 100, y - YH))) water.push({ x, y, ph: hash2(x, y, 42) * TAU, b: 0.45 + hash2(x, y, 43) * 0.55 });
   }
   // the hook: jade reflections of a ring that is not in the sky
+  // (on the plain of the 3D land the paddies are small: the place where most of the ring's seven
+  // points fall on still water, in the same part of the frame, away from the lamps: in the dark between
+  // them, where nothing on the land could be throwing it)
   const hook = [];
   {
-    let best = null;
-    for (let y = YH + 14; y < YH + 30 && !best; y++) for (let x = Math.round(ox + W * 0.52); x < ox + W * 0.68; x++) {
-      let ok = 0; for (let k = -5; k <= 5; k++) { const m = ground.layer.idx[y * Wc + x + k] >> 8; if (m === G.paddy || m === G.pond) ok++; }
-      if (ok >= 9) { best = [x, y]; break; }
+    const lit = new Uint8Array(Wc * Hc);
+    for (const L of lights) for (let dy = -4; dy <= 4; dy++) for (let dx = -8; dx <= 8; dx++) {
+      const x = L.x + dx, y = L.y + dy;
+      if (x >= 0 && y >= 0 && x < Wc && y < Hc) lit[y * Wc + x] = 1;
     }
-    if (best) for (let k = 0; k < 7; k++) {
-      const a = (k / 7) * Math.PI;
-      const x = Math.round(best[0] + Math.cos(a) * 5), y = Math.round(best[1] + Math.sin(a) * 1.4);
-      const m = ground.layer.idx[y * Wc + x] >> 8;
-      if (m === G.paddy || m === G.pond) hook.push({ x, y, ph: k * 0.9 });
+    const still = (x, y) => { const m = ground.layer.idx[y * Wc + x] >> 8; return m === G.paddy || m === G.pond; };
+    const ring = (cx0, cy0) => {
+      const pts = [];
+      for (let k = 0; k < 7; k++) {
+        const a = (k / 7) * Math.PI, x = Math.round(cx0 + Math.cos(a) * 5), y = Math.round(cy0 + Math.sin(a) * 1.4);
+        if (still(x, y)) pts.push({ x, y, ph: k * 0.9 });
+      }
+      return pts;
+    };
+    let best = [];
+    for (let y = YH + 14; y < YH + 30; y++) for (let x = Math.round(ox + W * 0.52); x < ox + W * 0.68; x++) {
+      if (lit[y * Wc + x]) continue;
+      const pts = ring(x, y);
+      if (pts.length > best.length) best = pts;
     }
+    hook.push(...best);
   }
   // the canopy overhead (top group: reference coords, a margin at the sides and above)
   const mX = ox, mT = 40;
@@ -88,7 +123,8 @@ export function bakeTitle(o = {}) {
   bg.globalCompositeOperation = 'lighter';
   for (const L of lights) {
     if (L.kind === 'window') { px(bg, L.x, L.y, L.far ? COL.windowDim : COL.window, L.far ? 0.7 : 0.92); if (!L.far) glow(bg, L.x, L.y, 2, scale3(COL.window, 0.35), 1); }
-    else if (L.kind === 'lantern') { px(bg, L.x, L.y, COL.lantern, 0.88); glow(bg, L.x, L.y, 2, scale3(COL.lantern, 0.4), 1); }
+    else if (L.kind === 'lantern') { const far = L.Z > 30; px(bg, L.x, L.y, COL.lantern, far ? 0.6 : 0.88); if (!far) glow(bg, L.x, L.y, 2, scale3(COL.lantern, 0.4), 1); }
+    else if (L.kind === 'float') { px(bg, L.x, L.y, COL.lantern, 0.8); glow(bg, L.x, L.y + 1, 1, scale3(COL.lantern, 0.3), 1); }
   }
   bg.globalCompositeOperation = 'source-over';
   // a pool of moonlight on the plain under the moon, and the mist over it catching the light

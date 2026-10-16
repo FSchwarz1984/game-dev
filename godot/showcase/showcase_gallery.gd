@@ -27,7 +27,7 @@ const DEMOS := {
 		{"who": "tsuzumi", "face": "surprise", "text": "[闪白]诶？送火怎么飘起来了？"},
 		{"who": "tsuzumi", "face": "shout", "text": "[集中线][大]婆婆[/大]——！"},
 		{"who": "tsuzumi", "face": "serious", "text": "[静][漫符:阴影]坏了。"},
-		{"who": "tsuzumi", "face": "tired", "text": "[慢]……[/慢][停0.6]顺路。"},
+		{"who": "tsuzumi", "face": "tired", "text": "[慢]……[/慢][等]顺路。"},
 		{"who": "tsuzumi", "face": "neutral", "text": "[漫符:怒]没您的份。"},
 		{"who": "tsuzumi", "face": "serious", "text": "[静][漫符:汗][轻]您小点声。[/轻]"},
 	],
@@ -42,7 +42,7 @@ const DEMOS := {
 		{"who": "saji", "face": "mischievous", "text": "鼓槌在你那儿吧？我看见她塞的。"},
 		{"who": "saji", "face": "neutral", "text": "[漫符:问]钟？"},
 		{"who": "saji", "face": "grin", "text": "[静][漫符:音符][快]最后是从窗户翻出来的。[/快]"},
-		{"who": "saji", "face": "neutral", "text": "[漫符:点点][慢]……[/慢][停0.4]第三个坛子里的梅干。"},
+		{"who": "saji", "face": "neutral", "text": "[漫符:点点][慢]……[/慢][停0.4][脸:grin]第三个坛子里的梅干。"},
 	],
 }
 ## A still of the home area (the 3D art sample at 9:30, nobody in it), 6 px larger than the page on every side so
@@ -72,6 +72,7 @@ var cinema: Cinema
 var backdrop: TextureRect
 var _demo := false
 var _shake := Vector2i.ZERO
+var _log: FileAccess = null       # -- --staging-log=PATH (checks): one JSON line per frame with the staging's state
 var _origin := Vector2.ZERO
 var _stick_t := 0.0
 
@@ -93,6 +94,10 @@ func _ready() -> void:
 	big = _tex()
 	kana_label = _label(12, DIM)
 	hint = _label(12, DIM)
+	# over the still in the dialogue, the hint needs its own shadow to stay readable
+	hint.add_theme_color_override("font_shadow_color", Color8(8, 7, 12, 220))
+	hint.add_theme_constant_override("shadow_offset_x", 1)
+	hint.add_theme_constant_override("shadow_offset_y", 1)
 	for i in ORDER.size():
 		var l := _label(12, DIM)
 		l.text = String(_char(ORDER[i]).get("name", ORDER[i]))
@@ -111,9 +116,22 @@ func _ready() -> void:
 		_layout()
 	add_child(story)
 	story.apply_theme("pixel")
+	move_child(hint, -1)              # words stay above the flash, like the dialogue's own
 	resized.connect(_layout)
 	Audio.ambience(["wind"])
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--staging-log="):
+			_log = FileAccess.open(a.substr(14), FileAccess.WRITE)
 	_set_char(0)
+
+
+## Leaving the page in the middle of the dialogue (pad B or Start go to the menu): close it, so the sound is not left
+## ducked and taps are not left captured.
+func _exit_tree() -> void:
+	if story != null and story.dialogue_open:
+		story.close()
+	if _log != null:
+		_log.close()
 
 
 func _char(id: String) -> Dictionary:
@@ -161,6 +179,7 @@ func _set_char(i: int) -> void:
 
 func _set_hint() -> void:
 	var calm := "　（减少晃动：开）" if GameState.reduce_motion() else ""
+	hint.add_theme_color_override("font_color", TEXT if _demo else DIM)
 	if _demo:
 		hint.text = "Space 下一句　Esc 返回" + calm
 	elif DEMOS.has(ORDER[ci]):
@@ -230,6 +249,13 @@ func _draw() -> void:
 
 func _process(dt: float) -> void:
 	story.update(dt)
+	if _log != null:
+		var d := story.dlg
+		_log.store_line(JSON.stringify({"frame": Engine.get_process_frames(), "demo": _demo, "open": story.dialogue_open,
+			"box": [d.box.position.x, d.box.position.y], "card": [d.card.position.x, d.card.position.y],
+			"text": [d.text.position.x, d.text.position.y], "shake": [_shake.x, _shake.y],
+			"portrait": d.portrait_tex.resource_path if d.portrait_tex != null else "",
+			"visible_chars": d.text.visible_characters, "arrow": d.done, "staging": story.stg.snapshot()}))
 	if _demo:
 		return
 	var ay := Input.get_joy_axis(0, JOY_AXIS_LEFT_Y)

@@ -275,4 +275,92 @@ func test_story_ui_stages_lines_on_the_real_box_and_the_card_never_reaches_the_w
 	check(shakes.size() >= 2 and shakes[-1] == Vector2i.ZERO, "the view shook and came back")
 	check(not ui.dialogue_open, "closed after the last line")
 	eq(ui.dlg.card_offset, Vector2.ZERO)
-	ui.queue_free()
+	ui.free()          # now, not at the end of a frame the runner may never reach
+
+
+func test_a_click_wait_stops_the_line_until_the_player_presses_on() -> void:
+	var st := Staging.new()
+	st.reset()
+	var p := Staging.parse("[慢]……[/慢][等]顺路。")
+	eq(p["waits"], [2])
+	eq(p["plain"], "……顺路。")
+	_line(st, "tsuzumi", "tired", "[慢]……[/慢][等]顺路。")
+	_run(st, 3.0)
+	eq(st.shown, 2, "the dots, then it waits")
+	check(st.waiting and not st.typed_out)
+	st.resume()
+	check(not st.waiting)
+	_run(st, 1.0)
+	check(st.typed_out, "the rest comes out after the press")
+	# a press while it types completes it up to the wait, the next one goes on past it
+	_line(st, "tsuzumi", "neutral", "一二[等]三四")
+	st.step(1.0 / 30.0)
+	st.complete()
+	eq(st.shown, 2)
+	check(st.waiting)
+	st.complete()
+	eq(st.shown, 2, "completing does not jump a wait")
+	st.resume()
+	st.complete()
+	check(st.typed_out)
+
+
+func test_a_face_can_change_inside_a_line() -> void:
+	var st := Staging.new()
+	st.reset()
+	_line(st, "saji", "neutral", "开头")
+	_run(st, 1.0)
+	_line(st, "saji", "neutral", "[漫符:红晕]……[停0.4][脸:grin]第三个坛子里的梅干。")
+	eq(st.face, "neutral")
+	_run(st, 0.2)
+	eq(st.face, "neutral", "not before the words reach it")
+	_run(st, 1.5)
+	eq(st.face, "grin", "the face changed")
+	eq(st.faces["saji"], "grin")
+	check(_tags(st).has("弹"), "with the new face's beat")
+	var m: Array = st.marks_now()
+	eq(m.size(), 1, "the blush stays")
+	eq(Staging.face_piece("saji", "grin", "blush"), st._marks[0]["frames"], "redrawn for the new face")
+	_line(st, "saji", "grin", "[静][脸:afraid]……")
+	st.complete()
+	eq(st.face, "afraid")
+	eq(_tags(st), ["脸:afraid"], "[静]: no beat with it")
+
+
+func test_story_ui_waits_at_a_click_wait_and_swaps_the_face() -> void:
+	var root := (Engine.get_main_loop() as SceneTree).root
+	var ui := StoryUI.new()
+	root.add_child(ui)
+	ui.apply_theme("pixel")
+	ui.say([{"who": "saji", "face": "neutral", "text": "……[等][脸:grin]第三个坛子里的梅干。"}])
+	for i in 60:
+		ui.update(1.0 / 30.0)
+	check(ui.dlg.done, "the arrow shows at the wait")
+	eq(ui.dlg.text.visible_characters, 2)
+	var before := ui.dlg.portrait_tex
+	ui.advance()
+	check(ui.dialogue_open, "a press at the wait goes on, it does not close the line")
+	for i in 90:
+		ui.update(1.0 / 30.0)
+	check(ui.stg.typed_out)
+	check(ui.dlg.portrait_tex != before and ui.dlg.portrait_tex == StoryUI.portrait("saji", "grin"), "the grin is on the card")
+	ui.advance()
+	check(not ui.dialogue_open)
+	ui.free()          # now, not at the end of a frame the runner may never reach
+
+
+func test_a_track_moves_one_step_every_frame_at_30_fps() -> void:
+	# the clock is a sum of 1/30 s frames; each step of a track must take exactly one frame, not two
+	var st := Staging.new()
+	st.reset()
+	_line(st, "tsuzumi", "neutral", "开头")
+	_run(st, 1.0)
+	_line(st, "tsuzumi", "neutral", "[框抖][闪白]婆婆——！")
+	var xs: Array = []
+	var flash: Array = []
+	for i in 8:
+		xs.append(st.box_offset().x)
+		flash.append(roundi(st.flash_alpha() * 100.0))
+		st.step(1.0 / 30.0)
+	eq(xs, [3.0, -3.0, 2.0, -2.0, 1.0, -1.0, 0.0, 0.0], "框抖, frame by frame")
+	eq(flash, [85, 60, 35, 15, 0, 0, 0, 0], "闪白 (percent), frame by frame")

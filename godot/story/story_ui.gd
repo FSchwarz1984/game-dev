@@ -9,9 +9,10 @@ extends Control
 ##   await ui.say([{"who": "saji", "text": "……", "face": "smile"}, {"who": "narr", "text": "..."}])
 ## Timed text waits on the game clock: `wait` is the director's wait.
 ## Staging (docs/design/dialogue-staging.md, G5R3-19): a line's text may carry the staging tags ([抖]..[/抖], [框抖],
-## [漫符:汗], [停0.5], ...; see Staging). They are read before anything is escaped, typed out on the line's own
-## schedule, and fire when the typing reaches them; a new face brings its default beat. The view behind shakes
-## through `view_shake` (the stage's whole-pixel offset), the flash goes to the Cinema layer under the words.
+## [漫符:汗], [停0.5], [等], [脸:smile], ...; see Staging). They are read before anything is escaped, typed out on the
+## line's own schedule, and fire when the typing reaches them; a new face brings its default beat; at a [等] the line
+## waits for the next press. The view behind shakes through `view_shake` (the stage's whole-pixel offset), the flash
+## goes to the Cinema layer under the words.
 ## GameState's "reduce_motion" (减少晃动) turns every movement and the flash off.
 
 signal dialogue_closed
@@ -33,6 +34,7 @@ var stg := Staging.new()
 var shake_fx := PixelShake.new()
 var wave_fx := PixelWave.new()
 var _view_off := Vector2i.ZERO
+var _face_shown := ""
 var kind := "pixel"
 var _lines: Array = []
 var _i := 0
@@ -120,6 +122,7 @@ func _show_line() -> void:
 	stg.reduce_motion = GameState.reduce_motion()
 	stg.begin(who, face, parsed, tex != null, bool(line.get("slow", false)))
 	dlg.show_line(String(cast["name"]), tex, _colour(String(parsed["bb"])))
+	_face_shown = face
 	_apply_staging()
 
 
@@ -146,13 +149,17 @@ static func _colour(bb: String) -> String:
 	return out
 
 
-## Complete the line, or move to the next one (E / tap / click).
+## Complete the line (up to its next [等]), go on past a [等], or move to the next line (E / tap / click).
 func advance() -> void:
 	if not _open:
 		return
+	if stg.waiting:
+		stg.resume()
+		dlg.done = false
+		return
 	if not dlg.done:
 		stg.complete()
-		dlg.text.visible_characters = -1
+		dlg.text.visible_characters = -1 if stg.typed_out else stg.shown
 		dlg.done = true
 		_apply_staging()
 		return
@@ -196,11 +203,8 @@ func update(dt: float) -> void:
 			var n := int(e[0]) + 1
 			if voice != "" and not SILENT.contains(c) and n % 2 == 1:
 				Audio.blip(voice, n)
-		if not dlg.done:
-			dlg.text.visible_characters = stg.shown
-			if stg.typed_out:
-				dlg.text.visible_characters = -1
-				dlg.done = true
+		dlg.text.visible_characters = -1 if stg.typed_out else stg.shown
+		dlg.done = stg.typed_out or stg.waiting
 		_apply_staging()
 	for key in _alpha:
 		var a: Array = _alpha[key]
@@ -288,6 +292,9 @@ func letterbox(on: bool) -> void:
 ## Puts the staging's state of this frame on the screen: the box's and the card's offsets, the view's shake, the
 ## flash, whether the shaky and wavy words still move, and the marks (redrawn every frame while a line is up).
 func _apply_staging() -> void:
+	if _open and stg.has_card and stg.face != _face_shown:      # [脸:x]: the face changes inside the line
+		_face_shown = stg.face
+		dlg.portrait_tex = portrait(stg.who, stg.face)
 	var b := stg.box_offset() if _open else Vector2.ZERO
 	var c := stg.card_offset() if _open else Vector2.ZERO
 	if b != dlg.box_offset or c != dlg.card_offset:

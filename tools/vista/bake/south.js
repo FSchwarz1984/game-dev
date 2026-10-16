@@ -79,47 +79,14 @@ export function bakeSouth(o = {}) {
   const cam = { cx: Cx, yh: YL, f, height: ground.height };
   const lights = paintHouses(ground.layer, ground.X, ground.Z, cam, seed);
   lights.push(...plainLanterns(cam, ground.Z, Wc, GH));
-  // the old road's switchbacks down the pass, an Obon lantern every ~40 m
-  const SW = PL.switchbacks();
-  for (let i = 0, acc = 0; i < SW.length - 1; i++) {
-    const [ax, az] = SW[i], [bx, bz] = SW[i + 1], len = Math.hypot(bx - ax, bz - az), step = 40 / PL.U;
-    for (let d = acc; d < len; d += step) {
-      const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
-      const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f * (1 - ground.height(X, Z)) / Z) - 1;
-      if (x < 0 || x >= Wc || y < 0 || y >= GH) continue;
-      if (ground.Z[(y + 1) * Wc + x] < Z * 0.85) continue;
-      lights.push({ x, y, X, Z, kind: 'lantern', path: true });
-    }
-    acc = (acc - len) % step; if (acc < 0) acc += step;
-  }
-  // the old road on across the plain to the town: on the night of the 送魂 paper lanterns hang
-  // between its street lamps (the 3D's, in plainLanterns), one every ~12 m, so that from the crown it
-  // is a thread of light winding into the town (HEAD's procession road was one)
-  const OR = PL.oldRoad(), taken = new Set(lights.map(L => L.x + ':' + L.y));
-  for (let i = 0, acc = 0; i < OR.length - 1; i++) {
-    const [ax, az] = OR[i], [bx, bz] = OR[i + 1], len = Math.hypot(bx - ax, bz - az), step = 12 / PL.U;
-    for (let d = acc; d < len; d += step) {
-      const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
-      const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f * (1 - ground.height(X, Z)) / Z) - 1;
-      if (x < 0 || x >= Wc || y < 0 || y >= GH || taken.has(x + ':' + y)) continue;
-      if (ground.Z[(y + 1) * Wc + x] < Z * 0.85) continue;
-      taken.add(x + ':' + y);
-      lights.push({ x, y, X, Z, kind: 'lantern', path: true });
-    }
-    acc = (acc - len) % step; if (acc < 0) acc += step;
-  }
+  // the old road's switchbacks and the old road to the town, lit for the night (plain.js)
+  PL.roadLanterns(lights, ground, cam, Wc, GH);
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
   // the far as plates peeled (G5R3-18): the key block's lines and how far each place ends up gone
   const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f, sun.dir, cam);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
-  const RIV = PL.RIVER, near = [];
-  for (let i = 0; i < RIV.length; i++) if (Math.hypot(RIV[i][0] - PL.TOWN.X, RIV[i][1] - PL.TOWN.Z) < 3.4) near.push(i);
-  for (const q of [0.15, 0.5, 0.85]) {
-    const i = near[Math.min(near.length - 1, Math.floor(q * near.length))];
-    const X = RIV[i][0] + 0.16, Z = RIV[i][1];
-    const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f / Z);
-    if (x > 0 && x < Wc && y > 0 && y < GH && ground.Z[y * Wc + x] > Z * 0.9) lights.push({ x, y, X, Z, kind: 'bonfire', river: true });
-  }
+  const RIV = PL.RIVER, { fires: riverFires, near } = PL.riverBonfires(ground, cam, Wc, GH);
+  lights.push(...riverFires);
   // the floating lanterns (灯籠流し), set on the water just above the town and carried down the
   // stretch below it, ~18 points (~5 km), thinning out downstream: past the town's front and away
   // along the river toward the far south-east, a trail of lights going off into the distance (the

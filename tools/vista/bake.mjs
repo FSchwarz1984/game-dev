@@ -43,9 +43,9 @@ const variant = canonDir ? 'canon' : 'ship';
 
 const site = path.join(RAW, 'site');
 fs.mkdirSync(site, { recursive: true });
-// the 3D lookout's land (tools/world3d/w3terrain/vista.py output), which the south shot's plain is
-// made from (tools/vista/bake/plain.js): its maps decoded here, byte for byte, for the page to fetch
-if (shots.includes('south')) {
+// the 3D lookout's land (tools/world3d/w3terrain/vista.py output), which the south and title shots'
+// plain is made from (tools/vista/bake/plain.js): its maps decoded here, byte for byte, for the page to fetch
+if (shots.includes('south') || shots.includes('title')) {
   const W3DIR = path.join(ROOT, 'godot/world3d/terrain/saddle');
   const json = JSON.parse(fs.readFileSync(path.join(W3DIR, 'vista.json'), 'utf8'));
   const keep = {};
@@ -71,7 +71,7 @@ const errors = [];
 page.on('pageerror', e => errors.push(String(e)));
 await page.goto(`http://127.0.0.1:${server.address().port}/index.html`);
 await page.waitForFunction(() => window.BAKE_READY === true);
-if (shots.includes('south')) await page.evaluate(() => window.BAKE.loadW3());
+if (shots.includes('south') || shots.includes('title')) await page.evaluate(() => window.BAKE.loadW3());
 
 fs.mkdirSync(OUT, { recursive: true });
 fs.mkdirSync(RAW, { recursive: true });
