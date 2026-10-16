@@ -113,16 +113,14 @@ func setup(p_data: VistaData) -> void:
 	ground.set_param("ids", data.tex("ground"))
 	ground.set_param("lut", data.tex("lutGround"))
 	ground.set_param("lut_far", data.tex("lutFar"))
-	ground.set_param("fade_map", data.tex("groundFade"))
-	var fd: Dictionary = m.get("fade", {})
-	if fd.has("ink"):
-		ground.set_param("ink_col", Vector3(fd["ink"][0], fd["ink"][1], fd["ink"][2]))
+	ground.set_param("ghost_map", data.tex("groundGhost"))
 	add_main_root.add_child(lights.layer("lamps"))
 	add_main_root.add_child(lights.layer("river"))
 	wave_fx = VistaSouthWave.new()
 	wave_fx.setup(self, quality)
 	add_main_root.add_child(wave_fx.curtain)
 	add_main_root.add_child(wave_fx.motes)
+	add_main_root.add_child(wave_fx.ghost_motes)
 	comp_main = _composite("PlainLight", add_main)
 	add_rise_root.add_child(lights.layer("rise"))
 	comp_rise = _composite("RisingLight", add_rise)
@@ -265,8 +263,8 @@ func update(st: Dictionary, t: float) -> void:
 	var dy := (1.0 - pan_k) * pan_d - crane_end * pan_k
 	var sky_k := clampf(float(st.get("sky", 0.0)), 0.0, 1.0)
 	var wave := float(st.get("wave", -1.0))
-	# the far has been and gone (G5R3-18): the land at its final stage of peeled blocks, no lamps, no
-	# front, no curtain (the art sample's last frame)
+	# the far has been and gone (G5R3-22): all the land in sight its own ghost (the more the nearer the
+	# town), no lamps, no front, no curtain (the art sample's last frame)
 	var settled := float(st.get("settled", 0.0)) > 0.5
 	if settled:
 		wave = -1.0
@@ -349,6 +347,7 @@ func update(st: Dictionary, t: float) -> void:
 	ground.set_param("tod_row", row)
 	ground.set_param("wave", wave)
 	ground.set_param("settled", 1.0 if settled else 0.0)
+	ground.set_param("t", t)
 	# canopy: the sprays on the crown's edge stir in the evening air
 	back.set_param("tod_row", row)
 	front.set_param("tod_row", row)
@@ -358,7 +357,7 @@ func update(st: Dictionary, t: float) -> void:
 		stir[k].position = stir_xy[k] + Vector2(floor(s * 0.8 + 0.5), floor(maxf(0.0, -s) * 0.6 + 0.5))
 		stir[k].set_param("tod_row", row)
 	# the wave's curtain, motes and end
-	wave_fx.update(wave, t, _dt(t), view)
+	wave_fx.update(wave, t, _dt(t), view, settled)
 	# anchors (screen px) and her place: sitting on the limb, or standing on it
 	var a: Dictionary = m["anchors"]
 	anchors["branch"] = Vector2(a["branch"]["x"], a["branch"]["y"]) + canopy.position

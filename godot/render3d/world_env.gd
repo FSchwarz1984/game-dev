@@ -50,12 +50,13 @@ var ambient_day_gain := 1.2
 # the luma and a fifth of the colour; the materials turn their own hue cool, w3_paint_shade); at
 # night all of it (round 4's night, kept)
 var ambient_day_hue := 0.2
-# the sky's light let back into the sun's shadow while the sun is low (round 5, the lead: the
-# mornings, the evenings and the shrine under the great camphor were far darker than round 3's;
-# pixel_toon w3_shadow_fill): this share of the day's ambient sky, added where the sun is shadowed.
-# None while the sun stands above about 58 degrees (round 3's midday is matched as it is), at night or
-# in rain.
-var shadow_fill := 0.8
+# the sky's light let back into the sun's shadow (round 5, the lead: under the crowns and by the
+# hedges of the new layout the day was far darker than round 3's, the mornings, the evenings and the
+# shrine under the great camphor most; pixel_toon w3_shadow_fill): this share of the day's ambient
+# sky, added where the sun is shadowed, all day (the open ground in the sun is as it was). None at
+# night or in rain. 0.55: the frame's median L* at 07:36, 09:30 by the shrine and 17:12 back within
+# 4 of round 3's (measured: 0 left them 10-14 under, 0.8 put the morning 7 over).
+var shadow_fill := 0.55
 
 
 func setup(v: PixelView3D) -> void:
@@ -256,8 +257,7 @@ func set_time(h: float) -> void:
 	if sky_mat:
 		sky_mat.set_shader_parameter("top", _hue_share(sky, hue) * ag)
 		sky_mat.set_shader_parameter("bottom", _hue_share(ground, hue) * ag)
-	var low_sun := 1.0 - smoothstep(0.80, 0.86, dir.y)
-	var fill := _hue_share(sky, hue) * ag * shadow_fill * low_sun * (1.0 - float(k[11])) * (1.0 - rain)
+	var fill := _hue_share(sky, hue) * ag * shadow_fill * (1.0 - float(k[11])) * (1.0 - rain)
 	RenderingServer.global_shader_parameter_set("w3_fill", Vector3(fill.r, fill.g, fill.b))
 	RenderingServer.global_shader_parameter_set("w3_fog_col", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("w3_night", night)

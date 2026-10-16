@@ -1,26 +1,24 @@
 // The ground of the treetop vista (painted by the bake: since round 5 the 3D lookout's plain) with the
 // wave of distance (src/vista/wave.js): every pixel knows when the ring reaches it (B channel, bucket of
 // w * 250). On the front (two buckets) the land flashes white, the event itself (lut_far row 0). Behind
-// it the land has gone far (遠化, G5R3-18), drawn as the 3D lookout draws it (vista_common "褪版"): a
-// woodblock print whose colour blocks come away one after another, the gradations first (flat
-// prints), then the green, the water's blue, the earths, down to the key block's ink lines on the
-// paper; how many are gone at a place is baked (fade_map G: its stage); after the tide they come off
-// one by one over a moment (lut_far rows 1..4). `settled`: the far has been and gone, every place at
-// its stage. At night the paper is as dark as the night and the lines only just show.
+// it the land has gone far (遠化, G5R3-22): its own silver-white ghost (lut_far row 1: v0.2's ghost,
+// everything in its place and shape, its lightness kept, drained of colour, lifted), mixed with the
+// night by how much a ghost the place is: the nearer the town (ground zero, where the tide bursts
+// from), the more (ghost_map R, in steps); and over it the air shimmers a little, as over heat: the
+// land sways up and down by whole pixels, slowly, most near the town (ghost_map G). `settled`: the far
+// has been and gone over all the land in sight (the art sample's last frame).
 shader_type canvas_item;
 #include "res://vista/shaders/vista.gdshaderinc"
 
 uniform sampler2D ids : filter_nearest, repeat_disable;     // R, G id; B arrival (255 never); A mask
 uniform sampler2D lut : filter_nearest, repeat_disable;     // per time of day
-uniform sampler2D lut_far : filter_nearest, repeat_disable; // row 0 the front, rows 1..4 the stages
-uniform sampler2D fade_map : filter_nearest, repeat_disable; // R ink (0 | 1), G stage x 50, B paper (emboss, fibres), A delay
+uniform sampler2D lut_far : filter_nearest, repeat_disable; // row 0 the front, row 1 the ghost
+uniform sampler2D ghost_map : filter_nearest, repeat_disable; // R how much a ghost, G the shimmer
 uniform float tod_row;
 uniform float wave = -1.0;
 uniform float settled = 0.0;
-uniform vec3 ink_col = vec3(15.0, 13.0, 13.0);   // the key block's ink (sRGB 0..255)
-
-const float PEEL = 5.0;      // buckets of the wave between one block and the next coming off
-const float DELAY = 4.0;     // buckets: the longest a place waits before its first block goes
+uniform float t = 0.0;                 // the vista clock (the shimmer)
+uniform float mirage_px = 1.6;         // the shimmer's sway at ground zero (whole pixels after rounding)
 
 varying vec2 px;
 
@@ -28,34 +26,43 @@ void vertex() {
 	px = VERTEX;
 }
 
+// gone far: the tide has passed (two buckets behind the front), or all of it has
+bool gone(vec4 tex, float b) {
+	return settled > 0.5 || floor(tex.b * 255.0 + 0.5) <= b - 2.0;
+}
+
 void fragment() {
 	ivec2 p = ivec2(floor(px));
-	vec4 t = texelFetch(ids, p, 0);
-	if (t.a < 0.5) discard;
-	int id = int(t.r * 255.0 + 0.5) + int(t.g * 255.0 + 0.5) * 256;
-	vec3 c = lut_rgb(lut, id, tod_row);
-	if (wave >= 0.0 || settled > 0.5) {
-		vec4 fm = texelFetch(fade_map, p, 0);
-		float fin = clamp(floor(fm.g * 255.0 / 50.0 + 0.001), 0.0, 4.0);
-		float st = 0.0;
-		if (settled > 0.5) {
-			st = fin;
-		} else {
-			float b = clamp(floor(wave * 250.0), -1.0, 254.0);
-			float arr = floor(t.b * 255.0 + 0.5);
-			if (arr <= b - 2.0) {
-				float since = b - 2.0 - arr - floor(fm.a * DELAY + 0.5);
-				st = since < 0.0 ? min(fin, 1.0) : min(fin, 1.0 + floor(since / PEEL));
-			} else if (arr <= b) {
-				c = texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0;
+	vec4 tex = texelFetch(ids, p, 0);
+	if (tex.a < 0.5) discard;
+	float b = wave >= 0.0 ? clamp(floor(wave * 250.0), -1.0, 254.0) : -10.0;
+	bool far_on = wave >= 0.0 || settled > 0.5;
+	if (far_on && gone(tex, b)) {
+		// the shimmer: whole-pixel sway, a slow swell along the row with a slower beat over it
+		float m = texelFetch(ghost_map, p, 0).g;
+		if (m > 0.004) {
+			float x = float(p.x);
+			float s = sin(x * 0.19 + t * 1.25 + sin(x * 0.043 - t * 0.37) * 2.1) * 0.7 + sin(x * 0.071 - t * 0.83) * 0.3;
+			int off = int(floor(mirage_px * m * s + 0.5));
+			if (off != 0) {
+				ivec2 q = p + ivec2(0, off);
+				vec4 tq = texelFetch(ids, q, 0);
+				if (tq.a > 0.5 && gone(tq, b)) {
+					p = q;
+					tex = tq;
+				}
 			}
 		}
-		if (st >= 1.0) {
-			vec4 pc = texelFetch(lut_far, ivec2(id, int(st)), 0);
-			c = pc.rgb * 255.0;
-			// the paper (flagged by its alpha): its blind embossing (the land's relief) and its fibres
-			if (pc.a < 0.75) c *= 1.0 + (fm.b * 255.0 - 128.0) / 120.0 * 0.08;
-			if (fm.r > 0.5) c = ink_col;
+	}
+	int id = int(tex.r * 255.0 + 0.5) + int(tex.g * 255.0 + 0.5) * 256;
+	vec3 c = lut_rgb(lut, id, tod_row);
+	if (far_on) {
+		if (gone(tex, b)) {
+			float g = texelFetch(ghost_map, p, 0).r;
+			vec3 gc = texelFetch(lut_far, ivec2(id, 1), 0).rgb * 255.0;
+			c = mix(c, gc, g);
+		} else if (wave >= 0.0 && floor(tex.b * 255.0 + 0.5) <= b) {
+			c = texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0;
 		}
 	}
 	COLOR = vec4(lin255(c), 1.0);

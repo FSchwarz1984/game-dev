@@ -277,15 +277,7 @@ void fragment() {
 	vec3 sdir = normalize(w3_sun_dir);
 	vec2 proj = v_wp.xz + sdir.xz / max(sdir.y, 0.25) * 11.0;
 	float can = texture(m3, (proj - splat_origin) / splat_cell / splat_size).a;
-	v_fleck = 0.0;
-	if (can > 0.2 && w3_night < 0.5) {
-		float sway = sin(w3_time * 0.8 + w3_hash(floor(v_wp.xz / 1.5)) * 6.28) * 0.35 * w3_wind.z;
-		vec2 fq = v_wp.xz / 0.42 + vec2(sway, sway * 0.5);
-		float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
-		float cluster = w3_vnoise(v_wp.xz / 2.6 + 9.0);
-		// toward the rim of a crown (thinner canopy) the flecks are many and larger; in its heart few
-		v_fleck = step(0.69 + can * 0.05, fn) * step(0.34 + can * 0.22, cluster);
-	}
+	v_fleck = (can > 0.2 && w3_night < 0.5) ? w3_fleck(proj, can) : 0.0;
 	v_cell = cell;
 	// the engine adds the ambient (sky colour, VoxelGI bounce, SSAO) times ALBEDO and AO: the shade
 	// gets the flattened colour (shade_flatten of the detail removed); light() puts the detail back
@@ -302,10 +294,11 @@ void fragment() {
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
-		float sh = max(ATTENUATION, v_fleck * 0.85);
+		float sh = max(ATTENUATION, v_fleck);
 		// (round 5: round 3's levels, continuous: w3_sun_level)
 		DIFFUSE_LIGHT += w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, sh, true, 0.15) * v_detail;
-		DIFFUSE_LIGHT += w3_shadow_fill(sh);
+		// (the sky's fill by the true shadow: a fleck keeps it, so it is the open ground's colour)
+		DIFFUSE_LIGHT += w3_shadow_fill(ATTENUATION);
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail;
 	}

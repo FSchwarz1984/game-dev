@@ -37,16 +37,12 @@ import { IdSpace, lutRows, idImage, fixed16, fixedS16, rows, todOfRow, TOD_ROWS,
 const REF_W = 480, REF_H = 270;
 const P = { far: 0.1, canopy: 1, front: 2.4 };
 const CT = 66;
-// the crane goes on a little past the crown at its end (G5R3-23): the canopy settles this many px
-// lower than the JS frame had it, so that the lower layer below the pass (the farm, the 溜池, the
-// terraces, the switchbacks; the mid-ground the lookout sees) shows between the plain and the leaves
-const CRANE_END = 30;
+// px the crane goes on past the JS frame's end (the canopy settles that much lower; 0: as the JS)
+const CRANE_END = 0;
 const KINDS = ['window', 'lantern', 'star', 'fire', 'bonfire'];
 // HEAD's draws from its sequence before the canopy (river lanterns and its procession plan, on HEAD's
 // map): frozen, so the crown's clumps stay the ones the user approved whatever the plain becomes
 export const HEAD_DRAWS = 1768;
-// the hour the far comes (the prologue's state from the lights' leaving on)
-const WAVE_TOD = 20.3;
 
 // counting RNG: the shipped variant replays the canon variant's draw count before the canopy
 function crng(seed) {
@@ -86,8 +82,9 @@ export function bakeSouth(o = {}) {
   // the old road's switchbacks and the old road to the town, lit for the night (plain.js)
   PL.roadLanterns(lights, ground, cam, Wc, GH);
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
-  // the far as plates peeled (G5R3-18): the key block's lines and how far each place ends up gone
-  const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f, sun.dir, cam);
+  // the far (G5R3-22): how much a ghost each place is (its step from the town, ground zero) and how
+  // much the air shimmers over it
+  const ghostMap = PL.ghostMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
   const RIV = PL.RIVER, { fires: riverFires, near } = PL.riverBonfires(ground, cam, Wc, GH);
   lights.push(...riverFires);
@@ -207,9 +204,9 @@ export function bakeSouth(o = {}) {
   }
 
   // ---------------- the wave (HEAD L214-220)
-  // the far spreads from the plain under the gate (HEAD's town lay under it; the 3D town is right of it
-  // now): the ground point under the gate's tip ~4.7 km out, so the ring crosses the whole plain
-  const Zc = 26, Xc = (T[0] - Cx) / f * Zc;
+  // the far bursts from the town (G5R3-22: ground zero; HEAD's town lay under the gate) and spreads to
+  // the crown, where it reaches her at w = 1
+  const Xc = PL.TOWN.X, Zc = PL.TOWN.Z;
   const noFront = new Uint8Array(Wc * GH);
   for (let i = 0; i < noFront.length; i++) { const m = ground.layer.idx[i] >> 8; noFront[i] = m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron ? 1 : 0; }
   const wave = new Wave({ w: Wc, h: GH, X: ground.X, Z: ground.Z, mask: ground.mask, Xc, Zc, R: Math.hypot(Xc, Zc) - 0.05, f, cx: Cx, yl: YL, noFront });
@@ -258,21 +255,16 @@ export function bakeSouth(o = {}) {
   const envG = e => ({ ...e, sun: e.sun.map(v => v * (1 - 0.8 * e.night)) });
   const gSpace = new IdSpace().add(ground.layer.idx);
   const groundLut = lutRows(gSpace, envs.map(e => palette(GROUND_MATS, envG(e), { haze: e.mist })));
-  // the far (遠化, G5R3-18): row 0 the white of the front as it passes (the event itself: HEAD's pale
-  // front, houses keep the pale), rows 1..4 the land as a print losing its blocks (plain.js: the 3D
-  // view's blocks and colours), in the light of the hour the far comes (20.3 h: it does not change
-  // meanwhile); the key block's ink in that light goes to meta.fade
-  const farPal = palette(GROUND_MATS, envG(envs[0]), { haze: envs[0].mist, far: true });
-  const envW = envG(todEnv(WAVE_TOD));
-  const nightPal = palette(GROUND_MATS, envW, { haze: envW.mist });
-  const stagePals = [];
-  for (let st = 1; st <= PL.FADE_STAGES; st++) stagePals.push(PL.fadePalette(st, nightPal));
+  // the far (遠化, G5R3-22): row 0 the white of the front as it passes (the event itself: HEAD's pale
+  // front, houses keep the pale), row 1 the land's silver-white ghost (plain.js ghostPalette: v0.2's,
+  // its shapes kept clear); Godot mixes the night with it by the place's step from the town
+  const farPal = PL.ghostPalette();
   const farLut = lutRows(gSpace, [v => {
     const p = farPal(v), m = v >> 8;
     if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron) return p;
     const c = mix3([p & 255, (p >> 8) & 255, (p >> 16) & 255], [222, 230, 250], 0.34);
     return ((255 << 24) | (Math.round(c[2]) << 16) | (Math.round(c[1]) << 8) | Math.round(c[0])) >>> 0;
-  }, ...stagePals], true);
+  }, farPal]);
   const fSpace = new IdSpace().add(back.layer.idx).add(frontC.layer.idx).add(nearL.idx);
   for (const sp of stir) fSpace.add(sp.layer.idx);
   const foliageLut = lutRows(fSpace, envs.map(e => palette(FOLIAGE_MATS, { ...e, sun: e.sun.map(v => v * (1 - 0.7 * e.night)) })));
@@ -320,7 +312,8 @@ export function bakeSouth(o = {}) {
       // how far the mountains were lowered to stay clear of the sky shore (plain.js mountainFit)
       mountain: (({ k0, kMin, limit, top0, topAll }) => ({ k0: r3(k0), kMin: r3(kMin), limitPx: limit, topPx: r3(top0), topWidePx: r3(topAll) }))(PL.mountainInfo()),
       // the far as a print (plain.js): the key block's ink at the hour, the blocks' fronts past the rim
-      fade: { ink: PL.fadeInk(), paperAlpha: PL.PAPER_ALPHA, plateAt: PL.PLATE_AT, plateSpread: PL.PLATE_SPREAD, tod: WAVE_TOD },
+      // the far (G5R3-22): ground zero (the town, m in the 3D frame), the steps [m, amount], the shimmer's reach
+      ghost: { zero: PL.ghostZero().map(r2), grades: PL.GHOST_GRADES.map(([r, a]) => [r >= 1e8 ? -1 : r, a]), mirageR: PL.MIRAGE_R },
       shoreBand, ringC, first: first ? lights.indexOf(first) : -1, second: second ? lights.indexOf(second) : -1,
       kinds: KINDS,
     },
@@ -348,7 +341,7 @@ export function bakeSouth(o = {}) {
     moteBuckets: Array.from(buckets),
     images: {
       ground: idImage(groundIds, Wc, GH, arrival),
-      groundFade: { w: Wc, h: GH, data: fadeMap, fmt: 'rgba8' },
+      groundGhost: { w: Wc, h: GH, data: ghostMap, fmt: 'rgba8' },
       groundZ: { w: Wc, h: GH, data: zmap, fmt: 'rg8' },
       ...Object.fromEntries(classes.map(c => ['shore' + c.H, idImage(sSpace.map(rows(c.shore.layer.idx, Wc, c.y0, c.shoreH)), Wc, c.shoreH - c.y0)])),
       deck: { w: Wc, h: deckRows, data: deckD, fmt: 'rg8' },

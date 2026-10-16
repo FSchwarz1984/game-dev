@@ -18,8 +18,10 @@
 //   lowered only as far as it takes to stay clear of the sky shore when it opens (k = 0.52 over every
 //   usual view, less only on the sides an ultra-wide view adds; mountainFit).
 // The town is the 3D town; the lamps of the Obon night are where the 3D view has its villages, its
-// houses and its street lamps by day. The far (遠化) peels the land like a print losing its colour
-// blocks (G5R3-18): fadePalette / fadeInk / fadeMaps at the end of this file.
+// houses and its street lamps by day. Below the pass the lower layer (the 溜池, the terraces, the
+// water-wheel farm, the switchbacks) is the 3D mid grid's (midUse). A shot may draw the depression its
+// own way (depG; the title, G5R3-23). The far (遠化) leaves the land its own silver-white ghost, the
+// more the nearer the town (G5R3-22): ghostPalette / ghostMaps at the end of this file.
 
 import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, bayer, IndexLayer, I } from '../../../src/vista/util.js';
 import { marchGen, sunShadows } from '../../../src/vista/terrain.js';
@@ -99,14 +101,12 @@ function mtnK(t) {
 const toH = (r, t = 0) => (r <= EYE_REL ? r / EYE_REL : 1 + (r - EYE_REL) / U * mtnK(t));
 export const P = (x, z) => [-x / U, z / U];
 
-// Below the eye, the picture's depression (G5R3-23): option C kept the prologue's band by drawing every
-// depression at 0.48 of the 3D's (the plain flat and its edges' hills flattened with it). Now the screen
-// depression is G(t) of the true one (t = tan, from the crown), piecewise linear through DEP: as before
-// out to ~4 km; the plain's nearer half and the hills along its sides (the frame the lookout sees) at
-// 0.70; the foot of the pass and the lower layer below it at 0.40; nearer still at 0.25. Only the
-// projection (the march, houses, lamps, the viaduct) uses it; the land's relief (land use, light) does
-// not.
-const DEP0 = [[0, 0], [0.1, 0.048], [0.25, 0.153], [0.45, 0.233], [1.5, 0.496]];
+// Below the eye, the picture's depression: the screen depression is G(t) of the true one (t = tan,
+// from the eye), piecewise linear through DEP. The prologue keeps option C's (every depression at 0.48
+// of the 3D's: U / EYE_REL); a shot may set its own (the title, G5R3-23: the lower layer below the
+// pass drawn taller, above the grass). Only the projection (the march, houses, lamps, the viaduct)
+// uses it; the land's relief (land use, light) does not.
+const DEP0 = [[0, 0], [10, 10 * U / EYE_REL]];
 let DEP = DEP0;
 export function depKnots() { return DEP.map(k => k.slice()); }
 /** For tools: another mapping (knots after [0, 0]); the railway's projection is redone. */
@@ -442,7 +442,7 @@ export function paintHouses(L, Xb, Zb, cam, seed) {
   for (const ho of HOUSES) {
     if (ho.farm) {
       // (the farm below the pass, near: drawn at its own size, its windows lit, a lantern at the door)
-      list.push({ X: ho.X, Z: ho.Z, w: sizeAt(ho.Z, ho.w), kind: 'thatch', vi: -1, farm: true, win: true, lantern: true });
+      list.push({ X: ho.X, Z: ho.Z, w: sizeAt(ho.Z, ho.w, 0.62), kind: 'thatch', vi: -1, farm: true, win: true, lantern: true });
       continue;
     }
     if (ho.Z < 3) continue;
@@ -610,465 +610,77 @@ export function paintViaduct(L, Xb, Zb, cam) {
 
 export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt };
 
-// ---------------------------------------------------------------- 遠化 as plates peeled off (G5R3-18)
+// ---------------------------------------------------------------- 遠化: the silver-white ghost (G5R3-22)
 //
-// Land gone far is a woodblock print losing its colour blocks one after another (the 3D lookout's rule,
-// vista_common "褪版", and the lead's notes for the prologue's night): first the gradations (bokashi:
-// the light's modelling, the water's sky): what is left prints flat, a couple of tones to a block;
-// then the green block (rice, grass, woods); then the water's blue; then the earths (soil, roads, dry
-// fields, rock, roofs, wood). What remains is the key block: hard ink lines on the paper, the paper
-// with its blind embossing (空摺: the big relief pressed in, very lightly). The paper reads as paper:
-// by night, in the moon, uninked paper is a step lighter than the coloured night beside it, flat, even,
-// without hue; the ink lines are the clearest thing in the frame (fog blurs with distance; this is the
-// reverse: the farther, the more is only line, and the lines stay hard). Blocks come off in pieces
-// with edges, like a colour block's register, never as a gradient: near the rim a few pieces of colour
-// stay (the paddies' blue, the woods' green), farther only lines and paper. No lamps, nothing moves.
-// Stages: 0 as drawn; 1 flat (the gradations gone); 2 + the green gone; 3 + the blue gone; 4 + the
-// earths gone (ink and paper).
-export const FADE_STAGES = 4;
-export const V_PAPER = 0, V_GREEN = 1, V_BLUE = 2, V_EARTH = 3;
-const GONE_AT = [99, 2, 3, 4];                               // the stage a block is gone at
-const BLOCK = [];                                            // material -> [block, tone: 1 light, 0 dark]
-for (const m of [G.riceA, G.riceB, G.riceC, G.meadow, G.levee]) BLOCK[m] = [V_GREEN, 1];
-for (const m of [G.forest, G.grove, G.hillForest, G.farForest, G.cedar]) BLOCK[m] = [V_GREEN, 0];
-for (const m of [G.paddy, G.river, G.pond]) BLOCK[m] = [V_BLUE, 1];
-for (const m of [G.crop, G.fallow, G.road, G.path, G.townGround, G.rock, G.farRock, G.bank, G.thatch, G.roofLit]) BLOCK[m] = [V_EARTH, 1];
-for (const m of [G.roof, G.wood, G.iron]) BLOCK[m] = [V_EARTH, 0];
-for (const m of [G.wall, G.kura]) BLOCK[m] = [V_PAPER, 1];
-// each block's tones: the material whose colour (as the night draws it, on level ground, open sky, no
-// haze) the block prints in
-const TONE_OF = { [V_GREEN]: [G.forest, G.riceA], [V_EARTH]: [G.wood, G.fallow] };
-// the paper and the ink by night (sRGB): washi in the moon, a step above the night's colours (its
-// fields are about L* 15-20 here, the paper about L* 32), a little cool so that beside the blue night
-// it reads as paper and not as a dirty brown-grey; the ink nearly black, warm like the palette's K
-export const PAPER_NIGHT = [73, 77, 87], INK_NIGHT = [15, 13, 13];
-const pack3 = (c, a = 255) => ((a << 24) | (c[2] << 16) | (c[1] << 8) | c[0]) >>> 0;
-/** The far's paper flag: a lutFar entry with this alpha is paper (the shader embosses it). */
-export const PAPER_ALPHA = 128;
+// The land the tide has passed is its own ghost, as the first vista had it (src/vista/tod.js ghost(),
+// v0.2; the user: "幽灵一样银白色的"): everything still there in its own place and shape, the fields,
+// roads and roofs keeping their own lightness and their light and shade, drained of colour, lifted, a
+// bluish silver-white lit by nothing in particular; its lamps out, nothing reflected in its water.
+// Ground zero is the town (the tide bursts from it): the nearer the town, the more a ghost; farther
+// out a little of the night's colour stays, in steps (GHOST_GRADES, their edges wandering with the
+// bearing). The 3D lookout draws the same point and the same steps. Over the land gone far the air
+// shimmers a little, as over heat (a whole-pixel sway up and down, most near the town: the ghost map's
+// G), and silver motes rise from it (Godot).
+// (Tried and rejected: the 褪版, the land as a woodblock print losing its colour blocks down to the
+// key block's lines on the paper, G5R3-18; the user, G5R3-22: "太脏、像灰模".)
+/** ground zero (m, the 3D frame): the town */
+export function ghostZero() { return [-TOWN.X * U, TOWN.Z * U]; }
+/** [radius (m from ground zero), how much a ghost (0..1)]: the last step holds beyond */
+export const GHOST_GRADES = [[900, 1.0], [2000, 0.86], [3500, 0.74], [1e9, 0.62]];
+/** the shimmer's reach (m from ground zero) */
+export const MIRAGE_R = 4200;
+const GHOST_HAZE = [0.6, 0.66, 0.78];
+const SUNLV = [0, 0.1, 0.22, 0.36, 0.5, 0.66, 0.83, 1], SKYLV = [0.42, 0.62, 0.82, 1], HAZELV = [0, 0.12, 0.24, 0.37, 0.5, 0.63, 0.77, 0.9];
+const lum3 = c => c[0] * 0.299 + c[1] * 0.587 + c[2] * 0.114;
+const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 
-/**
- * The colours of the print at stage s for every ground id (a palette: id -> packed sRGB): a block
- * still on prints flat in its tone (as the night draws that material on level ground; the water its
- * sky, flat); a block gone, or white things, leave the paper (flagged: alpha PAPER_ALPHA).
- * nightPal: the land's own palette at the far's hour.
- */
-export function fadePalette(s, nightPal) {
+/** The ghost's colour for a ground id (packed sRGB, alpha 255): v0.2's ghost(), its lightness spread a
+ *  third wider and its haze kept to half, so that the land's shapes stay clear. */
+export function ghostPalette() {
   const cache = new Map();
-  const flat = m => nightPal((m << 8) | (3 << 5) | (3 << 3)) >>> 0;
   return v => {
     let out = cache.get(v);
     if (out !== undefined) return out;
-    const mat = v >> 8, b = BLOCK[mat];
-    // (the viaduct's bents, its shaded underside: a colour block is not cut that fine; the key block
-    // draws the bents that are strokes, the rest leave the paper, so the far trestle is no comb)
-    const bent = mat === G.iron && ((v >> 5) & 7) === 1;
-    if (!b) out = 0;
-    else if (b[0] === V_PAPER || s >= GONE_AT[b[0]] || bent) out = pack3(PAPER_NIGHT, PAPER_ALPHA);
-    else if (b[0] === V_BLUE) out = (flat(mat) & 0xffffff) | 0xff000000;
-    else out = (flat(TONE_OF[b[0]][b[1]]) & 0xffffff) | 0xff000000;
-    out >>>= 0;
+    const mat = GROUND_MATS[v >> 8];
+    if (!mat) { cache.set(v, 0); return 0; }
+    const s = (v >> 5) & 7, k = (v >> 3) & 3, h = v & 7;
+    let c;
+    if (mat.water) c = [0.6, 0.66, 0.76].map(q => q * (0.62 + (mat.refl ?? 0.6) * 0.4));
+    else if (mat.rim) c = mat.albedo.map(q => q * 1.2);
+    else c = mat.albedo.map(q => q * (0.66 + 0.42 * SUNLV[s] + 0.12 * SKYLV[k]));
+    const l = clamp(lum3(c), 0, 1), L2 = clamp(0.2 + 0.74 * Math.pow(l, 0.85), 0, 1);
+    let g = mix3([L2 * 0.86, L2 * 0.92, L2 * 1.07], c, 0.1);
+    if (h) g = mix3(g, GHOST_HAZE, HAZELV[h] * 0.3);
+    const q = g.map(x => Math.round(clamp(x, 0, 1) * 255));
+    out = ((255 << 24) | (q[2] << 16) | (q[1] << 8) | q[0]) >>> 0;
     cache.set(v, out);
     return out;
   };
 }
-/** The key block's ink (sRGB 0..255). */
-export function fadeInk() { return INK_NIGHT.slice(); }
-
-// boundary classes (for the key block's lines) and which side of a boundary carries the line
-const CLS = [];
-for (const m of [G.riceA, G.riceB, G.riceC, G.crop, G.fallow, G.levee, G.meadow, G.bank]) CLS[m] = 1;
-CLS[G.paddy] = 2; CLS[G.pond] = 3; CLS[G.river] = 3;
-CLS[G.road] = 4; CLS[G.path] = 4; CLS[G.townGround] = 5;
-for (const m of [G.forest, G.grove, G.hillForest, G.farForest, G.cedar]) CLS[m] = 6;
-CLS[G.rock] = 7; CLS[G.farRock] = 7;
-for (const m of [G.roof, G.roofLit, G.thatch, G.wall, G.kura, G.wood]) CLS[m] = 8;
-CLS[G.iron] = 9;
-const PRIO = [0, 1, 2, 5, 6, 4, 3, 2, 8, 9];        // by class: the line goes on the higher side
-// metres past the region's rim where the gradations, the green, the blue, the earths are gone, each
-// wandering a fifth either way with the bearing, and each piece of land (a patch of ~140 m) keeping or
-// losing its block up to PLATE_SPREAD either side of that: the blocks' edges are the pieces' edges
-export const PLATE_AT = [300, 900, 1400, 1900], PLATE_SPREAD = 320;
 
 /**
- * Per ground pixel (RGBA8): R the key block's ink (0 or 255); G the stage that place prints at once the
- * far has come (50 per stage, 0..4), decided per piece of land so that the blocks come off in pieces;
- * B the paper's surface: its blind embossing (the land's relief, smoothed) and its fibres (a faint
- * mottle of long and short flecks, fixed to the land), 128 = plain paper; A a small delay for the
- * blocks coming off after the tide.
- *
- * The key block is drawn as a block is cut: deliberate, continuous lines, denser near, only the big
- * structures far. Main lines (2 px nearer than ~1.6 km, 1 px beyond): the skyline; the ranges' ridges, one range
- * in front of the next (where the line of sight truly breaks over a crest), each drawn as one smoothed
- * stroke, a few to a range and kept clear of each other; the ranges' spurs from their peaks; crests
- * and terraces of land; the viaduct's deck (its long bents near); river and pond banks, roads (to
- * ~2.9 km), the town's outline. Fine lines (1 px, to ~1.6 km): the woods' edges, the levees between
- * fields deep enough to show paper between, roofs, the crowns in a near wood. Then the cut is cleaned:
- * two lines never lie on one another (nor, far, two rows apart), gaps along a line are closed (and
- * behind the viaduct's bents), pieces too short to be cut on purpose go (longer far).
- * cam: the frame's { cx, yh } (for the spurs; without it none are cut).
+ * Per ground pixel (RGBA8): R how much a ghost the place is once the tide has passed (its step from
+ * ground zero, 0..255); G how much the air over it shimmers (0..255, most at ground zero, none past
+ * MIRAGE_R); B, A 0.
  */
-export function fadeMaps(L, Xb, Zb, mask, W, H, f, sunDir, cam = null) {
-  const N = W * H, out = new Uint8Array(N * 4), idx = L.idx;
-  const mat = i => idx[i] >> 8;
-  const cl = i => CLS[idx[i] >> 8] || 0;
-  const land = i => i >= 0 && i < N && mask[i] !== 0;
-  const isMtn = m => m === G.farRock || m === G.farForest || m === G.hillForest;
-  const isIron = i => land(i) && (idx[i] >> 8) === G.iron;
-  const sd = sunDir || [0.85, 0.27, -0.45], sl = Math.hypot(...sd), lx = sd[0] / sl, ly = sd[1] / sl, lz = sd[2] / sl;
-
-  // the land's relief as the paper takes it: the light on the land's slope, smoothed (over ~2 pixels
-  // near; FOLD_SMOOTH on the ranges, so that their faces read as faces and their folds as folds)
-  const lamA = new Float32Array(N);
-  for (let i = 0; i < N; i++) {
-    if (!mask[i]) continue;
-    const Z = Zb[i], X = Xb[i];
-    const sm = (Z > 30 ? FOLD_SMOOTH : Math.max(120, 2 * Z * Z / f * U)) / U;
-    const hx = heightBase(X + sm, Z) - heightBase(X - sm, Z), hz = heightBase(X, Z + sm) - heightBase(X, Z - sm);
-    lamA[i] = (-hx * lx + 2 * sm * ly - hz * lz) / Math.hypot(hx, 2 * sm, hz);
-  }
-  // runs of one material down a column (for the levees: only between fields deep enough to show
-  // paper between their lines) and the viaduct's runs (its deck across, its bents down)
-  const runDn = new Uint16Array(N), runUp = new Uint16Array(N), ironAcross = new Uint16Array(N);
-  for (let x = 0; x < W; x++) {
-    for (let y = 0; y < H; y++) { const i = y * W + x; runUp[i] = y > 0 && land(i) && land(i - W) && mat(i - W) === mat(i) ? runUp[i - W] + 1 : 1; }
-    for (let y = H - 1; y >= 0; y--) { const i = y * W + x; runDn[i] = y < H - 1 && land(i) && land(i + W) && mat(i + W) === mat(i) ? runDn[i + W] + 1 : 1; }
-  }
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x;
-    if (!isIron(i)) continue;
-    let n = 1;
-    for (let d = 1; d < 4 && x - d >= 0 && isIron(i - d); d++) n++;
-    for (let d = 1; d < 4 && x + d < W && isIron(i + d); d++) n++;
-    ironAcross[i] = n;
-  }
-
-  // how much deeper the land one row up is, where it goes on from X, Z without a break (along the line
-  // of sight: a row up is f (h' Z + 1 - h) / Z^2 farther per unit; a face turned away goes on out of
-  // sight: anything over it is a break)
-  const rowDepth = (X, Z) => {
-    const e = 0.01, h = heightBase(X, Z), h1 = heightBase(X * (1 + e), Z * (1 + e)), dh = (h1 - h) / (Z * e);
-    const den = f * (dh * Z + 1 - h);
-    return den > 1e-6 ? Z * Z / den : 0;
-  };
-  // 1. where the block's lines are cut. kind: 1 fine, 2 main, 4 a spur, 5 a ridge in the ranges (4, 5
-  // chosen below)
-  const kind = new Uint8Array(N);
-  const SRC = FADE_STATS.wantSrc ? (FADE_STATS.src = new Uint8Array(N)) : null;   // (diagnostics: what cut each line)
-  const weak = new Uint8Array(N);
+export function ghostMaps(L, Xb, Zb, mask, W, H) {
+  const N = W * H, out = new Uint8Array(N * 4);
+  const [gx, gz] = ghostZero();
   for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
     const i = y * W + x;
     if (!mask[i]) continue;
-    const Z = Zb[i], X = Xb[i], c = cl(i), m = mat(i), mtn = isMtn(m);
-    const up = y > 0 ? i - W : -1;
-    if (!land(up)) { kind[i] = 2; if (SRC) SRC[i] = 1; continue; }        // the skyline
-    const Zu = Zb[up], flat = Z * Z / f;
-    let k = 0, sc = 0;
-    if (c === 9) {
-      // the viaduct: its deck (the top edge always; both rows of it near) and, near, its bents where a
-      // bent is a stroke of 5 px or more under the deck (shorter ones would print as a comb)
-      if (!isIron(up)) k = 2;
-      else if (Z < 9 && ironAcross[i] >= 3) k = 2;
-      else if (Z < 8 && ironAcross[i] < 3 && runUp[i] + runDn[i] - 1 >= 7) k = 2;
-      sc = 12;
-    } else if (mtn) {
-      // a ridge in front of the next: the land seen over it is farther than this face, if it went on,
-      // could be one row up (the face's own rise along the line of sight, beyond this point)
-      // (the big ones only: one range or hill in front of land a good way behind it; a ridge going on
-      // along a fainter break where it joins one)
-      const rd = rowDepth(X, Z), jr = Z > 45 ? RIDGE_JUMP : RIDGE_JUMP_HILLS;
-      if (Zu - Z > Math.max(2 * rd, jr * Z)) { k = 5; sc = 2; }
-      else if (Zu - Z > Math.max(1.2 * rd, jr * 0.5 * Z)) weak[i] = 1;
-    } else if (Zu > Z * 1.25 && Zu - Z > 6 * flat + 0.04) { k = 2; sc = 3; }   // crests, terraces of land
-    if (!k) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
-      if (!land(n)) continue;
-      const cn = cl(n);
-      if (cn === c || (c <= 2 && cn <= 2)) {
-        // the levees between fields, where both fields are deep enough to show paper between lines
-        if (c <= 2 && mat(n) !== m && Z < 9 && n === up && runDn[i] >= 3 && runUp[up] >= 2) { k = Math.max(k, 1); sc = sc || 10; }
-        continue;
-      }
-      if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
-      // (a bank running just under the viaduct's deck, past ~1.6 km, is left to the deck's line)
-      if (c === 3 && Z >= 9 && (isIron(i - W) || isIron(i - 2 * W) || isIron(i - 3 * W))) continue;
-      if (c === 3 || c === 5) { k = 2; sc = c === 3 ? 4 : 5; }            // banks, the town
-      else if (c === 4 && Z < 16) { k = 2; sc = 6; }                      // roads
-      else if (c === 6 && !mtn && (Z < 9 || (n === up && Z < 16))) { k = Math.max(k, 1); sc = sc || 7; }   // the woods' edges
-      else if (c === 8 && Z < 9) { k = Math.max(k, 1); sc = sc || 8; }   // roofs
-      else if (c === 7 && Z < 8) { k = Math.max(k, 1); sc = sc || 9; }   // rock
-    }
-    // the crowns in a near wood (the bake's crown cells: their shaded side)
-    if (!k && c === 6 && Z > 600 / U && Z < 8) {
-      const t = heightBase(X, Z), cs = 0.06 * Math.max(1, Z / 6), u = X / cs, v = (Z + t * 4) / (cs * 1.6);
-      const fu = u - Math.floor(u) - 0.5, fv = v - Math.floor(v) - 0.5;
-      if (fu + fv * 0.6 < -0.4) { k = 1; sc = 11; }
-    }
-    kind[i] = k;
-    if (SRC && k) SRC[i] = sc;
-  }
-
-  // a ridge goes on as long as the break goes on, if fainter (from each clear break, along the fainter)
-  {
-    const st2 = [];
-    for (let i = 0; i < N; i++) if (kind[i] === 5) st2.push(i);
-    while (st2.length) {
-      const i = st2.pop(), y = (i / W) | 0, x = i - y * W;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const j = yy * W + xx;
-        if (weak[j] && !kind[j]) { kind[j] = 5; weak[j] = 0; if (SRC) SRC[j] = 2; st2.push(j); }
-      }
-    }
-  }
-  // 1b. the ranges' spurs, as a print draws a mountain: from each peak of the skyline the crest of a
-  // spur followed down toward us and to the side (the highest way down, one bearing left and one
-  // right); cut where they are the land in sight. Fewer the farther: past FOLD_FAR one spur to a peak.
-  const top = new Int16Array(W).fill(-1);
-  for (let x = 0; x < W; x++) for (let y = 0; y < H; y++) if (mask[y * W + x]) { top[x] = y; break; }
-  const trace = (X, Z, side) => {
-    const pts = [[X, Z, heightBase(X, Z)]];
-    const h0 = pts[0][2];
-    for (let n = 0; n < 120; n++) {
-      const [Xc, Zc, hc] = pts[pts.length - 1];
-      const ds = 45 / U * Math.max(1, Zc / 50), dl = Math.hypot(Xc, Zc), ux = -Xc / dl, uz = -Zc / dl;
-      let best = null;
-      for (let a = -100; a <= 100; a += 10) {
-        if (side && (a * side < 0 || Math.abs(a) < 20)) continue;
-        const r = a * Math.PI / 180, cx = ux * Math.cos(r) - uz * Math.sin(r), cz = ux * Math.sin(r) + uz * Math.cos(r);
-        const X1 = Xc + cx * ds, Z1 = Zc + cz * ds, h1 = heightBase(X1, Z1);
-        if (h1 >= hc) continue;
-        if (!best || h1 > best[2]) best = [X1, Z1, h1];
-      }
-      if (!best) break;
-      pts.push(best);
-      if (best[2] < Math.max(0.5, h0 * 0.45)) break;
-    }
-    return pts;
-  };
-  const cxF = cam ? cam.cx : 0, yhF = cam ? cam.yh : 0;
-  const cut = (pts, tag) => {
-    // a spur seen edge-on (along the skyline) is not drawn
-    if (pts.length < 3) return 0;
-    const proj = ([X, Z, h]) => [cxF + f * X / Z, yhF + f * (1 - h) / Z];
-    const [x0, y0] = proj(pts[0]), [x1, y1] = proj(pts[pts.length - 1]);
-    if (Math.abs(y1 - y0) < 0.3 * Math.abs(x1 - x0)) return 0;
-    let drawn = 0;
-    for (let q = 0; q < pts.length - 1; q++) {
-      const [Xa, Za, ha] = pts[q], [Xb2, Zb2, hb2] = pts[q + 1];
-      const xa = cxF + f * Xa / Za, ya = yhF + f * (1 - ha) / Za, xb = cxF + f * Xb2 / Zb2, yb = yhF + f * (1 - hb2) / Zb2;
-      const n = Math.max(1, Math.ceil(Math.max(Math.abs(xb - xa), Math.abs(yb - ya))));
-      for (let s2 = 0; s2 <= n; s2++) {
-        const t = s2 / n, xx = Math.round(xa + (xb - xa) * t), yy = Math.round(ya + (yb - ya) * t), Zs = Za + (Zb2 - Za) * t;
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const j = yy * W + xx;
-        if (!land(j) || !isMtn(mat(j)) || Math.abs(Zb[j] - Zs) > Zs * 0.04 || yy <= top[xx]) continue;
-        if (!kind[j]) { kind[j] = tag; drawn++; if (SRC) SRC[j] = 13; }
-      }
-    }
-    return drawn;
-  };
-  if (cam) {
-    const R = 9;
-    for (let x = R; x < W - R; x++) {
-      const t = top[x];
-      if (t < 0 || !isMtn(mat(t * W + x))) continue;
-      // a peak: the highest point of the skyline within R px, standing 2 px (4 far) over it on both sides
-      let pk = true, lmax = t, rmax = t;
-      for (let d = -2 * R; d <= 2 * R && pk; d++) {
-        const u = top[Math.min(W - 1, Math.max(0, x + d))];
-        if (u < 0) { pk = false; break; }
-        if (Math.abs(d) <= R && (u < t || (u === t && d < 0))) pk = false;
-        if (d < 0) lmax = Math.max(lmax, u); else rmax = Math.max(rmax, u);
-      }
-      const i = t * W + x, Z = Zb[i], X = Xb[i], far = Z > FOLD_FAR;
-      if (pk && Math.min(lmax - t, rmax - t) >= (far ? 4 : 2)) {
-        cut(trace(X, Z, -1), 4);
-        if (!far) cut(trace(X, Z, 1), 4);
-      }
-    }
-  }
-
-  // 2. lines never lie on one another: where two lines running across touch one above the other (they
-  // would print as a band), the lower gives way: a fine line to any line, a main line to a main line
-  // (past ~1.6 km, where a row is tens of metres deep, two lines running across two rows apart are one
-  // line doubled: the lower goes too)
-  for (let y = 1; y < H; y++) for (let x = 1; x < W - 1; x++) {
-    const i = y * W + x, k = kind[i];
-    if (!k || k >= 3 || !(kind[i - 1] || kind[i + 1])) continue;
-    const a = kind[i - W];
-    if (a && a < 3 && (kind[i - W - 1] || kind[i - W + 1])) { if (k === 1 || a === 2) kind[i] = 0; continue; }
-    if (y > 1 && !a && Zb[i] >= 9 && kind[i - 2 * W] === 2 && (kind[i - 2 * W - 1] || kind[i - 2 * W + 1])) kind[i] = 0;
-  }
-
-  // 3. the cut cleaned: gaps along a line closed (one pixel across or on a diagonal; two or three
-  // pixels across between two ends of main lines that meet in line), never up-down (which would weld
-  // two lines lying one above the other)
-  const fill = new Uint8Array(N);
-  for (let y = 1; y < H - 1; y++) for (let x = 1; x < W - 1; x++) {
-    const i = y * W + x;
-    if (kind[i] || !mask[i]) continue;
-    // (a bent of the viaduct that is not drawn is no gap: the line runs on behind it)
-    const leg = isIron(i);
-    for (const [p, q] of [[i - 1, i + 1], [i - W - 1, i + W + 1], [i - W + 1, i + W - 1]]) {
-      const kp = kind[p], kq = kind[q];
-      if (kp && kp === kq && kp < 3 && (leg || (!kind[i - W] && !kind[i + W]))) { fill[i] = kp; break; }
-    }
-  }
-  for (let i = 0; i < N; i++) if (fill[i]) { kind[i] = fill[i]; if (SRC) SRC[i] = 14; }
-  const isEnd = (i, dir) => {                 // a main line's end facing dir (+1 right, -1 left)
-    if (kind[i] !== 2) return false;
-    for (const dy of [-1, 0, 1]) if (kind[i + dy * W + dir]) return false;
-    let back = 0;
-    for (const dy of [-1, 0, 1]) if (kind[i + dy * W - dir]) back++;
-    return back >= 1;
-  };
-  for (let y = 2; y < H - 2; y++) for (let x = 4; x < W - 4; x++) {
-    const i = y * W + x;
-    if (!isEnd(i, 1)) continue;
-    // the nearest other end within 3 px to the right, one row off at most
-    let best = -1;
-    for (let d = 2; d <= 4 && best < 0; d++) for (const dy of [0, -1, 1]) {
-      const j = i + dy * W + d;
-      if (isEnd(j, -1) && Math.abs(Zb[j] - Zb[i]) < Zb[i] * 0.15) { best = j; break; }
-    }
-    if (best < 0) continue;
-    const yj = (best / W) | 0, xj = best - yj * W;
-    for (let xx = x + 1; xx < xj; xx++) {
-      const yy = Math.round(y + (yj - y) * (xx - x) / (xj - x)), j = yy * W + xx;
-      if (land(j) && !kind[j - W] && !kind[j + W]) { kind[j] = 2; if (SRC && !SRC[j]) SRC[j] = 15; }
-    }
-  }
-
-  // 4. the pieces too short to be cut on purpose go: main lines 4 px near, 6 past ~1.6 km, 8 past
-  // ~3 km, 10 in the ranges; fine lines 5 near, 8 farther
-  const comp = new Int32Array(N).fill(-1), stack = [], folds = [], ridges = [];
-  for (let i0 = 0; i0 < N; i0++) {
-    if (!kind[i0] || comp[i0] >= 0) continue;
-    const fam = kind[i0] >= 4 ? kind[i0] : 0, fold = fam === 4, piece = [];
-    stack.push(i0); comp[i0] = i0;
-    let zmin = 1e9, zsum = 0, ymin = 1e9, ymax = -1, xsum = 0;
-    while (stack.length) {
-      const i = stack.pop(); piece.push(i);
-      const y = (i / W) | 0, x = i - y * W;
-      if (Zb[i] < zmin) zmin = Zb[i];
-      zsum += Zb[i]; xsum += x; if (y < ymin) ymin = y; if (y > ymax) ymax = y;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        if (!dx && !dy) continue;
-        const xx = x + dx, yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
-        const j = yy * W + xx;
-        if (comp[j] < 0 && kind[j] && (kind[j] >= 4 ? kind[j] : 0) === fam) { comp[j] = i0; stack.push(j); }
-      }
-    }
-    if (fold) { folds.push({ piece, n: piece.length, tall: ymax - ymin + 1, x: xsum / piece.length, z: zsum / piece.length }); continue; }
-    if (fam === 5) { ridges.push({ piece, n: piece.length, z: zsum / piece.length }); continue; }
-    const main = piece.some(i => kind[i] === 2);
-    const min = main ? (zmin < 9 ? 4 : zmin < 16 ? 6 : zmin < 45 ? 8 : 10) : (zmin < 6 ? 5 : 8);
-    if (piece.length < min) for (const i of piece) kind[i] = 0;
-  }
-  // 5. the ranges' ridges, one range in front of the next: the longest first, each kept where it keeps
-  // clear of those kept (two rows of paper between) and is long enough to be a range (RIDGE_MIN px;
-  // farther ranges need longer ridges)
-  // each drawn as clean strokes: the ridge's top row in each column, smoothed along it (a median over
-  // five columns), gaps of a column or two bridged, a step of two rows drawn down; where it steps
-  // three rows or more it is two ridges
-  const strokes = [];
-  for (const r of ridges) {
-    const rowAt = new Map();
-    for (const i of r.piece) {
-      kind[i] = 0;
-      const y = (i / W) | 0, x = i - y * W;
-      if (!rowAt.has(x) || y < rowAt.get(x)) rowAt.set(x, y);
-    }
-    const cols = [...rowAt.keys()].sort((a, b) => a - b);
-    const line = [];
-    for (let q = 0; q < cols.length; q++) {
-      const x = cols[q], win = [];
-      for (let d = -2; d <= 2; d++) { const v = rowAt.get(x + d); if (v != null) win.push(v); }
-      win.sort((a, b) => a - b);
-      line.push([x, win[win.length >> 1]]);
-      const nx = cols[q + 1];
-      if (nx != null && nx - x > 1 && nx - x <= 3) {
-        const y0 = rowAt.get(x), y1 = rowAt.get(nx);
-        for (let xx = x + 1; xx < nx; xx++) line.push([xx, Math.round(y0 + (y1 - y0) * (xx - x) / (nx - x))]);
-      }
-    }
-    line.sort((a, b) => a[0] - b[0]);
-    let px = [];
-    const flush = () => { if (px.length) strokes.push({ piece: px.filter(i => land(i)), z: r.z }); px = []; };
-    for (let q = 0; q < line.length; q++) {
-      const [x, y] = line[q];
-      px.push(y * W + x);
-      const nb = line[q + 1];
-      if (!nb || nb[0] !== x + 1 || Math.abs(nb[1] - y) >= 3) { flush(); continue; }
-      if (Math.abs(nb[1] - y) === 2) px.push((y + Math.sign(nb[1] - y)) * W + (nb[1] > y ? x : x + 1));
-    }
-    flush();
-  }
-  // the longest first, each kept where it keeps clear of those kept (RIDGE_CLEAR rows of paper) and
-  // is long enough to be a range (RIDGE_MIN px; farther ranges longer; hills RIDGE_MIN_HILLS)
-  for (const r of strokes) r.n = r.piece.length;
-  strokes.sort((p, q) => q.n - p.n);
-  const taken = new Uint8Array(N);
-  for (let i = 0; i < N; i++) if (kind[i] === 2 && Zb[i] > 30) taken[i] = 1;
-  for (const r of strokes) {
-    let ok = r.n >= (r.z > 70 ? RIDGE_MIN * 1.4 : r.z > 45 ? RIDGE_MIN : RIDGE_MIN_HILLS);
-    if (ok) {
-      let clash = 0;
-      for (const i of r.piece) for (const d of RIDGE_CLEAR) if (taken[i + d * W]) { clash++; break; }
-      ok = clash <= r.n * 0.2;
-    }
-    if (ok) for (const i of r.piece) { kind[i] = 2; taken[i] = 1; if (SRC && !SRC[i]) SRC[i] = 2; }
-  }
-  // the ranges' spurs: pieces of FOLD_MIN px or more
-  FADE_STATS.folds = folds.map(fo => [fo.n, fo.tall, Math.round(fo.x), +fo.z.toFixed(1)]);
-  for (const fo of folds) for (const i of fo.piece) kind[i] = fo.n >= FOLD_MIN ? 2 : 0;
-
-  // 6. out: the ink (main lines nearer than LINE2_Z two pixels: the line and the pixel under it, if that
-  // is land and no line; the viaduct's deck is two rows of its own), the stage, the paper
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const i = y * W + x;
-    if (!mask[i]) continue;
-    const Z = Zb[i], X = Xb[i];
-    let ink = kind[i] ? 1 : 0;
-    if (!ink && y > 0 && kind[i - W] === 2 && Zb[i - W] < LINE2_Z && !isIron(i - W) && Zb[i] < Zb[i - W] * 1.4 && !(y < H - 1 && kind[i + W])) ink = 1;
-    // which blocks are gone here: metres past the rim against each block's front (wandering with the
-    // bearing), per piece of land
-    const xm = -X * U, zm = Z * U;
-    const e = Math.hypot((xm - MIST.cx) / MIST.rx, (zm - MIST.cz) / MIST.rz);
-    const past = Math.max(0, e - 1) * 400;
-    const ang = Math.atan2(xm, zm);
-    const pxc = Math.floor(xm / 140 + vnoise(xm / 260, zm / 260, 611) * 1.4), pzc = Math.floor(zm / 140 + vnoise(xm / 260 + 7, zm / 260, 612) * 1.4);
-    let st = 0;
-    for (let k = 0; k < 4; k++) {
-      const w = vnoise(ang * 3.3 + k * 17, k * 5 + 1, 620) * 0.7 + vnoise(ang * 9.1 + k * 3, 9, 621) * 0.3;
-      const spread = k === 0 ? 0 : (hash2(pxc, pzc, 700 + k) - 0.5) * 2 * PLATE_SPREAD;
-      if (past >= PLATE_AT[k] * (0.8 + 0.4 * w) + spread) st = k + 1;
-    }
-    // the blind embossing: the land's smoothed slope lit from the light's side against level ground,
-    // within 5 % (the plain stays level; the ranges' faces read as faces, a little less in the far ones)
-    const mtn = isMtn(mat(i));
-    const emb = Z > 30 ? clamp((lamA[i] - ly) * 25, -1, 1) * (Z > 70 ? 0.04 : 0.05) : clamp((lamA[i] - ly) * 0.35, -0.05, 0.05);
-    // the paper's fibres: long flecks along the sheet and short ones, about 2.5 % either way (less on
-    // the ranges, whose relief carries them), fixed to the land (the canvas moves with it by whole pixels)
-    const fib = clamp(((vnoise(x / 7, y / 1.6, 631) - 0.5) * 0.6 + (vnoise(x / 2.2, y / 1.4, 632) - 0.5) * 0.4) * 0.09, -0.025, 0.025) * (mtn ? 0.35 : 1);
+    const xm = -Xb[i] * U, zm = Zb[i] * U, d = Math.hypot(xm - gx, zm - gz);
+    // the steps' edges wander a tenth either way with the bearing, and break up over a pixel or two
+    const ang = Math.atan2(xm - gx, zm - gz);
+    const w = 1 + 0.1 * ((vnoise(ang * 2.6 + 3, 1.5, 941) - 0.5) * 1.4 + (vnoise(ang * 7.9, 4.5, 942) - 0.5) * 0.6);
+    const dj = d / w * (1 + (hash2(x, y, 943) - 0.5) * 0.04);
+    let g = GHOST_GRADES[GHOST_GRADES.length - 1][1];
+    for (const [r, a] of GHOST_GRADES) if (dj < r) { g = a; break; }
+    const m = Math.pow(clamp(1 - d / MIRAGE_R, 0, 1), 1.5);
     const o = i * 4;
-    out[o] = ink ? 255 : 0;
-    out[o + 1] = st * 50;
-    out[o + 2] = Math.round(clamp(128 + (emb + fib) / 0.08 * 120, 0, 255));
-    out[o + 3] = Math.round(hash2(pxc, pzc, 614) * 255);
+    out[o] = Math.round(g * 255);
+    out[o + 1] = Math.round(m * 255);
   }
   return out;
 }
-// the ranges: the relief's smoothing (m); the shortest spur piece cut (px); past FOLD_FAR (units) one
-// spur to a peak; a ridge: the break in the line of sight (the land seen over it this much farther,
-// relatively: ranges, hills nearer than ~8 km), its shortest stroke (px; ranges past ~12.7 km 1.4x),
-// the rows of paper kept clear round it
-const FOLD_SMOOTH = 300, FOLD_MIN = 4, FOLD_FAR = 70, RIDGE_MIN = 10, RIDGE_MIN_HILLS = 16;
-// the main lines are two pixels nearer than this (units: ~1.6 km, where a row is ~40 m deep)
-const LINE2_Z = 9;
-const RIDGE_JUMP = 0.025, RIDGE_JUMP_HILLS = 0.15, RIDGE_CLEAR = [-2, -1, 1, 2];
-/** Diagnostics (tools): set wantSrc before fadeMaps to get src (what cut each line); folds (spurs). */
-export const FADE_STATS = {};
-// the region's rim (vista.py MIST: the mist ellipse round the walkable region)
-const MIST = { cx: -50, cz: 100, rx: 430, rz: 370 };
+

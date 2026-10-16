@@ -28,6 +28,7 @@ uniform float sprite_pitch_deg = 39.33;                 // the pitch the sheets 
 uniform vec2 head_px = vec2(0.5, -35.0);                // this frame's head anchor (px from the pivot, y down)
 uniform vec2 pivot_px = vec2(32.0, 65.0);
 uniform float face_floor = 0.66;                        // brightness floor on her face under the brim
+uniform float sheet_scale = 1.0;                        // the sheet's px per metre / 20 (its pixel distances)
 
 varying vec3 v_wp;
 varying vec3 v_wu;      // the card's upright place (lamps light her where she stands)
@@ -73,7 +74,7 @@ void fragment() {
 	// the face: a floor of light under the hat's brim (she must read first in any light)
 	vec2 rel = vec2(tp.x - frame_rect.x, tp.y - frame_rect.y) - pivot_px;
 	if (flip_h) rel.x = -rel.x;
-	float face = 1.0 - smoothstep(4.0, 7.0, length((rel - head_px) * vec2(1.0, 1.15)));
+	float face = 1.0 - smoothstep(4.0 * sheet_scale, 7.0 * sheet_scale, length((rel - head_px) * vec2(1.0, 1.15)));
 	vec3 alb = w3_srgb_to_linear(w3_ukiyo_tex(c.rgb, ukiyo));
 	alb = mix(alb, w3_srgb_to_linear(flash.rgb), flash.a);
 	// rim: an opaque texel whose neighbour away from the light is empty

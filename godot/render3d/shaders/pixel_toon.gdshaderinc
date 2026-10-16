@@ -149,6 +149,26 @@ vec3 w3_shadow_fill(float att) {
 	return w3_fill * (1.0 - clamp(att, 0.0, 1.0));
 }
 
+// Sun flecks in the shade of the canopies (the terrain, and the grass at its root: the same spots).
+// proj: the point moved toward the sun to the crowns' height (about 11 m up); can: the canopy's
+// density there. Rounded spots with a soft rim, 0 .. 1 (round 5, the lead: crisp spots read as yellow
+// patches on gravel and paths), laid out in the crowns' space, so the gaps between the leaf clumps
+// make them and they move with the boughs; in loose clusters; longer along the sun when it is low
+// (its image through a gap lies stretched on the ground); toward a crown's rim (thinner) many and
+// larger, in its heart few. Lit as the same ground in the open (light(): the sun, and the sky's fill
+// kept in them).
+float w3_fleck(vec2 proj, float can) {
+	vec3 sdir = normalize(w3_sun_dir);
+	float sway = sin(w3_time * 0.8 + w3_hash(floor(proj / 1.5)) * 6.28) * 0.35 * w3_wind.z;
+	vec2 al = normalize(sdir.xz + vec2(1e-4, 0.0));
+	vec2 q = vec2(dot(proj, al) * max(sdir.y, 0.3), dot(proj, vec2(-al.y, al.x)));
+	vec2 fq = q / 0.5 + vec2(sway, sway * 0.5);
+	float fn = w3_vnoise(fq) * 0.7 + w3_vnoise(fq * 2.1 + 5.0) * 0.3;
+	float cluster = w3_vnoise(proj / 2.6 + 9.0);
+	float th = 0.67 + can * 0.05;
+	return smoothstep(th, th + 0.06, fn) * smoothstep(0.32 + can * 0.22, 0.4 + can * 0.22, cluster);
+}
+
 // ------------------------------------------------------------------------------------------------
 // colour helpers
 vec3 w3_srgb_to_linear(vec3 c) {

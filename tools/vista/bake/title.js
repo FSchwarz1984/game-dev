@@ -24,6 +24,10 @@ import { paintCanopy, paintCanopyGen, paintGrass, FOLIAGE_MATS } from '../../../
 import { COL, glow, px } from '../../../src/vista/lights.js';
 
 const REF_W = 480, REF_H = 270;
+// the title's depression knots (plain.js depG: t = tan of the true depression from the crown, g = the
+// picture's / f): the plain to y ~194 (t 0.25), the foot of the pass to ~205 (0.4), the lower layer
+// to ~227 (0.55: over the low grass), the near slope under the grass
+const TITLE_DEP = [[0.1, 0.04], [0.25, 0.09], [0.4, 0.118], [0.55, 0.18], [1.5, 0.3]];
 const STAR_A = [0.32, 0.55, 0.8, 1];
 
 export function bakeTitle(o = {}) {
@@ -42,6 +46,10 @@ export function bakeTitle(o = {}) {
   const sun = { dir: norm([0.6, 0.45, -0.35]), slope: 0.45 };
   const YH = yh + oy;                                           // horizon row in the back canvas
   if (!PL.haveW3()) throw new Error('title: the 3D lookout\'s land is not loaded (plain.js setW3)');
+  // the title's own depression (G5R3-23, the lead's option C): the plain a little tighter than the
+  // prologue's, the foot of the pass tighter still, and the lower layer below the pass (the 溜池, the
+  // terraces, the farm, the switchbacks: the lookout's mid-ground) drawn tall, just above the grass
+  PL.setDepression(TITLE_DEP);
   const ground = run(buildPlainGen({ w: Wc, h: Hc, cx, yh: YH, f, S, sun, seed }));
   const cam = { cx, yh: YH, f, height: ground.height };
   const lights = paintHouses(ground.layer, ground.X, ground.Z, cam, seed);
@@ -105,7 +113,8 @@ export function bakeTitle(o = {}) {
   const canopy = run(titleCanopy(W, H, moon, R, Wc, mX, mT));
   // a low bough of the same tree in from the left (the foreground that keeps the menu's corner dark)
   const bough = run(titleBough());
-  const gh = Math.round(clamp(H * 0.3, 50, 110));
+  // (the grass kept low, so that the lower layer shows over it: option C)
+  const gh = Math.round(clamp(H * 0.15, 34, 60));
   const grass = [0, 1, 2].map(k => ({ layer: paintGrass(Wc + 4, gh, seed * 17 + k, { n: Math.round(Wc * (1.1 - k * 0.3)), rimSide: 1, hMin: 0.1 + k * 0.08, hMax: 0.36 + k * 0.2, plumes: 0.05 + k * 0.04 }), ph: k * 2.1 }));
   const flies = [{ x: W * 0.2, y: H * 0.84, ph: 0.3 }, { x: W * 0.84, y: H * 0.8, ph: 2.1 }, { x: W * 0.58, y: H * 0.88, ph: 4.0 }];
   for (const L of lights) L.ph = R() * TAU;
@@ -121,6 +130,9 @@ export function bakeTitle(o = {}) {
     sg.fillRect(s.x, s.y, 1, 1);
   }
   const groundC = ground.layer.canvas('t', palette(GROUND_MATS, envG, { haze: env.mist }));
+  // the mid-ground in the moon (G5R3-23): as the 3D's moonlit night has it, a step under the plain's
+  // lamps; the slopes' lit faces, the terraces' water and the roofs read
+  moonlight(groundC, ground, Wc, Hc);
   const back = makeCanvas(Wc, Hc), bg = ctx2d(back);
   bg.drawImage(groundC, 0, 0);
   // the still lamps of the plain (title.js tiles: windows and lanterns), added like the JS did
@@ -183,6 +195,7 @@ export function bakeTitle(o = {}) {
     }
   }
   const fpal = palette(FOLIAGE_MATS, { ...env, ...lift, sun: [0.46, 0.53, 0.72] });
+  PL.setDepression(null);
 
   return {
     meta: { shot: 'title', seed, tod: TOD, refW: W, refH: H, Wc, Hc, ox, oy, yh, YH, moon, mX, mT, gh, bough: { w: bough.w, h: bough.h },
@@ -328,6 +341,26 @@ function* titleBough() {
   // (no rim: the moon is far up to the right; the canopy's rims are only round the moon too)
   const rimBelow = { x: 1e4, y: -1e4, r: 1 };
   return yield* paintCanopyGen(w, h, { clumps, limbs, light, cell: 3.4, cellSeed: 13, rimBelow }, 77);
+}
+
+// The moon on the mid-ground (G5R3-23): within ~1.2 km fully, gone by ~2.6 km, the land a step
+// brighter: its faces to the moon more than the rest (the bake's sun bits), still water (the terraces,
+// the 溜池) and roofs most; the plain beyond and its lamps as they were.
+function moonlight(c, ground, W, H) {
+  const g = ctx2d(c), img = g.getImageData(0, 0, W, H), D = img.data, idx = ground.layer.idx;
+  for (let i = 0; i < W * H; i++) {
+    const v = idx[i];
+    if (!v || !ground.mask[i]) continue;
+    const d = Math.hypot(ground.X[i], ground.Z[i]) * PL.U, k = 1 - smooth(1200, 2600, d);
+    if (k <= 0) continue;
+    const m = v >> 8, s = (v >> 5) & 7;
+    const water = m === G.paddy || m === G.pond || m === G.river;
+    const roof = m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura;
+    const b = k * (water ? 0.75 : roof ? 0.6 : 0.25 + 0.55 * s / 7);
+    const o = i * 4;
+    for (let q = 0; q < 3; q++) D[o + q] = Math.min(255, Math.round(D[o + q] * (1 + b)));
+  }
+  g.putImageData(img, 0, 0);
 }
 
 function norm(v) { const l = Math.hypot(...v); return v.map(q => q / l); }

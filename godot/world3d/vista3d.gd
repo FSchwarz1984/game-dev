@@ -83,6 +83,7 @@ var rng := RandomNumberGenerator.new()
 var _t := 0.0
 var _vdebug: PackedStringArray = []   # --vdebug=nodrain,nohaze,nocloud (looking into the layers)
 var nochar := false                   # (the sample's --nochar, G5R3-21) her and さぢ are not drawn
+var sprites := false                  # (the sample's sprites, G5R3-24) her sprite, not her 3D model
 
 
 func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
@@ -1460,6 +1461,12 @@ func _build_figures() -> void:
 	if f == null:
 		return
 	var chars: Dictionary = JSON.parse_string(f.get_as_text())
+	# the sprites baked at the land's scale at her distance (fig_ppm, 26.7 px per metre at 360 px high:
+	# tools/world3d/sync_sprites.sh 55 idle 26.66 vista), drawn texel for pixel; else the top-down view's
+	var sdir := "res://world3d/sprites"
+	if FileAccess.file_exists("res://world3d/sprites/vista/characters.json"):
+		sdir = "res://world3d/sprites/vista"
+		chars = JSON.parse_string(FileAccess.get_file_as_string(sdir + "/characters.json"))
 	for spec in [["tsuzumi", "load", Vector3(0, 0, 0)], ["saji", "main", Vector3(0.85, 0, -0.35)]]:
 		var m := _mat("vista_figure")
 		if spec[0] == "tsuzumi" and _build_fig3d():
@@ -1479,12 +1486,13 @@ func _build_figures() -> void:
 			var a: Dictionary = sh["anims"]["idle"]["back"]
 			var fw := int(c["frame"][0])
 			var fh := int(c["frame"][1])
-			m.set_shader_parameter("sheet", CharSprite3D.pixel_texture("res://world3d/sprites/%s.png" % sh["file"]))
+			m.set_shader_parameter("sheet", CharSprite3D.pixel_texture("%s/%s.png" % [sdir, sh["file"]]))
 			m.set_shader_parameter("frame_rect", Vector4(int(a["col"]) * fw, int(a["row"]) * fh, fw, fh))
 			m.set_shader_parameter("pivot_px", Vector2(c["pivot"][0], c["pivot"][1]))
-			# (her sprite sheets are 20 px per metre: さぢ at the land's scale is a third bigger)
-			m.set_shader_parameter("sheet_ppm", 20.0)
-			m.set_shader_parameter("px_scale", fig_ppm() / 20.0)
+			# (the sheet's own px per metre: the vista set's is the land's scale here, px_scale 1)
+			var sppm := float((c.get("camera", {}) as Dictionary).get("ppm", 20.0))
+			m.set_shader_parameter("sheet_ppm", sppm)
+			m.set_shader_parameter("px_scale", fig_ppm() / sppm)
 		var q := QuadMesh.new()
 		q.size = Vector2(1, 1)
 		var mi := MeshInstance3D.new()
@@ -1513,7 +1521,7 @@ var _fig_started := false
 
 
 func _build_fig3d() -> bool:
-	if not FileAccess.file_exists("res://characters/kasasagi/rig.json") or _vdebug.has("sprites"):
+	if sprites or not FileAccess.file_exists("res://characters/kasasagi/rig.json") or _vdebug.has("sprites"):
 		return false
 	fig_vp = SubViewport.new()
 	fig_vp.name = "VistaFigure"

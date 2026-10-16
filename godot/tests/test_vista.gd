@@ -64,7 +64,7 @@ func test_the_prologue_keeps_the_js_beats_order_and_timing() -> void:
 
 ## The art sample's entry (ShowcaseVista): the beats on the vista's own director, her sprite on the
 ## limb following the poses, and after the white of the far a hold on what the far has left (the
-## plain peeled to its final stages, G5R3-18), the sky shore over it, she standing.
+## land its own silver-white ghost, G5R3-22), the sky shore over it, she standing.
 func test_the_standalone_play_ends_held_on_the_far_plain() -> void:
 	var v := _vista()
 	var beats := []

@@ -38,6 +38,7 @@ var focus := Vector3.ZERO
 var her: W3Walker
 var saji: W3Walker                # (null with --nochar)
 var nochar := false               # --nochar: no characters drawn (GhostWalker below)
+var sprites := false              # --sprites (the showcase sets it, G5R3-24): her sprite, not her 3D model
 var her_shadow: MeshInstance3D
 var saji_shadow: MeshInstance3D
 var trail: Array[Vector3] = []
@@ -73,6 +74,7 @@ func _ready() -> void:
 		elif a.begins_with("--"):
 			args[a.substr(2)] = "1"
 	nochar = args.has("nochar") and not (str(args["nochar"]) in ["0", "false"])
+	sprites = args.has("sprites") and not (str(args["sprites"]) in ["0", "false"])
 	if args.has("seed"):
 		seed(int(args["seed"]))      # comparisons: the global random numbers (the model's idle, the motes) alike run to run
 	pv = PixelView3D.new()
@@ -152,6 +154,7 @@ func _ready() -> void:
 	vista = W3Vista.new()
 	vista.name = "Vista"
 	vista.nochar = nochar
+	vista.sprites = sprites
 	vista.props = placed_props
 	vista.lamp_src = lamps
 	add_child(vista)
@@ -732,6 +735,7 @@ func _spawn_characters() -> void:
 		return
 	her = W3Walker.new()
 	her.name = "Tsuzumi"
+	her.use_sprites = sprites
 	pv.world_root.add_child(her)
 	her.setup(terrain, "tsuzumi", "load", chars)
 	her.blockers = blockers
@@ -746,9 +750,10 @@ func _spawn_characters() -> void:
 	# their outlines when something covers them: her warm (the lamp of her hat), さぢ a pale sky blue
 	her.set_xray_colour(Color(1.0, 0.84, 0.52))
 	saji.set_xray_colour(Color(0.62, 0.86, 1.0))
-	# (the 3D model casts its own shadow: her contact shadow is only the darkening right under her feet)
-	her_shadow = _contact_shadow(Vector2(8.0, 3.0) if her.model else Vector2(9.0, 3.5))
-	saji_shadow = _contact_shadow(Vector2(7.0, 3.0))
+	# (the 3D model casts its own shadow: her contact shadow is only the darkening right under her feet;
+	# a sprite's ellipse was set on the 20 px/m sheets and grows with a finer one)
+	her_shadow = _contact_shadow(Vector2(8.0, 3.0) if her.model else Vector2(9.0, 3.5) * her.sheet_ppm() / 20.0)
+	saji_shadow = _contact_shadow(Vector2(7.0, 3.0) * saji.sheet_ppm() / 20.0)
 	# (comparison: the 3D model casts its own shadow; --nocontact hides the painted contact ellipse)
 	if args.has("nocontact"):
 		her_shadow.visible = false

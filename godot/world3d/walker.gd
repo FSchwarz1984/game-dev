@@ -33,6 +33,9 @@ var blockers: Array = []           # [Vector3 centre (y unused), radius]
 # beside the walker; the walker moves it (its position is her feet) and hands it her ground speed.
 const MODELS := {"tsuzumi": "kasasagi"}
 var model: Node3D
+## the sprite even where a 3D model exists (the sample's `sprites` option, or --sprites on the command
+## line; G5R3-24: this build shows the round-3 figure while her model is redone)
+var use_sprites := false
 
 
 func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> void:
@@ -46,15 +49,22 @@ func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> vo
 	var file: String = sheet["file"]
 	var mid: String = MODELS.get(id, "")
 	if mid != "" and ResourceLoader.exists(PixelView3D.CHAR3D) and FileAccess.file_exists("res://characters/%s/rig.json" % mid) \
-			and not OS.get_cmdline_user_args().has("--sprites"):
+			and not use_sprites and not OS.get_cmdline_user_args().has("--sprites"):
 		model = (load(PixelView3D.CHAR3D) as GDScript).new()
 		model.name = "Model_" + mid
 		get_parent().add_child(model)
 		model.call("setup", mid)
 		return
 	sprite.setup(CharSprite3D.pixel_texture("%s/%s.png" % [sprite_dir, file]),
-		CharSprite3D.pixel_texture("%s/%s_n.png" % [sprite_dir, file]), fsize, piv, float(chars.get("_sprite_pitch_deg", 39.33)))
+		CharSprite3D.pixel_texture("%s/%s_n.png" % [sprite_dir, file]), fsize, piv, float(chars.get("_sprite_pitch_deg", 39.33)),
+		sheet_ppm())
 	add_child(sprite)
+
+
+## The sheets' pixels per metre (characters.json camera.ppm: 20 for the 2D game's sets, 30 for the
+## 3D world's since G5R3-24, drawn texel for pixel).
+func sheet_ppm() -> float:
+	return float((meta.get("camera", {}) as Dictionary).get("ppm", 20.0))
 
 
 func place(p: Vector3) -> void:

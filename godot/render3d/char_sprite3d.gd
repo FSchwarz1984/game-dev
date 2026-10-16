@@ -42,9 +42,15 @@ static func pixel_texture(path: String) -> Texture2D:
 	return ImageTexture.create_from_image(t.get_image())
 
 
-func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i, sprite_pitch := 39.33) -> void:
+func setup(sheet: Texture2D, sheet_n: Texture2D, fsize: Vector2i, piv: Vector2i, sprite_pitch := 39.33,
+		sheet_ppm := 20.0) -> void:
 	frame_size = fsize
 	pivot = piv
+	# the shaders' pixel distances (her face's light floor round the head anchor, the x-ray's band over
+	# her feet) were set on 20 px/m sheets: a finer sheet (30 px/m, G5R3-24) has more pixels for them
+	var s := sheet_ppm / 20.0
+	mat.set_shader_parameter("sheet_scale", s)
+	xray_mat.set_shader_parameter("gap_below_px", 9.0 * s)
 	mat.set_shader_parameter("pivot_px", Vector2(piv))
 	mat.set_shader_parameter("sprite_pitch_deg", sprite_pitch)
 	mat.set_shader_parameter("sheet", sheet)

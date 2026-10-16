@@ -20,7 +20,7 @@ extends Control
 ##                     where she sat); shown_scale / shown_origin map them to the stage's logical px
 ## State (as the JS vista): tod 17.5..21, pan 0..1 (crane out of the crown), rise 0..1 (the lights
 ## leave), sky 0..1 (the deck parts, the sky shore shows), wave -1 | 0..1 (the far), tower 1 | 0;
-## settled 1: the far has been and gone, the plain left as a print with its blocks peeled (G5R3-18).
+## settled 1: the far has been and gone, the land left its own silver-white ghost (G5R3-22).
 ## The clock: by default the vista advances itself every frame (_process); a host that drives the
 ## director's clock (skip, pause) sets autoplay = false and calls advance(dt) with the same dt.
 
@@ -371,9 +371,9 @@ func play_prologue(d: Director, between: Callable = Callable()) -> void:
 ## The prologue's beats on their own, without the story or a host's director (the art sample's
 ## entry, ShowcaseVista): its own director on the vista's clock, her sprite on the limb following
 ## state.pose. When the far has washed the frame white the white holds a second, then thins to what
-## the far has left (G5R3-18): the plain as a print with its colour blocks peeled, its lines just
-## showing on the night's paper, no lamps, the sky shore over it, she standing on the limb looking at
-## it; the vista stays there, still alive. Returns then (beat "hold"); call it again to play it from
+## the far has left (G5R3-22): the land its own silver-white ghost, the more the nearer the town, the
+## air over it shimmering, silver motes rising from it, no lamps, the sky shore over it, she standing
+## on the limb looking at it; the vista stays there, still alive. Returns then (beat "hold"); call it again to play it from
 ## the start. Needs autoplay (the vista advancing itself).
 func play_standalone() -> void:
 	if _own_director == null:
