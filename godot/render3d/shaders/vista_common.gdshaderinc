@@ -239,8 +239,10 @@ float v_light_ref() {
 //   (the user, G5R3-26: the silver-white was too bright at night; the silver-grey of the prologue
 //   "在夜間的表現還是不錯的"); it takes the land by k, as the prologue's night does;
 // - by day two parts: the colour drawn out toward the cool silver at the land's own lightness, by
-//   k^ghost_day_drain (rising early at low k, so that the day's edge, where a change can be seen,
-//   lies where the night's does); and the lift toward the silver-white (ld -> 0.34 + 0.6 ld^0.8, the
+//   k^0.6 (rising early at low k, so that the day's edge, where a change can be seen, lies where the
+//   night's does: measured, dE > 5 between the 遠化 on and off, the three hours' areas overlap by an
+//   IoU of 0.89-0.96; capped at 0.65 the plain kept more colour but the day's edge fell short by 20
+//   px toward the lookout); and the lift toward the silver-white (ld -> 0.34 + 0.6 ld^0.8, the
 //   cool silver (0.88, 0.93, 1.05), a tenth of its own colour, keeping the hour's light) by
 //   k^ghost_day_gamma, steep, so that the town is whitest and the heart reads (the plain before
 //   the town is bright by day already: lifted by k it was one pale wash). The lift decides where it
@@ -248,7 +250,7 @@ float v_light_ref() {
 // - at dusk and dawn the one turns into the other with the night (w3_night).
 const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
 uniform float ghost_day_gamma = 4.0;
-uniform float ghost_day_drain = 0.6;
+uniform float ghost_day_drain = 0.6;       // the drawing out: k^ghost_day_drain
 vec3 v_ghost(vec3 col, float k) {
 	if (k <= 0.0) return col;
 	float lref = max(v_light_ref(), 1e-4);
