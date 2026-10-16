@@ -54,6 +54,9 @@ locale/line_breaking_strictness=3
 [rendering]
 
 renderer/rendering_method="forward_plus"
+; the delivery (feature "showcase"): no silent fall back to the Compatibility renderer, whose
+; picture is not this art (no volumetric fog, no GI, other shaders); better the engine's own message
+rendering_device/fallback_to_opengl3.showcase=false
 textures/canvas_textures/default_texture_filter=0
 textures/vram_compression/import_etc2_astc=true
 environment/defaults/default_clear_color=Color(0.039, 0.035, 0.05, 1)
