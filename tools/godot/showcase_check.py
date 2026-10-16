@@ -14,6 +14,8 @@
 # smoke (Windows export under wine): menu, home area, a walk, back to the menu, quit.
 # long  (Linux export): walking metres and the lookout's far view with long holds (software
 #       rendering makes game time run ten or more times slower than the clock; see plan_long).
+# lookout (with --game-args "--mode=lookout --log_pos=1"): real keys walk her onto the lookout,
+#       steered by the position the game prints; the far view must come on, turn and go off.
 # Writes DIR/NN_name.png (X screen), DIR/log.txt (engine output), DIR/steps.txt; exit code 1 when
 # the engine died, printed a script error, or a step that must change the screen did not.
 import argparse
@@ -56,6 +58,8 @@ class Check:
         if self.a.binary.endswith(".exe"):
             cmd = [WINE, self.a.binary]
             env.update(WINE_ENV)
+        if self.a.game_args:
+            cmd += ["--"] + self.a.game_args.split()
         self.log = open(os.path.join(self.out, "log.txt"), "w")
         self.t0 = time.time()
         self.game = subprocess.Popen(cmd, env=env, stdout=self.log, stderr=subprocess.STDOUT,
@@ -216,6 +220,62 @@ class Check:
         if self.alive():
             self.failed.append("退出 did not quit")
 
+    LOOKOUT = (-23.6, 42.4)      # terrain.json markers.lookout (x, z); the far view starts within 1.9 m
+
+    def her_pos(self):
+        """her position from the game's own --log_pos lines (observation only; the keys stay real)"""
+        self.log.flush()
+        pos = None
+        for ln in open(os.path.join(self.out, "log.txt"), encoding="utf-8", errors="replace"):
+            if ln.startswith("POS "):
+                try:
+                    inner = ln.split("her=(", 1)[1].split(")", 1)[0]
+                    x, z = (float(v) for v in inner.split(","))
+                    pos = (x, z)
+                except (IndexError, ValueError):
+                    pass
+        return pos
+
+    def log_has(self, text):
+        return text in open(os.path.join(self.out, "log.txt"), encoding="utf-8", errors="replace").read()
+
+    def plan_lookout(self):
+        """run with --game-args "--mode=lookout --log_pos=1": walk her onto the lookout marker with
+        real keys, steering by the position the game prints, stand still, wait for the far view"""
+        self.wait_loaded("lookout", timeout=300)
+        self.focus()
+        for step in range(30):
+            p = self.her_pos()
+            if p is None:
+                time.sleep(3)
+                continue
+            dx, dz = self.LOOKOUT[0] - p[0], self.LOOKOUT[1] - p[1]
+            self.note("her at (%.2f, %.2f), %.2f m from the lookout" % (p[0], p[1], (dx * dx + dz * dz) ** 0.5))
+            if (dx * dx + dz * dz) ** 0.5 < 1.0:
+                break
+            k = ("s" if dz > 0 else "w") if abs(dz) >= abs(dx) else ("d" if dx > 0 else "a")
+            self.hold(k, 3.0)
+            time.sleep(2.0)
+        self.shot("lookout_standing")
+        t = time.time()
+        while time.time() - t < 150 and not self.log_has("VISTA on"):
+            time.sleep(3)
+        self.note("far view: %s" % ("on" if self.log_has("VISTA on") else "never came"))
+        if not self.log_has("VISTA on"):
+            self.failed.append("the far view did not come on")
+        time.sleep(20)
+        self.shot("lookout_far_view", must_change=True)
+        self.hold("d", 15.0)
+        time.sleep(5)
+        self.shot("lookout_turned_right", must_change=True)
+        self.hold("w", 6.0)
+        t = time.time()
+        while time.time() - t < 90 and not self.log_has("VISTA off"):
+            time.sleep(3)
+        self.note("back to the top-down view: %s" % self.log_has("VISTA off"))
+        time.sleep(20)
+        self.shot("lookout_back", must_change=True)
+
     def plan_full(self):
         self.wait_loaded("menu", timeout=240)
         self.focus()
@@ -336,7 +396,8 @@ def main():
     p.add_argument("--binary", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--display", default=":94")
-    p.add_argument("--plan", default="full", choices=["full", "smoke", "long"])
+    p.add_argument("--plan", default="full", choices=["full", "smoke", "long", "lookout"])
+    p.add_argument("--game-args", default="", help="extra game arguments after --, e.g. \"--mode=lookout --log_pos=1\"")
     a = p.parse_args()
     c = Check(a)
     c.start()
