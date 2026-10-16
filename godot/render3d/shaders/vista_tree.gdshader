@@ -194,7 +194,5 @@ void fragment() {
 	float sun_k = k > 1.0 ? 1.0 : (k > 0.8 ? 0.5 : 0.1);
 	col += alb * k * w3_lit_tint * w3_sun / W3_PI * sun_k * clamp(sd.y * 2.0 + 0.4, 0.0, 1.0);
 	ALBEDO = vec3(0.0);
-	// (in the 遠化: the crowns from the green block, red leaves, trunks and the wheel from the earths)
-	int plate = (part == 0 && kind != 4 && kind != 5 && kind != 6 && kind < 8) ? V_GREEN : V_EARTH;
-	EMISSION = v_print(v_air(col, v_wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, vec3(0.0, 1.0, 0.0), v_wp, eye, FRAGCOORD.xy);
+	EMISSION = v_air(col, v_wp, eye, FRAGCOORD.xy);
 }

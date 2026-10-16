@@ -1,13 +1,13 @@
-// Outlines, the 遠化's edge and the ground's painted marks for the view from the lookout (W3Vista): a
+// Outlines, the 遠化 and the ground's painted marks for the view from the lookout (W3Vista): a
 // full-screen quad drawn first in the transparent pass.
 // Outlines: where a neighbouring pixel lies clearly farther (relative to the distance, so far ridges
 // get their line as well as near rocks), this pixel is on the near edge of something: it takes a
 // darker, cooler shade of the darker side. One native pixel wide, never black. Light things (the
-// clouds' billows) get a light line; in the 遠化 every edge is the key block's ink line (the 褪版,
-// vista_common), at every distance, and the lines there are whole (the lead's rules, 2026-10-16):
-// nearer than 9 km a big step's line is two pixels, and any bit of line, the outlines' or the ground's
-// own (fields, lanes, banks, villages: vista_ground), with fewer than five line pixels within four
-// pixels of it is dropped: no field of broken one- and two-pixel dashes.
+// clouds' billows) get a light line.
+// The 遠化 round the town (vista_common v_ghost, G5R3-22): the air over it trembles a little, the
+// picture there moving up or down by a whole pixel in slow bands that drift upward (heat over a road,
+// stronger toward the town; never a per-pixel jitter), then its colour is turned: its lightness kept
+// and lifted, the colour drawn out to a cool silver.
 // Marks: the same hand-drawn glyphs as the top-down ground (tufts, flowers, pebbles, gravel, rock
 // chips, moss, litter; pixelart.py) stand on the land, texel for pixel. Their anchors are fixed to the
 // lattice of view directions in cells of 8 pixels (vista_common: the projection moves the picture by
@@ -23,7 +23,6 @@ render_mode unshaded, depth_draw_never, depth_test_disabled, cull_disabled, skip
 uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 uniform float strength = 0.75;
-uniform float band_edge = 0.0;          // the 遠化's bright edge (round 3: 1; round 5: 0, the lead's choice)
 uniform vec3 eye = vec3(0.0);
 uniform sampler2D glyphs : filter_nearest;  // 16 x 16 glyphs of 8 x 8 (R tone + 4, G accent + 1, A)
 uniform sampler2D tufts : filter_nearest;   // 4 x 4 tufts of 16 x 16
@@ -45,11 +44,6 @@ uniform vec2 g_bank = vec2(88.0, 8.0);
 uniform bool marks = true;
 
 const float CELL = 8.0;                     // anchor cell, in pixels of the lattice of directions
-// the 遠化's key block (the numbers the prologue's 2D view keeps too: coord/to_vista2d)
-const float KEY_TH = 0.025;         // a depth step over 0.35 m + this share of the distance draws a line
-const float KEY_THICK_D = 9000.0;   // nearer than this, a step over 12 % of the distance draws two pixels
-const int KEY_R = 4;                // the line filter's reach, pixels
-const int KEY_MIN = 5;              // line pixels a pixel of line needs within the reach (itself included)
 
 void vertex() {
 	POSITION = vec4(VERTEX.xy, 1.0, 1.0);
@@ -84,51 +78,31 @@ int material_at(vec2 xz, vec2 c) {
 	return best;
 }
 
-// the 遠化's key block: whether the pixel at uv is on the near side of a step in the depth
-bool key_edge(vec2 uv, vec2 px, mat4 ip) {
-	float c = view_depth(uv, ip);
-	if (c >= 20000.0) return false;
-	float far_n = max(max(view_depth(uv - vec2(px.x, 0.0), ip), view_depth(uv + vec2(px.x, 0.0), ip)),
-			max(view_depth(uv - vec2(0.0, px.y), ip), view_depth(uv + vec2(0.0, px.y), ip)));
-	return far_n - c > 0.35 + c * KEY_TH;
-}
-// the second pixel of a thick line: the next pixel toward the step lies on the same surface, and the
-// step beyond it is big (near the front only)
-bool key_thick(vec2 uv, vec2 px, mat4 ip, float c) {
-	if (c >= KEY_THICK_D) return false;
-	for (int k = 0; k < 4; k++) {
-		vec2 o = k == 0 ? vec2(px.x, 0.0) : (k == 1 ? vec2(-px.x, 0.0) : (k == 2 ? vec2(0.0, px.y) : vec2(0.0, -px.y)));
-		float n1 = view_depth(uv + o, ip);
-		float n2 = view_depth(uv + 2.0 * o, ip);
-		if (abs(n1 - c) < 0.35 + c * KEY_TH && n2 - n1 > n1 * 0.12) return true;
-	}
-	return false;
-}
-// a line the land drew in ink (vista_ground: fields, lanes, banks, villages; vista_house: roofs); the
-// small marks (v_ink_mark, a hair lighter) are not lines
-bool is_ink(vec3 col, vec3 ink) {
-	return all(lessThan(abs(col - ink), ink * 0.012 + vec3(2e-5)));
-}
-// line pixels within the filter's reach
-int key_count(vec2 uv, vec2 px, mat4 ip, vec3 ink) {
-	int n = 0;
-	for (int j = -KEY_R; j <= KEY_R; j++) {
-		for (int i = -KEY_R; i <= KEY_R; i++) {
-			vec2 q = uv + vec2(float(i), float(j)) * px;
-			if (is_ink(texture(screen_tex, q).rgb, ink) || key_edge(q, px, ip)) n++;
-		}
-	}
-	return n;
-}
-
 vec3 accent(int i) {
 	return w3_srgb_to_linear(texelFetch(palette, ivec2(i % 8, 11 + i / 8), 0).rgb);
 }
 
 void fragment() {
 	vec2 px = 1.0 / VIEWPORT_SIZE;
-	vec2 uv = SCREEN_UV;
 	mat4 ip = INV_PROJECTION_MATRIX;
+	// ---- the 遠化's trembling air: over its land the picture is taken from a whole pixel above or
+	// below, in slow bands (about 70 pixels across, 30 high) that drift upward; only within the
+	// 遠化's own land (the near hills never slide into it), more of it toward the town
+	vec2 uv = SCREEN_UV;
+	float c0 = view_depth(uv, ip);
+	if (c0 < 20000.0) {
+		float gk0 = v_ghost_k(world_at(uv, ip, VIEWPORT_SIZE).xz);
+		if (gk0 > 0.05) {
+			vec2 p = floor(uv * VIEWPORT_SIZE);
+			float t = cloud_time;
+			float n = sin(p.x / 11.0 + t * 0.7 + sin(p.y / 5.0 - t * 0.9) * 1.6) * 0.6 + sin(p.x / 29.0 - p.y / 13.0 + t * 0.45) * 0.4;
+			float dy = floor(n * 1.15 * pow(gk0, 1.5) + 0.5);
+			if (dy != 0.0) {
+				vec2 o = uv + vec2(0.0, dy * px.y);
+				if (view_depth(o, ip) < 20000.0 && v_ghost_k(world_at(o, ip, VIEWPORT_SIZE).xz) > 0.05) uv = o;
+			}
+		}
+	}
 	float c = view_depth(uv, ip);
 	float l = view_depth(uv - vec2(px.x, 0.0), ip);
 	float r = view_depth(uv + vec2(px.x, 0.0), ip);
@@ -143,59 +117,18 @@ void fragment() {
 	// the sky is very far: an edge against it counts
 	float jump = bd - c;
 	vec3 wp = c < 20000.0 ? world_at(uv, ip, VIEWPORT_SIZE) : eye;
-	// (in the 遠化 the key block's lines must not be eaten: a nearer ridge before a farther one gets
-	// its line at well under half the depth step the rest of the view needs, so a range shows its
-	// ridges and folds inside the skyline, not the skyline alone)
-	bool enka = c < 20000.0 && v_past(wp, eye, FRAGCOORD.xy);
-	float th = 0.35 + c * (enka ? KEY_TH : 0.06);
-	if (enka) {
-		// in the 遠化 (past its gradations) every edge is the key block's line in ink, at every
-		// distance: ridges, the far mountains against the sky, trees, houses (the 褪版: what is left
-		// of a print when its colour blocks are gone; vista_common); whole lines only
-		vec3 ink = v_ink();
-		bool line = jump > th || key_thick(uv, px, ip, c);
-		bool printed = is_ink(col, ink);
-		if (line || printed) {
-			if (key_count(uv, px, ip, ink) >= KEY_MIN) {
-				col = ink;
-			} else if (printed) {
-				// a broken bit of the land's own line: the paper or block beside it
-				vec3 keep = v_paper_white();
-				for (int k = 3; k >= 0; k--) {
-					vec2 o = k == 0 ? vec2(px.x, 0.0) : (k == 1 ? vec2(-px.x, 0.0) : (k == 2 ? vec2(0.0, px.y) : vec2(0.0, -px.y)));
-					vec3 q = texture(screen_tex, uv + o).rgb;
-					if (!is_ink(q, ink)) keep = q;
-				}
-				col = keep;
-			}
-		}
-	} else if (c < 20000.0 && jump > th) {
-		float keep = 1.0;
+	float gk = c < 20000.0 ? v_ghost_k(wp.xz) : 0.0;
+	float th = 0.35 + c * 0.06;
+	if (c < 20000.0 && jump > th) {
+		float keep = 1.0 - 0.5 * gk;          // (the 遠化 has no lines: its shapes read by their lightness)
 		vec3 bcol = texture(screen_tex, uv + behind).rgb;
 		vec3 base = dot(bcol, vec3(0.3, 0.59, 0.11)) < dot(col, vec3(0.3, 0.59, 0.11)) ? mix(col, bcol, 0.6) : col;
 		float lb = dot(base, vec3(0.3, 0.59, 0.11));
 		vec3 tint = mix(vec3(0.55, 0.58, 0.68), vec3(0.86, 0.88, 0.94), smoothstep(0.5, 0.75, lb));
 		col = mix(col, base * tint, strength * keep * (1.0 - smoothstep(1500.0, 6000.0, c)) * mix(1.0, 0.7, smoothstep(0.5, 0.75, lb)));
 	}
-
-	// ---- the 遠化's edge (round 3's; back in round 5): where the white meets land that keeps its
-	// colour on the same ground (not where something nearer stands in front of it), a line of light
-	// one pixel wide on the white's side, wherever it runs: across the plain, up and over the hills
-	// (it glows a little). band_edge: 1 as round 3 drew it, 0 none (round 5: none, lead 2026-10-16)
-	if (c < 20000.0 && band_edge > 0.0) {
-		vec3 wc = world_at(uv, ip, VIEWPORT_SIZE);
-		if (v_drain(wc.xz, wc.y) > 0.99) {
-			bool edge = false;
-			for (int k = 0; k < 4; k++) {
-				vec2 o = k == 0 ? vec2(px.x, 0.0) : (k == 1 ? vec2(-px.x, 0.0) : (k == 2 ? vec2(0.0, px.y) : vec2(0.0, -px.y)));
-				float dn = view_depth(uv + o, ip);
-				if (abs(dn - c) > c * 0.12 + 2.0) continue;
-				vec3 wn = world_at(uv + o, ip, VIEWPORT_SIZE);
-				if (v_drain(wn.xz, wn.y) < 0.99) edge = true;
-			}
-			if (edge) col = mix(col, far_white * 1.3, band_edge);
-		}
-	}
+	// ---- the 遠化's colour (vista_common v_ghost)
+	col = v_ghost(col, gk);
 
 	// ---- the marks
 	if (marks) {

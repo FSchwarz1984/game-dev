@@ -170,11 +170,8 @@ void fragment() {
 			}
 		}
 		vec3 cc = v_air(col, v_wp, eye, FRAGCOORD.xy);
-		if (v_past(v_wp, eye, FRAGCOORD.xy)) cc = row < v_roof ? v_ink() : v_emboss(vec3(0.0, 1.0, 0.0), v_wp, eye);
 		ALBEDO = lamp ? mix(cc, lamp_c * 3.0, 0.85) : cc;
 	} else {
-	vec3 h_alb = w3_srgb_to_linear(v_col.rgb);   // the block's colour in the 遠化
-	int h_plate = V_EARTH;
 	if (row < v_roof) {
 		vec3 roof = w3_srgb_to_linear(v_col.rgb);
 		// the ridge row catches the light when the roof has room for it
@@ -189,20 +186,14 @@ void fragment() {
 		bool plaster = fract(v_cus.w * 3.73) < 0.55;
 		vec3 wall = plaster ? w3_srgb_to_linear(vec3(0.88, 0.86, 0.80)) : w3_srgb_to_linear(vec3(0.52, 0.42, 0.31));
 		col = wall * (ambient_col + light_col * 0.45 * day);
-		h_alb = wall;
-		h_plate = plaster ? V_PAPER : V_EARTH;
 	}
 	// windows at night: a scattering of houses lit (round 5, the lead: "夜里村子只有零星的暖灯"; a
 	// pane or two; a far house that is a single pixel shows only its light)
-	// (past the 遠化 front a house has lost its light with everything else)
+	// (in the 遠化 a house has lost its light with everything else: v_drain)
 	bool lit_house = fract(v_cus.w * 7.31) > 1.0 - 0.45 * city_lights && v_drain(v_wp.xz, v_wp.y) < 0.9;
 	float h = w3_hash(vec2(v_cus.w * 913.0, q.x));
 	bool win = lit_house && ((row >= v_roof && (h > 0.45 || v_size.x < 2.5)) || (v_size.y < 1.5 && h > 0.3));
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);
-	// (in the 遠化 a house prints flat: its roof and a wooden wall from the earths, a plaster wall is
-	// the paper; when the earths are gone its roof is the key block's line)
-	c = v_print(c, v_flat(h_plate, h_alb), h_plate, vec3(0.0, 1.0, 0.0), v_wp, eye, FRAGCOORD.xy);
-	if (row < v_roof && v_past(v_wp, eye, FRAGCOORD.xy) && v_plate_on(V_EARTH, v_wp.xz, length(v_wp - eye), FRAGCOORD.xy) < 0.5) c = v_ink();
 	// (a lit window shines through the air)
 	ALBEDO = win ? mix(c, w3_srgb_to_linear(window_col) * 3.2, 0.88) : c;
 	}

@@ -76,9 +76,9 @@ void fragment() {
 	if (cover <= 0.02) discard;
 	col *= light_k;
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);
-	// (in the 遠化 smoke and steam are the paper, still; no glow)
-	c = v_print(c, col, V_PAPER, vec3(0.0, 1.0, 0.0), v_wp, eye, FRAGCOORD.xy);
-	c += col * v_cus.w * v_print_sun(v_wp, eye, FRAGCOORD.xy);
+	// (in the 遠化 smoke and steam stand still and have no glow; vista_post does not turn them, they
+	// are drawn after it: as they stand they read as what they were)
+	c += col * v_cus.w * (1.0 - v_drain(v_wp.xz, v_wp.y));
 	ALBEDO = c;
 	ALPHA = kind == 3 ? 1.0 : clamp(cover * 1.4, 0.0, 1.0);
 }

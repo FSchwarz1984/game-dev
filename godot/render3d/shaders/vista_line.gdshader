@@ -55,10 +55,5 @@ void fragment() {
 	} else {
 		vec3 c = alb * (ambient_col + light_col * (0.35 + 0.65 * lit) * clamp(sd.y * 3.0, 0.0, 1.0));
 		ALBEDO = v_air(c, v_wp, eye, FRAGCOORD.xy) + alb * v_par.w;
-		// (in the 遠化 a viaduct, a bridge, a rail is a line: printed flat from the earths, then the
-		// key block's ink alone)
-		if (v_past(v_wp, eye, FRAGCOORD.xy)) {
-			ALBEDO = v_plate_on(V_EARTH, v_wp.xz, length(v_wp - eye), FRAGCOORD.xy) > 0.5 ? v_flat(V_EARTH, alb) * v_print_light() : v_ink();
-		}
 	}
 }

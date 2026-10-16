@@ -18,8 +18,6 @@ uniform vec2 splat_size = vec2(641.0, 833.0);
 uniform vec4 local_bounds = vec4(-80.0, -96.0, 80.0, 112.0);
 uniform vec3 eye = vec3(0.0);
 uniform int dbg_mode = 0;
-// the region's grass as the top-down world colours it (one soft colour field: round 5)
-#include "res://render3d/shaders/sward.gdshaderinc"
 
 varying vec3 v_wp;
 varying vec3 v_n;
@@ -68,7 +66,6 @@ void fragment() {
 	v_river = 0.0;
 	v_town = 0.0;
 	vec3 n = normalize(v_n);
-	vec3 rn = n;                // the land's big relief (the 遠化's blind embossing: tens of metres, never broken up)
 	// (round 4: away from the eye the mesh's rings lie tens of metres apart and its radial strips
 	// run straight up the screen; a normal interpolated across them shaded every strip of a hill's
 	// face its own way, a curtain of vertical streaks. Out there the normal comes from the height
@@ -83,9 +80,6 @@ void fragment() {
 		float hz = v_height(xz + vec2(0.0, e)) - v_height(xz - vec2(0.0, e));
 		n = normalize(vec3(-hx, 2.0 * e, -hz));
 		NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
-		float er = max(12.0, dist * 0.02);
-		rn = normalize(vec3(v_height(xz - vec2(er, 0.0)) - v_height(xz + vec2(er, 0.0)), 2.0 * er,
-				v_height(xz - vec2(0.0, er)) - v_height(xz + vec2(0.0, er))));
 	}
 	// texture cell: about a pixel and a half wide at this distance (fine grain near, never blocks).
 	// On steep faces the cells lie in the face (along it and down its fall line), not in the map:
@@ -109,9 +103,6 @@ void fragment() {
 	float slope = degrees(acos(clamp(n.y, 0.0, 1.0)));
 	vec3 alb;
 	bool water = false;
-	int plate = V_GREEN;        // the block that prints this ground in the 遠化 (vista_common v_print)
-	float ink = 0.0;            // 1 on a line of the key block (the borders of fields, woods, water, roads, villages)
-	float wood = 0.0;           // 1 in a wood (the key block draws its crowns once the green is gone)
 	bool local = xz.x > local_bounds.x && xz.x < local_bounds.z && xz.y > local_bounds.y && xz.y < local_bounds.w;
 	if (local) {
 		// the walkable region, as the top-down ground paints it (toon_terrain): its dominant ground
@@ -141,13 +132,11 @@ void fragment() {
 		float mstep = floor(macro + 0.5 + (stip - 0.5) * 0.3);
 		float row;
 		float tone;
-		float sw_dry = -1.0;
 		if (best == 0) {
-			// (round 5: the sward's colour field, as toon_terrain: dryness and tone soft over metres)
-			sw_dry = w3_sward_dry(xz, e3.g, 0.0);
-			row = 0.0;
+			float dry = e3.g + (w3_fbm(xz / 3.0 + 7.0) - 0.5) * 0.25;
+			row = dry > 0.5 + (stip - 0.5) * 0.2 ? 1.0 : 0.0;
 			float gr = w3_hash(pc * 0.73 + 17.0);
-			tone = w3_sward_tone(xz) + (gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0));
+			tone = 3.6 + mstep + (gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0));
 		} else if (best == 1) {
 			row = 2.0;
 			tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + 0.3 + (stip - 0.5) * 0.25);
@@ -182,7 +171,7 @@ void fragment() {
 			row = 10.0;
 			tone = 3.0 + mstep * 0.5;
 		}
-		alb = sw_dry >= 0.0 ? w3_sward_col(sw_dry, tone) : pal(row, tone);
+		alb = pal(row, tone);
 		// the terraces' paddies: water holding the sky, young rice in sparse rows across it
 		if (best == 7) {
 			water = true;
@@ -201,25 +190,19 @@ void fragment() {
 		// grass and scrub as the base
 		float tone = 3.4 + floor((clump - 0.5) * 2.6 + 0.5) + (n1 < 0.14 ? -1.0 : (n1 > 0.9 ? 1.0 : 0.0));
 		alb = pal(n1 > 0.55 && clump > 0.6 ? 1.0 : 0.0, tone);
-		// the plain's maps and the paddies' grid (which follows an old grid that turns slowly across the
-		// plain), and how fast they change across a pixel: taken before the branch, where every pixel
-		// of a quad runs it, so the derivatives hold on any GPU
-		vec4 pm = v_plain_data(xz);
-		float ang = (w3_vnoise(xz / 2600.0 + 3.0) - 0.5) * 0.9;
-		vec2 ax = vec2(cos(ang), sin(ang));
-		vec2 uv = vec2(dot(xz, ax), dot(xz, vec2(-ax.y, ax.x)));
-		vec2 fw_uv = fwidth(uv);
-		float fw_dens = fwidth(pm.b);
-		float fw_road = fwidth(pm.g * 127.5);
-		float fw_river = fwidth(pm.r * 255.0);
 		if (plain) {
 			// the plain in early summer: blocks of paddies in strips (young rice, a few still flooded
 			// and holding the sky), dry fields and fallow, groves round the villages, lanes, the river
+			vec4 pm = v_plain_data(xz);
 			float d_river = pm.r * 255.0;
 			float d_road = pm.g * 127.5;
 			float dens = pm.b;
 			v_town = dens;
-			float pxm = dist / v_ppr;                      // metres per pixel here
+			float pxm = dist * 0.0027;                     // metres per pixel here
+			// (the paddies follow an old grid that turns slowly across the plain)
+			float ang = (w3_vnoise(xz / 2600.0 + 3.0) - 0.5) * 0.9;
+			vec2 ax = vec2(cos(ang), sin(ang));
+			vec2 uv = vec2(dot(xz, ax), dot(xz, vec2(-ax.y, ax.x)));
 			vec2 bc = floor(uv / vec2(240.0, 180.0));
 			float bh = w3_hash(bc + 3.3);
 			float sw = mix(16.0, 28.0, w3_hash(bc + 9.1));
@@ -230,18 +213,8 @@ void fragment() {
 			if (kind < 0.5) alb = pal(0.0, 4.6 + floor(sh * 4.0) * 0.5);           // young rice
 			else if (kind < 0.66) alb = pal(5.0, 5.2);                           // rice further on
 			else if (kind < 0.74) { water = true; }                              // still flooded
-			else if (kind < 0.87) { alb = pal(6.0, 4.4 + floor(sh * 9.0) * 0.3); plate = V_EARTH; }   // dry fields
-			else { alb = pal(8.0, 4.0); plate = V_EARTH; }                       // fallow
-			// (the key block's lines, the lead's rules 2026-10-16: whole and deliberate, as a print's
-			// key block draws the big things: the paddies' blocks, lanes, banks, villages, ridges. Each
-			// line is a pixel wide across whatever the angle (its half width at least 0.6 of the
-			// pixel's footprint across it, so it never breaks into dashes), and a family of lines is
-			// drawn only where they stay a few pixels apart: seen edge on, the paddies' rows would crowd
-			// into one dark band. vista_post then drops what is left shorter than about five pixels.)
-			// the paddies' blocks, where a block is four pixels or more across that way
-			vec2 bl = abs(fract(uv / vec2(240.0, 180.0)) - 0.5) * vec2(240.0, 180.0);
-			vec2 hw = max(vec2(pxm * 0.55), fw_uv * 0.6);
-			if ((fw_uv.x < 60.0 && bl.x > 120.0 - hw.x) || (fw_uv.y < 45.0 && bl.y > 90.0 - hw.y)) ink = 1.0;
+			else if (kind < 0.87) alb = pal(6.0, 4.4 + floor(sh * 9.0) * 0.3);     // dry fields
+			else alb = pal(8.0, 4.0);                                            // fallow
 			// the levees between the strips, where the pixel can hold them
 			if (pxm < sw * 0.4 && fract(along / sw) < max(0.06, pxm * 0.5 / sw)) alb = pal(0.0, 3.0);
 			// groves and gardens round the villages, a tree line along the lanes
@@ -249,21 +222,11 @@ void fragment() {
 				float g = w3_vnoise(xz / max(6.0, pxm * 2.0));
 				alb = g > 0.5 ? srgb(vec3(0.21, 0.29, 0.16)) : srgb(vec3(0.16, 0.23, 0.13));
 				water = false;
-				plate = V_GREEN;
 			}
-			// (the key block: a village's grove drawn round, nearer than 9 km: farther, only the big
-			// things keep a line)
-			if (dist < 9000.0 && fw_dens < 0.15 && abs(dens - 0.33) < max(fw_dens * 0.6, 1e-4)) ink = 1.0;
-			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; plate = V_EARTH; }
-			else if (d_road < max(5.0, pxm * 1.1) && w3_hash(floor(xz / 9.0)) > 0.55) { alb = srgb(vec3(0.19, 0.27, 0.15)); water = false; plate = V_GREEN; }
-			// (the key block: the lanes, nearer than 9 km, where the pixel's footprint across a lane is
-			// under 40 m)
-			if (dist < 9000.0 && fw_road < 40.0 && d_road < max(2.6, fw_road * 0.6)) { water = false; plate = V_EARTH; ink = 1.0; }
-			float r_edge = 34.0 + w3_vnoise(xz / 90.0) * 10.0;
-			if (d_river < r_edge) { water = true; v_river = 1.0; }
-			else if (d_river < 44.0) { alb = pal(9.0, 3.0); water = false; plate = V_EARTH; }        // its banks
-			// (the key block: the river's banks)
-			if (fw_river < 30.0 && abs(d_river - r_edge) < max(pxm * 0.55, fw_river * 0.6)) ink = 1.0;
+			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; }
+			else if (d_road < max(5.0, pxm * 1.1) && w3_hash(floor(xz / 9.0)) > 0.55) { alb = srgb(vec3(0.19, 0.27, 0.15)); water = false; }
+			if (d_river < 34.0 + w3_vnoise(xz / 90.0) * 10.0) { water = true; v_river = 1.0; }
+			else if (d_river < 44.0) { alb = pal(9.0, 3.0); water = false; }        // its banks
 		}
 		if (cult > 0.5) {
 			// the lower layer's terraces: young rice in muted greens, a few strips still flooded
@@ -274,16 +237,7 @@ void fragment() {
 			// the risers: grass banks, darker
 			if (fract(rowf) < 0.18) { alb = pal(0.0, 2.5); water = false; }
 		}
-		// (the key block: the edges of the terraces, the woods, the water)
-		// (where a field changes by more than 0.15 across a pixel its edges would crowd: none)
-		float fc = fwidth(cult);
-		float ff = fwidth(forest);
-		float fwt = fwidth(wat);
-		if (fc < 0.15 && abs(cult - 0.5) < max(fc * 0.6, 1e-4)) ink = 1.0;
-		if (!plain && ff < 0.15 && abs(forest - 0.4) < max(ff * 0.6, 1e-4)) ink = 1.0;
-		if (!plain && fwt < 0.15 && abs(wat - 0.5) < max(fwt * 0.6, 1e-4)) ink = 1.0;
 		bool far_hill = !plain && dist > 2600.0;
-		wood = (forest > 0.4 && !plain) ? 1.0 : 0.0;
 		if (forest > 0.4 && !plain) {
 			// canopy seen from above: dark clumps, lit crowns
 			float k = dist > 160.0 ? vnoise3(wq / max(4.0, dist * 0.012) + 3.0) : w3_vnoise(pl / max(4.0, dist * 0.012) + 3.0);
@@ -293,7 +247,6 @@ void fragment() {
 			// rock faces: bands along the height (strata), in clusters, not salt and pepper
 			float k = w3_vnoise(vec2((xz.x + xz.y) / max(6.0, dist * 0.03), wp.y / max(1.2, dist * 0.006)));
 			alb = pal(4.0, 2.6 + floor((k - 0.5) * 2.2 + 0.5));
-			plate = V_EARTH;
 		}
 		if (far_hill) {
 			// far mountains: masses, not texture: woods dark, open slopes and crags lighter, in a few
@@ -301,11 +254,9 @@ void fragment() {
 			float k = w3_vnoise(xz / 520.0 + 7.0);
 			alb = forest > 0.4 ? (k > 0.5 ? srgb(vec3(0.22, 0.3, 0.18)) : srgb(vec3(0.18, 0.25, 0.16)))
 				: (slope > 38.0 ? pal(4.0, 4.0) : pal(0.0, k > 0.55 ? 5.0 : 4.0));
-			plate = (forest <= 0.4 && slope > 38.0) ? V_EARTH : V_GREEN;
 		}
 		if (road > 0.5) {
 			alb = pal(2.0, 4.0 + (n1 < 0.2 ? -1.0 : 0.0));
-			plate = V_EARTH;
 		}
 		if (mt.a * mw > 0.5) {
 			// a dry-stone wall (the temple's terrace): courses of grey stones, dark joints
@@ -313,7 +264,6 @@ void fragment() {
 			float blk = floor((pl.x + w3_hash(vec2(course, 1.0)) * 1.3) / 1.1);
 			alb = pal(3.0, 4.6 + (w3_hash(vec2(course, blk)) - 0.5) * 2.0);
 			if (fract(wp.y / 0.55) < 0.2 && dist < 900.0) alb = pal(3.0, 2.2);
-			plate = V_EARTH;
 		}
 		if (wat > 0.5 && !plain) {
 			water = true;
@@ -329,39 +279,27 @@ void fragment() {
 		float graze = (1.0 - clamp(v.y * 4.0, 0.0, 1.0)) * (local ? 0.35 : 1.0);
 		vec3 sky = mix(mix(haze_col, w3_sky * 1.6, 0.35), haze_col * 1.05, graze);
 		alb = mix(sky * mix(0.5, 0.86, graze), pal(0.0, 3.0), 0.3 * (1.0 - graze));
-		vec2 rq = vec2(xz.x * 0.4, xz.y * 2.0) / max(1.0, dist * 0.004) + cloud_time * 0.05;
-		float ruffle = w3_vnoise(rq);
+		// (in the 遠化 water is still: no ruffle, no glint; vista_post turns its sky to the light of a
+		// sky that is not there)
+		bool still = v_ghost_k(xz) > 0.5;
+		vec2 rq = vec2(xz.x * 0.4, xz.y * 2.0) / max(1.0, dist * 0.004) + (still ? 0.0 : cloud_time) * 0.05;
+		float ruffle = still ? 0.0 : w3_vnoise(rq);
 		// (a ruffled line only where it is a few pixels long: far off it would be streaks)
 		if (ruffle > 0.8 && (v_river > 0.5 || dist < 700.0)) alb = sky * mix(0.72, 0.98, graze);
 		vec3 sd = normalize(w3_sun_dir);
 		vec3 rv = vec3(-v.x, v.y, -v.z);
 		float glint = dot(rv, sd);
-		if (v_river > 0.5 && sd.y > 0.0 && glint > 0.9 - 0.06 * ruffle && w3_hash(floor(xz / max(2.0, dist * 0.0027))) > 0.55) {
+		if (!still && v_river > 0.5 && sd.y > 0.0 && glint > 0.9 - 0.06 * ruffle && w3_hash(floor(xz / max(2.0, dist * 0.0027))) > 0.55) {
 			alb = w3_sun * 0.34 * (1.0 - v_shade);
 		}
 		alb *= 1.0 - v_shade * 0.35;
 		v_alb = alb;
 		ALBEDO = vec3(0.0);
-		// (in the 遠化 the water is its block, flat and still: no sky's gradation, no ruffle, no glint;
-		// then paper with its banks drawn)
-		vec3 w_flat = mix(haze_col, w3_sky * 1.6, 0.35) * 0.62 / max(w3_luma(v_print_light()), 1e-3);
-		EMISSION = v_print(v_air(alb, wp, eye, FRAGCOORD.xy), w_flat, V_BLUE, rn, wp, eye, FRAGCOORD.xy);
-		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
+		EMISSION = v_air(alb, wp, eye, FRAGCOORD.xy);
 	} else {
 		v_alb = alb;
 		ALBEDO = vec3(1.0);
-		EMISSION = v_print(v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, rn, wp, eye, FRAGCOORD.xy);
-		// the key block's lines where the print has lost its gradations
-		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
-		// and its woods: once the green block is gone a wood is small crowns in ink on the paper, as a
-		// print draws a wooded hill (a white field there read as snow)
-		if (wood > 0.5 && v_past(wp, eye, FRAGCOORD.xy) && v_plate_on(V_GREEN, xz, dist, FRAGCOORD.xy) < 0.5) {
-			vec2 pc = v_dir_cell(wp, eye);
-			vec2 cc = floor(pc / vec2(4.0, 3.0));
-			vec2 q = pc - cc * vec2(4.0, 3.0) - vec2(floor(w3_hash(cc + 9.1) * 2.0), 0.0);
-			bool crown = (q.y == 1.0 && q.x == 1.0) || (q.y == 0.0 && (q.x == 0.0 || q.x == 2.0));
-			if (crown && w3_hash(cc * 1.7 + 3.0) < 0.6) EMISSION = v_ink_mark();
-		}
+		EMISSION = v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy);
 		if (dbg_mode == 1) { EMISSION = vec3(clamp(slope / 60.0, 0.0, 1.0), n.y, 0.0); ALBEDO = vec3(0.0); }
 		if (dbg_mode == 3) { EMISSION = alb; ALBEDO = vec3(0.0); }
 		if (dbg_mode == 4) { EMISSION = w3_ambient(alb, n, 1.0); ALBEDO = vec3(0.0); }
@@ -374,7 +312,7 @@ void fragment() {
 	}
 	// (round 5, G5R3-1: no glow of streets at night any more, the city is gone and the lead wants
 	// only a scattering of warm windows in the villages: vista_house)
-	// (the 遠化's edge, a line of light where the white meets the land, is drawn by vista_post)
+	// (the 遠化 round the town: vista_post turns the frame's colour there, v_ghost)
 }
 
 void light() {

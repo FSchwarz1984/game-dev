@@ -45,16 +45,16 @@ varying vec3 v_up;
 varying vec3 v_to;
 varying vec2 v_q;
 varying vec3 v_wp;
-varying flat float v_still;    // 1: the bank lies in the 遠化 (paper, its line, no motion)
+varying flat float v_still;    // 1: the bank lies over the 遠化 (it does not move)
 
 void vertex() {
 	vec3 o = MODEL_MATRIX[3].xyz;
 	vec3 bk = MODEL_MATRIX[0].xyz;
 	vec3 bc = MODEL_MATRIX[1].xyz;
 	vec3 b = MODEL_MATRIX[2].xyz;
-	// (nothing moves in the 遠化: a bank that lies there stays where it was; one that creeps toward it
-	// dissolves before it crosses the front)
-	bool still = v_past_m(bc.xz) > 0.0;
+	// (nothing moves in the 遠化: a bank that lies over it stays where it was, and its shade with it,
+	// v_cloud_shade; one that creeps toward it dissolves before it gets there)
+	bool still = v_ghost_k(bc.xz) > 0.5;
 	float ct = still ? 0.0 : cloud_time;
 	vec3 shift = still ? vec3(0.0) : v_cloud_shift(bc.xz);
 	o += shift;
@@ -63,7 +63,7 @@ void vertex() {
 	// middle of its base (never a ghost of the whole bank: a thin veil over a wide area read as a
 	// halftone screen)
 	float room = v_cloud_room(bc.xz);
-	if (!still) room *= 1.0 - smoothstep(-600.0, -100.0, v_past_m(bc.xz));
+	if (!still) room *= 1.0 - smoothstep(0.3, 0.5, v_ghost_k(bc.xz));
 	float k = mix(0.25, 1.0, smoothstep(0.0, 0.3, room));
 	vec3 foot = vec3(bc.x, bk.z, bc.z);
 	o = foot + (o - foot) * k;
@@ -143,11 +143,6 @@ void fragment() {
 	// (the world's grade lifts the light end: the brightest cloud is painted a little under white,
 	// so its tones survive the grade instead of clipping together)
 	vec3 c = v_air_only(w3_srgb_to_linear(col * 0.84), sp, eye, FRAGCOORD.xy);
-	if (v_still > 0.5) {
-		// in the 遠化 a cloud is the paper with the key block's line round each billow, about a pixel
-		c = v_emboss(vec3(0.0, 1.0, 0.0), sp, eye);
-		if (rr > 1.0 - 1.4 * fwidth(rr)) c = v_ink();
-	}
 	// the cover. The edge: crisp round the top, where the light draws the billow's round edge (a
 	// pixel and a half), melting over much more of the radius below; the base dissolves into the
 	// air. Both thinning bands are dithered on the lattice of directions (an ordered pattern fixed to
@@ -176,5 +171,5 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = c;
-	ALPHA = v_still > 0.5 ? 1.0 : a;
+	ALPHA = a;
 }

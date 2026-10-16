@@ -202,9 +202,6 @@ func _marks_setup(pm: ShaderMaterial) -> void:
 		pm.set_shader_parameter("marks", false)
 	if _vdebug.has("nooutline"):
 		pm.set_shader_parameter("strength", 0.0)
-	# the 遠化's band without round 3's bright edge (lead 2026-10-16, of three variants: beside the new
-	# clouds the edge read as cut paper, the hardness the user disliked in round 3's clouds)
-	pm.set_shader_parameter("band_edge", 0.0)
 
 
 var post_mat: ShaderMaterial
@@ -238,6 +235,7 @@ func build() -> void:
 	_build_temple()
 	_build_figures()
 	_build_puffs()
+	_build_motes()
 	_place_impostors(eye)
 	print("VISTA built ms=", Time.get_ticks_msec() - t0)
 
@@ -262,11 +260,9 @@ func _common(m: ShaderMaterial) -> void:
 	m.set_shader_parameter("sea_base", SEA_Y)
 	if vp:
 		m.set_shader_parameter("v_ppr", px_per_rad())
-	m.set_shader_parameter("front_c", FRONT)
-	# the 遠化's print (vista_common v_print): the blocks' flat colours and the key block's ink, from the
-	# terrain's palette and the view's own forest (no new colours)
-	for kv in _print_colours():
-		m.set_shader_parameter(kv[0], kv[1])
+	# the 遠化's heart, the town, and its rings (vista_common v_ghost_k)
+	m.set_shader_parameter("ghost_c", ghost_c())
+	m.set_shader_parameter("ghost_r", GHOST_R)
 	m.set_shader_parameter("eye", eye)
 	if cloud_tex:
 		m.set_shader_parameter("cloud_tex", cloud_tex)
@@ -290,34 +286,47 @@ func _tex_lin(path: String) -> ImageTexture:
 	return _tex(path)
 
 
-var _print_cols: Array = []
-
-## The 遠化's print colours (vista_common): the key block's ink (the palette's K, sRGB) and two tones
-## for the green and the earth blocks (linear): the terrain palette's grass and fallow and bank earth,
-## the view's own forest.
-func _print_colours() -> Array:
-	if _print_cols.is_empty():
-		var pal: Image = load("res://world3d/terrain/common/palette.png")
-		var lin := func(c: Color) -> Vector3:
-			var l := c.srgb_to_linear()
-			return Vector3(l.r, l.g, l.b)
-		var k := pal.get_pixel(0, 12) if pal else Color8(58, 46, 38)
-		_print_cols = [["ink_k", Vector3(k.r, k.g, k.b)],
-			["print_green_lt", lin.call(pal.get_pixel(5, 0) if pal else Color8(85, 96, 75))],
-			["print_green_dk", lin.call(Color(0.2, 0.29, 0.16))],
-			["print_earth_lt", lin.call(pal.get_pixel(5, 8) if pal else Color8(129, 119, 103))],
-			["print_earth_dk", lin.call(pal.get_pixel(3, 9) if pal else Color8(88, 75, 61))]]
-	return _print_cols
+# ------------------------------------------------------------------------------------------------
+# the 遠化 (G5R3-22): its heart is the town in the middle of the plain, where the prologue's tide
+# burst; heaviest there, thinner ring by ring outward (vista_common v_ghost_k, the same numbers as the
+# prologue's 2D view: coord/to_vista2d)
+const GHOST_R := Vector4(400.0, 1100.0, 2600.0, 5500.0)   # full to r0; 0.75 at r1; 0.4 at r2; none past r3 (m)
+var _ghost_c := Vector2.INF
 
 
-## The 遠化 on the CPU, as vista_common draws it (v_front_r, v_past_m): metres past the front at a
-## point (negative before it). The puffs and the sound ask it.
-func past_m(x: float, z: float) -> float:
-	var dx := x - FRONT.x
-	var dz := z - FRONT.y
+## The town (the largest of vista.json's villages: the one the lookout looks down the middle at).
+func ghost_c() -> Vector2:
+	if _ghost_c == Vector2.INF:
+		var best := -1.0
+		_ghost_c = Vector2(-260.0, 2160.0)
+		for v in data.get("villages", []):
+			if float(v[3]) > best:
+				best = float(v[3])
+				_ghost_c = Vector2(float(v[0]), float(v[1]))
+	return _ghost_c
+
+
+## The 遠化 at a point on the CPU, as vista_common draws it (v_ghost_k): 1 at the heart .. 0. The
+## smoke, the sound and the rising lights ask it.
+func ghost_k(x: float, z: float) -> float:
+	var c := ghost_c()
+	var dx := x - c.x
+	var dz := z - c.y
 	var a := atan2(dx, -dz)
-	var w := _vnoise(a * 2.2 + 11.0, 3.0) * 0.65 + _vnoise(a * 6.1 + 2.0, 7.0) * 0.35
-	return sqrt(dx * dx + dz * dz) - FRONT.z * (0.62 + 0.8 * w)
+	var w := 0.9 + 0.2 * (_vnoise(a * 2.6 + 4.0, 1.7) * 0.7 + _vnoise(a * 7.3 + 1.0, 5.1) * 0.3)
+	var r := sqrt(dx * dx + dz * dz) / w
+	var k := 0.0
+	if r < GHOST_R.x:
+		k = 1.0
+	elif r < GHOST_R.y:
+		k = lerpf(1.0, 0.75, smoothstep(GHOST_R.x, GHOST_R.y, r))
+	elif r < GHOST_R.z:
+		k = lerpf(0.75, 0.4, smoothstep(GHOST_R.y, GHOST_R.z, r))
+	else:
+		k = lerpf(0.4, 0.0, smoothstep(GHOST_R.z, GHOST_R.w, r))
+	var me: Dictionary = data["mist"]
+	var e := Vector2((x - float(me["cx"])) / float(me["rx"]), (z - float(me["cz"])) / float(me["rz"])).length()
+	return k * smoothstep(1.15, 1.8, e)
 
 
 static func _hash2(x: float, y: float) -> float:
@@ -341,15 +350,15 @@ static func _vnoise(x: float, y: float) -> float:
 ## How much of the view the 遠化 fills toward a bearing (0..1), by the direction of her head: rays
 ## across the frame's width just under the horizon (where the far land is: the frame's own pitch
 ## looks down at her feet, and rays at its height met the near slope), each marched over the land to
-## where it meets the ground or runs out past 16 km; the share of them that end past the front.
-## Cached per two degrees.
+## where it meets the ground or runs out past 16 km; the mean of the 遠化 where they end. Cached per
+## two degrees.
 var _far_cache := {}
 var _far_sent := 0.0
 func far_share(bearing: float) -> float:
 	var key := roundi(bearing * 0.5)
 	if _far_cache.has(key):
 		return float(_far_cache[key])
-	var hits := 0
+	var sum := 0.0
 	var total := 0
 	var half := rad_to_deg(atan(float(vp.size.x) * 0.5 / px_per_rad()))
 	for i in 7:
@@ -366,9 +375,8 @@ func far_share(bearing: float) -> float:
 					break
 				t *= 1.08
 			total += 1
-			if past_m(end.x, end.z) > 0.0:
-				hits += 1
-	var k := float(hits) / maxf(float(total), 1.0)
+			sum += ghost_k(end.x, end.z)
+	var k := sum / maxf(float(total), 1.0)
 	_far_cache[key] = k
 	return k
 
@@ -534,7 +542,7 @@ var _mat_img: Image
 
 var sea_mat: ShaderMaterial
 const SEA_Y := -255.0                 # the banks' soft base (the plain lies at about -340)
-const FRONT := Vector3(-50.0, 0.0, 5000.0)   # the 遠化 front: centre x, z, mean radius (m)
+const FRONT := Vector3(-50.0, 0.0, 5000.0)   # the banks' ring round the region: centre x, z, radius (m)
 const CLOUD_CELL := 340.0             # at most one big bank to a cell of this size
 const CLOUD_SMALL := 200.0            # and one small cumulus
 const CLOUD_TEX_CELL := 70.0          # m per texel of the room and shade map
@@ -1635,15 +1643,15 @@ func _build_puffs() -> void:
 	# warm up so the columns stand when the view opens
 	for i in 480:
 		_step_puffs(0.1)
-	# (nothing moves in the 遠化: a source there keeps the column it had, still; vista_puff draws it
-	# as the paper)
+	# (nothing moves in the 遠化: a source there keeps the column it had, still; vista_puff stops it
+	# where vista_common v_drain is over a half, at about 0.28 of the 遠化)
 	var still := 0
 	for s in puff_src:
-		if past_m((s[0] as Vector3).x, (s[0] as Vector3).z) > 0.0:
+		if ghost_k((s[0] as Vector3).x, (s[0] as Vector3).z) > 0.28:
 			s[1] = 0.0
 			still += 1
 	for pf in puffs:
-		if past_m((pf[0] as Vector3).x, (pf[0] as Vector3).z) > 0.0:
+		if ghost_k((pf[0] as Vector3).x, (pf[0] as Vector3).z) > 0.28:
 			pf.append(true)
 	print("VISTA puffs sources=%d still_in_enka=%d" % [puff_src.size(), still])
 
@@ -1704,6 +1712,96 @@ func _write_puffs() -> void:
 		puff_mm.set_instance_color(i, col)
 		puff_mm.set_instance_custom_data(i, Color(size, float(kind), float(pf[6]), float(pf[8])))
 	puff_mm.visible_instance_count = n
+
+
+# ------------------------------------------------------------------------------------------------
+# small silver lights rising from the 遠化 (G5R3-22): densest over the town, a couple of hundred at
+# most, slow (a pixel or two a second at their distance), each living some seconds and fading in and
+# out, drawn a pixel each (a few of two), the only things there that glow (vista_mote). Restraint:
+# from the lookout the 遠化 should read quiet, seen and out of reach, not a show.
+const MOTES := 220
+var motes: Array = []            # [position, velocity, life s, age s, size px, seed]
+var mote_mm := MultiMesh.new()
+var mote_mat: ShaderMaterial
+var mote_rng := RandomNumberGenerator.new()
+var _mote_acc := 0.0
+
+
+func _build_motes() -> void:
+	mote_rng.seed = 2207
+	mote_mm.transform_format = MultiMesh.TRANSFORM_3D
+	mote_mm.use_custom_data = true
+	var q := QuadMesh.new()
+	q.size = Vector2(1, 1)
+	mote_mm.mesh = q
+	mote_mm.instance_count = MOTES
+	mote_mm.visible_instance_count = 0
+	var mi := MultiMeshInstance3D.new()
+	mi.name = "Motes"
+	mi.multimesh = mote_mm
+	mote_mat = _mat("vista_mote")
+	mote_mat.render_priority = 3
+	mi.material_override = mote_mat
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
+	root.add_child(mi)
+	# (warm up: the view opens on lights already risen, not on all of them starting together)
+	for i in 120:
+		_step_motes(0.1)
+
+
+## A light starts from a point of the 遠化's land, the more often the farther gone it is there (by the
+## cube of v_ghost_k: most of them over the town).
+func _spawn_mote() -> void:
+	var c := ghost_c()
+	for t in 8:
+		var a := mote_rng.randf() * TAU
+		var r := sqrt(mote_rng.randf()) * GHOST_R.w
+		var x := c.x + cos(a) * r
+		var z := c.y + sin(a) * r
+		var k := ghost_k(x, z)
+		if mote_rng.randf() < k * k * k:
+			var y := ground_h(x, z) + mote_rng.randf_range(1.0, 24.0)
+			var vel := Vector3(mote_rng.randf_range(-1.2, 1.2), mote_rng.randf_range(4.5, 10.0), mote_rng.randf_range(-1.2, 1.2))
+			motes.append([Vector3(x, y, z), vel, mote_rng.randf_range(6.0, 12.0), 0.0, 2.0 if mote_rng.randf() < 0.1 else 1.0, mote_rng.randf()])
+			return
+
+
+func _step_motes(dt: float) -> void:
+	_mote_acc = minf(_mote_acc + dt * float(MOTES) / 9.0, 3.0)
+	while _mote_acc >= 1.0:
+		_mote_acc -= 1.0
+		if motes.size() < MOTES:
+			_spawn_mote()
+	var i := 0
+	while i < motes.size():
+		var m: Array = motes[i]
+		m[3] = float(m[3]) + dt
+		if float(m[3]) > float(m[2]):
+			motes.remove_at(i)
+			continue
+		# (rising, slowing a little as they go, swaying slowly aside)
+		var sd := float(m[5]) * 40.0
+		var sway := Vector3(sin(_t * 0.37 + sd), 0.0, cos(_t * 0.29 + sd * 1.3)) * 1.1
+		var v: Vector3 = m[1]
+		m[0] = (m[0] as Vector3) + (Vector3(v.x, v.y * (1.0 - 0.4 * float(m[3]) / float(m[2])), v.z) + sway) * dt
+		i += 1
+
+
+func _write_motes(night: float) -> void:
+	if mote_mm.instance_count == 0:
+		return
+	var n := mini(motes.size(), MOTES)
+	# (a little over white by day, so the view's glow catches them; less at night, where they are
+	# the brightest thing there anyway)
+	var bright := lerpf(1.45, 0.7, night)
+	for i in n:
+		var m: Array = motes[i]
+		var age := float(m[3]) / float(m[2])
+		var fade := clampf(age * 5.0, 0.0, 1.0) * clampf((1.0 - age) * 2.5, 0.0, 1.0)
+		mote_mm.set_instance_transform(i, Transform3D(Basis(), m[0]))
+		mote_mm.set_instance_custom_data(i, Color(float(m[4]), fade * bright * lerpf(0.8, 1.15, float(m[5])), float(m[5]), 0.0))
+	mote_mm.visible_instance_count = n
 
 
 # ------------------------------------------------------------------------------------------------
@@ -1907,21 +2005,9 @@ func update(dt: float) -> void:
 	sky_mat.set_shader_parameter("time", _t)
 	# (clear enough that the plain's fields, river and villages read through it; mornings hazier)
 	var haze_dist := lerpf(9000.0, 1500.0, env.rain) * lerpf(1.0, 0.82, clampf(1.0 - absf(env.hours - 6.8) / 2.2, 0.0, 1.0))
-	# the 遠化's white: the lightest of the land (under white, so the ghost of the land in it and its
-	# glowing edge still show after the grade), a dim pale glow in the dark
-	# (the world's grade lifts and clips the light end: about 0.85 sRGB is the last value that keeps
-	# its difference from its neighbours, so the white sits just under it and only its edge clips)
-	# (a warm paper white, like a print faded in the sun: a cool white beside the haze read as water)
-	# (round 5, G5R3-1: round 3's band again, "すやり霞")
-	# (at night the 遠化's paper is as dark as the night, never a glow: its lines just legible)
-	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.04, 0.044, 0.063), night)
-	if env.hours > 16.5 and env.hours < 19.5:
-		fw = fw.lerp(Color(0.68, 0.6, 0.52), clampf(1.0 - absf(env.hours - 17.8) / 1.3, 0.0, 1.0) * (1.0 - night))
 	for m in mats:
 		m.set_shader_parameter("haze_col", hz)
-		m.set_shader_parameter("mist_col", k[3])
 		m.set_shader_parameter("haze_dist", haze_dist)
-		m.set_shader_parameter("far_white", Vector3(fw.r, fw.g, fw.b))
 	# lights: the tower blinks red, the kiln glows at night
 	# the tower's beacon: a second on, a second off (dark when off, so the blink reads from afar)
 	var blink := 1.0 if fmod(_t, 2.0) < 1.0 else 0.04
@@ -1981,6 +2067,8 @@ func update(dt: float) -> void:
 			cloud_inst.visible = false
 	_step_puffs(dt)
 	_write_puffs()
+	_step_motes(dt)
+	_write_motes(clampf(float(env.sample(env.hours)[11]), 0.0, 1.0))
 
 
 func _sky_at(h: float) -> Array:

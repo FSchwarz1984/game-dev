@@ -15,8 +15,6 @@ uniform vec4 far_frame = vec4(-16000.0, -16000.0, 32.0, 1001.0);
 uniform vec2 far_h = vec2(-480.0, 2400.0);
 uniform vec4 mist_ellipse = vec4(-50.0, 100.0, 430.0, 370.0);  // centre x, z, radii x, z
 uniform vec3 haze_col : source_color = vec3(0.7, 0.75, 0.8);   // linear; the horizon of the sky
-uniform vec3 mist_col : source_color = vec3(0.8, 0.8, 0.84);   // linear; the 遠化's pale land
-uniform vec3 far_white = vec3(0.66, 0.635, 0.59);              // linear; past the front (its edge glows brighter)
 uniform float haze_dist = 2200.0;                              // metres for 63 % haze
 uniform float mist_max = 1.0;               // the 遠化's strength (1: as drawn)
 uniform sampler2D plain_tex : filter_linear, repeat_disable;   // R river m, G road m*2, B village, A rail m*2
@@ -24,7 +22,6 @@ uniform vec4 plain_frame = vec4(-6000.0, 400.0, 8.0, 1501.0);  // x0, z0, cell, 
 uniform float cloud_time = 0.0;             // seconds (the clouds drift)
 uniform float city_lights = 0.0;            // the plain's lamplight: 0 by day .. 1 at night (on with the dusk)
 uniform float sea_base = -255.0;            // the sea of clouds' flat underside (m)
-uniform vec3 front_c = vec3(-50.0, 0.0, 4300.0);  // the 遠化 front: centre x, z, mean radius (m)
 uniform float v_ppr = 371.0;                // native pixels per radian
 uniform vec4 v_cam = vec4(3.1416, -0.2, 240.0, 135.0);   // the view: yaw (rad, as atan(x, -z)), pitch (rad, up +), half size (px)
 uniform vec2 v_lat = vec2(0.0);             // yaw and pitch in whole pixels (the lattice's offset)
@@ -146,6 +143,29 @@ float v_mist_e(vec2 xz) {
 	return length((xz - mist_ellipse.xy) / mist_ellipse.zw);
 }
 
+// (the 遠化's heart and rings: see the 遠化 below)
+// The town and the rings (vista3d.gd sets them from vista.json; the prologue's 2D view keeps the same
+// numbers: coord/to_vista2d): full within r0, 0.75 at r1, 0.4 at r2, nothing past r3 (metres), each
+// ring's radius wandering a tenth either way round the town.
+uniform vec2 ghost_c = vec2(-260.0, 2160.0);
+uniform vec4 ghost_r = vec4(400.0, 1100.0, 2600.0, 5500.0);
+const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
+
+// how far gone a point is: 1 at the heart .. 0 (as it is)
+float v_ghost_k(vec2 xz) {
+	vec2 d = xz - ghost_c;
+	float a = atan(d.x, -d.y);
+	float w = 0.9 + 0.2 * (w3_vnoise(vec2(a * 2.6 + 4.0, 1.7)) * 0.7 + w3_vnoise(vec2(a * 7.3 + 1.0, 5.1)) * 0.3);
+	float r = length(d) / w;
+	float k;
+	if (r < ghost_r.x) k = 1.0;
+	else if (r < ghost_r.y) k = mix(1.0, 0.75, smoothstep(ghost_r.x, ghost_r.y, r));
+	else if (r < ghost_r.z) k = mix(0.75, 0.4, smoothstep(ghost_r.y, ghost_r.z, r));
+	else k = mix(0.4, 0.0, smoothstep(ghost_r.z, ghost_r.w, r));
+	// (the region's ring round home stays as it is)
+	return k * smoothstep(1.15, 1.8, v_mist_e(xz));
+}
+
 // ------------------------------------------------------------------------------------------------
 // the sea of clouds: banks of billows (vista_cloud.gdshader), laid out by vista3d.gd _build_mist in a
 // square domain round the region; they creep east with the wind, wrapping round the domain (far
@@ -197,27 +217,6 @@ float v_cloud_shade(vec3 wp) {
 // vista_puff, vista_cloud, v_cloud_shade); the air over it trembles a little (vista_post, by whole
 // pixels, slowly) and small silver lights rise from it (vista3d.gd _motes). At night it keeps a little
 // light of its own, a step above the land round it.
-// The town and the rings (vista3d.gd sets them from vista.json; the prologue's 2D view keeps the same
-// numbers: coord/to_vista2d): full within r0, 0.75 at r1, 0.4 at r2, nothing past r3 (metres), each
-// ring's radius wandering a tenth either way round the town.
-uniform vec2 ghost_c = vec2(-260.0, 2160.0);
-uniform vec4 ghost_r = vec4(400.0, 1100.0, 2600.0, 5500.0);
-const vec3 V_GHOST_TINT = vec3(0.88, 0.93, 1.05);   // display: a cool silver
-
-// how far gone a point is: 1 at the heart .. 0 (as it is)
-float v_ghost_k(vec2 xz) {
-	vec2 d = xz - ghost_c;
-	float a = atan(d.x, -d.y);
-	float w = 0.9 + 0.2 * (w3_vnoise(vec2(a * 2.6 + 4.0, 1.7)) * 0.7 + w3_vnoise(vec2(a * 7.3 + 1.0, 5.1)) * 0.3);
-	float r = length(d) / w;
-	float k;
-	if (r < ghost_r.x) k = 1.0;
-	else if (r < ghost_r.y) k = mix(1.0, 0.75, smoothstep(ghost_r.x, ghost_r.y, r));
-	else if (r < ghost_r.z) k = mix(0.75, 0.4, smoothstep(ghost_r.y, ghost_r.z, r));
-	else k = mix(0.4, 0.0, smoothstep(ghost_r.z, ghost_r.w, r));
-	// (the region's ring round home stays as it is)
-	return k * smoothstep(1.15, 1.8, v_mist_e(xz));
-}
 // the light a level white surface has at this hour (the sky above, the sun at round 3's middle level):
 // the 遠化's lightness is taken against it, so it keeps the hour (bright by day, dim at night)
 float v_light_ref() {
