@@ -81,7 +81,7 @@ var red_mat: ShaderMaterial
 var kiln_glow: ShaderMaterial
 var rng := RandomNumberGenerator.new()
 var _t := 0.0
-var _vdebug: PackedStringArray = []   # --vdebug=nodrain,nohaze,nocloud (looking into the layers)
+var _vdebug: PackedStringArray = []   # --vdebug=nodrain,nohaze,nocloud,noenka (looking into the layers)
 var nochar := false                   # (the sample's --nochar, G5R3-21) her and さぢ are not drawn
 var sprites := false                  # (the sample's sprites, G5R3-24) her sprite, not her 3D model
 
@@ -262,7 +262,8 @@ func _common(m: ShaderMaterial) -> void:
 	if vp:
 		m.set_shader_parameter("v_ppr", px_per_rad())
 	# the 遠化's heart, the town, and its rings (vista_common v_ghost_k)
-	m.set_shader_parameter("ghost_c", ghost_c())
+	# (--vdebug=noenka: no 遠化 at all, for measuring what it changes: its heart moved out of the world)
+	m.set_shader_parameter("ghost_c", Vector2(1.0e7, 1.0e7) if _vdebug.has("noenka") else ghost_c())
 	m.set_shader_parameter("ghost_r", GHOST_R)
 	m.set_shader_parameter("eye", eye)
 	if cloud_tex:
@@ -310,6 +311,8 @@ func ghost_c() -> Vector2:
 ## The 遠化 at a point on the CPU, as vista_common draws it (v_ghost_k): 1 at the heart .. 0. The
 ## smoke, the sound and the rising lights ask it.
 func ghost_k(x: float, z: float) -> float:
+	if _vdebug.has("noenka"):
+		return 0.0
 	var c := ghost_c()
 	var dx := x - c.x
 	var dz := z - c.y

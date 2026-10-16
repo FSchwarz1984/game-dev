@@ -121,8 +121,7 @@ void fragment() {
 	float gk = c < 20000.0 ? v_ghost_k(wp.xz) : 0.0;
 	float th = 0.35 + c * 0.06;
 	if (c < 20000.0 && jump > th) {
-		// (the 遠化 has no lines: its shapes read by their lightness; by day as steep as its colour, v_ghost)
-		float keep = 1.0 - 0.5 * mix(pow(gk, ghost_day_gamma), gk, w3_night);
+		float keep = 1.0 - 0.5 * gk;          // (the 遠化 has no lines: its shapes read by their lightness)
 		vec3 bcol = texture(screen_tex, uv + behind).rgb;
 		vec3 base = dot(bcol, vec3(0.3, 0.59, 0.11)) < dot(col, vec3(0.3, 0.59, 0.11)) ? mix(col, bcol, 0.6) : col;
 		float lb = dot(base, vec3(0.3, 0.59, 0.11));
