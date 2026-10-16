@@ -23,7 +23,8 @@ global uniform vec3 w3_shade_tint;  // hue shift of surfaces in shadow (cool), m
 global uniform vec3 w3_lit_tint;    // hue shift of surfaces in sunlight (warm), multiplier
 global uniform vec4 w3_wind;        // xy: wind direction (x east, y south), z: strength 0..2, w: gust 0..1
 global uniform float w3_wet;        // rain wetness 0..1
-global uniform vec4 w3_player;      // xyz: her chest (world), w: cut-away radius in native px (0 = off)
+global uniform vec4 w3_player;      // xyz: her chest (world), w: cut-away radius in native px (0 = off; negative: the
+                                    // cut-away only, nothing gives way or clears round her: --nochar, an unseen walker)
 global uniform float w3_night;      // 0 day .. 1 night
 global uniform sampler2D w3_lamps;  // lamps (render3d/lamps.gd): row 0 xyz + reach, row 1 rgb * energy + on
 global uniform float w3_lamp_n;     // how many lamps are lit (texels in use)
@@ -109,13 +110,13 @@ vec2 w3_wind_px(vec3 anchor, float flex, float amp_px) {
 // keep_px > 0: whatever lies more than keep_px above her on screen stays (a great crown overhead
 // frames the top of the view with its lowest boughs instead of vanishing whole)
 bool w3_cutaway_k(vec3 wp, vec2 cell, float scale, float keep_px) {
-	if (w3_player.w <= 0.0) return false;
+	if (w3_player.w == 0.0) return false;
 	vec3 d = wp - w3_player.xyz;
 	float toward = dot(d, w3_cam_back());           // > 0: this surface is between her and the camera
 	if (toward < 0.3) return false;
 	vec2 ds = w3_screen(wp) - w3_screen(w3_player.xyz);
 	float r = length(ds * vec2(1.0, 0.8));
-	float R = w3_player.w * scale;
+	float R = abs(w3_player.w) * scale;
 	float ring = min(12.0, R * 0.35);                 // a stippled edge, clear inside
 	float k = clamp((R - r) / ring, 0.0, 1.0) * smoothstep(0.3, 1.2, toward);
 	if (keep_px > 0.0) {

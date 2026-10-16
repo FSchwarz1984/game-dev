@@ -192,6 +192,8 @@ func _finish() -> void:
 
 
 func update(dt: float) -> void:
+	# a long frame (a hitch, a load) slows the line down instead of skipping its beats: a 0.2 s jolt must be seen
+	dt = minf(dt, 0.1)
 	if _open:
 		var line: Dictionary = _lines[_i]
 		var who := String(line.get("who", "narr"))

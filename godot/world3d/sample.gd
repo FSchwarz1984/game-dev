@@ -12,9 +12,9 @@ extends Node
 ##                      --route=lookout: down the spur to the lookout, where she looks out (the view
 ##                      south, east, then back home), and the top-down view comes back
 ##   --nochar           no characters drawn (G5R3-21: this round's Windows build): she is an unseen walker
-##                      (the terrain, what blocks her and her pace as before; the camera follows her and
-##                      she still looks out from the lookout), with no model, shadow or silhouette, no
-##                      canopy cut-away round her, no さぢ; the grass and the hens take no notice of her
+##                      (the terrain, what blocks her and her pace as before; the camera follows her, the
+##                      canopy still opens round her and she still looks out from the lookout), with no
+##                      model, shadow or silhouette, no さぢ; the grass, bushes and hens take no notice of her
 ##   --novista          she does not look out from the lookout (the view from the lookout, W3Vista, is on
 ##                      by default: standing still on the rock for a moment she looks out)
 ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
@@ -691,7 +691,7 @@ func _collect_geometry(n: Node, out: Array) -> void:
 ## cutmode "fade": a tree hides her when her chest falls inside its drawn box and it stands nearer
 ## the camera (south of her); then all of it eases to see-through, and back when she leaves.
 func _update_fades(dt: float) -> void:
-	if _fade_objs.is_empty() or her == null or nochar:
+	if _fade_objs.is_empty() or her == null:
 		return
 	var feet := her.pos
 	var chest := pv.screen_of_upright(feet, 1.0)
@@ -754,8 +754,9 @@ func _spawn_characters() -> void:
 
 
 ## --nochar: a walker that is never drawn. The terrain, what blocks her, her pace, her facing and her
-## chest (where the camera looks) are the walker's own; no model or sprite is made (so nothing of her
-## is drawn: no body, no shadow, no silhouette through what covers her). `ghost` tells the grass and
+## chest (where the camera looks, and round which the canopy opens: w3_player) are the walker's own; no
+## model or sprite is made (so nothing of her is drawn: no body, no shadow, no silhouette through what
+## covers her). `ghost` tells the grass and
 ## the small life (W3Grass, dressing_life) not to answer to her: grass bending and hens hurrying off
 ## round no one read as something unseen there.
 class GhostWalker extends W3Walker:
@@ -1152,9 +1153,10 @@ func _process(dt: float) -> void:
 	var haze_max := 0.0 if args.has("nohaze") else 0.78
 	RenderingServer.global_shader_parameter_set("w3_haze", Vector4(_haze_h, 5.0, 40.0, haze_max))
 	var chest := her.chest()
-	# (the canopy's cut-away and the grass and bushes giving way round her: off with --nochar, no one
-	# to keep in sight)
-	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, 0.0 if nochar else 26.0))
+	# (with --nochar the cut-away stays, round the unseen walking point, so the ground under a crown is
+	# seen as before (the lead, G5R3-21); a negative radius: nothing gives way or clears round her,
+	# the grass and bushes and the light shafts, pixel_toon w3_player)
+	RenderingServer.global_shader_parameter_set("w3_player", Vector4(chest.x, chest.y, chest.z, -26.0 if nochar else 26.0))
 	pv.update_camera(dt)
 	_update_fades(dt)
 	_update_realm(dt)
