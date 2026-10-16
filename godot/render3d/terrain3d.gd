@@ -95,6 +95,11 @@ func _setup_material(dir: String) -> void:
 	terrain_mat.set_shader_parameter("splat_origin", origin)
 	terrain_mat.set_shader_parameter("splat_cell", float(sp["cell"]))
 	terrain_mat.set_shader_parameter("splat_size", Vector2(sp["size"][0], sp["size"][1]))
+	# the canopy map for everything else that stands under the crowns (pixel_toon w3_canopy_at: the
+	# steps, stones and the feet of things get the ground's flecks, not the shadow map's gaps)
+	RenderingServer.global_shader_parameter_set("w3_canopy", terrain_mat.get_shader_parameter("m3"))
+	var ext := Vector2(sp["size"][0], sp["size"][1]) * float(sp["cell"])
+	RenderingServer.global_shader_parameter_set("w3_canopy_frame", Vector4(origin.x, origin.y, 1.0 / ext.x, 1.0 / ext.y))
 	var gf := FileAccess.open(common.path_join("glyphs.json"), FileAccess.READ)
 	if gf:
 		var table: Dictionary = JSON.parse_string(gf.get_as_text())

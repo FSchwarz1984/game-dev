@@ -144,3 +144,11 @@ w3_fill={
 "type": "vec3",
 "value": Vector3(0, 0, 0)
 }
+w3_canopy={
+"type": "sampler2D",
+"value": ""
+}
+w3_canopy_frame={
+"type": "vec4",
+"value": Vector4(0, 0, 0, 0)
+}

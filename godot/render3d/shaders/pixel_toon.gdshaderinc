@@ -27,6 +27,8 @@ global uniform vec4 w3_player;      // xyz: her chest (world), w: cut-away radiu
                                     // cut-away only, nothing gives way or clears round her: --nochar, an unseen walker)
 global uniform float w3_night;      // 0 day .. 1 night
 global uniform vec3 w3_fill;        // the sky's light let back into the sun's shadow (round 5; world_env.gd: by the hour)
+global uniform sampler2D w3_canopy; // the terrain's canopy map (its m3; A: how dense the crowns are), terrain3d.gd
+global uniform vec4 w3_canopy_frame; // xy: its origin (x, z), zw: 1 / its extent in metres; z 0: none (tools)
 global uniform sampler2D w3_lamps;  // lamps (render3d/lamps.gd): row 0 xyz + reach, row 1 rgb * energy + on
 global uniform float w3_lamp_n;     // how many lamps are lit (texels in use)
 global uniform float w3_bake;       // 0 the game; impostor bake (render3d/dev/impostor_bake.gd):
@@ -157,6 +159,13 @@ vec3 w3_shadow_fill(float att) {
 // (its image through a gap lies stretched on the ground); toward a crown's rim (thinner) many and
 // larger, in its heart few. Lit as the same ground in the open (light(): the sun, and the sky's fill
 // kept in them).
+// the canopy's density at a point (x, z), 0 where there is no canopy map (the tools)
+float w3_canopy_at(vec2 xz) {
+	if (w3_canopy_frame.z <= 0.0) return 0.0;
+	vec2 uv = (xz - w3_canopy_frame.xy) * w3_canopy_frame.zw;
+	if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) return 0.0;
+	return textureLod(w3_canopy, uv, 0.0).a;
+}
 // Under a dense crown the sun reaches the ground only as these flecks: the shadow map's own sunlit
 // gaps there (where the leaf cards happen to leave a hole: hard-edged blotches, the yellow patches on
 // the gravel) give way, over the crown's edge, softly (the canopy map is smooth): the sun's share is

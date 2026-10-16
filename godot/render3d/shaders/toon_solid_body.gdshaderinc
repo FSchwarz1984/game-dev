@@ -37,6 +37,9 @@ varying vec3 v_wn;
 varying flat vec2 v_origin_px;
 varying vec2 v_cell;
 varying vec3 v_detail;      // detailed albedo / the shade's flattened albedo (light() restores the detail)
+varying flat float v_base_y;
+varying float v_sun_open;   // under a dense crown, near the ground: 0 (the sun only as flecks), else 1
+varying float v_fleck_s;    // the ground's soft sun flecks (pixel_toon w3_fleck) on what stands low under a crown
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -49,6 +52,7 @@ void vertex() {
 	v_wp = wp;
 	v_wn = NORMAL;
 	v_origin_px = w3_screen(origin);
+	v_base_y = origin.y;
 }
 
 void fragment() {
@@ -59,6 +63,20 @@ void fragment() {
 	}
 	if (obj_fade > 0.0 && !IN_SHADOW_PASS && w3_stipple(cell) < obj_fade) {
 		discard;
+	}
+	// (round 5, the lead: on the steps and stones under the great camphor the shadow map's gaps read as
+	// hard-edged yellow patches. What stands low under a dense crown (the steps, stones, the feet of
+	// things: fading out from 2 to 4 m above its base) takes the ground's light there: the crown's
+	// shade, and the ground's soft flecks where the sun gets through; terrain3d.gd w3_canopy)
+	float low = 1.0 - smoothstep(2.0, 4.0, v_wu.y - v_base_y);
+	v_sun_open = 1.0;
+	v_fleck_s = 0.0;
+	if (low > 0.0 && w3_canopy_frame.z > 0.0) {
+		vec3 sdir = normalize(w3_sun_dir);
+		vec2 proj = v_wu.xz + sdir.xz / max(sdir.y, 0.25) * max(11.0 - (v_wu.y - v_base_y), 1.0);
+		float can = w3_canopy_at(proj);
+		v_sun_open = mix(1.0, w3_canopy_open(can), low);
+		v_fleck_s = (can > 0.2 && w3_night < 0.5) ? w3_fleck(proj, can) * low : 0.0;
 	}
 	vec3 wn = normalize(v_wn);
 	vec3 alb = w3_srgb_to_linear(COLOR.rgb) * tint.rgb;
@@ -106,14 +124,17 @@ void light() {
 	float k = w3_far_light(far);
 	if (LIGHT_IS_DIRECTIONAL) {
 		// (round 5: round 3's levels, continuous: w3_sun_level)
-		vec3 c = w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, false, 0.3);
+		// (under a dense crown, near the ground: the crown's shade and the flecks, as the ground)
+		float att = ATTENUATION * v_sun_open;
+		float sh = max(att, v_fleck_s);
+		vec3 c = w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, sh, false, 0.3);
 		// big trunks under a crown: a share of the light reaches their shade anyway (continuous)
 		c *= v_detail;
 		if (shade_fill > 0.0) {
-			float lit = mix(w3_r3_body(dot(NORMAL, LIGHT)), w3_wrap(dot(NORMAL, LIGHT), 0.3), w3_night) * ATTENUATION;
+			float lit = mix(w3_r3_body(dot(NORMAL, LIGHT)), w3_wrap(dot(NORMAL, LIGHT), 0.3), w3_night) * sh;
 			c += LIGHT_COLOR / W3_PI * shade_fill * (1.0 - lit);
 		}
-		DIFFUSE_LIGHT += (c + w3_shadow_fill(ATTENUATION)) * k;
+		DIFFUSE_LIGHT += (c + w3_shadow_fill(att)) * k;
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail * k;
 	}
