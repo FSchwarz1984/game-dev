@@ -231,13 +231,20 @@ float v_light_ref() {
 // a colour as the 遠化 shows it (k: v_ghost_k), two looks, the same numbers as the prologue's 2D view
 // (tools/vista/bake/plain.js GHOST_LOOKS), from its lightness against the hour's light (display: ld):
 // - by day the silver-white: ld -> 0.34 + 0.6 ld^0.8, the cool silver (0.88, 0.93, 1.05), a tenth of
-//   its own colour at the same lightness; it keeps the hour's light (bright by day);
+//   its own colour at the same lightness; it keeps the hour's light (bright by day). By day it takes
+//   the land by k^ghost_day_gamma, not k (the lead, after the first day render: the plain before the
+//   town is bright by day already, and lifted and drained by k it all read one pale wash, with no
+//   heart): the town (k 1) all silver-white, the plain at her feet (k ~0.5) a quarter, the sides
+//   (k ~0.3) next to their own colours, round 3's greens and golds. The rings stay (they are where
+//   the 遠化 is); only how the day shows them steepens. Its lightness is not pressed down (that
+//   greys it, the rejected 褪版).
 // - at night the silver-grey (round 2's ghost() lifted a third wider): ld -> 0.2 + 0.74 ld^0.85, the
 //   silver (0.86, 0.92, 1.07) mixed a tenth with its own colour; a light of its own, not the hour's
 //   (the user, G5R3-26: the silver-white was too bright at night; the silver-grey of the prologue
-//   "在夜間的表現還是不錯的");
+//   "在夜間的表現還是不錯的"); it takes the land by k, as the prologue's night does;
 // - at dusk and dawn the one turns into the other with the night (w3_night).
 const vec3 V_GHOST_TINT_NIGHT = vec3(0.86, 0.92, 1.07);
+uniform float ghost_day_gamma = 4.0;
 vec3 v_ghost(vec3 col, float k) {
 	if (k <= 0.0) return col;
 	float lref = max(v_light_ref(), 1e-4);
@@ -251,7 +258,7 @@ vec3 v_ghost(vec3 col, float k) {
 	float ln = clamp(0.2 + 0.74 * pow(min(ld, 1.0), 0.85), 0.0, 1.0);
 	vec3 own = pow(clamp(col / lref, vec3(0.0), vec3(1.0)), vec3(1.0 / 2.2));
 	vec3 gn = w3_srgb_to_linear(clamp(0.9 * ln * V_GHOST_TINT_NIGHT + 0.1 * own, vec3(0.0), vec3(1.0))) * ghost_night_gain;
-	return mix(col, mix(gd, gn, w3_night), k);
+	return mix(mix(col, gd, pow(k, ghost_day_gamma)), mix(col, gn, k), w3_night);
 }
 // lamps go out in the 遠化 (and smoke and cloud stand still there: vista_puff, vista_cloud)
 float v_drain(vec2 xz, float y) {

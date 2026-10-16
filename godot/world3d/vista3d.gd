@@ -1800,15 +1800,16 @@ func _write_motes(night: float) -> void:
 	if mote_mm.instance_count == 0:
 		return
 	var n := mini(motes.size(), MOTES)
-	# (a little over white by day, so the view's glow catches them; less at night, where they are
-	# the brightest thing there anyway)
+	# (by day a light cool blue a little over white, with a darker edge, vista_mote: the land round
+	# the town is silver-white then and a white point on it would not show; less at night, where they
+	# are the brightest thing there anyway). Custom data: size, brightness, seed, fade.
 	var bright := lerpf(1.45, 0.7, night)
 	for i in n:
 		var m: Array = motes[i]
 		var age := float(m[3]) / float(m[2])
 		var fade := clampf(age * 5.0, 0.0, 1.0) * clampf((1.0 - age) * 2.5, 0.0, 1.0)
 		mote_mm.set_instance_transform(i, Transform3D(Basis(), m[0]))
-		mote_mm.set_instance_custom_data(i, Color(float(m[4]), fade * bright * lerpf(0.8, 1.15, float(m[5])), float(m[5]), 0.0))
+		mote_mm.set_instance_custom_data(i, Color(float(m[4]), bright * lerpf(0.8, 1.15, float(m[5])), float(m[5]), fade))
 	mote_mm.visible_instance_count = n
 
 
