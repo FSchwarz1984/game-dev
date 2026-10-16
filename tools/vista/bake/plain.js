@@ -626,10 +626,10 @@ export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt }
 // key block's lines on the paper, G5R3-18; the user, G5R3-22: "太脏、像灰模".)
 /** ground zero (m, the 3D frame): the town, vista.json's largest village */
 export function ghostZero() { const v = VILLAGES.reduce((a, b) => (b.n > a.n ? b : a)); return [v.x, v.z]; }
-/** the rings (m from ground zero): full within r0, GHOST_K[1] at r1, GHOST_K[2] at r2, nothing past r3
- *  (vista3d.gd GHOST_R, GHOST_K; VISTA_GHOST_R / VISTA_GHOST_K in the environment try others) */
-export const GHOST_R = (globalThis.VISTA_GHOST_R || [400, 1100, 2600, 5500]);
-export const GHOST_K = (globalThis.VISTA_GHOST_K || [1, 0.75, 0.4, 0]);
+/** the rings (m from ground zero) and how much a ghost the land is at each: GHOST_K[0] within r0,
+ *  GHOST_K[1] at r1, GHOST_K[2] at r2, GHOST_K[3] (nothing) past r3 (vista3d.gd GHOST_R, GHOST_K) */
+export const GHOST_R = [400, 1100, 2600, 5500];
+export const GHOST_K = [1, 0.75, 0.4, 0];
 /** the region's ellipse round home (vista.json mist: cx, cz, rx, rz in m) */
 export function ghostHome() { const m = W3.json.mist; return { cx: m.cx, cz: m.cz, rx: m.rx, rz: m.rz }; }
 // pixel_toon's w3_hash and vista3d.gd _vnoise (fposmod = the GLSL fract)
