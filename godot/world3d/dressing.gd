@@ -10,6 +10,10 @@ extends Node3D
 ##
 ## The east gate's giant straw sandal (node "Waraji" in michikiri_e) turns slowly on its cord.
 ##
+## Round 5: the creatures whose catalog entry lists "poses" (the hens, the cat) are not handed to the
+## assembly as slots; W3Life (dressing_life.gd, a child of this node) places and moves them, and
+## brings the crows (catalog "karasu") to the great camphor's stops (terrain.json perches.crow).
+##
 ## A prop entry: {"name": catalog name, "x", "z", "yaw" (degrees), "hang" (m above the ground,
 ## for things hung from an eave or a hook; leaned like what they hang from), "light": [height above
 ## the prop's origin, energy, reach] (a lamp: lit from dusk to dawn), "anchor": [prop name, anchor
@@ -25,6 +29,8 @@ var has_asset := {}       # names of things the asset catalog provides
 var lean_k := 0.5206      # the camera's lean-back for upright things (tan(pitch / 2)), set by the sample
 var catalog := {}
 var placed := {}          # prop id or name -> [position, yaw] (for anchors of later props)
+var life: Node3D          # the creatures that move (W3Life, dressing_life.gd)
+var _life_spots: Array = []   # [catalog name, position (with hang), yaw, ground height]
 
 
 func build(t: Terrain3D, cat := {}) -> void:
@@ -35,7 +41,12 @@ func build(t: Terrain3D, cat := {}) -> void:
 	var props: Array = t.info.get("props", [])
 	for e in props:
 		_prop(e)
-	print("DRESSING props=%d slots=%d lamps=%d" % [props.size(), asset_slots.size(), _lamp_count])
+	if not _life_spots.is_empty() or catalog.has("karasu"):
+		life = preload("res://world3d/dressing_life.gd").new()
+		life.name = "Life"
+		add_child(life)
+		life.build(t, catalog, lean_k, _life_spots)
+	print("DRESSING props=%d slots=%d lamps=%d life=%d" % [props.size(), asset_slots.size(), _lamp_count, _life_spots.size()])
 
 
 var _lamp_count := 0
@@ -83,6 +94,11 @@ func _prop(e: Dictionary) -> void:
 			e["hang"] = float(anc[1])
 	var gy := terrain.height_at(pos.x, pos.z)
 	pos.y = gy + float(e.get("hang", 0.0))
+	if a.has("poses"):
+		# a creature: W3Life moves it
+		_life_spots.append([nm, pos, yaw, gy])
+		placed[String(e.get("id", nm))] = [Vector3(pos.x, gy, pos.z), yaw]
+		return
 	asset_slots.append([nm, pos, yaw])
 	placed[String(e.get("id", nm))] = [Vector3(pos.x, gy, pos.z), yaw]
 	if e.has("light"):

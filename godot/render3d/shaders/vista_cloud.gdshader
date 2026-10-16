@@ -45,26 +45,32 @@ varying vec3 v_up;
 varying vec3 v_to;
 varying vec2 v_q;
 varying vec3 v_wp;
+varying flat float v_still;    // 1: the bank lies in the 遠化 (paper, its line, no motion)
 
 void vertex() {
 	vec3 o = MODEL_MATRIX[3].xyz;
 	vec3 bk = MODEL_MATRIX[0].xyz;
 	vec3 bc = MODEL_MATRIX[1].xyz;
 	vec3 b = MODEL_MATRIX[2].xyz;
-	vec3 shift = v_cloud_shift(bc.xz);
+	// (nothing moves in the 遠化: a bank that lies there stays where it was; one that creeps toward it
+	// dissolves before it crosses the front)
+	bool still = v_past_m(bc.xz) > 0.0;
+	float ct = still ? 0.0 : cloud_time;
+	vec3 shift = still ? vec3(0.0) : v_cloud_shift(bc.xz);
 	o += shift;
 	bc += shift;
 	// the room the bank has where it is now: without it the bank dissolves, shrinking toward the
 	// middle of its base (never a ghost of the whole bank: a thin veil over a wide area read as a
 	// halftone screen)
 	float room = v_cloud_room(bc.xz);
+	if (!still) room *= 1.0 - smoothstep(-600.0, -100.0, v_past_m(bc.xz));
 	float k = mix(0.25, 1.0, smoothstep(0.0, 0.3, room));
 	vec3 foot = vec3(bc.x, bk.z, bc.z);
 	o = foot + (o - foot) * k;
 	bc = foot + (bc - foot) * k;
 	bk.xy *= k;
 	// (and each billow swells and settles a little, slowly)
-	float r = b.x * k * (1.0 + 0.06 * sin(cloud_time * 0.05 + b.y * 40.0));
+	float r = b.x * k * (1.0 + 0.06 * sin(ct * 0.05 + b.y * 40.0));
 	vec3 to = normalize(eye - o);
 	vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), to));
 	vec3 up = cross(to, right);
@@ -81,6 +87,7 @@ void vertex() {
 	v_to = to;
 	v_q = q;
 	v_wp = wp;
+	v_still = still ? 1.0 : 0.0;
 	POSITION = room < 0.01 ? vec4(0.0, 0.0, 0.0, -1.0) : v_project(wp, eye, PROJECTION_MATRIX);
 }
 
@@ -94,7 +101,7 @@ void fragment() {
 	// the billow's outline: round, with smaller lumps on it (a cauliflower's), turning slowly
 	float l = length(q);
 	vec2 dq = q / max(l, 1e-4);
-	float lump = w3_vnoise(dq * 2.2 + seed * 37.0 + vec2(cloud_time * 0.004, 0.0)) * 0.6
+	float lump = w3_vnoise(dq * 2.2 + seed * 37.0 + vec2((v_still > 0.5 ? 0.0 : cloud_time) * 0.004, 0.0)) * 0.6
 		+ w3_vnoise(dq * 5.3 + seed * 11.0) * 0.4;
 	float rr = l / (1.0 - 0.26 * lump);
 	if (rr > 1.0) {
@@ -136,6 +143,12 @@ void fragment() {
 	// (the world's grade lifts the light end: the brightest cloud is painted a little under white,
 	// so its tones survive the grade instead of clipping together)
 	vec3 c = v_air_only(w3_srgb_to_linear(col * 0.84), sp, eye, FRAGCOORD.xy);
+	if (v_still > 0.5) {
+		// in the 遠化 a cloud is the paper (pressed round by its form) with the key block's line
+		// round each billow, about a pixel
+		c = v_emboss(n);
+		if (rr > 1.0 - 1.4 * fwidth(rr)) c = v_ink();
+	}
 	// the cover. The edge: crisp round the top, where the light draws the billow's round edge (a
 	// pixel and a half), melting over much more of the radius below; the base dissolves into the
 	// air. Both thinning bands are dithered on the lattice of directions (an ordered pattern fixed to
@@ -164,5 +177,5 @@ void fragment() {
 		discard;
 	}
 	ALBEDO = c;
-	ALPHA = a;
+	ALPHA = v_still > 0.5 ? 1.0 : a;
 }

@@ -86,6 +86,8 @@ def export_prop(out, name, category, prop, catalog, porosity=0.7, cutaway=False,
                  'pos': [float(x) for x in o.get('pos', epos)], 'meta': {'w3a_far_mesh': m_f or '', 'w3a_mesh': m_n}}
             if 'rot' in o:
                 n['rot'] = [float(x) for x in o['rot']]
+            if 'visible' in o:
+                n['visible'] = bool(o['visible'])     # (a creature's other poses: hidden until W3Life shows one)
             nd.append(n)
         for mname, pos in (markers or {}).items():
             if isinstance(pos[0], (list, tuple)):

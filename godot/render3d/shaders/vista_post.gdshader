@@ -3,8 +3,8 @@
 // Outlines: where a neighbouring pixel lies clearly farther (relative to the distance, so far ridges
 // get their line as well as near rocks), this pixel is on the near edge of something: it takes a
 // darker, cooler shade of the darker side. One native pixel wide, never black. Light things (the
-// clouds' billows) get a light line; in the 遠化's white the land keeps only its drawing, a faint
-// warm line along its ridges.
+// clouds' billows) get a light line; in the 遠化 every edge is the key block's ink line (the 褪版,
+// vista_common), at every distance.
 // Marks: the same hand-drawn glyphs as the top-down ground (tufts, flowers, pebbles, gravel, rock
 // chips, moss, litter; pixelart.py) stand on the land, texel for pixel. Their anchors are fixed to the
 // lattice of view directions in cells of 8 pixels (vista_common: the projection moves the picture by
@@ -101,13 +101,13 @@ void fragment() {
 	if (c < 20000.0 && jump > th) {
 		// where is this pixel in the world: past the ring the 遠化 has taken the land's relief
 		vec3 wp = world_at(uv, ip, VIEWPORT_SIZE);
-		float dr = v_drain(wp.xz, wp.y);
-		if (dr > 0.99) {
-			// in the 遠化's white only the land's drawing is left: its ridges a faint warm line
-			// (round 5: round 3's again)
-			col = v_paper(0.9);
+		if (v_past(wp, eye, FRAGCOORD.xy)) {
+			// in the 遠化 (past its gradations) every edge is the key block's line in ink, at every
+			// distance: ridges, the far mountains against the sky, trees, houses (the 褪版: what is left
+			// of a print when its colour blocks are gone; vista_common)
+			col = v_ink();
 		} else {
-			float keep = 1.0 - smoothstep(0.2, 0.45, dr);
+			float keep = 1.0;
 			vec3 bcol = texture(screen_tex, uv + behind).rgb;
 			vec3 base = dot(bcol, vec3(0.3, 0.59, 0.11)) < dot(col, vec3(0.3, 0.59, 0.11)) ? mix(col, bcol, 0.6) : col;
 			float lb = dot(base, vec3(0.3, 0.59, 0.11));

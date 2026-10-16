@@ -49,12 +49,16 @@ void fragment() {
 	float lit = step(0.0, v_side * (sd.x + sd.z) + 0.2) * (1.0 - v_par.z) + v_par.z * 0.5;
 	if (v_par.z > 1.5) {
 		// a lamp: its flame alone, over 1 so it blooms (it shines through the air)
-		if (lamp_on * v_par.w < 0.02) discard;
+		// (no lamps in the 遠化)
+		if (lamp_on * v_par.w < 0.02 || v_drain(v_wp.xz, v_wp.y) > 0.5) discard;
 		ALBEDO = alb * v_par.w * lamp_on;
 	} else {
 		vec3 c = alb * (ambient_col + light_col * (0.35 + 0.65 * lit) * clamp(sd.y * 3.0, 0.0, 1.0));
 		ALBEDO = v_air(c, v_wp, eye, FRAGCOORD.xy) + alb * v_par.w;
-		// (in the 遠化's white a viaduct or a bridge is only its drawing)
-		if (v_past(v_wp, eye, FRAGCOORD.xy)) ALBEDO = v_paper(0.85);
+		// (in the 遠化 a viaduct, a bridge, a rail is a line: printed flat from the earths, then the
+		// key block's ink alone)
+		if (v_past(v_wp, eye, FRAGCOORD.xy)) {
+			ALBEDO = v_plate_on(V_EARTH, v_wp.xz, length(v_wp - eye), FRAGCOORD.xy) > 0.5 ? v_flat(V_EARTH, alb) * v_print_light() : v_ink();
+		}
 	}
 }

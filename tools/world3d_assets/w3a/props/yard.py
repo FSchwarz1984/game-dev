@@ -24,7 +24,9 @@
   makiwari        the chopping block (薪割り台): a stump, a split log on it, wood chips all round
   houki           a bamboo broom (竹箒) leaning on a wall
   teoke           a small wooden bucket with a bamboo hoop
-  niwatori_a/b    hens (地鶏): one standing and looking, one pecking at the ground
+  niwatori_a/b    hens (地鶏): one standing and looking, one pecking at the ground; round 5: their other
+                  poses (Up / Peck / Step / Look) as hidden nodes, moved by W3Life (dressing_life.gd)
+  karasu          a jungle crow (ハシブトガラス) in six poses (stand; Peck, Caw, Hop, FlyA, FlyB hidden)
 Origins on the ground; fronts toward +z (south, the camera)."""
 from __future__ import annotations
 
@@ -97,8 +99,9 @@ def drape(x0, x1, y_top, length, z, colour, anchor, R, flex=(0.15, 0.85), bands=
     stripes: [(y, colour, h)] bands across."""
     P = []
     W = x1 - x0
-    nx = max(int(W / 0.03), 4)
-    ny_total = max(int(length / 0.03), 6)
+    # (the folds run down the cloth: fine across, coarse along; 1.5 px across, 3 px down)
+    nx = max(int(W / 0.045), 4)
+    ny_total = max(int(length / 0.09), 3)
     lam = [W / max(folds, 1) * f for f in (1.0, 0.55, 0.32)]
     ph = [R.uniform(0, 2 * math.pi) for _ in lam]
     amp = [depth, depth * 0.45, depth * 0.2]
@@ -167,7 +170,7 @@ def drape(x0, x1, y_top, length, z, colour, anchor, R, flex=(0.15, 0.85), bands=
         # over the pole: a half tube of the cloth's colour
         rr = 0.03
         pts, nrm, idx = [], [], []
-        n_a = 6
+        n_a = 4
         for i, x in enumerate(xs):
             for k in range(n_a + 1):
                 a = math.pi * k / n_a
@@ -523,20 +526,30 @@ def kakashi(out):
 
 
 # ------------------------------------------------------------------------------------------- the cat
-def neko(out):
-    """A calico cat asleep, curled up: body, head tucked to the right, tail around the front."""
+def _cat_prop(pose='sleep'):
+    """The calico cat, curled up asleep on the engawa. pose: 'sleep'; 'breath' (the body risen a
+    pixel); 'tail' (the tip of the tail lifted and curled, a flick); 'awake' (the head up, ears up,
+    eyes open, looking)."""
+    hc = np.array([0.13, 0.1, 0.06]) if pose != 'awake' else np.array([0.15, 0.17, 0.08])
+    ear_up = 0.0 if pose != 'awake' else 0.05
+    rise = 0.03 if pose == 'breath' else 0.0
+
     def body(Q):
-        b = K.sd_ellipsoid(Q - np.array([0.0, 0.085, 0.0]), (0.2, 0.1, 0.15))
-        h = K.sd_ellipsoid(Q - np.array([0.13, 0.1, 0.06]), (0.075, 0.065, 0.07))
-        e1 = K.sd_capsule(Q, (0.11, 0.15, 0.05), (0.105, 0.19, 0.04), 0.018)
-        e2 = K.sd_capsule(Q, (0.17, 0.15, 0.06), (0.185, 0.185, 0.05), 0.018)
+        b = K.sd_ellipsoid(Q - np.array([0.0, 0.085 + rise * 0.5, 0.0]), (0.2, 0.1 + rise * 0.5, 0.15))
+        h = K.sd_ellipsoid(Q - hc, (0.075, 0.065, 0.07))
+        e1 = K.sd_capsule(Q, hc + (-0.02, 0.05, -0.01), hc + (-0.025, 0.09 + ear_up * 0.3, -0.02), 0.018)
+        e2 = K.sd_capsule(Q, hc + (0.04, 0.05, 0.0), hc + (0.055, 0.085 + ear_up * 0.3, -0.01), 0.018)
         tail = K.sd_capsule(Q, (-0.17, 0.05, 0.05), (-0.05, 0.035, 0.15), 0.028)
-        tail2 = K.sd_capsule(Q, (-0.05, 0.035, 0.15), (0.09, 0.035, 0.15), 0.024)
+        if pose == 'tail':
+            tail2 = np.minimum(K.sd_capsule(Q, (-0.05, 0.035, 0.15), (0.04, 0.06, 0.17), 0.024),
+                               K.sd_capsule(Q, (0.04, 0.06, 0.17), (0.07, 0.12, 0.16), 0.02))
+        else:
+            tail2 = K.sd_capsule(Q, (-0.05, 0.035, 0.15), (0.09, 0.035, 0.15), 0.024)
         d = K.smin(b, h, 0.04)
         d = np.minimum(d, np.minimum(e1, e2))
         d = K.smin(d, np.minimum(tail, tail2), 0.02)
         return d
-    pc = K.sdf_piece(body, (-0.26, -0.02, -0.2), (0.27, 0.22, 0.22), K.col('#ece6d8'), h=0.012, tris=560, pattern='plain', amount=0.0,
+    pc = K.sdf_piece(body, (-0.26, -0.02, -0.2), (0.27, 0.3, 0.24), K.col('#ece6d8'), h=0.012, tris=560, pattern='plain', amount=0.0,
                      var=0.02, seed=9651)
 
     def calico(Pp, N):
@@ -547,15 +560,28 @@ def neko(out):
         black = (n2 > 0.62) & (Pp[:, 1] > 0.08) & ~orange
         m[orange] = np.array([0.86, 0.58, 0.34]) / np.array([0.925, 0.9, 0.85])
         m[black] = np.array([0.2, 0.18, 0.17]) / np.array([0.925, 0.9, 0.85])
-        # closed eyes and the nose: a dark line on the face
-        face = (Pp[:, 0] > 0.17) & (Pp[:, 2] > 0.09) & (np.abs(Pp[:, 1] - 0.11) < 0.008)
+        # the face: closed eyes and the nose a dark line; awake, two dark eyes
+        if pose == 'awake':
+            face = (Pp[:, 0] > hc[0] + 0.04) & (Pp[:, 2] > hc[2] + 0.02) & (np.abs(Pp[:, 1] - (hc[1] + 0.012)) < 0.012)
+        else:
+            face = (Pp[:, 0] > 0.17) & (Pp[:, 2] > 0.09) & (np.abs(Pp[:, 1] - 0.11) < 0.008)
         m[face] = np.array([0.25, 0.22, 0.2]) / np.array([0.925, 0.9, 0.85])
         return m
     pc.shade = calico
-    prop = K.Prop('neko', 9651).add([pc])
-    return export_prop(out, 'neko', 'props', prop, {'footprint': [], 'tags': ['life', 'animal'],
-                                                   'notes': 'A calico cat (三毛猫) asleep, curled up, 0.5 m long; place on the engawa.'},
-                       porosity=0.5, far=False, budget=800, ground=False)
+    return K.Prop('neko_' + pose, 9651).add([pc])
+
+
+def neko(out):
+    """A calico cat asleep, curled up: body, head tucked to the right, tail around the front. Its
+    other poses ride along as hidden nodes (Breath, Tail, Awake): W3Life (godot/world3d/
+    dressing_life.gd) shows one at a time."""
+    hide = {None: {'visible': False}}
+    extras = {nm: (_cat_prop(pz), (0.0, 0.0, 0.0), hide) for nm, pz in (('Breath', 'breath'), ('Tail', 'tail'), ('Awake', 'awake'))}
+    return export_prop(out, 'neko', 'props', _cat_prop('sleep'), {'footprint': [], 'tags': ['life', 'animal'],
+                                                                 'poses': {'sleep': 'Mesh', 'breath': 'Breath', 'tail': 'Tail', 'awake': 'Awake'},
+                                                                 'notes': 'A calico cat (三毛猫) asleep, curled up, 0.5 m long; place on the engawa. '
+                                                                          'Poses (hidden nodes): Breath, Tail, Awake.'},
+                       porosity=0.5, far=False, budget=2600, ground=False, extras=extras)
 
 
 # ------------------------------------------------------------------------------------------- ground things
@@ -602,9 +628,10 @@ def mushiro(out):
             xx = -half + R.uniform(0.0, 0.03)
             while xx < half:
                 c = ume * R.uniform(0.82, 1.15)
-                P.append(K.lathe([(0.0, 0.0), (0.024, 0.004), (0.026, 0.016), (0.012, 0.028), (0.0, 0.028)], c, n=5,
-                                 base=(cx + xx + R.normal(0, 0.006), 0.022, cz + zz + R.normal(0, 0.006)), pattern='plain', amount=0.0,
-                                 var=0.05, seed=int(R.integers(0, 1 << 20)), dirt=False))
+                # (a plum is 1-2 px: a small rounded block without an outline, no lathe)
+                P.append(K.cbox((0.046, 0.024, 0.046), c, centre=(cx + xx + R.normal(0, 0.006), 0.034, cz + zz + R.normal(0, 0.006)),
+                                bevel=0.0, R=K.rot_y(R.uniform(0, 1.5)), var=0.05, seed=int(R.integers(0, 1 << 20)),
+                                mat='noline', ao=False, dirt=False))
                 xx += R.uniform(0.055, 0.07)
                 n += 1
     # red shiso leaves drying on the mat's corner
@@ -742,23 +769,26 @@ def teoke(out):
     return export_prop(out, 'teoke', 'props', prop, cat, porosity=0.7, far=False, budget=900)
 
 
-def niwatori(out, name, seed, peck=False):
+def _hen_prop(name, seed, pose='up'):
     """A hen (地鶏): plump red-brown body, darker wings, a cocked tail of dark feathers, a small red comb
-    and wattle, yellow beak and legs. peck: the head down at the ground."""
+    and wattle, yellow beak and legs. pose: 'up' (standing, head up), 'peck' (the head down at the
+    ground), 'step' (mid-stride: head forward, one foot lifted), 'look' (head up, turned toward the
+    camera)."""
     R = rng(seed)
     body_c = K.col('#8c5530')
-    hx, hy = (0.17, 0.05) if peck else (0.13, 0.27)
+    hx, hy, hz = {'up': (0.13, 0.27, 0.0), 'peck': (0.17, 0.05, 0.0), 'step': (0.17, 0.23, 0.0), 'look': (0.12, 0.28, 0.035)}[pose]
+    peck = pose == 'peck'
 
     def body(Q):
         b = K.sd_ellipsoid(Q - np.array([0.0, 0.17, 0.0]), (0.15, 0.1, 0.085))
-        n = K.sd_capsule(Q, (0.08, 0.2, 0.0), (hx - 0.02, hy, 0.0), 0.045)
-        h = K.sd_ellipsoid(Q - np.array([hx, hy, 0.0]), (0.05, 0.045, 0.04))
+        n = K.sd_capsule(Q, (0.08, 0.2, 0.0), (hx - 0.02, hy, hz * 0.7), 0.045)
+        h = K.sd_ellipsoid(Q - np.array([hx, hy, hz]), (0.05, 0.045, 0.04))
         tail = K.sd_ellipsoid(Q - np.array([-0.15, 0.25, 0.0]), (0.05, 0.08, 0.03))
         d = K.smin(b, n, 0.04)
         d = K.smin(d, h, 0.02)
         d = K.smin(d, tail, 0.04)
         return d
-    pc = K.sdf_piece(body, (-0.22, 0.04, -0.11), (0.24, 0.36, 0.11), body_c, h=0.012, tris=420, pattern='plain', amount=0.0,
+    pc = K.sdf_piece(body, (-0.22, 0.0, -0.11), (0.25, 0.36, 0.13), body_c, h=0.012, tris=420, pattern='plain', amount=0.0,
                      var=0.03, seed=seed + 1)
 
     def plumage(Pp, N):
@@ -773,20 +803,157 @@ def niwatori(out, name, seed, peck=False):
     pc.shade = plumage
     P = [pc]
     red = K.col('#c42a22')
-    up = 1.0 if not peck else 0.0
-    P.append(K.cbox((0.05, 0.035, 0.012), red, centre=(hx + 0.005, hy + 0.045 * up + 0.01 * (1 - up), 0.0), bevel=0.0))
-    P.append(K.cbox((0.02, 0.03, 0.012), red, centre=(hx + 0.03, hy - 0.04 * up + 0.02 * (1 - up), 0.0), bevel=0.0))
+    up = 0.0 if peck else 1.0
+    P.append(K.cbox((0.05, 0.035, 0.012), red, centre=(hx + 0.005, hy + 0.045 * up + 0.01 * (1 - up), hz), bevel=0.0))
+    P.append(K.cbox((0.02, 0.03, 0.012), red, centre=(hx + 0.03, hy - 0.04 * up + 0.02 * (1 - up), hz), bevel=0.0))
     beak = K.col('#d8a838')
-    P.append(K.cbox((0.035, 0.014, 0.014), beak, centre=(hx + 0.055, hy - 0.005 - 0.02 * (1 - up), 0.0), bevel=0.0,
+    P.append(K.cbox((0.035, 0.014, 0.014), beak, centre=(hx + 0.055, hy - 0.005 - 0.02 * (1 - up), hz), bevel=0.0,
                     R=K.rot_z(-0.9 * (1 - up))))
     leg = K.col('#c89a3a')
     for s in (-1, 1):
+        if pose == 'step' and s > 0:          # the lifted foot, toes curled under
+            P.append(cyl((0.02, 0.06, s * 0.035), (0.01, 0.1, s * 0.03), 0.008, leg, n=3))
+            P.append(K.cbox((0.035, 0.006, 0.012), leg, centre=(0.035, 0.055, s * 0.035), bevel=0.0, R=K.rot_z(-0.5)))
+            continue
         P.append(cyl((0.0, 0.0, s * 0.035), (0.01, 0.1, s * 0.03), 0.008, leg, n=3))
         P.append(K.cbox((0.06, 0.006, 0.012), leg, centre=(0.03, 0.004, s * 0.035), bevel=0.0))
-    prop = K.Prop(name, seed).add(P)
-    cat = {'footprint': [], 'tags': ['life', 'animal'],
-           'notes': 'A hen, about 0.36 m tall, facing +x' + (' and pecking at the ground.' if peck else ', head up.')}
-    return export_prop(out, name, 'props', prop, cat, porosity=0.5, far=False, budget=900)
+    return K.Prop(name + '_' + pose, seed).add(P)
+
+
+def niwatori(out, name, seed, peck=False):
+    """A hen; the base pose standing (a) or pecking (b), the others as hidden nodes (Up, Peck, Step,
+    Look) for W3Life."""
+    base = 'peck' if peck else 'up'
+    hide = {None: {'visible': False}}
+    extras = {pz.capitalize(): (_hen_prop(name, seed, pz), (0.0, 0.0, 0.0), hide) for pz in ('up', 'peck', 'step', 'look') if pz != base}
+    poses = {pz: ('Mesh' if pz == base else pz.capitalize()) for pz in ('up', 'peck', 'step', 'look')}
+    cat = {'footprint': [], 'tags': ['life', 'animal'], 'poses': poses,
+           'notes': 'A hen, about 0.36 m tall, facing +x' + (' and pecking at the ground.' if peck else ', head up.')
+                    + ' Poses (hidden nodes): ' + ', '.join(n for n in extras) + '.'}
+    return export_prop(out, name, 'props', _hen_prop(name, seed, base), cat, porosity=0.5, far=False, budget=3600, extras=extras)
+
+
+# ------------------------------------------------------------------------------------------- crows
+CROW = K.col('#1d1c22')
+
+
+def _crow_prop(pose='stand'):
+    """A jungle crow (ハシブトガラス), 0.56 m from bill to tail, facing +x, origin at its feet: a deep
+    body tilted up to the head, the steep forehead and the thick arched bill that make it a
+    ハシブト, a long tail, black with a blue-violet sheen on top. pose: 'stand', 'peck' (bill to the
+    ground), 'caw' (neck stretched forward, bill open), 'hop' (crouched, wings a little open),
+    'fly_a' (wings up), 'fly_b' (wings down)."""
+    fly = pose.startswith('fly')
+    tilt = {'stand': 0.38, 'peck': -0.2, 'caw': 0.18, 'hop': 0.3, 'fly_a': 0.05, 'fly_b': 0.05}[pose]
+    by = {'stand': 0.2, 'peck': 0.19, 'caw': 0.19, 'hop': 0.16, 'fly_a': 0.2, 'fly_b': 0.2}[pose]
+    bc = np.array([0.0, by, 0.0])
+    ax = np.array([math.cos(tilt), math.sin(tilt), 0.0])
+    if pose == 'peck':
+        H = np.array([0.17, 0.075, 0.0])
+        bd = normalize(np.array([0.55, -1.0, 0.0]))
+    elif pose == 'caw':
+        H = np.array([0.19, 0.28, 0.0])
+        bd = normalize(np.array([1.0, 0.25, 0.0]))
+    else:
+        H = bc + ax * 0.15 + np.array([0.0, 0.07, 0.0])
+        bd = normalize(np.array([1.0, -0.12, 0.0]))
+    up_b = normalize(np.cross(np.array([0.0, 0.0, 1.0]), bd))
+    tail_a = bc - ax * 0.12
+    tail_b = bc - ax * 0.32 + np.array([0.0, -0.03 if not fly else 0.0, 0.0])
+
+    def body(Q):
+        q = Q - bc
+        lq = np.stack([q[..., 0] * ax[0] + q[..., 1] * ax[1], -q[..., 0] * ax[1] + q[..., 1] * ax[0], q[..., 2]], -1)
+        b = K.sd_ellipsoid(lq, (0.15, 0.085, 0.075))
+        h = K.sd_ellipsoid(Q - H, (0.06, 0.055, 0.05))
+        fore = K.sd_ellipsoid(Q - (H + bd * 0.03 + up_b * 0.03), (0.035, 0.03, 0.035))
+        n = K.sd_capsule(Q, bc + ax * 0.08, H, 0.05)
+        d = K.smin(b, n, 0.04)
+        d = K.smin(d, h, 0.025)
+        d = K.smin(d, fore, 0.02)
+        # the bill: thick at the base, arched on top, a little hook
+        if pose == 'caw':
+            ob = normalize(bd + up_b * 0.35)
+            lb = normalize(bd - up_b * 0.45)
+            u = K.sd_capsule(Q, H + bd * 0.04 + up_b * 0.012, H + ob * 0.11 + up_b * 0.01, 0.014)
+            l = K.sd_capsule(Q, H + bd * 0.04 - up_b * 0.012, H + lb * 0.1, 0.011)
+            bill = np.minimum(u, l)
+        else:
+            bill = K.smin(K.sd_capsule(Q, H + bd * 0.04, H + bd * 0.1 + up_b * 0.004, 0.02),
+                          K.sd_capsule(Q, H + bd * 0.1 + up_b * 0.004, H + bd * 0.125 - up_b * 0.012, 0.009), 0.012)
+        d = K.smin(d, bill, 0.012)
+        # the tail: long, flat, a little spread at the end
+        tq = Q - (tail_a + tail_b) * 0.5
+        td = normalize(tail_b - tail_a)
+        tl = np.stack([tq[..., 0] * td[0] + tq[..., 1] * td[1], -tq[..., 0] * td[1] + tq[..., 1] * td[0], tq[..., 2]], -1)
+        tail = K.sd_ellipsoid(tl, (0.11, 0.016, 0.042 + 0.0))
+        d = K.smin(d, tail, 0.03)
+        return d
+    lo = (-0.36, 0.0, -0.12)
+    hi = (0.36, 0.42, 0.12)
+    pc = K.sdf_piece(body, lo, hi, CROW, h=0.012, tris=520, pattern='plain', amount=0.0, var=0.0, seed=9851)
+    sheen = np.array([0.2, 0.23, 0.36]) / np.maximum(CROW, 1e-4)
+
+    def gloss(Pp, N):
+        m = np.ones((len(Pp), 3))
+        top = np.clip(N[:, 1], 0, 1)[:, None]
+        m = m * (1 - 0.55 * top) + sheen * 0.55 * top          # blue-violet sheen on the back and the crown
+        bill = (Pp[:, 0] - H[0]) * bd[0] + (Pp[:, 1] - H[1]) * bd[1] > 0.045
+        m[bill] = 0.85
+        return m
+    pc.shade = gloss
+    P = [pc]
+    # the eye: one dark-brown glint on each side of the head
+    for s in (-1, 1):
+        P.append(K.cbox((0.014, 0.014, 0.006), K.col('#3a2a22'), centre=tuple(H + bd * 0.02 + up_b * 0.012 + np.array([0, 0, s * 0.045])),
+                        bevel=0.0, mat='noline', ao=False, dirt=False))
+    leg = K.col('#24222a')
+    if not fly:
+        kh = 0.75 if pose == 'hop' else 1.0
+        for s in (-1, 1):
+            P.append(cyl((0.0, 0.0, s * 0.03), (-0.01, 0.13 * kh, s * 0.028), 0.01, leg, n=3))
+            P.append(K.cbox((0.07, 0.008, 0.012), leg, centre=(0.02, 0.004, s * 0.03), bevel=0.0))
+            P.append(K.cbox((0.03, 0.008, 0.01), leg, centre=(-0.025, 0.004, s * 0.03), bevel=0.0))
+    # the wings: folded on the sides (in the body) or open
+    if fly or pose == 'hop':
+        sh = bc + ax * 0.04 + np.array([0.0, 0.03, 0.0])
+        if pose == 'fly_a':
+            ang, span = 0.75, 0.46
+        elif pose == 'fly_b':
+            ang, span = -0.55, 0.44
+        else:
+            ang, span = 0.35, 0.16
+        for s in (-1, 1):
+            # inner and outer wing: broad, the outer narrower with the primaries fanned (a ragged end)
+            Rw = K.rot_x(-s * ang)
+            inner = K.cbox((0.2, 0.014, span * 0.5), CROW, centre=tuple(sh + Rw @ np.array([-0.02, 0.0, s * span * 0.25])), bevel=0.0, R=Rw)
+            P.append(inner)
+            if span > 0.3:
+                Ro = K.rot_x(-s * (ang * 1.2)) @ K.rot_y(s * 0.25)
+                tip0 = sh + Rw @ np.array([-0.02, 0.0, s * span * 0.5])
+                outer = K.cbox((0.15, 0.012, span * 0.5), CROW, centre=tuple(tip0 + Ro @ np.array([-0.03, 0.0, s * span * 0.22])),
+                               bevel=0.0, R=Ro)
+                P.append(outer)
+                for f in range(4):           # the fingered primaries
+                    fz = s * (span * 0.47)
+                    fp = tip0 + Ro @ np.array([0.02 - f * 0.035, 0.0, fz])
+                    P.append(K.cbox((0.022, 0.01, 0.07), CROW, centre=tuple(fp), bevel=0.0, R=Ro, mat='noline'))
+    return K.Prop('karasu_' + pose, 9851).add(P)
+
+
+def karasu(out):
+    """The crows of the great camphor (G5R3-11 5.3: they take dango up to their nest at the top):
+    one asset, the standing pose as its mesh, the others as hidden nodes for W3Life."""
+    hide = {None: {'visible': False}}
+    names = {'peck': 'Peck', 'caw': 'Caw', 'hop': 'Hop', 'fly_a': 'FlyA', 'fly_b': 'FlyB'}
+    extras = {nm: (_crow_prop(pz), (0.0, 0.0, 0.0), hide) for pz, nm in names.items()}
+    poses = {'stand': 'Mesh'}
+    poses.update({pz: nm for pz, nm in names.items()})
+    cat = {'footprint': [], 'tags': ['life', 'animal'], 'poses': poses,
+           'notes': 'A jungle crow (ハシブトガラス), 0.56 m, facing +x, origin at its feet. Poses (hidden nodes): '
+                    + ', '.join(names.values()) + '. Moved by W3Life (godot/world3d/dressing_life.gd).'}
+    return export_prop(out, 'karasu', 'props', _crow_prop('stand'), cat, porosity=0.3, far=False, budget=5200, ground=False,
+                       extras=extras)
 
 
 def build(out):
@@ -815,4 +982,5 @@ def build(out):
     st['teoke'] = teoke(out)
     st['niwatori_a'] = niwatori(out, 'niwatori_a', 9811, peck=False)
     st['niwatori_b'] = niwatori(out, 'niwatori_b', 9821, peck=True)
+    st['karasu'] = karasu(out)
     return st

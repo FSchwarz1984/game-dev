@@ -12,7 +12,7 @@ def all_parts():
     parts = []
     parts += MD.head()
     parts += MD.hair()
-    parts.append(MD.hat(float(os.environ.get('C3D_HAT_TILT', '0')), float(os.environ.get('C3D_HAT_ROLL', '0'))))
+    parts += MD.hat()
     from kasasagi import clothes
     parts += clothes.body_parts()
     return parts
@@ -113,16 +113,17 @@ def to_godot(v):
 # hat_tilt (facing the camera) .. hat_tilt_away (her back to it), so its white top shows as a flat
 # ellipse over the face (round 5: past 50.7 deg the camera sees the navy underside; that was the
 # rejected round-4 halo at 52 deg); a small roll to the screen's right
-from kasasagi.design import D as _D, VARIANT as _VARIANT
+from kasasagi.design import D as _D
 from kasasagi import body as _B
+_VARIANT = 'R6'
 HAT_TILT_DEG = _D['hat_tilt']
-HAT_TILT_AWAY_DEG = _D['hat_tilt_away']
+HAT_TILT_AWAY_DEG = _D['hat_tilt']
 HAT_ROLL_DEG = _D['hat_roll']
 # in profile her head turns this far toward the camera (godot/characters/head_turn_modifier.gd)
 HEAD_TURN_BIAS_DEG = 20.0
 # the hat's brim in the hat bone's space (the brim plane below the seat, its radius) and the arm that
 # reaches for it (godot/characters/hat_reach_modifier.gd)
-HAT_BRIM = {'y': -_B.HAT_SINK, 'r': _B.HAT_R, 'arm': ['upper_arm_R', 'forearm_R', 'hand_R'], 'hand_len': 0.062}
+HAT_BRIM = {'y': _B.HAT_C.z - _B.HEAD_TOP, 'r': _B.HAT_R, 'arm': ['upper_arm_R', 'forearm_R', 'hand_R'], 'hand_len': 0.062}
 
 HAIR_COLLIDE = ['col_head', 'col_chest', 'col_spine', 'col_hips', 'col_thigh_L', 'col_thigh_R']
 

@@ -14,9 +14,12 @@
 //   0.48 times the true one), so it keeps the band of the frame the prologue's plain had (approved,
 //   G5R2-4) and its "sea of lights";
 //   height above the plain r = y + 350 m: h = r / 380 below the eye; above the eye the true elevation
-//   is kept, h = 1 + (r - 380) / U, so the mountains stand on the horizon as high as in the 3D view.
+//   times a factor, h = 1 + (r - 380) / U * k: the mountains keep the 3D view's outline and bearings,
+//   lowered only as far as it takes to stay clear of the sky shore when it opens (k = 0.52 over every
+//   usual view, less only on the sides an ultra-wide view adds; mountainFit).
 // The town is the 3D town; the lamps of the Obon night are where the 3D view has its villages, its
-// houses and its street lamps by day.
+// houses and its street lamps by day. The far (遠化) peels the land like a print losing its colour
+// blocks (G5R3-18): fadeMats / fadeMaps at the end of this file.
 
 import { clamp, lerp, smooth, rng, hash2, vnoise, fbm, bayer, IndexLayer, I } from '../../../src/vista/util.js';
 import { marchGen, sunShadows } from '../../../src/vista/terrain.js';
@@ -495,3 +498,155 @@ export function paintViaduct(L, Xb, Zb, cam) {
 }
 
 export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt };
+
+// ---------------------------------------------------------------- 遠化 as plates peeled off (G5R3-18)
+//
+// Land gone far is an ukiyo-e print losing its colour blocks one by one: first the bokashi (the haze
+// and the gradations), then the greens, then the water's blue, then the earth colours; what is left is
+// the key block's ink lines and the paper, with the relief pressed into it (空摺: no ink, only the
+// shading of the land). Things stay sharp and readable (no fog); the water does not reflect; at night
+// the paper is the night's dark paper and the lines only just show; there are no lights.
+// Stage 0 is the land as it is; 1 no bokashi (and no reflection); 2 no greens; 3 no water blue; 4 no
+// earth colours: ink and paper. How far a place has gone (the stage it ends at) grows with its
+// distance beyond the region's rim (the 3D view's mist ellipse, vista.py MIST), in patches.
+export const FADE_STAGES = 4;
+const PAPER = [0.86, 0.84, 0.78];
+// the night's paper: the blocks are printed on paper the dark has taken (纸白压暗); 1 by day
+let PAPER_K = 1;
+export function setPaperK(k) { PAPER_K = k; }
+const PLATE = { green: [0.42, 0.6, 0.3], deep: [0.3, 0.42, 0.2], blue: [0.4, 0.55, 0.74], earth: [0.8, 0.64, 0.44], bengara: [0.74, 0.38, 0.3] };
+const PLATE_GONE = { green: 2, deep: 2, blue: 3, earth: 4, bengara: 4 };     // the stage that removes it
+const RECIPE = [];   // material -> [[plate, coverage]] (coverage: the plate's ink to that power)
+RECIPE[G.riceA] = [['green', 1], ['earth', 0.3]];
+RECIPE[G.riceB] = [['green', 0.85], ['earth', 0.45]];
+RECIPE[G.riceC] = [['green', 1.15], ['earth', 0.3]];
+RECIPE[G.crop] = [['green', 0.5], ['earth', 0.8]];
+RECIPE[G.fallow] = [['green', 0.15], ['earth', 1.4]];
+RECIPE[G.levee] = [['green', 0.4], ['earth', 0.8]];
+RECIPE[G.meadow] = [['green', 0.45], ['earth', 0.65]];
+RECIPE[G.bank] = [['green', 0.35], ['earth', 0.75]];
+RECIPE[G.road] = [['earth', 1.1]];
+RECIPE[G.path] = [['earth', 1.0]];
+RECIPE[G.townGround] = [['earth', 1.3], ['blue', 0.2]];
+RECIPE[G.paddy] = [['blue', 0.9], ['green', 0.6]];
+RECIPE[G.river] = [['blue', 1.1]];
+RECIPE[G.pond] = [['blue', 1.0], ['green', 0.2]];
+RECIPE[G.forest] = [['deep', 1], ['earth', 0.2]];
+RECIPE[G.grove] = [['deep', 1.2], ['earth', 0.2]];
+RECIPE[G.hillForest] = [['deep', 1.05], ['earth', 0.15]];
+RECIPE[G.farForest] = [['deep', 0.95], ['blue', 0.2]];
+RECIPE[G.cedar] = [['deep', 1.2], ['blue', 0.3]];
+RECIPE[G.rock] = [['earth', 0.6], ['blue', 0.35]];
+RECIPE[G.farRock] = [['earth', 0.5], ['blue', 0.3]];
+RECIPE[G.roof] = [['earth', 0.6], ['blue', 0.9]];
+RECIPE[G.roofLit] = [['earth', 0.35], ['blue', 0.5]];
+RECIPE[G.thatch] = [['earth', 1.3]];
+RECIPE[G.wall] = [['earth', 0.15]];
+RECIPE[G.kura] = [];
+RECIPE[G.wood] = [['earth', 1.6], ['bengara', 0.6]];
+RECIPE[G.iron] = [['bengara', 1.6]];
+
+/** The albedo (0..1) of a material printed with the blocks still on at stage s (>= 2: the recipe;
+ *  0 and 1: its own albedo, water by its blue block, as it no longer reflects). */
+export function fadeAlbedo(mat, s) {
+  const base = GROUND_MATS[mat];
+  if (!base) return null;
+  if (s <= 1 && !base.water) return base.albedo;
+  const c = PAPER.map(v => v * PAPER_K);
+  for (const [p, a] of RECIPE[mat] || []) {
+    if (s >= PLATE_GONE[p]) continue;
+    for (let k = 0; k < 3; k++) c[k] *= Math.pow(PLATE[p][k], a);
+  }
+  return c;
+}
+
+/** Materials as printed at stage s (no water, no emission, no rim: flat blocks on paper). */
+export function fadeMats(s) {
+  const out = [];
+  for (let m = 0; m < GROUND_MATS.length; m++) {
+    const a = fadeAlbedo(m, s);
+    if (a) out[m] = { albedo: a };
+  }
+  return out;
+}
+
+// boundary classes (for the key block's lines) and which side of a boundary carries the line
+const CLS = [];
+for (const m of [G.riceA, G.riceB, G.riceC, G.crop, G.fallow, G.levee, G.meadow, G.bank]) CLS[m] = 1;
+CLS[G.paddy] = 2; CLS[G.pond] = 3; CLS[G.river] = 3;
+CLS[G.road] = 4; CLS[G.path] = 4; CLS[G.townGround] = 5;
+for (const m of [G.forest, G.grove, G.hillForest, G.farForest, G.cedar]) CLS[m] = 6;
+CLS[G.rock] = 7; CLS[G.farRock] = 7;
+for (const m of [G.roof, G.roofLit, G.thatch, G.wall, G.kura, G.wood]) CLS[m] = 8;
+CLS[G.iron] = 9;
+const PRIO = [0, 1, 2, 5, 6, 4, 3, 2, 8, 9];        // by class: the line goes on the higher side
+
+/**
+ * Per ground pixel (RGBA8): R the key block's ink (0..255): silhouettes (the top edge of anything in
+ * front of what lies behind it: ridges, crowns, roofs, the viaduct), the edges between kinds of
+ * ground (river and pond banks, roads, the town, woods, houses), the edges of fields only where they
+ * are a few pixels wide, and the shaded side of the crowns in a wood; G the stage that place ends at
+ * (50 per stage, from its distance beyond the region's rim, jittered by patch so that the blocks come
+ * off in pieces); B the patch's delay (0..255) for the peeling after the front; A 255 on ground.
+ */
+export function fadeMaps(L, Xb, Zb, mask, W, H, f) {
+  const out = new Uint8Array(W * H * 4), idx = L.idx;
+  const cl = i => CLS[idx[i] >> 8] || 0;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const i = y * W + x;
+    if (!mask[i]) continue;
+    const Z = Zb[i], X = Xb[i], c = cl(i), m = idx[i] >> 8;
+    const near = clamp(1.3 - Z / 25, 0.35, 1);              // minor lines thin out with distance
+    let ink = 0;
+    // silhouette: the skyline, and the top edge of whatever stands well in front of the land behind it
+    // (ridges, the edge of a terrace of land, a wood's crown line, a roof, the viaduct)
+    const up = y > 0 ? i - W : -1;
+    if (up < 0 || !mask[up]) ink = 1;
+    else {
+      const Zu = Zb[up], flat = Z * Z / f;
+      if (Zu > Z * 1.3 && Zu - Z > 8 * flat + 0.05) ink = Z > 40 ? 0.7 : 1;
+    }
+    // boundaries between kinds of ground: the line on the higher side only; far away only the river,
+    // the town and the houses keep theirs
+    if (ink < 1) for (const n of [x > 0 ? i - 1 : -1, x < W - 1 ? i + 1 : -1, up, y < H - 1 ? i + W : -1]) {
+      if (n < 0 || !mask[n]) continue;
+      const cn = cl(n);
+      if (cn === c || (c <= 2 && cn <= 2)) {
+        // the edges of fields and paddies (levees): near only, where a field is a few pixels across
+        if (c <= 2 && (idx[n] >> 8) !== m && Z < 5.5 && n === up) ink = Math.max(ink, 0.4);
+        continue;
+      }
+      if (!(PRIO[c] > PRIO[cn] || (PRIO[c] === PRIO[cn] && c > cn))) continue;
+      if (Z > 30 && c !== 3 && c < 5) continue;
+      ink = Math.max(ink, (c >= 8 ? 0.85 : c === 3 ? 0.8 : 0.6) * near);
+    }
+    // the crowns' shaded sides in a near wood (the bake's crown texture, tex -1), lightly
+    if (c === 6 && ink < 0.3 && Z > 600 / U && Z < 14) {
+      const t = heightBase(X, Z), cs = 0.06 * Math.max(1, Z / 6), u = X / cs, v = (Z + t * 4) / (cs * 1.6);
+      const fu = u - Math.floor(u) - 0.5, fv = v - Math.floor(v) - 0.5;
+      if (fu + fv * 0.6 < -0.36) ink = Math.max(ink, 0.3);
+    }
+    // how far it has gone: its distance beyond the rim, in patches of about 140 m
+    const xm = -X * U, zm = Z * U;
+    const e = Math.hypot((xm - MIST.cx) / MIST.rx, (zm - MIST.cz) / MIST.rz);
+    const beyond = Math.max(0, e - 1) * 400;
+    const px = Math.floor(xm / 140 + vnoise(xm / 300, zm / 300, 611) * 1.2), pz = Math.floor(zm / 140 + vnoise(xm / 300 + 7, zm / 300, 612) * 1.2);
+    const jit = (hash2(px, pz, 613) - 0.5) * 0.9;
+    const s = clamp(fadeStageAt(beyond) + jit, 1, FADE_STAGES);
+    const o = i * 4;
+    out[o] = Math.round(clamp(ink, 0, 1) * 255);
+    out[o + 1] = Math.round(s * 50);
+    out[o + 2] = Math.round(hash2(px, pz, 614) * 255);
+    out[o + 3] = 255;
+  }
+  return out;
+}
+// the region's rim (vista.py MIST: the mist ellipse round the walkable region)
+const MIST = { cx: -50, cz: 100, rx: 430, rz: 370 };
+/** The stage (1..4, continuous) a place ends at, from its distance beyond the rim in metres. */
+export function fadeStageAt(beyond) {
+  const K = [[0, 1], [900, 2], [2400, 3], [5000, 4]];
+  if (beyond <= 0) return 1;
+  for (let k = 0; k < K.length - 1; k++) if (beyond <= K[k + 1][0]) return K[k][1] + (beyond - K[k][0]) / (K[k + 1][0] - K[k][0]);
+  return 4;
+}

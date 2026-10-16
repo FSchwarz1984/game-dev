@@ -185,9 +185,41 @@ float v_cloud_shade(vec3 wp) {
 }
 
 // ------------------------------------------------------------------------------------------------
-// the 遠化: beyond the region's ring the land pales more and more with distance (it loses its
-// nearness, it does not hide in a fog); past the front it lies flat and white. The front wanders
-// round the region (its radius per direction). High ground keeps more of itself.
+// the 遠化 as a print losing its blocks (褪版; round 5, the user G5R3-15/18: "遠化選a好了"). The 遠化
+// is things that are still in their place and in sight but no longer "near" (the rule of the world:
+// the more of its nature a thing has lost, the farther it is). So it is drawn as a woodblock print
+// whose colour blocks come away, never as air: past the front (where the prologue's white tide
+// stopped; it wanders round the region) the land keeps its place and its drawing, and its blocks
+// go one after another, each at its own front farther out:
+//   0 the gradations and the fine tones (bokashi: the light's modelling, the clouds' shade on the
+//     land, the water's sky): the surfaces print flat, two tones to a block;
+//   1 the green block (grass, rice, woods, leaves);
+//   2 the water's blue;
+//   3 the earths and ochres (soil, roads, dry fields, rock, roofs, wood, brick);
+// at last only the key block is left: its ink lines (vista_post: the outlines; vista_ground: the
+// borders of fields, woods, water, roads and villages) on the paper, and the paper's blind
+// embossing (karazuri: the relief pressed into the white, a very light light and shade by the
+// surface's normal). A block is printed or not (no fading toward white: a seam dithered on the
+// screen pixel), so the blocks read one by one, not as a loss of saturation. Paper and ink are the
+// palette's (far_white; the palette's ink K); no haze, no paling in the 遠化; at night no lamps there,
+// the paper as dark as the night and the lines just legible. Nothing in it moves (vista_cloud,
+// vista_puff, the water here; vista3d.gd). Anything that loses its nature later (「移」) is drawn by
+// the same rule: v_print with its block.
+
+const int V_PAPER = 0;      // white things: printed by no block (plaster, smoke, steam, clouds)
+const int V_GREEN = 1;
+const int V_BLUE = 2;
+const int V_EARTH = 3;
+// metres past the front where the gradations, the green, the blue, the earths are gone (each block's
+// own front wanders a fifth either way)
+uniform vec4 plate_at = vec4(250.0, 1500.0, 2900.0, 4600.0);
+uniform vec3 ink_k = vec3(0.216, 0.184, 0.157);   // the palette's ink (K, sRGB; vista3d.gd sets it from the palette)
+// the blocks' flat colours (linear; vista3d.gd sets them from the terrain's palette and the view's own
+// colours): two tones to a block, light and dark
+uniform vec3 print_green_lt = vec3(0.10, 0.13, 0.06);
+uniform vec3 print_green_dk = vec3(0.033, 0.069, 0.022);
+uniform vec3 print_earth_lt = vec3(0.20, 0.17, 0.12);
+uniform vec3 print_earth_dk = vec3(0.07, 0.055, 0.04);
 
 float v_front_r(vec2 xz) {
 	vec2 d = xz - front_c.xy;
@@ -195,73 +227,99 @@ float v_front_r(vec2 xz) {
 	float w = w3_vnoise(vec2(a * 2.2 + 11.0, 3.0)) * 0.65 + w3_vnoise(vec2(a * 6.1 + 2.0, 7.0)) * 0.35;
 	return front_c.z * (0.62 + 0.8 * w);
 }
-
-// 0 inside the ring; up to about 0.3 before the front; 1 past it
-// (round 5, G5R3-1: round 3's 遠化 again, the lead: "远处那条米色的宽带是第三轮的，按第三轮恢复（它读起来像
-// 浮世绘、大和绘里的すやり霞）"; round 4's "far land in the air" was rolled back with the colours)
-float v_drain(vec2 xz, float y) {
-	float e = v_mist_e(xz);
-	if (e < 1.0) return 0.0;
-	float r = length(xz - front_c.xy);
-	float rf = v_front_r(xz);
-	// (the high ground keeps more of itself: far mountains stand out of the white)
-	float hk = 1.0 - 0.85 * smoothstep(-300.0, -60.0, y);
-	if (r > rf) {
-		// past the front the white takes the land up to a height that wanders from place to place:
-		// up one slope, short of the next, so its far side is no level line (a white that stopped
-		// at one height read as a lake filling the plain)
-		float top = -250.0 + 600.0 * w3_vnoise(xz / 2500.0 + 5.0);
-		return y < top ? 1.0 : min(hk, 0.55);
-	}
-	float f = r / rf;
-	return (0.03 + 0.3 * f * f) * hk;
+// metres past the 遠化's front (negative before it)
+float v_past_m(vec2 xz) {
+	return length(xz - front_c.xy) - v_front_r(xz);
+}
+// where block k is gone, metres past the front, wandering with the direction (its own line)
+float v_plate_front(int k, vec2 xz) {
+	vec2 d = xz - front_c.xy;
+	float a = atan(d.x, -d.y);
+	float w = w3_vnoise(vec2(a * 3.3 + float(k) * 17.0, float(k) * 5.0 + 1.0)) * 0.7 + w3_vnoise(vec2(a * 9.1 + float(k) * 3.0, 9.0)) * 0.3;
+	return plate_at[k] * (0.8 + 0.4 * w);
+}
+// 1 while block k is still printed at this point, 0 past its front; the seam dithered over about two
+// screen pixels (dist: from the eye, to size the seam)
+float v_plate_on(int k, vec2 xz, float dist, vec2 frag) {
+	float past = v_past_m(xz) - v_plate_front(k, xz);
+	float seam = 2.0 * dist / v_ppr;
+	return step(past, (w3_hash(floor(frag) + float(k) * 7.31) - 0.5) * seam);
+}
+// how far into the 遠化: 0 before the front .. 1 past the last block (only the key block)
+float v_fade(vec2 xz) {
+	float p = v_past_m(xz);
+	return p <= 0.0 ? 0.0 : clamp(p / plate_at.w, 0.0, 1.0);
+}
+// the light a print shows: no modelling, the hour's light on a level surface (the sky above, the sun
+// at round 3's middle level), so the faded land keeps the hour (warm at dusk, dark at night)
+vec3 v_print_light() {
+	return vec3(w3_luma(w3_sky)) * w3_shade_tint + w3_sun * w3_lit_tint * (0.78 / W3_PI);
+}
+// a block's flat colour for a surface of albedo alb (light or dark tone of the block)
+vec3 v_flat(int plate, vec3 alb) {
+	float l = w3_luma(alb);
+	if (plate == V_GREEN) return l > 0.075 ? print_green_lt : print_green_dk;
+	if (plate == V_EARTH) return l > 0.12 ? print_earth_lt : print_earth_dk;
+	return alb;
+}
+// the paper, with its blind embossing (the relief by the normal, a few hundredths)
+vec3 v_emboss(vec3 n) {
+	vec3 sd = normalize(w3_sun_dir);
+	return far_white * (1.0 + 0.07 * clamp(dot(n, sd) - 0.45, -0.6, 0.6));
+}
+// the key block's ink: the palette's K, printed (lit like the paper), a little of the paper through it
+vec3 v_ink() {
+	vec3 k = w3_srgb_to_linear(ink_k);
+	float paper_l = max(w3_luma(far_white), 1e-4);
+	// (lit as the paper is: the paper's own albedo is about 0.75)
+	return mix(far_white, k * paper_l / 0.75, 0.78);
+}
+// a surface's colour past the front: amb its colour as drawn before the 遠化 (ambient-lit, without
+// the sun); flat_c its block's flat colour (the albedo the print uses: two tones to a block, v_flat);
+// plate its block; n its normal (world). Before the front it is amb.
+vec3 v_print(vec3 amb, vec3 flat_c, int plate, vec3 n, vec3 wp, vec3 cam, vec2 frag) {
+	float dist = length(wp - cam);
+	if (v_plate_on(0, wp.xz, dist, frag) > 0.5) return amb;
+	if (plate == V_PAPER || v_plate_on(plate, wp.xz, dist, frag) < 0.5) return v_emboss(n);
+	return flat_c * v_print_light();
+}
+// the sun's share a surface keeps (the gradations go first: past the front no modelling)
+float v_print_sun(vec3 wp, vec3 cam, vec2 frag) {
+	return v_plate_on(0, wp.xz, length(wp - cam), frag);
 }
 
-// haze (air) and drain (遠化) amounts at a point (continuous since round 4: the HDR view and the
-// display's blue-noise dither keep a slow gradient from banding)
-vec2 v_air_k(vec3 wp, vec3 cam, vec2 frag) {
+// (compatibility: 1 in the 遠化 (past the front), else 0; the lamps and the outlines ask this)
+float v_drain(vec2 xz, float y) {
+	return v_past_m(xz) > 0.0 ? 1.0 : 0.0;
+}
+
+// the air before the 遠化: haze with distance, gone across the front's first stretch (nothing in the
+// 遠化 hides in air)
+float v_haze_k(vec3 wp, vec3 cam) {
 	float d = length(wp - cam);
 	// the air thins with height: far peaks stay legible above the lowland's haze
 	float thin = mix(1.0, 0.35, smoothstep(-100.0, 700.0, wp.y));
 	float h = 1.0 - exp(-d / haze_dist * thin);
-	float m = v_drain(wp.xz, wp.y) * mist_max;
-	return vec2(clamp(h, 0.0, 1.0), m > 0.99 ? 1.0 : clamp(m, 0.0, 1.0));
+	return clamp(h, 0.0, 1.0) * (1.0 - smoothstep(-400.0, plate_at.x, v_past_m(wp.xz))) * mist_max;
 }
-// the 遠化's white with the land's drawing in it: ink 0 the paper, 1 the darkest line
-vec3 v_paper(float ink) {
-	return far_white * (1.0 - 0.17 * ink);
-}
-// haze and the 遠化 over a colour: paler and greyer toward the front, past it the flat white
 vec3 v_air(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
-	vec2 k = v_air_k(wp, cam, frag);
-	float l0 = dot(col, vec3(0.299, 0.587, 0.114));
-	if (k.y >= 1.0) {
-		// past the front: paper white with the land's drawing left in it, like a print faded in the
-		// sun: what was dark (woods, the groves round the villages, roofs, the river's banks, the
-		// viaduct) a faint warm grey, everything light the paper itself. Dark marks on white, never
-		// light flecks on a darker ground (those read as the glitter of water).
-		// (col is the land's ambient light here: the sun is added later, and not past the front; so
-		// divided by the ambient it is about the land's own lightness, at every hour)
-		float la = max(dot(w3_sky + w3_ground, vec3(0.299, 0.587, 0.114)), 0.01);
-		return v_paper(1.0 - smoothstep(0.02, 0.08, l0 / la));
-	}
-	col = mix(col, haze_col, k.x);
-	float l = dot(col, vec3(0.299, 0.587, 0.114));
-	vec3 pale = mix(vec3(l), col, 0.45) * 0.55 + mist_col * 0.5;
-	return mix(col, pale, clamp(k.y * 1.3, 0.0, 1.0));
+	return mix(col, haze_col, v_haze_k(wp, cam));
 }
-// the clouds and the sky: haze only (weather is not drained)
+// the clouds and the sky: the same air
 vec3 v_air_only(vec3 col, vec3 wp, vec3 cam, vec2 frag) {
-	return mix(col, haze_col, v_air_k(wp, cam, frag).x);
+	return mix(col, haze_col, v_haze_k(wp, cam));
 }
-// what is left of a light added later (in light()) after the same air
+// what is left of the sun's light (added in light()) after the air and the 遠化's gradations
 float v_air_keep(vec3 wp, vec3 cam, vec2 frag) {
-	vec2 k = v_air_k(wp, cam, frag);
-	return k.y >= 1.0 ? 0.0 : (1.0 - k.x) * (1.0 - clamp(k.y * 1.4, 0.0, 0.85));
+	return (1.0 - v_haze_k(wp, cam)) * v_print_sun(wp, cam, frag);
 }
-// past the 遠化 front (the flat white): the things drawn on it give their own ink
+// past the 遠化's first block (the gradations): the surfaces print flat
 bool v_past(vec3 wp, vec3 cam, vec2 frag) {
-	return v_air_k(wp, cam, frag).y >= 1.0;
+	return v_print_sun(wp, cam, frag) < 0.5;
+}
+// (kept for the old callers: the paper with a share of ink)
+vec3 v_paper(float ink) {
+	return mix(far_white, v_ink(), ink);
 }
 
 // the toon sun of the vista: three bands, the painted shade of pixel_toon (w3_ambient); the band

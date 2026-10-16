@@ -82,7 +82,9 @@ void fragment() {
 	v_leaf = leaf;
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	ALBEDO = vec3(1.0);
-	EMISSION = v_air(w3_ambient(alb, n, ao), v_wp, eye, FRAGCOORD.xy);
+	// (in the 遠化 the leaves print from the green block, red leaves and the wood from the earths)
+	int plate = leaf > 0.5 && alb.r < alb.g * 1.15 ? V_GREEN : V_EARTH;
+	EMISSION = v_print(v_air(w3_ambient(alb, n, ao), v_wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, n, v_wp, eye, FRAGCOORD.xy);
 	}
 }
 

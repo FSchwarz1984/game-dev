@@ -1,64 +1,78 @@
-"""百々かさゝぎ's proportions and skeleton points (rest pose), derived from design.py; shared by the
+"""百々かさゝぎ's skeleton points, round 6, in the model sheet's A pose (design.py): shared by the
 model, the rig and the animations.
 
-Blender coordinates, metres: Z up, she faces -Y, her left is +X. On screen (docs/knowledge/21 §1)
-a point's height is 30 px per metre of (z_up - 0.819 * forward): see design.py for what that does
-to a head under a wide hat.
-
-Rest pose (round 5): she stands with her arms hanging inside the wide sleeves, hands just showing at
-the sleeves' hems, as in the v0.2 sprite; every standing animation starts from it.
+Blender coordinates, metres: Z up, she faces -Y, her left is +X.
 """
+import math
 from mathutils import Vector
 
 from kasasagi.design import D
 
-S = 1.0
-
-# ---- head --------------------------------------------------------------------------------------
+# ---- head ----------------------------------------------------------------------------------------
 CHIN_Z = D['chin_z']
-HEAD_H = D['head_h']
-HEAD_TOP = CHIN_Z + HEAD_H
-HEAD_YC = 0.012                 # the head's axis sits a little behind the body's
+HEAD_TOP = D['head_top']
+HEAD_H = HEAD_TOP - CHIN_Z
+HEAD_YC = -D['head_f']          # the head's axis (forward is -Y)
 EYE_H = D['eye_h']
 EYE_X = D['eye_x']
 MOUTH_H = D['mouth_h']
 BANG_CUT_H = D['bang_cut']
-FACE_Y = D['face_y']
 FACE_W = D['face_w']
+FACE_F = D['face_f']
 
-# ---- neck, torso -------------------------------------------------------------------------------
+# ---- neck, torso ---------------------------------------------------------------------------------
 SHOULDER_Z = D['shoulder_z']
-NECK_BASE = Vector((0, 0.010, D['neck_base']))
-NECK_TOP = Vector((0, 0.018, CHIN_Z + 0.03))
+NECK_BASE = Vector((0, 0.012, D['neck_base']))
+NECK_TOP = Vector((0, HEAD_YC + 0.02, CHIN_Z + 0.04))
 HIPS = Vector((0, 0.0, D['hip_z']))
-SPINE = Vector((0, 0.0, D['hip_z'] + 0.5 * (D['obi_z'][0] - D['hip_z']) + 0.04))
-CHEST = Vector((0, 0.004, D['obi_z'][1] + 0.05))
+SPINE = Vector((0, 0.0, 0.80))
+CHEST = Vector((0, 0.004, 1.00))
 OBI_Z = D['obi_z']
 
-# ---- arms: hanging, a little out from her sides, the elbows soft --------------------------------
+# ---- arms: the A pose (41 deg below level), the elbow nearly straight -------------------------
 SW = D['shoulder_w']
-CLAV_IN = Vector((0.03, 0.010, SHOULDER_Z - 0.006))
+CLAV_IN = Vector((0.03, 0.010, SHOULDER_Z + 0.02))
 SHOULDER = Vector((SW, 0.012, SHOULDER_Z))
-_arm_len = SHOULDER_Z - D['hand_z']
-_hx, _hy = D['hand_dx'], D['hand_dy']
-ELBOW = Vector((SW + 0.6 * _hx, 0.006, SHOULDER_Z - _arm_len * 0.44))
-WRIST = Vector((SW + 0.96 * _hx, 0.65 * _hy, SHOULDER_Z - _arm_len * 0.86))
-HAND_TIP = Vector((SW + _hx, _hy, D['hand_z']))
+_wx, _wz = D['wrist']
+WRIST = Vector((_wx, -0.01, _wz))
+ELBOW = SHOULDER.lerp(WRIST, 0.52) + Vector((0, 0.012, 0))
+_dir = (WRIST - SHOULDER).normalized()
+HAND_TIP = WRIST + _dir * D['hand_len'] + Vector((0, -0.01, -0.02))
+ARM_DIR = _dir
 
 # ---- legs ----------------------------------------------------------------------------------------
-HIP_JOINT = Vector((0.072, 0.0, D['hip_z'] - 0.035))
-KNEE = Vector((0.078, -0.010, D['knee_z']))
-ANKLE = Vector((0.080, 0.012, D['ankle_z']))
-BALL = Vector((0.082, -0.075, 0.026))
-TOE = Vector((0.083, -(D['foot_len'] - 0.07), 0.022))
+LX = D['leg_x']
+HIP_JOINT = Vector((LX * 0.62, 0.0, D['hip_z'] - 0.04))
+KNEE = Vector((LX * 0.92, -0.010, D['knee_z']))
+ANKLE = Vector((LX, 0.010, D['ankle_z']))
+BALL = Vector((LX, -0.10, 0.03))
+TOE = Vector((LX, -(D['foot_len'] * 0.5 + D['foot_f']) + 0.02, 0.025))
 
 # ---- hat -----------------------------------------------------------------------------------------
-# the seat: the crown of the head, where the hat rests (the hat bone's head: the game tilts the hat
-# about this point)
-HAT_SEAT = Vector((0, HEAD_YC, HEAD_TOP))
 HAT_R = D['hat_r']
 HAT_H = D['hat_h']
-HAT_SINK = D['hat_sink']
+# the brim's centre and the hat's frame: tilted back (front up) by hat_tilt, rolled (her left down)
+HAT_C = Vector((0.0, -D['hat_centre_f'], D['hat_centre_h']))
+_t = math.radians(D['hat_tilt'])
+_r = math.radians(D['hat_roll'])
+
+
+def hat_frame():
+    """(centre, up, forward, left): the hat's axes in rest pose."""
+    c, s = math.cos(_t), math.sin(_t)
+    # tilt back about her left axis: the front edge rises, the axis leans back (+Y)
+    up = Vector((0, s, c))
+    fwd = Vector((0, -c, s))
+    left = Vector((1, 0, 0))
+    # roll about the forward axis: her left side down, the axis leans to her left
+    cr, sr = math.cos(_r), math.sin(_r)
+    up2 = up * cr + left * sr
+    left2 = left * cr - up * sr
+    return HAT_C.copy(), up2.normalized(), fwd.normalized(), left2.normalized()
+
+
+# the seat: the crown of the head (the hat bone's head)
+HAT_SEAT = Vector((0, HEAD_YC, HEAD_TOP))
 
 
 def mirror(v):

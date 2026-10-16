@@ -12,12 +12,15 @@ var sample: Node
 var out := "."
 var frame := 0
 var marks := {}
+var part := "all"     # --part=quality: only set_quality() and the hour's wrap (the pad checked before)
 
 
 func _initialize() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--out="):
 			out = a.substr(6)
+		if a.begins_with("--part="):
+			part = a.substr(7)
 	var ps: PackedScene = load("res://world3d/sample.tscn")
 	sample = ps.instantiate()
 	sample.set("args", {"novista": "1", "gi": "none"})
@@ -52,6 +55,22 @@ func _shot(name: String) -> void:
 
 func _process(_dt: float) -> bool:
 	frame += 1
+	if part == "quality":
+		match frame:
+			40:
+				sample.call("set_hours", 37.5, false)  # wraps to 13.5, time passing
+			45:
+				print("SHELLCHECK wrapped hours %.2f" % sample.get("env").get("hours"))
+				_shot("shell_1330_q1.png")
+				sample.call("set_quality", 0)
+			70:
+				_shot("shell_1330_q0.png")
+				sample.call("set_quality", 1)
+			75:
+				_shot("shell_1330_q1_again.png")
+				print("SHELLCHECK quality 1 -> 0 -> 1 done")
+				return true
+		return false
 	match frame:
 		40:
 			marks["a"] = _her()

@@ -595,7 +595,10 @@ def trail_details(sink, ground, route, s0, s1, width, R, trees=(), stones=1.0):
     L = s1 - s0
     n = int(L / 2.6 * stones)
     if stones > 0:
-        tris += edge_stones(sink, ground, route, s0, s1, R, every=(1.8, 5.0), size=(0.12, 0.28), cluster=0.35)
+        # the kerb (round 5, iron rule: a path has edges): field stones every metre or three, in ones,
+        # twos and threes, bigger on the downhill side
+        st = max(float(stones), 0.4)
+        tris += edge_stones(sink, ground, route, s0, s1, R, every=(1.0 / st, 3.2 / st), size=(0.14, 0.34), cluster=0.45)
     for k in range(n):
         s = s0 + R.uniform(0, L)
         t = R.uniform(0.45, 0.85) * width * 0.5 * (1 if R.uniform() < 0.5 else -1)
@@ -869,7 +872,12 @@ def build(L, h, x0, z0, cell, placements, seed):
     ground = Ground(h, x0, z0, cell)
     sink = Sink()
     stats = {}
-    trees = [(p['x'], p['z'], 0.35 * p.get('scale', 1.0)) for p in placements if p['kind'] in ('cedar', 'broadleaf', 'beech', 'maple', 'pine')]
+    # (round 5: every tree near a path sends roots across it, the authored ones too: their kinds are
+    # asset names such as konara or maple_a)
+    not_trees = ('fern', 'shrub', 'azalea', 'hydrangea', 'susuki', 'boulder', 'outcrop', 'rock_slab', 'bamboo', 'camphor',
+                 'sakaki', 'ikegaki', 'tsubaki', 'ajisai', 'tsutsuji', 'tama_ajisai', 'sarusuberi')
+    trees = [(p['x'], p['z'], 0.35 * p.get('scale', 1.0)) for p in placements
+             if not any(p['kind'] == k or p['kind'].startswith(k + '_') for k in not_trees)]
 
     def run(route, ranges, width, name, gutter=0):
         for a, b, sg in ranges:

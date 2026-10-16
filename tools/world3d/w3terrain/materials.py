@@ -51,6 +51,14 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     road = F["trail_k"]
     paths = np.zeros_like(Hs)
     yard = geom.smoothstep(0.22, -0.3, F["yard_sdf"] + (n1 - 0.5) * 0.4) * (0.78 + 0.22 * geom.smoothstep(0.35, 0.65, n2))
+    # round 5 (G5R3-4, the paths' iron rule: never one band of one colour): along a trail's outer
+    # part the verge bites in, in tongues and bites half a metre long: leaves under the trees, moss in
+    # the barrier and the shade, grass in the open (whatever wins below); the bitten places are not
+    # earth any more, so the edge is ragged at the scale of a step
+    edge = np.asarray(F.get("edge_k", 0.0)) * np.ones_like(Hs)
+    nb = noise.fbm(Xs / 0.75, Zs / 0.75, 2, seed + 111) * 0.65 + noise.fbm(Xs / 2.2, Zs / 2.2, 2, seed + 112) * 0.35
+    bite = edge * geom.smoothstep(0.5, 0.64, nb)
+    road = road * (1.0 - 0.9 * bite)
     dirt = np.maximum(road, yard)
     W["dirt"] = dirt * (1.0 - rock * 0.8)
 
@@ -89,6 +97,10 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     W["litter"] = 0.66 * litter * (1.0 - dirt * 0.5) * (1.0 - rock * 0.8) * (1.0 - W["moss"] * 0.45) * (1.0 - F.get("pave_k", 0.0))
     # under the canopy the grass thins and moss creeps in among the leaves
     W["moss"] = np.maximum(W["moss"], canopy * geom.smoothstep(0.5, 0.68, n1) * 0.55 * (1.0 - dirt))
+    # the trails' bitten verges: leaves where trees stand over the path, moss in the barrier and in
+    # the shade, otherwise the grass (the default) takes them
+    W["litter"] = np.maximum(W["litter"], bite * 0.85 * geom.smoothstep(0.15, 0.5, canopy))
+    W["moss"] = np.maximum(W["moss"], bite * 0.8 * np.maximum(sanct, faces_north * 0.7) * (1.0 - geom.smoothstep(0.15, 0.5, canopy)))
 
     # the paddies (round 5: the yard's trodden paths are no longer paddy mud: they read as dark olive
     # bands; they are the yard's own packed earth, worn lighter, below: m2.b)
@@ -132,7 +144,9 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     hb2 = ndimage.gaussian_filter(Hs, 1.2 / cell_s)
     puddle = geom.smoothstep(0.015, 0.06, hb2 - Hs) * np.maximum(W["dirt"], W["gravel"]) * geom.smoothstep(12.0, 6.0, slope)
     puddle = np.maximum(puddle, F["paddy"] * 0.0)
-    wear = geom.smoothstep(0.3, 0.9, F["trail_k"]) * np.maximum(W["dirt"], 0.0) * (0.5 + 0.5 * n1)
+    # a trail's wear follows the trodden line (lighter, swept of pebbles), its sides keep their stones
+    tread = np.asarray(F.get("tread_k", 1.0)) * np.ones_like(Hs)
+    wear = geom.smoothstep(0.3, 0.9, F["trail_k"]) * np.maximum(W["dirt"], 0.0) * (0.2 + 0.8 * tread) * (0.6 + 0.4 * n1)
     # the yard: swept a little in the open middle (fewer pebbles), pebbles gather toward the edges
     yard_mid = geom.smoothstep(-0.6, -2.4, F["yard_sdf"]) * geom.smoothstep(0.45, 0.6, n2)
     wear = np.maximum(wear, 0.3 * yard_mid * W["dirt"])

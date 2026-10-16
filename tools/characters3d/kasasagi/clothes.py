@@ -1,543 +1,534 @@
-"""百々かさゝぎ, round 5: body and clothes. Big clean shapes first (the lead's diagnosis of round 4: thin
-body, rectangular sleeves, stiff): a short round torso, two wide white sleeves that hang as bells from
-the shoulders with the hands just showing (v0.2), the white robe open over the trousers, a red bow.
-Colour regions that must stay crisp at 30 px per metre are separate geometry laid on top (collar,
-cord, hem bands), never vertex-colour gradients; every band is at least ~1 native px wide."""
+"""百々かさゝぎ, round 6: body and clothes, built to the model sheet (design.py: the blueprint frame and
+every measured number; the clothes sheet for details).
+
+  * a navy kosode with a white and a red collar showing in its V;
+  * the cream outer coat, open in front, flaring to uneven pointed hems at the knees, with very wide
+    sleeves hanging to the knees from the A-posed arms, navy lining showing at the cuffs;
+  * a white obi with a red band, a big red bow a little to her left, one short tail and one long one
+    running down past her left knee;
+  * navy lantern trousers gathered under the knee, white leg wraps, navy tabi on cream-soled zori with
+    a white thong.
+
+Coordinates: Blender, metres, Z up, she faces -Y, her left is +X.
+"""
 import math
 from mathutils import Vector
 
-from c3d.surf import (Part, grid, sweep, cap, Path, interp, superellipse, smooth, lerp, mix_col,
-                      M_SKIN, M_FACE, M_HAIR, M_CLOTH, M_HAT_TOP, M_HAT_UNDER, M_STRAW, M_WOOD, M_ROPE, M_TIE)
+from c3d.surf import Part, grid, sweep, cap, Path, interp, smooth, lerp, M_SKIN, M_CLOTH, M_TIE
 from kasasagi import body as B
 from kasasagi import palette as C
 from kasasagi.design import D
 
 TAU = 2 * math.pi
-LINED = 1.0           # aux extra: the back faces show the navy lining (the shader flips them)
-LINED_CREAM = 2.0     # back faces a deeper cream
 
 
-def ring_point(t, X, Yd, yc, n=2.3):
-    cx, sy = superellipse(t, 1.0, 1.0, n)
-    return X * cx, yc - Yd * sy
+def _tab(table, h, k):
+    return interp([(p[0], p[k]) for p in table], h)
 
 
 # =================================================================================================
-# torso (the navy kosode)
-
-def _torso_table():
-    hz, (o0, o1), sz, nb = D['hip_z'], D['obi_z'], B.SHOULDER_Z, D['neck_base']
-    return [
-        # z            X      Yd     yc
-        (hz - 0.07,    0.124, 0.094, 0.000),
-        (hz,           0.122, 0.092, 0.000),
-        (o0,           0.116, 0.088, 0.000),
-        (o1,           0.120, 0.088, -0.002),
-        (o1 + 0.07,    0.128, 0.090, -0.004),
-        (sz - 0.03,    0.136, 0.086, 0.000),
-        (sz,           0.122, 0.074, 0.006),
-        (sz + 0.022,   0.082, 0.058, 0.010),
-        (nb + 0.012,   0.048, 0.044, 0.012),
-    ]
+# the kosode (navy): the torso from the hips to the neck, the shoulders sloping
+TORSO = [
+    # h      W       F       K
+    (0.62, 0.150, 0.120, 0.120),
+    (0.80, 0.150, 0.120, 0.120),
+    (0.95, 0.152, 0.125, 0.118),
+    (1.05, 0.160, 0.128, 0.112),
+    (1.10, 0.168, 0.118, 0.105),
+    (1.13, 0.170, 0.105, 0.098),
+    (1.155, 0.142, 0.088, 0.082),
+    (1.185, 0.085, 0.064, 0.060),
+    (1.21, 0.056, 0.052, 0.050),
+    (1.235, 0.050, 0.048, 0.046),
+]
 
 
-TORSO = _torso_table()
+def torso_point(h, a, grow=0.0):
+    """a: angle from her front, + toward her left."""
+    W = _tab(TORSO, h, 1) + grow
+    F = _tab(TORSO, h, 2) + grow
+    K = _tab(TORSO, h, 3) + grow
+    s, c = math.sin(a), math.cos(a)
+    e = 2.0 / 2.6
+    x = W * math.copysign(abs(s) ** e, s)
+    y = -F * (abs(c) ** e) if c >= 0 else K * (abs(c) ** e)
+    return Vector((x, y + 0.004, h))
 
 
-def torso_slice(z):
-    X = interp([(p[0], p[1]) for p in TORSO], z)
-    Yd = interp([(p[0], p[2]) for p in TORSO], z)
-    yc = interp([(p[0], p[3]) for p in TORSO], z)
-    return X, Yd, yc
+def _collar_col(p):
+    """The V: skin at the throat, a red band, a white band, then the navy kosode."""
+    # sheet front: at h 1.21 the throat |x| < 0.037, red to 0.055, white to 0.095; the V's point at
+    # h 1.036
+    if p.y > -0.02 or p.z < D['collar_v']:
+        return C.NAVY
+    d = abs(p.x) - 0.316 * (p.z - D['collar_v'])
+    return C.SKIN if d < 0.0 else C.NAVY
 
 
 def torso():
     part = Part('torso', M_CLOTH)
-    z0, z1 = TORSO[0][0], TORSO[-1][0]
+    h0, h1 = 0.62, 1.235
 
     def pos(u, v):
-        z = lerp(z0, z1, u)
-        X, Yd, yc = torso_slice(z)
-        x, y = ring_point(v * TAU, X, Yd, yc)
-        return Vector((x, y, z))
+        return torso_point(lerp(h0, h1, u), v * TAU - math.pi / 2)
 
-    grid(part, 14, 32, pos, close_v=True, col=lambda u, v: C.NAVY, flip=True,
-         tagf=lambda u, v: {'seg': 'torso', 'z': lerp(z0, z1, u)})
-    return part
-
-
-def torso_normal(p):
-    X, Yd, yc = torso_slice(min(max(p.z, TORSO[0][0]), TORSO[-1][0]))
-    n = Vector((p.x / max(X, 1e-3) ** 2, (p.y - yc) / max(Yd, 1e-3) ** 2, 0.0))
-    if n.length < 1e-6:
-        return Vector((0, -1, 0))
-    return n.normalized()
-
-
-def _band_on(part, path_pts, width, lift, base_fn, col, aux=(M_CLOTH, 0.0), tag=None, nu=12, up=None,
-             thick=0.006):
-    """A flat band laid along a path over a surface (`base_fn(p)`: the surface's outward normal near p)."""
-    path = Path(path_pts, up=up or (0, -1, 0))
-    idx = []
-    for i in range(nu + 1):
-        u = i / nu
-        p, t, n, b = path.at(u)
-        out = base_fn(p)
-        side = t.cross(out).normalized()
-        w = width(u) if callable(width) else width
-        top = [part.add(p + out * (lift + thick) + side * (w * 0.5 * s), col(u, (s + 1) / 2) if callable(col) else col,
-                        (u, (s + 1) / 2), aux, dict(tag or {}, u=u)) for s in (-1, 0, 1)]
-        lo = [part.add(p + out * lift + side * (w * 0.5 * s), col(u, (s + 1) / 2) if callable(col) else col,
-                       (u, (s + 1) / 2), aux, dict(tag or {}, u=u)) for s in (-1, 1)]
-        idx.append((top, lo))
-    for i in range(nu):
-        (r0, l0), (r1, l1) = idx[i], idx[i + 1]
-        for k in range(2):
-            part.f.append((r0[k], r0[k + 1], r1[k + 1], r1[k]))
-        part.f.append((l0[0], r0[0], r1[0], l1[0]))
-        part.f.append((r0[2], l0[1], l1[1], r1[2]))
+    grid(part, 20, 40, pos, close_v=True, col=lambda u, v: _collar_col(pos(u, v)),
+         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'torso', 'h': lerp(h0, h1, u)}, flip=True)
     return part
 
 
 def collar():
-    """The kosode's V (her left panel over her right): a white band with the red under-collar inside."""
+    """The V of the collars on the kosode's front: a red band inside a white one each side, from the
+    neck's sides down to the V's point (sheet front: at h 1.21 the throat |x| < 0.037, red to 0.055,
+    white to 0.095; the point at h 1.036). Strips lying on the torso, a little proud of it."""
     part = Part('collar', M_CLOTH)
-    nb = D['neck_base']
-    o1 = D['obi_z'][1]
-    for side, z_end, over in ((1, o1 - 0.01, True), (-1, o1 + 0.05, False)):
-        pts = [Vector((0.0, 0.048, nb + 0.012)), Vector((side * 0.044, 0.016, nb + 0.010)),
-               Vector((side * 0.050, -0.040, nb - 0.004)),
-               Vector((side * 0.010, -0.082, nb - 0.075)),
-               Vector((-side * 0.032, -0.086, z_end + 0.02))]
-        if not over:
-            pts = pts[:4] + [Vector((-side * 0.006, -0.086, z_end))]
-        _band_on(part, pts, lambda u: 0.042, 0.004 if over else 0.002, torso_normal, C.WHITE,
-                 tag={'seg': 'torso'}, nu=12)
-        # the red under-collar, a band inside the V
-        rp = [p + Vector((-side * 0.016, -0.001, 0.0)) for p in pts[1:]]
-        _band_on(part, rp, lambda u: 0.026, 0.0035 if over else 0.0015, torso_normal, C.RED,
-                 tag={'seg': 'torso'}, nu=10, thick=0.004)
+    z0, z1 = D['collar_v'], 1.235
+    k = 0.300
+
+    def on_torso(x, z, lift):
+        # the torso's front surface at (x, z): search the angle whose x matches
+        lo, hi = 0.0, math.pi / 2
+        sgn = 1 if x >= 0 else -1
+        for _ in range(30):
+            mid = 0.5 * (lo + hi)
+            if abs(torso_point(z, sgn * mid).x) < abs(x):
+                lo = mid
+            else:
+                hi = mid
+        p = torso_point(z, sgn * 0.5 * (lo + hi))
+        return p + Vector((0, -lift, 0))
+
+    for side in (1, -1):
+        for (d0, d1, col, lift) in ((-0.018, 0.0, C.RED, 0.006), (0.0, 0.040, C.WHITE, 0.008)):
+            def pos(u, v, d0=d0, d1=d1, lift=lift, side=side):
+                z = lerp(z0, z1, u)
+                x = side * (k * (z - z0) + lerp(d0, d1, v))
+                if side * x < 0:
+                    x = 0.0
+                return on_torso(x, min(z, 1.232), lift + 0.004 * smooth((z - 1.16) / 0.05))
+            grid(part, 8, 2, pos, col=lambda u, v, col=col: col, auxf=lambda u, v: (M_CLOTH, 0.0),
+                 tagf=lambda u, v: {'seg': 'torso', 'h': 1.1}, flip=(side < 0))
     return part
 
 
 # =================================================================================================
-# obi, cord, bow, the sash's tails
+# the outer coat (cream), open in front
 
-def obi():
-    part = Part('obi', M_CLOTH)
-    o0, o1 = D['obi_z']
-
-    def pos(u, v):
-        z = lerp(o0, o1, u)
-        X, Yd, yc = torso_slice(z)
-        bulge = 0.016 + 0.004 * math.sin(math.pi * u)
-        x, y = ring_point(v * TAU, X + bulge, Yd + bulge, yc)
-        return Vector((x, y, z))
-
-    grid(part, 4, 32, pos, close_v=True, col=lambda u, v: C.WHITE, flip=True,
-         tagf=lambda u, v: {'seg': 'torso', 'z': lerp(o0, o1, u)})
-    cord = Part('cord', M_CLOTH)
-    zc = (o0 + o1) / 2
-
-    def cpos(u, v):
-        z = lerp(zc - 0.022, zc + 0.022, u)
-        X, Yd, yc = torso_slice(z)
-        bulge = 0.026 + 0.003 * math.sin(math.pi * u)
-        x, y = ring_point(v * TAU, X + bulge, Yd + bulge, yc)
-        return Vector((x, y, z))
-
-    grid(cord, 2, 32, cpos, close_v=True, col=lambda u, v: C.RED, flip=True,
-         tagf=lambda u, v: {'seg': 'torso', 'z': zc})
-    part.extend(cord)
-    return part
+COAT = [
+    # h      W       F       K       gap: x of the front edge (sheet front: the lapels at x +-0.20 by the
+    #                                chest, the kosode's navy between them and the white collar)
+    (0.225, 0.420, 0.335, 0.240, 0.150),
+    (0.40, 0.400, 0.330, 0.232, 0.150),
+    (0.60, 0.350, 0.272, 0.205, 0.145),
+    (0.80, 0.270, 0.205, 0.172, 0.160),
+    (0.92, 0.205, 0.162, 0.152, 0.185),
+    (1.02, 0.205, 0.152, 0.140, 0.198),
+    (1.10, 0.200, 0.138, 0.126, 0.192),
+    (1.15, 0.188, 0.112, 0.105, 0.172),
+    (1.185, 0.150, 0.080, 0.078, 0.140),
+]
+COAT_TOP = 1.185
 
 
-def bow_at():
-    o0, o1 = D['obi_z']
-    zc = (o0 + o1) / 2
-    if D['bow'] == 'left':
-        return Vector((0.072, -0.118, zc + 0.004))
-    return Vector((0.010, -0.124, zc + 0.004))
+def coat_slice(h):
+    return (_tab(COAT, h, 1), _tab(COAT, h, 2), _tab(COAT, h, 3), _tab(COAT, h, 4))
 
 
-def bow():
-    """The red bow: a knot and two loops (the butterfly)."""
-    part = Part('bow', M_CLOTH)
-    k = bow_at()
-    path = Path([k + Vector((0, 0.010, 0.022)), k + Vector((0, -0.010, 0.0)), k + Vector((0, 0.010, -0.022))],
-                up=(0, -1, 0))
-    sweep(part, path, 4, 10, lambda u, a: (0.024 * math.cos(a), 0.022 * math.sin(a)), pole0=True, pole1=True,
-          col=lambda u, v: C.RED, tagf=lambda u, v: {'seg': 'bow'})
-    for ang, size, h in ((math.radians(18), 0.115, 0.074), (math.radians(162), 0.115, 0.074)):
-        d = Vector((math.cos(ang), 0.0, math.sin(ang)))
-        upv = Vector((-d.z, 0, d.x))
-        c = k + d * size * 0.5 + Vector((0, 0.010, 0))
-        lp = []
-        for j in range(12):
-            a = j / 12 * TAU
-            r = 0.5 * (1.0 - 0.35 * math.cos(a))
-            lp.append(c + d * (size * 0.5 * math.cos(a)) + upv * (h * r * math.sin(a)))
-        lpath = Path(lp + [lp[0], lp[1]], up=(0, -1, 0))
-        sweep(part, lpath, 24, 6, lambda u, a: (0.010 * math.cos(a), 0.026 * math.sin(a)), col=lambda u, v: C.RED,
-              tagf=lambda u, v: {'seg': 'bow'})
-    return part
+def coat_hem(a):
+    """Hem height by the angle from the front edge round her side to the back (radians from the
+    front, absolute): the front panels' corners by the opening, the lowest points at the sides, a
+    second corner behind and the back's middle a little higher (sheet: front, side and back views)."""
+    deg = math.degrees(abs(a))
+    # front view: the lowest corners at x +-0.37 (60 deg round from the front); side view: the side
+    # seam high (0.39), the corners front and back lower; back view: points at the back's sides
+    tab = [(0.0, D['coat_hem_mid']), (28.0, D['coat_hem_mid']), (60.0, D['coat_hem']),
+           (92.0, 0.395), (125.0, 0.300), (155.0, 0.255), (180.0, 0.340)]
+    for i in range(len(tab) - 1):
+        if tab[i][0] <= deg <= tab[i + 1][0]:
+            t = (deg - tab[i][0]) / (tab[i + 1][0] - tab[i][0])
+            return lerp(tab[i][1], tab[i + 1][1], t)
+    return tab[-1][1]
 
 
-def sash_paths():
-    """The two tails from the bow (rest pose): A long one down the front to the knee, a shorter one beside it."""
-    k = bow_at()
-    hem = D['coat_hem']
-    if D['bow'] == 'left':
-        A = [k + Vector((0.012, -0.010, -0.020)), k + Vector((0.040, -0.024, -0.14)),
-             k + Vector((0.070, -0.020, -0.28)), Vector((k.x + 0.092, k.y + 0.002, hem - 0.06)),
-             Vector((k.x + 0.104, k.y + 0.016, hem - 0.15))]
-        Bp = [k + Vector((0.004, -0.008, -0.020)), k + Vector((0.004, -0.020, -0.12)),
-              k + Vector((0.016, -0.018, -0.22)), Vector((k.x + 0.024, k.y - 0.006, hem + 0.02))]
-    else:
-        A = [k + Vector((0.016, -0.010, -0.020)), k + Vector((0.050, -0.026, -0.16)),
-             k + Vector((0.100, -0.026, -0.32)), Vector((k.x + 0.150, k.y - 0.006, hem - 0.04)),
-             Vector((k.x + 0.180, k.y + 0.010, hem - 0.18))]
-        Bp = [k + Vector((-0.008, -0.008, -0.020)), k + Vector((-0.010, -0.022, -0.13)),
-              k + Vector((0.004, -0.022, -0.25)), Vector((k.x + 0.020, k.y - 0.010, hem + 0.04))]
-    return A, Bp
+def coat_point(h, a, grow=0.0):
+    W, F, K, g = coat_slice(h)
+    s, c = math.sin(a), math.cos(a)
+    e = 2.0 / 2.4
+    x = (W + grow) * math.copysign(abs(s) ** e, s)
+    y = -(F + grow) * (abs(c) ** e) if c >= 0 else (K + grow) * (abs(c) ** e)
+    return Vector((x, y, h))
 
 
-def _tail(part, pts, width, chain, col):
-    path = Path(pts, up=(0, -1, 0))
-
-    def section(u, a):
-        w = lerp(width * 0.55, width, smooth(u * 3.0))
-        return (0.007 * math.sin(a), w * math.cos(a))
-
-    rows = sweep(part, path, 20, 8, section, col=lambda u, v: col, auxf=lambda u, v: (M_CLOTH, 0.0),
-                 tagf=lambda u, v: {'seg': 'sash', 'u': u, 'chain': chain}, flip=True)
-    p, t, n, b = path.at(1.0)
-    tip = part.add(p - t * 0.022, col, (1, 0.5), (M_CLOTH, 0.0), {'seg': 'sash', 'u': 1.0, 'chain': chain})
-    ring = rows[-1]
-    for j in range(len(ring)):
-        part.f.append((tip, ring[j], ring[(j + 1) % len(ring)]))
-
-
-def sash_tail():
-    part = Part('sash', M_CLOTH)
-    A, Bp = sash_paths()
-    _tail(part, A, 0.050, 'A', C.RED)
-    _tail(part, Bp, 0.044, 'B', C.RED_DEEP)
-    return part
-
-
-# =================================================================================================
-# the white robe below the obi (haori): open at the front over the trousers, flaring to the hem
-
-def _coat_table():
-    o0 = D['obi_z'][0]
-    hem = D['coat_hem']
-    fl = D['coat_flare']
-    hz = D['hip_z']
-    return [
-        # z                    X                 Yd             yc     half gap at the front (rad)
-        (o0 + 0.012,           0.136,            0.104,         0.000, 0.30),
-        (hz,                   0.150,            0.112,         0.004, 0.34),
-        (lerp(hz, hem, 0.5),   lerp(0.15, fl, 0.62), lerp(0.112, fl * 0.66, 0.62), 0.010, 0.40),
-        (hem,                  fl,               fl * 0.66,     0.016, 0.46),
-    ]
-
-
-COAT = _coat_table()
-
-
-def coat_slice(z):
-    tab = COAT[::-1]
-    X = interp([(p[0], p[1]) for p in tab], z)
-    Yd = interp([(p[0], p[2]) for p in tab], z)
-    yc = interp([(p[0], p[3]) for p in tab], z)
-    g = interp([(p[0], p[4]) for p in tab], z)
-    return X, Yd, yc, g
-
-
-def _peak(v, c, w):
-    d = abs(v - c)
-    return max(0.0, 1.0 - d / w) ** 1.3
-
-
-def hem_z(v):
-    """The hem along v (0 her right front edge .. 1 her left front edge). A: the ChatGPT sheet's pointed
-    hems (the front corners lowest, a point at each side and at the back); B: a plain round hem."""
-    hem = D['coat_hem']
-    if D['hem_style'] == 'points':
-        w = hem + 0.12
-        w -= 0.12 * (_peak(v, 0.0, 0.08) + _peak(v, 1.0, 0.08))
-        w -= 0.08 * (_peak(v, 0.24, 0.08) + _peak(v, 0.76, 0.08))
-        w -= 0.10 * _peak(v, 0.5, 0.12)
-        return w
-    return hem + 0.02 - 0.03 * (_peak(v, 0.0, 0.1) + _peak(v, 1.0, 0.1)) + 0.012 * math.sin(math.pi * v) ** 2
-
-
-def coat_point(z, v, grow=0.0):
-    X, Yd, yc, g = coat_slice(z)
-    t = (math.pi / 2 + g) + v * (TAU - 2 * g)
-    x, y = ring_point(t, X + grow, Yd + grow, yc, n=2.2)
-    return Vector((x, y, z))
+def _edge_angle(h, side):
+    """The angle (from the front) where the coat's front edge is: x = gap."""
+    W, F, K, g = coat_slice(h)
+    r = min(0.999, g / max(W, 1e-3))
+    # invert x = W |s|^e for s
+    e = 2.0 / 2.4
+    s = r ** (1.0 / e)
+    return side * math.asin(s)
 
 
 def coat():
     part = Part('coat', M_CLOTH)
-    z_top = COAT[0][0]
-    nu, nv = 18, 64
+    nu, nv = 26, 96
+
+    def a_of(u, v):
+        h = lerp(COAT_TOP, 0.2, u)
+        a0 = _edge_angle(h, 1)
+        return lerp(a0, TAU - a0, v)
 
     def pos(u, v):
-        return coat_point(lerp(z_top, hem_z(v), u), v)
+        a = a_of(u, v)
+        aa = a if a <= math.pi else a - TAU
+        hem = coat_hem(aa)
+        h = lerp(COAT_TOP, hem, u)
+        return coat_point(h, a)
 
     def col(u, v):
-        return mix_col(C.CREAM, C.CREAM_DEEP, 0.30 * smooth((u - 0.88) / 0.12))
+        k = (v * 16.0) % 1.0
+        return C.CREAM_DEEP if (k < 0.06 and u > 0.35) else C.CREAM
 
-    def tag(u, v):
-        z = lerp(z_top, hem_z(v), u)
-        return {'seg': 'coat', 'u': u, 'v': v, 'z': z}
-
-    grid(part, nu, nv, pos, close_v=False, col=col, auxf=lambda u, v: (M_CLOTH, LINED_CREAM), tagf=tag)
-    return part
-
-
-def back_y(z):
-    """The body's back surface (y, at x = 0) at height z, for the long hair to lie on."""
-    best = 0.0
-    if TORSO[0][0] <= z <= TORSO[-1][0]:
-        X, Yd, yc = torso_slice(z)
-        best = max(best, yc + Yd)
-    o0, o1 = D['obi_z']
-    if o0 - 0.01 <= z <= o1 + 0.01:
-        X, Yd, yc = torso_slice(z)
-        best = max(best, yc + Yd + 0.022)
-    if D['coat_hem'] - 0.05 <= z <= COAT[0][0] + 0.01:
-        X, Yd, yc, g = coat_slice(z)
-        best = max(best, yc + Yd)
-    if z > TORSO[-1][0]:
-        best = max(best, 0.06)
-    return best + 0.012
-
-
-# =================================================================================================
-# sleeves: kimono sleeves are flat bags; with her arms down they hang from the shoulders as two wide
-# white panels, flat-bottomed, their navy lining showing as a band along the hem, the hands at the
-# hem's inner corner (the v0.2 sprite's trapezoids; the round-4 tubes with bags read as rectangles,
-# round bells as balloons)
-
-def sleeve_frame(side):
-    """(shoulder point, hem height, centre x of the hem, half width at the hem, half depth)."""
-    sh = Vector((B.SHOULDER.x * side, B.SHOULDER.y, B.SHOULDER.z))
-    hem = D['sleeve_hem']
-    out = D['sleeve_w']
-    inner = SLEEVE_IN
-    return sh, hem, side * (out + inner) / 2, (out - inner) / 2, 0.05
-
-
-# the sleeve's inner edge at the hem: just outside the robe, so the hand at the hem's inner corner
-# shows beside the robe (as in the sprite)
-SLEEVE_IN = 0.19
-
-
-def _sleeve_edges(u):
-    """Inner and outer edge (|x|) of the panel at u (0 the shoulder .. 1 the hem)."""
-    sw = B.SHOULDER.x
-    x_in = lerp(sw - 0.030, SLEEVE_IN, smooth(u * 1.6) ** 0.8)
-    top_out = sw + D['sleeve_top'] * (D['sleeve_w'] - sw)
-    x_out = lerp(top_out, D['sleeve_w'], u ** D['sleeve_flare'])
-    # the shoulder seam rounds off into the outer edge
-    x_out = lerp(x_in + 0.5 * (top_out - x_in), x_out, smooth(u / 0.12) ** 0.6)
-    return x_in, x_out
-
-
-def sleeve_point(side, u, s, face):
-    """A point of the sleeve panel: u down (0 shoulder .. 1 hem), s across (0 inner .. 1 outer), face +1
-    front / -1 back."""
-    x_in, x_out = _sleeve_edges(u)
-    x = lerp(x_in, x_out, s)
-    # the shoulder seam slopes down outward (a dropped, rounded shoulder: from above the panel's top
-    # must not read as a ledge, the round-5 first panels looked like wings)
-    z_top = B.SHOULDER.z + 0.030 - D['shoulder_drop'] * (s ** 0.8)
-    hem = D['sleeve_hem'] - D['sleeve_slant'] * s
-    # rounded bottom corners (the outer one rounder)
-    r_out, r_in = 0.085, 0.03
-    lift = r_out * (1.0 - math.sqrt(max(0.0, 1.0 - max(0.0, (s - (1 - r_out / 0.38)) / (r_out / 0.38)) ** 2)))
-    lift += r_in * (1.0 - math.sqrt(max(0.0, 1.0 - max(0.0, ((r_in / 0.38) - s) / (r_in / 0.38)) ** 2)))
-    z = lerp(z_top, hem + lift, u)
-    # thickness: round the arm near the top and the inner side, a thin bag below
-    arm = math.exp(-((s - 0.20) / 0.24) ** 2) * (1.0 - 0.45 * smooth(u))
-    half = (0.030 + 0.042 * arm) * (math.sin(math.pi * min(max(s, 0.0), 1.0)) ** 0.35)
-    half *= 1.0 - 0.5 * smooth((u - 0.9) / 0.1)
-    yc = 0.010 + 0.012 * u
-    return Vector((side * x, yc - face * half, z))
-
-
-# the lining's band at the hem: about 0.04 m tall (one native pixel and a bit)
-BAND_U = 0.04 / max(D['shoulder_z'] - D['sleeve_hem'], 0.2)
-
-
-def sleeve(side):
-    part = Part('sleeve', M_CLOTH)
-    nu, ns = 20, 16
-    rows = []
-    # around the panel: the front face inner -> outer, then the back face outer -> inner
-    ring = [(j / ns, 1) for j in range(ns + 1)] + [(1 - j / ns, -1) for j in range(1, ns)]
-    for i in range(nu + 1):
-        u = i / nu
-        row = []
-        for s, face in ring:
-            p = sleeve_point(side, u, s, face)
-            row.append(part.add(p, C.CREAM, (u, s), (M_CLOTH, LINED),
-                                {'seg': 'sleeve', 'side': side, 'u': u, 's': s}))
-        rows.append(row)
-    n = len(ring)
-    for i in range(nu):
-        for j in range(n):
-            j1 = (j + 1) % n
-            a, b, c, d = rows[i][j], rows[i][j1], rows[i + 1][j1], rows[i + 1][j]
-            # the ring runs inner -> outer on the front: for her left (+x) that winds outward as (a, b, c,
-            # d) reversed; the mirror image (her right) the other way
-            part.f.append((a, d, c, b) if side > 0 else (a, b, c, d))
-    # close the hem (a flat strip between the faces) and the top (over the shoulder)
-    for k in (nu,):
-        ctr = sum((part.v[q] for q in rows[k]), Vector()) / n
-        cap(part, rows[k], ctr, col=C.NAVY_LINING, aux=(M_CLOTH, LINED), flip=side < 0)
-        part.tag[-1] = {'seg': 'sleeve', 'side': side, 'u': 1.0, 's': 0.5}
-    ctr = sum((part.v[q] for q in rows[0]), Vector()) / n
-    cap(part, rows[0], ctr, col=C.CREAM, aux=(M_CLOTH, LINED), flip=side > 0)
-    part.tag[-1] = {'seg': 'sleeve', 'side': side, 'u': 0.0, 's': 0.5}
-    # the lining's band along the hem, on both faces (a native pixel tall)
-    band = Part('sleeve_band', M_CLOTH)
-    for face in (1, -1):
-        brow = []
-        for j in range(ns + 1):
-            s = j / ns
-            lo = sleeve_point(side, 1.0, s, face)
-            hi = sleeve_point(side, 1.0 - BAND_U, s, face)
-            off = Vector((0, -face * 0.004, 0))
-            brow.append((band.add(lo + off, C.NAVY_LINING, (1, s), (M_CLOTH, LINED),
-                                  {'seg': 'sleeve', 'side': side, 'u': 1.0, 's': s}),
-                         band.add(hi + off, C.NAVY_LINING, (1.0 - BAND_U, s), (M_CLOTH, LINED),
-                                  {'seg': 'sleeve', 'side': side, 'u': 1.0 - BAND_U, 's': s})))
-        for j in range(ns):
-            (l0, h0), (l1, h1) = brow[j], brow[j + 1]
-            quad = (h0, h1, l1, l0)
-            if (face > 0) == (side > 0):
-                quad = quad[::-1]
-            band.f.append(quad)
-    part.extend(band)
-    # normals: the panel's faces look front and back, turning out at the outer edge (clean tones: the
-    # front lit, the outer edge a half tone)
-    for i, p in enumerate(part.v):
-        tg = part.tag[i]
-        s = tg.get('s', 0.5)
-        f = 1.0 if p.y < 0.01 + 0.012 * tg.get('u', 0.5) else -1.0
-        part.nrm[i] = Vector((side * 0.55 * smooth((s - 0.55) / 0.45), -f * 1.0, 0.18)).normalized()
-    return part
-
-
-def hand(side):
-    part = Part('hand', M_SKIN)
-
-    def m(v):
-        return Vector((v.x * side, v.y, v.z))
-    w = m(B.WRIST)
-    tip = m(B.HAND_TIP)
-    axis = (tip - w).normalized()
-    path = Path([w - axis * 0.01, w + axis * 0.03, tip + axis * 0.004], up=(side, 0, 0))
-
-    def section(u, a):
-        r = 0.030 * math.sin(math.pi * min(1.0, 0.18 + u * 0.9)) + 0.006
-        return (r * 0.70 * math.cos(a), r * math.sin(a))
-
-    sweep(part, path, 8, 12, section, pole0=True, pole1=True, col=lambda u, v: C.SKIN,
-          auxf=lambda u, v: (M_SKIN, 0.0), tagf=lambda u, v: {'seg': 'hand', 'side': side, 'u': u})
-    return part
-
-
-def arm_inner(side):
-    """The arm inside the sleeve (navy kosode sleeve, seen only through the bell's opening)."""
-    part = Part('arm', M_CLOTH)
-
-    def m(v):
-        return Vector((v.x * side, v.y, v.z))
-    path = Path([m(B.SHOULDER), m(B.ELBOW), m(B.WRIST) + Vector((0, 0, 0.01))], up=(0, -1, 0))
-    sweep(part, path, 10, 10, lambda u, a: (0.040 * math.cos(a), 0.040 * math.sin(a)),
-          col=lambda u, v: C.NAVY, auxf=lambda u, v: (M_CLOTH, 0.0),
-          tagf=lambda u, v: {'seg': 'arm', 'side': side, 'u': u}, flip=True)
+    grid(part, nu, nv, pos, col=col, auxf=lambda u, v: (M_CLOTH, 0.0),
+         tagf=lambda u, v: {'seg': 'coat', 'u': u, 'a': a_of(u, v)}, flip=False)
+    # the inside (a step deeper), so the open front shows the coat's inner face
+    def pos_in(u, v):
+        p = pos(u, v)
+        return Vector((p.x * 0.985, p.y * 0.985, p.z))
+    grid(part, nu, nv, pos_in, col=lambda u, v: C.CREAM_DEEP, auxf=lambda u, v: (M_CLOTH, 0.0),
+         tagf=lambda u, v: {'seg': 'coat', 'u': u, 'a': a_of(u, v)}, flip=True)
     return part
 
 
 # =================================================================================================
-# trousers (lantern monpe), ankle bands, boots
+# sleeves: the coat's wide sleeves hanging from the A-posed arms. Sections in planes across her
+# side (x constant) from the shoulder out to the cuff; each section a tall loop from just over the arm
+# down to the bag's bottom. Front view: the cuff's edge from (x 0.484, h 0.877) to the lowest point
+# (0.403, 0.518); side view: the bag 0.26 m front to back, the navy opening in its middle.
 
-def leg_points(side):
-    def m(v):
-        return Vector((v.x * side, v.y, v.z))
-    return m(B.HIP_JOINT), m(B.KNEE), m(B.ANKLE)
-
-
-def trouser(side):
-    part = Part('trouser', M_CLOTH)
-    hip, knee, ankle = leg_points(side)
-    top = hip + Vector((-side * 0.012, 0.0, 0.08))
-    a_top = ankle + Vector((0, 0, 0.045))
-    path = Path([top, hip, knee, a_top + Vector((0, 0, 0.05)), a_top], up=(0, -1, 0))
-    pf = D['trouser_puff']
-
-    def section(u, a):
-        r = interp([(0.0, 0.098), (0.25, 0.104), (0.55, pf * 0.94), (0.78, pf), (0.90, pf * 0.86),
-                    (0.97, 0.062), (1.0, 0.048)], u)
-        return (r * 0.86 * math.cos(a), r * math.sin(a))
-
-    sweep(part, path, 20, 20, section, col=lambda u, v: C.TROUSERS,
-          tagf=lambda u, v: {'seg': 'leg', 'side': side, 'u': u})
-    band = Part('ankle_band', M_CLOTH)
-    bpath = Path([a_top + Vector((0, 0, 0.014)), a_top + Vector((0, 0, -0.026))], up=(0, -1, 0))
-    sweep(band, bpath, 2, 16, lambda u, a: (0.052 * math.cos(a), 0.052 * math.sin(a)),
-          col=lambda u, v: C.WHITE, tagf=lambda u, v: {'seg': 'leg', 'side': side, 'u': 0.97})
-    part.extend(band)
-    return part
+def arm_z(x):
+    """Height of the arm's line at |x| (the A pose)."""
+    S, W = B.SHOULDER, B.WRIST
+    t = (x - S.x) / (W.x - S.x)
+    return lerp(S.z, W.z, t)
 
 
-def foot(side):
-    part = Part('foot', M_CLOTH)
+SLEEVE_X0 = 0.195                # the coat's shoulder seam (sheet front: the sleeves begin at x 0.20)
+SLEEVE_X1 = 0.475
 
-    def m(v):
-        return Vector((v.x * side, v.y, v.z))
-    ank, ball, toe = m(B.ANKLE), m(B.BALL), m(B.TOE)
-    path = Path([ank + Vector((0, 0.014, 0.05)), ank + Vector((0, 0.024, 0.0)), ank + Vector((0, 0.012, -0.05)),
-                 ball + Vector((0, 0.0, 0.010)), toe + Vector((0, 0.004, 0.012))], up=(0, -1, 0))
 
-    def section(u, a):
-        w = interp([(0.0, 0.048), (0.3, 0.047), (0.55, 0.044), (0.8, 0.040), (1.0, 0.030)], u)
-        h = interp([(0.0, 0.048), (0.3, 0.048), (0.55, 0.040), (0.8, 0.028), (1.0, 0.018)], u)
-        return (h * math.cos(a), w * math.sin(a))
+def sleeve_bottom(x):
+    tab = [(0.195, 0.92), (0.24, 0.80), (0.30, 0.66), (0.36, 0.56), (0.405, 0.518), (0.44, 0.56),
+           (0.475, 0.70)]
+    return interp(tab, x)
 
-    sweep(part, path, 12, 14, section, pole1=True, col=lambda u, v: C.BOOTS,
-          tagf=lambda u, v: {'seg': 'foot', 'side': side, 'u': max(0.0, (u - 0.3) / 0.7)})
-    sole = Part('sole', M_CLOTH)
-    cx = ank.x
-    y0, y1 = ank.y + 0.055, toe.y - 0.016
 
-    def spos(u, v):
+def sleeve_top(x):
+    return arm_z(x) + 0.065
+
+
+def sleeve_depth(x, z):
+    """Half depth (front to back) of the bag at x, height z."""
+    w = lerp(0.10, D['sleeve_depth'], smooth((x - 0.195) / 0.12))
+    zt, zb = sleeve_top(x), sleeve_bottom(x)
+    t = (z - zb) / max(zt - zb, 1e-3)
+    # narrow over the arm, full lower down, rounded at the bottom
+    return w * (math.sin(math.pi * min(1.0, max(0.0, t)) ** 0.8) ** 0.7) + 0.02
+
+
+def sleeve_point(side, x, phi, inset=0.0):
+    zt, zb = sleeve_top(x), sleeve_bottom(x)
+    zc = 0.5 * (zt + zb)
+    hz = 0.5 * (zt - zb) - inset
+    z = zc + hz * math.cos(phi)
+    w = sleeve_depth(x, z) - inset
+    y = -w * math.sin(phi) + 0.01
+    return Vector((side * x, y, z))
+
+
+CUFF_DIAMOND = [(0.48, 0.89), (0.34, 0.72), (0.40, 0.53), (0.52, 0.75)]
+
+
+def in_cuff_diamond(x, z):
+    """The navy lining the sheet shows at each cuff (front and back views): a diamond in (|x|, z)."""
+    pts = CUFF_DIAMOND
+    inside = False
+    n = len(pts)
+    for i in range(n):
+        x1, z1 = pts[i]
+        x2, z2 = pts[(i + 1) % n]
+        if (z1 > z) != (z2 > z):
+            xi = x1 + (z - z1) * (x2 - x1) / (z2 - z1)
+            if x < xi:
+                inside = not inside
+    return inside
+
+
+def sleeves():
+    parts = []
+    for side in (1, -1):
+        part = Part('sleeve', M_CLOTH)
+        nu, nv = 40, 44
+
+        def pos(u, v, side=side):
+            x = lerp(SLEEVE_X0, SLEEVE_X1, u)
+            return sleeve_point(side, x, v * TAU)
+
+        def col(u, v, side=side):
+            p = pos(u, v)
+            return C.NAVY_LINING if in_cuff_diamond(abs(p.x), p.z) else C.CREAM
+
+        grid(part, nu, nv, pos, close_v=True, col=col, auxf=lambda u, v: (M_CLOTH, 0.0),
+             tagf=lambda u, v, side=side: {'seg': 'sleeve', 'side': side, 'u': u, 'phi': v},
+             flip=(side < 0))
+        # the lining inside, navy
+        def pos_in(u, v, side=side):
+            x = lerp(SLEEVE_X0, SLEEVE_X1, u)
+            return sleeve_point(side, x, v * TAU, inset=0.012)
+        rows = grid(part, nu, nv, pos_in, close_v=True, col=lambda u, v: C.NAVY_LINING,
+                    auxf=lambda u, v: (M_CLOTH, 0.0),
+                    tagf=lambda u, v, side=side: {'seg': 'sleeve', 'side': side, 'u': u, 'phi': v},
+                    flip=(side > 0))
+        x0 = SLEEVE_X0 + 0.004
+        cz = 0.5 * (sleeve_top(x0) + sleeve_bottom(x0))
+        cap(part, rows[0], Vector((side * x0, 0.01, cz)), col=C.NAVY_LINING, aux=(M_CLOTH, 0.0),
+            flip=(side > 0))
+        parts.append(part)
+    return parts
+
+
+def hands():
+    """The hands out of the cuffs, open, fingers down (the sheet's A pose); a navy kosode cuff round
+    the wrist inside the sleeve's opening."""
+    parts = []
+    for side in (1, -1):
+        part = Part('hand', M_SKIN)
+        Wr = Vector((side * B.WRIST.x, B.WRIST.y, B.WRIST.z))
+        d = Vector((side * B.ARM_DIR.x, B.ARM_DIR.y, B.ARM_DIR.z))
+        dd = (d + Vector((0, 0, -0.35))).normalized()
+        tip = Wr + dd * 0.135 + Vector((0, -0.01, 0))
+        path = Path([Wr - d * 0.02, Wr + dd * 0.05, tip], up=(0, -1, 0))
+
+        def section(u, a):
+            w = lerp(0.030, 0.040, smooth(u * 2)) * (1.0 - 0.40 * smooth((u - 0.7) / 0.3))
+            t = lerp(0.022, 0.014, u)
+            return (t * math.cos(a), w * math.sin(a))
+        sweep(part, path, 8, 12, section, pole1=True, col=lambda u, v: C.SKIN,
+              auxf=lambda u, v: (M_SKIN, 0.0), tagf=lambda u, v, side=side: {'seg': 'hand', 'side': side, 'u': u})
+        # the kosode's cuff round the wrist
+        cpath = Path([Wr - d * 0.10, Wr - d * 0.01], up=(0, -1, 0))
+
+        def csec(u, a):
+            return (0.040 * math.cos(a), 0.044 * math.sin(a))
+        sweep(part, cpath, 3, 12, csec, col=lambda u, v: C.NAVY, auxf=lambda u, v: (M_CLOTH, 0.0),
+              tagf=lambda u, v, side=side: {'seg': 'forearm', 'side': side, 'u': u})
+        parts.append(part)
+    return parts
+
+
+# =================================================================================================
+# the obi, the red band, the bow and its tails
+
+def obi():
+    part = Part('obi', M_CLOTH)
+    z0, z1 = D['obi_z']
+    b0, b1 = D['band_z']
+    W, Dp = D['obi_w'], D['obi_d']
+
+    def pos(u, v, grow=0.0):
+        z = lerp(z0, z1, u)
         a = v * TAU
-        cxs, sys_ = superellipse(a, 1.0, 1.0, 2.6)
-        hw = 0.040 if sys_ < 0 else 0.044
-        yy = (y0 + y1) / 2 - sys_ * (y0 - y1) / 2
-        z = 0.020 * (1 - u)
-        return Vector((cx + cxs * hw, yy, z))
+        s, c = math.sin(a), math.cos(a)
+        e = 2.0 / 2.5
+        return Vector(((W + grow) * math.copysign(abs(s) ** e, s), -(Dp + 0.01 + grow) * math.copysign(abs(c) ** e, c) + 0.004, z))
 
-    rows = grid(sole, 1, 24, spos, close_v=True, col=lambda u, v: C.SOLE,
-                tagf=lambda u, v: {'seg': 'foot', 'side': side, 'u': 0.6})
-    cap(sole, rows[0], Vector((cx, (y0 + y1) / 2, 0.020)), col=C.SOLE, aux=(M_CLOTH, 0.0))
-    cap(sole, rows[-1], Vector((cx, (y0 + y1) / 2, 0.0)), col=C.SOLE, aux=(M_CLOTH, 0.0), flip=True)
-    for i in range(len(sole.tag)):
-        sole.tag[i] = {'seg': 'foot', 'side': side, 'u': 0.6}
-    part.extend(sole)
+    grid(part, 6, 44, pos, close_v=True, col=lambda u, v: C.WHITE, auxf=lambda u, v: (M_CLOTH, 0.0),
+         tagf=lambda u, v: {'seg': 'obi'}, flip=True)
+    # tops and bottoms closed against the coat
+    band = Part('band', M_CLOTH)
+
+    def pos_b(u, v):
+        z = lerp(b0, b1, u)
+        return pos((z - z0) / (z1 - z0), v, grow=0.008)
+    grid(band, 3, 44, pos_b, close_v=True, col=lambda u, v: C.RED, auxf=lambda u, v: (M_CLOTH, 0.0),
+         tagf=lambda u, v: {'seg': 'obi'}, flip=True)
+    return [part, band]
+
+
+def _front_y(x, z):
+    """The obi band's front surface y at x (to place the bow on it)."""
+    W, Dp = D['obi_w'], D['obi_d']
+    r = min(0.999, abs(x) / (W + 0.008))
+    e = 2.0 / 2.5
+    s = r ** (1.0 / e)
+    c = math.sqrt(max(0.0, 1 - s * s))
+    return -(Dp + 0.018) * c ** e + 0.004
+
+
+def bow():
+    part = Part('bow', M_CLOTH)
+    kx, kz = D['bow_x'], D['bow_z']
+    ky = _front_y(kx, kz) - 0.012
+    knot = Vector((kx, ky, kz))
+    # two loops: flattened ellipsoids either side of the knot
+    for side in (1, -1):
+        # each loop: a filled, flattened ellipsoid tilted up and out (front view: 0.107 wide each side,
+        # 0.115 tall in all)
+        c = knot + Vector((side * D['bow_w'] * 0.50, 0.010, 0.012))
+
+        def pos(u, v, c=c, side=side):
+            a = v * TAU
+            b = u * math.pi
+            rx, rz, ry = D['bow_w'] * 0.52, D['bow_h'] * 0.46, 0.028
+            p = Vector((rx * math.sin(b) * math.cos(a), -ry * math.cos(b), rz * math.sin(b) * math.sin(a)))
+            p.z += side * p.x * 0.30
+            return c + p
+        grid(part, 8, 20, pos, close_v=True, pole0=True, pole1=True, col=lambda u, v: C.RED,
+             auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'bow'})
+    # the knot
+    def posk(u, v):
+        a = v * TAU
+        b = u * math.pi
+        return knot + Vector((0.030 * math.sin(b) * math.cos(a), -0.028 * math.cos(b) - 0.008,
+                              0.034 * math.sin(b) * math.sin(a)))
+    grid(part, 6, 14, posk, close_v=True, pole0=True, pole1=True, col=lambda u, v: C.RED_DEEP,
+         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'bow'})
+    return part, knot
+
+
+def sash_paths():
+    """The two tails' centre lines (the short one, the long one)."""
+    kx, kz = D['bow_x'], D['bow_z']
+    ky = _front_y(kx, kz) - 0.02
+    sx, sz = D['tail_short_end']
+    lx, lz = D['tail_long_end']
+    short = [Vector((kx + 0.01, ky, kz - 0.02)), Vector((kx + 0.05, ky - 0.03, kz - 0.10)),
+             Vector((sx, ky - 0.04, sz))]
+    long_ = [Vector((kx + 0.02, ky, kz - 0.02)), Vector((kx + 0.12, ky - 0.05, 0.72)),
+             Vector((0.30, -0.30, 0.42)), Vector((lx - 0.04, -0.27, 0.22)), Vector((lx, -0.22, lz))]
+    return short, long_
+
+
+def sash_tails():
+    part = Part('sash', M_CLOTH)
+    short, long_ = sash_paths()
+    for pts, w, name in ((short, D['tail_w'] * 0.85, 'sashA'), (long_, D['tail_w'], 'sashB')):
+        path = Path(pts, up=(0, -1, 0))
+
+        def pos(u, v, path=path, w=w, name=name):
+            p, t, n, b = path.at(u)
+            # the ribbon faces forward by the bow; the long tail turns to face her left lower down
+            # (front view: broad by the bow; side view: broad over her knee)
+            k = smooth((u - 0.30) / 0.40) if name == 'sashB' else 0.0
+            face = Vector((0, -1, 0)).lerp(Vector((0.87, -0.50, 0)).normalized(), k).normalized()
+            across = t.cross(face)
+            if across.length < 1e-4:
+                across = Vector((1, 0, 0))
+            across.normalize()
+            ww = w * 0.5 * (1.0 + 0.15 * math.sin(u * 5.0))
+            return p + across * ((v - 0.5) * 2 * ww)
+        grid(part, 22, 3, pos, col=lambda u, v: C.RED, auxf=lambda u, v: (M_CLOTH, 0.0),
+             tagf=lambda u, v, name=name: {'seg': name, 'u': u})
     return part
+
+
+# =================================================================================================
+# legs: lantern trousers, leg wraps, tabi on zori
+
+def trousers():
+    parts = []
+    for side in (1, -1):
+        part = Part('trousers', M_CLOTH)
+        x0 = side * B.LX
+
+        def radius(z):
+            tab = [(0.253, 0.064), (0.27, 0.112), (0.31, 0.138), (0.38, 0.135), (0.50, 0.118),
+                   (0.62, 0.106), (0.72, 0.100)]
+            return interp(tab, z)
+
+        def pos(u, v, x0=x0, side=side):
+            z = lerp(0.74, D['cuff_z'], u)
+            a = v * TAU
+            r = radius(z)
+            # the leg's centre drifts in toward the crotch at the top
+            xc = lerp(x0, x0 * 0.55, smooth((z - 0.55) / 0.2))
+            return Vector((xc + r * math.cos(a), r * 0.95 * math.sin(a) - 0.01, z))
+
+        def col(u, v):
+            return C.TROUSERS_DEEP if u > 0.94 else C.TROUSERS
+
+        grid(part, 14, 24, pos, close_v=True, col=col, auxf=lambda u, v: (M_CLOTH, 0.0),
+             tagf=lambda u, v, side=side: {'seg': 'leg', 'side': side, 'z': lerp(0.74, D['cuff_z'], u)}, flip=True)
+        # the leg wrap (white) under the cuff
+        z0, z1 = D['wrap_z']
+
+        def posw(u, v, x0=x0):
+            z = lerp(z1 + 0.02, z0, u)
+            a = v * TAU
+            r = 0.056 - 0.006 * u
+            return Vector((x0 + r * math.cos(a), r * math.sin(a), z))
+        grid(part, 3, 16, posw, close_v=True, col=lambda u, v: C.WHITE, auxf=lambda u, v: (M_CLOTH, 0.0),
+             tagf=lambda u, v, side=side: {'seg': 'leg', 'side': side, 'z': 0.2}, flip=True)
+        parts.append(part)
+    return parts
+
+
+def feet():
+    parts = []
+    L, Wd = D['foot_len'], D['foot_w']
+    for side in (1, -1):
+        part = Part('foot', M_CLOTH)
+        x0 = side * B.LX
+        yc = -D['foot_f']
+        top = D['wrap_z'][0]
+
+        # the tabi: a rounded box from the ankle down, the toe in front
+        def pos(u, v, x0=x0):
+            # u: 0 the ankle's top .. 1 the sole; v round
+            a = v * TAU
+            z = lerp(top + 0.005, 0.03, u)
+            k = smooth(u * 1.6)                 # the foot widens and lengthens toward the sole
+            rx = lerp(0.052, Wd * 0.47, k)
+            ry_f = lerp(0.052, L * 0.62, k)
+            ry_b = lerp(0.050, L * 0.36, k)
+            s, c = math.sin(a), math.cos(a)
+            x = x0 + rx * c
+            y = (yc * k) + (-ry_f * s if s > 0 else -ry_b * s)
+            return Vector((x, y, z))
+
+        grid(part, 10, 28, pos, close_v=True, col=lambda u, v: C.BOOTS, auxf=lambda u, v: (M_CLOTH, 0.0),
+             tagf=lambda u, v, side=side: {'seg': 'foot', 'side': side}, flip=False)
+        # the zori's sole (cream), a little larger, flat
+        def poss(u, v, x0=x0):
+            a = v * TAU
+            z = lerp(0.032, 0.0, u)
+            rx = Wd * 0.50
+            s, c = math.sin(a), math.cos(a)
+            x = x0 + rx * c
+            y = yc + (-(L * 0.64) * s if s > 0 else -(L * 0.38) * s)
+            return Vector((x, y, z))
+        grid(part, 2, 28, poss, close_v=True, col=lambda u, v: C.SOLE, auxf=lambda u, v: (M_CLOTH, 0.0),
+             tagf=lambda u, v, side=side: {'seg': 'foot', 'side': side}, flip=False)
+        # the thong: a white strap over the toes
+        tp = Path([Vector((x0 - 0.07, yc - 0.05, 0.035)), Vector((x0, yc - 0.12, 0.07)),
+                   Vector((x0 + 0.07, yc - 0.05, 0.035))], up=(0, -1, 0))
+
+        def tsec(u, a):
+            return (0.008 * math.cos(a), 0.016 * math.sin(a))
+        sweep(part, tp, 8, 8, tsec, col=lambda u, v: C.WHITE, auxf=lambda u, v: (M_CLOTH, 0.0),
+              tagf=lambda u, v, side=side: {'seg': 'foot', 'side': side})
+        parts.append(part)
+    return parts
 
 
 def body_parts():
-    parts = [torso(), collar(), coat(), obi(), bow(), sash_tail()]
-    for side in (1, -1):
-        parts += [sleeve(side), hand(side), trouser(side), foot(side)]
+    parts = [torso(), collar(), coat()]
+    parts += sleeves()
+    parts += hands()
+    parts += obi()
+    b, knot = bow()
+    parts.append(b)
+    parts.append(sash_tails())
+    parts += trousers()
+    parts += feet()
     return parts

@@ -44,12 +44,16 @@ void fragment() {
 	vec2 q = v_uv - 0.5;
 	float cover = v_col.a;
 	vec3 col = w3_srgb_to_linear(v_col.rgb);
-	float n = w3_vnoise(q * 6.0 + v_cus.z * 31.0 + vec2(0.0, TIME * 0.3));
+	// (nothing moves in the 遠化: a puff there stays as it was when the 遠化 took it; vista3d.gd stops
+	// its source)
+	bool still = v_drain(v_wp.xz, v_wp.y) > 0.5;
+	float t = still ? 0.0 : TIME;
+	float n = w3_vnoise(q * 6.0 + v_cus.z * 31.0 + vec2(0.0, t * 0.3));
 	if (kind == 3) {
 		// falling water: streaks running down, ragged edges, white foam at the foot
 		float x = q.x;
-		float streak = w3_vnoise(vec2(x * 18.0, v_uv.y * 3.0 - TIME * 1.6) + v_cus.z);
-		float edge = abs(x) * 2.0 + (w3_vnoise(vec2(v_uv.y * 9.0 - TIME * 2.0, 3.0)) - 0.5) * 0.35;
+		float streak = w3_vnoise(vec2(x * 18.0, v_uv.y * 3.0 - t * 1.6) + v_cus.z);
+		float edge = abs(x) * 2.0 + (w3_vnoise(vec2(v_uv.y * 9.0 - t * 2.0, 3.0)) - 0.5) * 0.35;
 		if (edge > 0.92) discard;
 		col = mix(col * 0.78, col * 1.08, step(0.45, streak));
 		if (v_uv.y > 0.9) col = col * 1.1;
@@ -72,7 +76,9 @@ void fragment() {
 	if (cover <= 0.02) discard;
 	col *= light_k;
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);
-	c += col * v_cus.w;
+	// (in the 遠化 smoke and steam are the paper, still; no glow)
+	c = v_print(c, col, V_PAPER, vec3(0.0, 1.0, 0.0), v_wp, eye, FRAGCOORD.xy);
+	c += col * v_cus.w * v_print_sun(v_wp, eye, FRAGCOORD.xy);
 	ALBEDO = c;
 	ALPHA = kind == 3 ? 1.0 : clamp(cover * 1.4, 0.0, 1.0);
 }

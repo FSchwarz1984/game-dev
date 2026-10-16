@@ -113,6 +113,7 @@ func setup(p_data: VistaData) -> void:
 	ground.set_param("ids", data.tex("ground"))
 	ground.set_param("lut", data.tex("lutGround"))
 	ground.set_param("lut_far", data.tex("lutFar"))
+	ground.set_param("fade_map", data.tex("groundFade"))
 	add_main_root.add_child(lights.layer("lamps"))
 	add_main_root.add_child(lights.layer("river"))
 	wave_fx = VistaSouthWave.new()
@@ -246,7 +247,7 @@ func tod_row(tod: float) -> float:
 	return clampf((tod - float(m["tod0"])) / float(m["todStep"]), 0.0, float(m["todRows"]) - 1.0)
 
 
-## One frame: st = {tod, pan, rise, sky, wave}; t is the vista clock.
+## One frame: st = {tod, pan, rise, sky, wave, settled}; t is the vista clock.
 func update(st: Dictionary, t: float) -> void:
 	if cls_index < 0:
 		layout(view)
@@ -258,6 +259,12 @@ func update(st: Dictionary, t: float) -> void:
 	var dy := (1.0 - pan_k) * pan_d
 	var sky_k := clampf(float(st.get("sky", 0.0)), 0.0, 1.0)
 	var wave := float(st.get("wave", -1.0))
+	# the far has been and gone (G5R3-18): the land at its final stage of peeled blocks, no lamps, no
+	# front, no curtain (the art sample's last frame)
+	var settled := float(st.get("settled", 0.0)) > 0.5
+	if settled:
+		wave = -1.0
+	var lamp_wave := 2.0 if settled else wave
 	reveal = VistaEnv.smoothj(0.05, 0.75, sky_k)
 	closed = 1.0 - VistaEnv.smoothj(0.15, 0.6, sky_k)
 
@@ -288,7 +295,7 @@ func update(st: Dictionary, t: float) -> void:
 	lights.update(rise_k, t)
 	flux = clampf(lights.in_flight / 40.0, 0.0, 1.0) + 0.35 * minf(lights.flash, 1.5) * closed
 	lights.lamps.set_param("tod", tod)
-	lights.lamps.set_param("wave", wave)
+	lights.lamps.set_param("wave", lamp_wave)
 	lights.lamps.set_param("js_off", 1.0 if js_lamps else 0.0)
 	var sg := Vector3.ZERO
 	for k in 3:
@@ -303,7 +310,7 @@ func update(st: Dictionary, t: float) -> void:
 	lights.shore.set_param("reveal", reveal)
 	lights.shore.set_param("inflow", lights.inflow)
 	lights.shore.set_param("flash", lights.flash)
-	lights.update_river(t, tod, rise_k, wave)
+	lights.update_river(t, tod, rise_k, lamp_wave)
 	lights.river.set_param("tod", tod)
 	lights.river.set_param("wave", -1.0)
 	# sky (the stars are mixed over the same painted sky)
@@ -335,6 +342,7 @@ func update(st: Dictionary, t: float) -> void:
 	# ground
 	ground.set_param("tod_row", row)
 	ground.set_param("wave", wave)
+	ground.set_param("settled", 1.0 if settled else 0.0)
 	# canopy: the sprays on the crown's edge stir in the evening air
 	back.set_param("tod_row", row)
 	front.set_param("tod_row", row)

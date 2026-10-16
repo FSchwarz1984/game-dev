@@ -1,112 +1,143 @@
-"""百々かさゝぎ, round 5 (2026-10-16, decision-log G5R3-6..8): the design numbers of the two proposals.
+"""百々かさゝぎ, round 6 (2026-10-16, decision-log G5R3-17): the model is built to the ChatGPT model
+sheet as a blueprint (scratchpad gdrive x_v2_84_final/models: Tiangan_v2_kasasagi_turnaround.png, with
+the hat, clothes, hair, colours and face sheets for detail). Rounds 4 and 5 were tuned by eye; this one
+takes every number from the sheet.
 
-  A  the ChatGPT model sheet (scratchpad gdrive x_v2_84_final/models: turnaround, hair, hat, clothes,
-     colours): Q-version about 3 heads, long hair to the knees, a long haori with pointed hems,
-     sleeves to the knee, a red ribbon tied round the hat's crown
-  B  the v0.2 sprite's front and back (the user liked them; its side view and the other characters
-     are not references): a squat body under a very wide hat, the face small and low, bell sleeves,
-     hair to the waist as one sheet, a red stripe down the hat
+Blueprint frame. The turnaround is 2048 x 832; its five views are cut by tools in the scratchpad
+(chars6/tools/sheetmask.py). Per view, local pixels (u right, v down) from the figure's bounding box:
+    front    box x 45..482,   y 100..760: ground (sole) v = 660, body axis u = 218 (the face, the
+             collar's V; the feet are drawn 11 px left of it)
+    side     box x 844..1195, y 102..759: ground v = 657, axis u = 192 (the shin); she faces left,
+             so we see her left side
+    back     box x 1575..2002, y 99..761: ground v = 662, axis u = 205
+The scale: the figure, sole to hat apex, is 660 px; she is 1.90 m tall to the apex (30 native px per
+metre: about 57 px on screen), so one sheet pixel is S = 1.90 / 660 m. Heights are h = (ground - v) S,
+her left x = (u - axis) S in the front view (her left is on the viewer's right), forward
+f = (axis - u) S in the side view.
 
-Pick one with C3D_VARIANT=A|B (default below). Everything else reads D[...].
+Where the views disagree, the front view wins, then the side (the lead's rule): the hat is 431 px
+across in the front view but 350 px in the side view; it is built 1.24 m across (the front).
+The back view is drawn mirrored for the asymmetric details (the hat's tail and the sash's long tail
+hang on her left in the front, three-quarter and side views and on her right in the back view): they
+are built on her left.
 
-The screen (docs/knowledge/21 §1): 30 native px per metre; upright things are leaned back by
-k = tan 27.5 deg, so a point's screen height is y - 0.819 z (z toward the camera): vertical metres are
-1:1, depth toward the camera pulls a point down. In effect upright things are seen from
-atan(sin 55 deg) = 39.3 deg above. Two consequences shape the head:
-  * the face must be a near-vertical plate (a receding chin is pulled up on screen and the face
-    shrinks), and
-  * a wide hat worn level hides the face; tipped back past 50.7 deg it shows its navy underside (the
-    rejected round-4 halo). Tipped back 20-24 deg the white top shows as a flat ellipse over the face,
-    as in the v0.2 sprite, and the eyes clear the front brim if the crown stands high above them: a
-    big cranium over a small, low face (the baby schema).
+Coordinates (Blender): metres, Z up, she faces -Y, her left is +X.
 """
-import os
+import math
 
-VARIANT = os.environ.get('C3D_VARIANT', 'A').upper()
+S = 1.90 / 660.0                 # metres per sheet pixel
 
-_COMMON = {
-    # the face (heights above the chin, metres; 1 native px = 0.0333 m)
-    'eye_h': 0.226,            # eye centre: three rows 0.176..0.276, the bangs end on the top row; the
-                               # face below the eyes is tall enough that the lean (which pulls the
-                               # receding chin up the screen) still leaves three rows of cheek and chin
-    'eye_x': 0.083,            # eye centre half spacing: 2 px eyes, 3 px between them
-    'face_y': 0.200,           # the face plate's front (distance in front of the head's axis)
-    'face_w': 0.155,           # half width of the face at the cheeks: 9 px, laid out as the sprite's
-                               # [1 skin][2 eye][3][2 eye][1 skin]; the cranium is much wider (the
-                               # baby schema: a big head, a small low face)
-    'bang_cut': 0.268,         # the hime cut: just over the eyes' top row (the bangs press on it)
-    'mouth_h': 0.096,
-    'cheek_h': 0.158,          # the blush: a row under the eyes, under their outer column (v0.2)
-    'cheek_x': 0.100,
+
+def hf(v, ground=660):
+    """Height of a sheet row (front view by default)."""
+    return (ground - v) * S
+
+
+def xf(u, axis=218):
+    """Her-left x of a front-view column."""
+    return (u - axis) * S
+
+
+def fs(u, axis=192):
+    """Forward distance of a side-view column (she faces left)."""
+    return (axis - u) * S
+
+
+D = {
+    'name': 'round6',
+    # ---- the hat (front: apex (220, 2), brim tips (2, 92) and (432, 125), the brim's raised front
+    # edge crossing the centre at v 70; side: front tip (5, 62), back tip (~355, 165), apex (255, 5);
+    # hat sheet: height / diameter 0.26, a ring of red band round the crown at 0.34 of the radius)
+    'hat_r': 431 / 2 * S,                     # 0.620
+    'hat_h': 0.318,                            # cone height (apex above the brim's plane)
+    'hat_centre_h': hf(110),                   # 1.583: the brim's centre (front: v 70 front edge,
+                                               # v 150 back edge behind the head)
+    'hat_centre_f': 0.02,                      # forward of the body axis (side: tips at +0.52 / -0.47)
+    'hat_tilt': 14.0,                          # deg, the front raised (front view 10.7, side 16.6)
+    'hat_roll': 4.4,                           # deg, her left side down (front: tips 33 px apart)
+    'hat_crown': 0.36,                         # the crown knob: the cone steepens above this fraction
+                                               # of the radius (hat sheet side view)
+    'hat_ring_r': 0.44,                        # the red ring round the crown, fraction of the radius (front
+                                               # view: v 25..45, mid-way down the visible cone; the hat
+                                               # sheet draws it at 0.34)
+    'hat_band_w': 0.100,                       # the band's width (front: 15-20 px seen nearly edge-on)
+    'hat_strap_angle': 58.0,                   # deg: the strap the front view shows, down the cone's
+                                               # front-left to the brim at x 0.48
+    'hat_tail_angle': 155.0,                   # deg round the brim from her front toward her left: where
+                                               # the band crosses the brim and hangs (three-quarter and
+                                               # side views: behind her, on her left)
+    'hat_tail_end': 1.00,                      # height of the tail's end (side: v 300; three-quarter v 390)
+    'hat_tail_w': 0.095,
+    # ---- the head (front: bangs cut v 150, eyes v 155..188 at u 182 / 248, face 160..277 wide at
+    # v 195, chin v 232, mouth v 207; side: nose f 0.25, chin f 0.18 at h 1.229)
+    'chin_z': hf(232),                         # 1.232
+    'head_top': 1.77,                          # hidden under the hat (the face sheet: 3.1 eye-to-chin
+                                               # lengths from the chin to the crown)
+    'face_w': 117 / 2 * S,                     # 0.168: half width at the cheeks
+    'face_f': 0.215,                           # the face's front (cheeks) forward of the head axis
+    'head_f': 0.02,                            # the head's axis, forward of the body axis (side: the
+                                               # ear at f 0, the nose at 0.25)
+    'cranium_w': 0.235,                        # half width of the skull (under the hair)
+    'cranium_back': 0.235,                     # back of the skull behind the head axis
+    'eye_h': hf(172),                          # 1.405: eye centre
+    'eye_top': hf(155),                        # 1.454
+    'eye_x': 33 * S,                           # 0.095: half the distance between the eye centres
+    'eye_w': 38 * S,                           # 0.109
+    'eye_hgt': 33 * S,                         # 0.095
+    'bang_cut': hf(150),                       # 1.468
+    'mouth_h': hf(207),                        # 1.304
+    'ear_h': hf(198),
+    # ---- hair (front outline: +-0.32 just under the brim, +-0.28 at the chin, +-0.30 at the
+    # shoulders, +-0.34 at h 1.04 and on down behind the sleeves to v 470; back view: 200 px wide at
+    # v 150, 105 px at v 450, the end at v 490; side: the back of the hair f -0.40)
+    'hair_out_w': [(1.62, 0.300), (1.47, 0.318), (1.25, 0.278), (1.10, 0.300), (1.00, 0.330),
+                   (0.80, 0.300), (0.62, 0.230), (0.50, 0.170)],
+    'back_hair_end': hf(490, 662),             # 0.495
+    'lock_x': 0.196,                           # the side locks' centres (front: u 130..170, 268..308)
+    'lock_w': 40 * S,                          # 0.115
+    'lock_tie_h': hf(237),                     # 1.218: the white-red-white tie (v 222..252)
+    'lock_end_h': hf(330),                     # 0.950
+    # ---- body (front: neck v 232..250, kosode shoulders u 160..280 at v 262, collar V to v 300,
+    # obi v 323..357 and u 148..290, red band v 330..347)
+    'neck_base': hf(250),                      # 1.180
+    'shoulder_z': hf(268),                     # 1.128: the shoulder joint
+    'shoulder_w': 0.150,                       # the shoulder joint's x
+    'shoulder_top_w': 60 * S,                  # 0.173: the kosode's shoulder point
+    'collar_v': hf(300),                       # 1.036
+    'obi_z': (hf(357), hf(323)),               # 0.872 .. 0.970
+    'obi_w': 71 * S,                           # 0.204: half width in front
+    'obi_d': 0.150,                            # half depth (side view)
+    'band_z': (hf(347), hf(330)),              # the red band over the obi
+    'bow_x': 25 * S,                           # 0.072: the knot, a little to her left
+    'bow_z': hf(345),                          # 0.907
+    'bow_w': 37 * S,                           # loop half width
+    'bow_h': 40 * S,
+    'tail_short_end': (xf(272), hf(410)),      # (x, h)
+    'tail_long_end': (xf(385), hf(615)),
+    'tail_w': 0.130,                           # front: 32 px seen at an angle; side: 40-60 px
+    'hip_z': 0.66,
+    # ---- the arms, in the sheet's A pose (front: shoulder joint ~(165, 285), wrist ~(65, 370), hand
+    # centre (42, 392): 41 deg below level)
+    'arm_angle': 41.0,
+    'wrist': (xf(65) * -1, hf(370)),           # (|x|, h) = (0.440, 0.835)
+    'hand_len': 0.10,
+    # ---- sleeves (front: the cuff from (50, 355) down to the lowest point (78, 480); side: the bag
+    # 0.26 m front to back, lowest at h 0.486)
+    'sleeve_bottom': hf(480),                  # 0.518
+    'sleeve_depth': 0.130,                     # half, front to back
+    # ---- the outer coat (front: the hem's outer corners (90, 582) and (330, 558), the opening's hems at
+    # v 520..545, 0.79 m wide at the hem; side: front f +0.34, back -0.23, hem 0.30 front, 0.265 back)
+    'coat_hem': 0.225,                         # the lowest corner
+    'coat_hem_mid': hf(530),                   # 0.374: the front panels' hems by the opening
+    # ---- legs (front: trouser cuffs v 572, legs 80 px wide at v 540, wraps v 578..600, tabi v 600..658,
+    # feet at u 152 / 262, 65 px wide; side: toe f +0.23, heel -0.07)
+    'leg_x': 0.158,
+    'knee_z': 0.36,
+    'cuff_z': hf(572),                         # 0.253
+    'trouser_r': 40 * S,                       # 0.115: the widest half width of a leg
+    'wrap_z': (hf(600), hf(578)),              # 0.173 .. 0.236
+    'ankle_z': 0.13,
+    'foot_len': 103 * S,                       # 0.297
+    'foot_w': 0.200,                           # front: 65 px (0.187) for the tabi, the sole a little wider
+    'foot_f': 0.08,                            # the foot's centre forward of the leg
 }
-
-_D = {
-    'A': dict(_COMMON, **{
-        'name': 'A (ChatGPT sheet)',
-        'chin_z': 1.20,
-        'head_h': 0.52,            # chin to crown
-        'cranium_w': 0.232,        # half width at the widest (above the ears)
-        'cranium_back': 0.215,
-        # hat (sugegasa): radius, cone height, how far the brim plane sits below the crown
-        'hat_r': 0.58, 'hat_h': 0.25, 'hat_sink': 0.16,
-        'hat_tilt': 26.0, 'hat_tilt_away': 26.0, 'hat_roll': 6.0,
-        'hat_band': 'ribbon',      # a red ribbon round the crown, tied, with a tail
-        # hair
-        'lock_tie_h': -0.17,       # the side locks' ties, height above the chin (chest)
-        'lock_end_h': -0.33,
-        'back_hair_end': 0.42,     # the long hair's end, height above the ground (knees)
-        'back_hair_w': 0.23,
-        # body
-        'shoulder_w': 0.150, 'shoulder_z': 1.06, 'neck_base': 1.10,
-        'obi_z': (0.80, 0.90), 'hip_z': 0.70, 'knee_z': 0.40, 'ankle_z': 0.11,
-        'coat_hem': 0.28,          # the haori's lowest points
-        'coat_flare': 0.30,        # its half width at the hem
-        'sleeve_hem': 0.50, 'sleeve_w': 0.40,    # sleeve bottom height; outer edge from the middle
-        'hand_z': 0.64,            # the hand's tip (hanging arm): out of the cuff, over the hanging sleeve
-        'hand_dx': 0.020, 'hand_dy': -0.110,     # the hand's place from the shoulder (in front of the robe)
-        'sleeve_top': 0.40,        # the sleeve's width at the shoulder (share of its width at the hem)
-        'shoulder_drop': 0.15,     # how far the shoulder seam drops from the neck side to the outside
-        'sleeve_flare': 0.75,      # how soon the sleeve reaches its full width (lower: sooner)
-        'trouser_puff': 0.135,
-        'foot_len': 0.20,
-        'bow': 'front',
-        'hem_style': 'points',     # the haori's pointed hems
-        'sleeve_slant': 0.10,      # the sleeve's hem lower on the outside (the hanging bag)
-    }),
-    'B': dict(_COMMON, **{
-        'name': 'B (v0.2 sprite)',
-        # about 2.7 heads (the sprite is about 2.4): a big head on a short body
-        'chin_z': 1.02,
-        'head_h': 0.60,
-        'cranium_w': 0.255,
-        'cranium_back': 0.235,
-        'hat_r': 0.66, 'hat_h': 0.27, 'hat_sink': 0.19,
-        'hat_tilt': 26.0, 'hat_tilt_away': 26.0, 'hat_roll': 0.0,
-        'hat_band': 'stripe',      # a red stripe from the apex down to the front right of the brim
-        'lock_tie_h': -0.05,       # just under the chin, as in the sprite
-        'lock_end_h': -0.16,
-        'back_hair_end': 0.56,     # to the small of her back
-        'back_hair_w': 0.225,
-        'shoulder_w': 0.145, 'shoulder_z': 0.875, 'neck_base': 0.91,
-        'obi_z': (0.65, 0.74), 'hip_z': 0.56, 'knee_z': 0.29, 'ankle_z': 0.09,
-        'coat_hem': 0.31,
-        'coat_flare': 0.29,
-        'sleeve_hem': 0.37, 'sleeve_w': 0.54,    # long bags, nearly to the robe's hem (the sprite's)
-        'hand_z': 0.44,            # the hands at the sleeves' inner edge, in front, above the bags' hem
-        'hand_dx': 0.040, 'hand_dy': -0.105,
-        'sleeve_top': 0.58,
-        'shoulder_drop': 0.08,
-        'sleeve_flare': 0.55,
-        'trouser_puff': 0.13,
-        'foot_len': 0.19,
-        'bow': 'left',
-        'hem_style': 'round',
-        'sleeve_slant': 0.0,
-    }),
-}
-
-D = _D[VARIANT]
-
-
-def get(key):
-    return D[key]

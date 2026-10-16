@@ -19,6 +19,7 @@ extends SceneTree
 ## for before/after recordings).
 ## --standalone plays Vista.play_standalone() instead (the art sample's entry: the vista runs itself,
 ## its own director and her figure, autoplay on) and stops 3 s after its "hold" beat.
+## --grab-from=SECONDS starts writing --grab frames only from that time of the timeline on.
 ## The first two frames are drawn before the vista exists (black).
 
 var v: Vista
@@ -46,6 +47,7 @@ var _stat_sec := -1
 var standalone := false
 var clock := 0.0
 var held_at := -1.0
+var grab_from := 0.0
 
 
 func _initialize() -> void:
@@ -74,6 +76,8 @@ func _initialize() -> void:
 			data_dir = a.substr(7)
 		elif a == "--standalone":
 			standalone = true
+		elif a.begins_with("--grab-from="):
+			grab_from = float(a.substr(12))
 	if grab != "":
 		DirAccess.make_dir_recursive_absolute(grab)
 	if rise_dir != "":
@@ -177,6 +181,8 @@ func _grab() -> void:
 		rise_times.append("%d %.4f %.4f %.4f" % [rise_n, d.t, float(v.state["rise"]), float(v.state["sky"])])
 		rise_n += 1
 	if grab == "":
+		return
+	if (clock if standalone else d.t) < grab_from:
 		return
 	var img := root.get_texture().get_image()
 	var win := img.get_size()

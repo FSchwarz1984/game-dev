@@ -19,7 +19,8 @@ extends Control
 ##   v.anchors()       {branch, stand} in the vista's own px (where she sits / stands; she stands up
 ##                     where she sat); shown_scale / shown_origin map them to the stage's logical px
 ## State (as the JS vista): tod 17.5..21, pan 0..1 (crane out of the crown), rise 0..1 (the lights
-## leave), sky 0..1 (the deck parts, the sky shore shows), wave -1 | 0..1 (the far), tower 1 | 0.
+## leave), sky 0..1 (the deck parts, the sky shore shows), wave -1 | 0..1 (the far), tower 1 | 0;
+## settled 1: the far has been and gone, the plain left as a print with its blocks peeled (G5R3-18).
 ## The clock: by default the vista advances itself every frame (_process); a host that drives the
 ## director's clock (skip, pause) sets autoplay = false and calls advance(dt) with the same dt.
 
@@ -369,10 +370,11 @@ func play_prologue(d: Director, between: Callable = Callable()) -> void:
 
 ## The prologue's beats on their own, without the story or a host's director (the art sample's
 ## entry, ShowcaseVista): its own director on the vista's clock, her sprite on the limb following
-## state.pose. When the far has washed the frame white the white holds a second, then thins back to
-## the sky shore over the dark plain (the frame where 天岸 shows: the lamps gone up into the gate, she
-## sitting on the limb) and the vista stays there, still alive. Returns then (beat "hold"); call it
-## again to play it from the start. Needs autoplay (the vista advancing itself).
+## state.pose. When the far has washed the frame white the white holds a second, then thins to what
+## the far has left (G5R3-18): the plain as a print with its colour blocks peeled, its lines just
+## showing on the night's paper, no lamps, the sky shore over it, she standing on the limb looking at
+## it; the vista stays there, still alive. Returns then (beat "hold"); call it again to play it from
+## the start. Needs autoplay (the vista advancing itself).
 func play_standalone() -> void:
 	if _own_director == null:
 		_own_director = Director.new()
@@ -383,7 +385,7 @@ func play_standalone() -> void:
 	await play_prologue(_own_director)
 	await _own_director.wait(1.0)
 	_wash_hold = 0.97
-	state = {"tod": 20.3, "pan": 1.0, "rise": 1.0, "sky": 1.0, "wave": -1.0, "tower": 1.0, "pose": "sit"}
+	state = {"tod": 20.3, "pan": 1.0, "rise": 1.0, "sky": 1.0, "wave": -1.0, "settled": 1.0, "tower": 1.0, "pose": "stand"}
 	show_shot("south")
 	await _own_director.tween(2.2, func(k: float) -> void: _wash_hold = 0.97 * (1.0 - k))
 	_wash_hold = -1.0

@@ -10,6 +10,8 @@ extends Node
 ##   Audio.blip("saji", i)                      a dialogue voice blip
 ##   Audio.footstep("stone", {"volume", "pitch", "extra"})   from BodyState.step_sound()
 ##   Audio.duck(0.35, 0.3)                      lower music and ambience under dialogue
+##   Audio.far(k)                               the 遠化 fills k (0..1) of what she looks at: the ambience
+##                                              recedes, quieter and muffled (world3d/vista3d.gd)
 
 const RATE := 22050
 const BUSES := ["Music", "Ambience", "SFX", "Voice"]
@@ -29,6 +31,12 @@ var _duck := 0.0
 var _duck_target := 0.0
 var _duck_speed := 4.0
 var played: Array = []       # recent sounds (name, time) for the debug bridge
+var _far := 0.0              # the 遠化's share of the view, eased (Audio.far)
+var _far_target := 0.0
+var _far_logged := -1.0
+var _far_fx: AudioEffectLowPassFilter
+const FAR_DB := -14.0         # the ambience this much quieter when the 遠化 fills the view
+const FAR_CUTOFF := 1100.0    # and muffled down to this
 
 
 func _ready() -> void:
@@ -48,6 +56,12 @@ func _ready() -> void:
 		a.volume_db = -80.0
 		add_child(a)
 		_amb.append(a)
+	# the 遠化's muffle on the ambience (open while nothing is far)
+	var ai := AudioServer.get_bus_index("Ambience")
+	if ai >= 0:
+		_far_fx = AudioEffectLowPassFilter.new()
+		_far_fx.cutoff_hz = 20000.0
+		AudioServer.add_bus_effect(ai, _far_fx)
 	apply_volumes()
 	GameState.settings_changed.connect(func(key: String, _v) -> void:
 		if key.begins_with("vol_"):
@@ -65,10 +79,23 @@ func apply_volumes() -> void:
 func _process(dt: float) -> void:
 	_duck = move_toward(_duck, _duck_target, _duck_speed * dt)
 	var off := linear_to_db(maxf(0.0001, 1.0 - _duck))
+	# (about a second to recede or to come back)
+	_far = move_toward(_far, _far_target, dt / 1.2)
 	for b in ["Music", "Ambience"]:
 		var i := AudioServer.get_bus_index(b)
 		var v := float(GameState.setting("vol_" + String(b).to_lower()))
-		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)) + off)
+		AudioServer.set_bus_volume_db(i, linear_to_db(maxf(v, 0.0001)) + off + (FAR_DB * _far if b == "Ambience" else 0.0))
+	if _far_fx:
+		_far_fx.cutoff_hz = 20000.0 * pow(FAR_CUTOFF / 20000.0, _far)
+	if absf(_far - _far_logged) >= 0.05 or (_far == _far_target and _far != _far_logged):
+		_far_logged = _far
+		print("AUDIO far=%.2f ambience_db=%+.1f lowpass_hz=%.0f" % [_far, FAR_DB * _far, _far_fx.cutoff_hz if _far_fx else 20000.0])
+
+
+## The 遠化 fills k (0..1) of what she looks at (world3d/vista3d.gd): the ambience recedes, quieter and
+## muffled, and comes back as she turns away. No new sound.
+func far(k: float) -> void:
+	_far_target = clampf(k, 0.0, 1.0)
 
 
 func duck(amount: float, dur: float = 0.3) -> void:

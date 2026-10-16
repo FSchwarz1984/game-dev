@@ -63,8 +63,9 @@ func test_the_prologue_keeps_the_js_beats_order_and_timing() -> void:
 
 
 ## The art sample's entry (ShowcaseVista): the beats on the vista's own director, her sprite on the
-## limb following the poses, and after the white of the far a hold on the sky shore over the plain.
-func test_the_standalone_play_ends_held_on_the_sky_shore() -> void:
+## limb following the poses, and after the white of the far a hold on what the far has left (the
+## plain peeled to its final stages, G5R3-18), the sky shore over it, she standing.
+func test_the_standalone_play_ends_held_on_the_far_plain() -> void:
 	var v := _vista()
 	var beats := []
 	var at := {}
@@ -95,11 +96,14 @@ func test_the_standalone_play_ends_held_on_the_sky_shore() -> void:
 	var south: VistaSouth = v.shots["south"]
 	check(v._figure != null and v._figure.get_parent() == south.figure, "her sprite is in the figure slot")
 	eq(v.shot, "south")
-	eq([v.state["sky"], v.state["rise"], v.state["wave"], v.state["pose"]], [1.0, 1.0, -1.0, "sit"], "held on the sky shore, the lamps gone up, she sitting")
+	eq([v.state["sky"], v.state["rise"], v.state["wave"], v.state["settled"], v.state["pose"]], [1.0, 1.0, -1.0, 1.0, "stand"],
+		"held on the far plain under the sky shore, the lamps gone, she standing")
 	v._process(DT)
 	v.advance(DT)
 	eq(float(mat.get_shader_parameter("wash_a")), 0.0, "no white left")
-	eq(v._figure.pose, "sit")
+	eq(v._figure.pose, "stand")
+	eq(float((south.ground.material as ShaderMaterial).get_shader_parameter("settled")), 1.0, "the ground at its final stages")
+	check(not south.wave_fx.curtain.visible and not south.wave_fx.motes.visible, "no front, no curtain")
 	v.queue_free()
 
 

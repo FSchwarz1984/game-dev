@@ -18,6 +18,8 @@ uniform vec2 splat_size = vec2(641.0, 833.0);
 uniform vec4 local_bounds = vec4(-80.0, -96.0, 80.0, 112.0);
 uniform vec3 eye = vec3(0.0);
 uniform int dbg_mode = 0;
+// the region's grass as the top-down world colours it (one soft colour field: round 5)
+#include "res://render3d/shaders/sward.gdshaderinc"
 
 varying vec3 v_wp;
 varying vec3 v_n;
@@ -103,6 +105,8 @@ void fragment() {
 	float slope = degrees(acos(clamp(n.y, 0.0, 1.0)));
 	vec3 alb;
 	bool water = false;
+	int plate = V_GREEN;        // the block that prints this ground in the 遠化 (vista_common v_print)
+	float ink = 0.0;            // 1 on a line of the key block (the borders of fields, woods, water, roads, villages)
 	bool local = xz.x > local_bounds.x && xz.x < local_bounds.z && xz.y > local_bounds.y && xz.y < local_bounds.w;
 	if (local) {
 		// the walkable region, as the top-down ground paints it (toon_terrain): its dominant ground
@@ -132,11 +136,13 @@ void fragment() {
 		float mstep = floor(macro + 0.5 + (stip - 0.5) * 0.3);
 		float row;
 		float tone;
+		float sw_dry = -1.0;
 		if (best == 0) {
-			float dry = e3.g + (w3_fbm(xz / 3.0 + 7.0) - 0.5) * 0.25;
-			row = dry > 0.5 + (stip - 0.5) * 0.2 ? 1.0 : 0.0;
+			// (round 5: the sward's colour field, as toon_terrain: dryness and tone soft over metres)
+			sw_dry = w3_sward_dry(xz, e3.g, 0.0);
+			row = 0.0;
 			float gr = w3_hash(pc * 0.73 + 17.0);
-			tone = 3.6 + mstep + (gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0));
+			tone = w3_sward_tone(xz) + (gr < 0.11 ? -1.0 : (gr > 0.94 ? 1.0 : 0.0));
 		} else if (best == 1) {
 			row = 2.0;
 			tone = 3.4 + mstep * 0.7 + floor(e2.b * 1.6 + 0.3 + (stip - 0.5) * 0.25);
@@ -171,7 +177,7 @@ void fragment() {
 			row = 10.0;
 			tone = 3.0 + mstep * 0.5;
 		}
-		alb = pal(row, tone);
+		alb = sw_dry >= 0.0 ? w3_sward_col(sw_dry, tone) : pal(row, tone);
 		// the terraces' paddies: water holding the sky, young rice in sparse rows across it
 		if (best == 7) {
 			water = true;
@@ -198,7 +204,7 @@ void fragment() {
 			float d_road = pm.g * 127.5;
 			float dens = pm.b;
 			v_town = dens;
-			float pxm = dist * 0.0027;                     // metres per pixel here
+			float pxm = dist / v_ppr;                      // metres per pixel here
 			// (the paddies follow an old grid that turns slowly across the plain)
 			float ang = (w3_vnoise(xz / 2600.0 + 3.0) - 0.5) * 0.9;
 			vec2 ax = vec2(cos(ang), sin(ang));
@@ -213,8 +219,11 @@ void fragment() {
 			if (kind < 0.5) alb = pal(0.0, 4.6 + floor(sh * 4.0) * 0.5);           // young rice
 			else if (kind < 0.66) alb = pal(5.0, 5.2);                           // rice further on
 			else if (kind < 0.74) { water = true; }                              // still flooded
-			else if (kind < 0.87) alb = pal(6.0, 4.4 + floor(sh * 9.0) * 0.3);     // dry fields
-			else alb = pal(8.0, 4.0);                                            // fallow
+			else if (kind < 0.87) { alb = pal(6.0, 4.4 + floor(sh * 9.0) * 0.3); plate = V_EARTH; }   // dry fields
+			else { alb = pal(8.0, 4.0); plate = V_EARTH; }                       // fallow
+			// (the key block: the paddies' blocks, where a block is a few pixels across)
+			vec2 bl = abs(fract(uv / vec2(240.0, 180.0)) - 0.5) * vec2(240.0, 180.0);
+			if (pxm < 50.0 && max(bl.x - 120.0 + pxm * 0.55, bl.y - 90.0 + pxm * 0.55) > 0.0) ink = 1.0;
 			// the levees between the strips, where the pixel can hold them
 			if (pxm < sw * 0.4 && fract(along / sw) < max(0.06, pxm * 0.5 / sw)) alb = pal(0.0, 3.0);
 			// groves and gardens round the villages, a tree line along the lanes
@@ -222,11 +231,17 @@ void fragment() {
 				float g = w3_vnoise(xz / max(6.0, pxm * 2.0));
 				alb = g > 0.5 ? srgb(vec3(0.21, 0.29, 0.16)) : srgb(vec3(0.16, 0.23, 0.13));
 				water = false;
+				plate = V_GREEN;
 			}
-			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; }
-			else if (d_road < max(5.0, pxm * 1.1) && w3_hash(floor(xz / 9.0)) > 0.55) { alb = srgb(vec3(0.19, 0.27, 0.15)); water = false; }
-			if (d_river < 34.0 + w3_vnoise(xz / 90.0) * 10.0) { water = true; v_river = 1.0; }
-			else if (d_river < 44.0) { alb = pal(9.0, 3.0); water = false; }        // its banks
+			// (the key block: a village's grove drawn round)
+			if (abs(dens - 0.33) < max(fwidth(dens) * 0.6, 1e-4)) ink = 1.0;
+			if (d_road < max(2.6, pxm * 0.55)) { alb = pal(8.0, 6.0); water = false; plate = V_EARTH; ink = 1.0; }
+			else if (d_road < max(5.0, pxm * 1.1) && w3_hash(floor(xz / 9.0)) > 0.55) { alb = srgb(vec3(0.19, 0.27, 0.15)); water = false; plate = V_GREEN; }
+			float r_edge = 34.0 + w3_vnoise(xz / 90.0) * 10.0;
+			if (d_river < r_edge) { water = true; v_river = 1.0; }
+			else if (d_river < 44.0) { alb = pal(9.0, 3.0); water = false; plate = V_EARTH; }        // its banks
+			// (the key block: the river's banks)
+			if (abs(d_river - r_edge) < max(pxm * 0.55, fwidth(d_river) * 0.6)) ink = 1.0;
 		}
 		if (cult > 0.5) {
 			// the lower layer's terraces: young rice in muted greens, a few strips still flooded
@@ -237,6 +252,10 @@ void fragment() {
 			// the risers: grass banks, darker
 			if (fract(rowf) < 0.18) { alb = pal(0.0, 2.5); water = false; }
 		}
+		// (the key block: the edges of the terraces, the woods, the water)
+		if (abs(cult - 0.5) < max(fwidth(cult) * 0.6, 1e-4)) ink = 1.0;
+		if (!plain && abs(forest - 0.4) < max(fwidth(forest) * 0.6, 1e-4)) ink = 1.0;
+		if (!plain && abs(wat - 0.5) < max(fwidth(wat) * 0.6, 1e-4)) ink = 1.0;
 		bool far_hill = !plain && dist > 2600.0;
 		if (forest > 0.4 && !plain) {
 			// canopy seen from above: dark clumps, lit crowns
@@ -247,6 +266,7 @@ void fragment() {
 			// rock faces: bands along the height (strata), in clusters, not salt and pepper
 			float k = w3_vnoise(vec2((xz.x + xz.y) / max(6.0, dist * 0.03), wp.y / max(1.2, dist * 0.006)));
 			alb = pal(4.0, 2.6 + floor((k - 0.5) * 2.2 + 0.5));
+			plate = V_EARTH;
 		}
 		if (far_hill) {
 			// far mountains: masses, not texture: woods dark, open slopes and crags lighter, in a few
@@ -254,9 +274,11 @@ void fragment() {
 			float k = w3_vnoise(xz / 520.0 + 7.0);
 			alb = forest > 0.4 ? (k > 0.5 ? srgb(vec3(0.22, 0.3, 0.18)) : srgb(vec3(0.18, 0.25, 0.16)))
 				: (slope > 38.0 ? pal(4.0, 4.0) : pal(0.0, k > 0.55 ? 5.0 : 4.0));
+			plate = (forest <= 0.4 && slope > 38.0) ? V_EARTH : V_GREEN;
 		}
 		if (road > 0.5) {
 			alb = pal(2.0, 4.0 + (n1 < 0.2 ? -1.0 : 0.0));
+			plate = V_EARTH;
 		}
 		if (mt.a * mw > 0.5) {
 			// a dry-stone wall (the temple's terrace): courses of grey stones, dark joints
@@ -264,6 +286,7 @@ void fragment() {
 			float blk = floor((pl.x + w3_hash(vec2(course, 1.0)) * 1.3) / 1.1);
 			alb = pal(3.0, 4.6 + (w3_hash(vec2(course, blk)) - 0.5) * 2.0);
 			if (fract(wp.y / 0.55) < 0.2 && dist < 900.0) alb = pal(3.0, 2.2);
+			plate = V_EARTH;
 		}
 		if (wat > 0.5 && !plain) {
 			water = true;
@@ -292,14 +315,17 @@ void fragment() {
 		alb *= 1.0 - v_shade * 0.35;
 		v_alb = alb;
 		ALBEDO = vec3(0.0);
-		EMISSION = v_air(alb, wp, eye, FRAGCOORD.xy);
-		// (in the white water holds no sky: the flooded fields are paper like the rest, the river
-		// a faint line winding on into it)
-		if (v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_paper(v_river > 0.5 ? 0.55 : 0.1);
+		// (in the 遠化 the water is its block, flat and still: no sky's gradation, no ruffle, no glint;
+		// then paper with its banks drawn)
+		vec3 w_flat = mix(haze_col, w3_sky * 1.6, 0.35) * 0.62 / max(w3_luma(v_print_light()), 1e-3);
+		EMISSION = v_print(v_air(alb, wp, eye, FRAGCOORD.xy), w_flat, V_BLUE, n, wp, eye, FRAGCOORD.xy);
+		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
 	} else {
 		v_alb = alb;
 		ALBEDO = vec3(1.0);
-		EMISSION = v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy);
+		EMISSION = v_print(v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, n, wp, eye, FRAGCOORD.xy);
+		// the key block's lines where the print has lost its gradations
+		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
 		if (dbg_mode == 1) { EMISSION = vec3(clamp(slope / 60.0, 0.0, 1.0), n.y, 0.0); ALBEDO = vec3(0.0); }
 		if (dbg_mode == 3) { EMISSION = alb; ALBEDO = vec3(0.0); }
 		if (dbg_mode == 4) { EMISSION = w3_ambient(alb, n, 1.0); ALBEDO = vec3(0.0); }

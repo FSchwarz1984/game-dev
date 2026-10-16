@@ -28,13 +28,15 @@ extends Node
 
 const DATA := "res://world3d/terrain/saddle/vista.json"
 const EYE_H := 1.45
-# vertical, degrees (px per radian = half the height / tan(FOV/2)). Round 5 (G5R3-1: the view as in
-# round 3): round 3 drew 480x270 at 40 degrees, 371 px per radian, the camera ppr/20 = 18.55 m
-# behind her; at 640x360 the same 371 px per radian (her sprite pixel still one screen pixel, the
-# same framing of the land) is 51.8 degrees: round 3's picture in the middle, a margin round it.
-# (Round 4 kept 40 degrees: everything a third bigger and the camera pushed back to 24.7 m, so the
-# foreground's trees and rocks came into the frame differently.)
-const FOV := 51.78
+# vertical, degrees (px per radian = half the height / tan(FOV/2)). Round 3's frame (the user,
+# G5R3-16: "v3版的畫面裁剪比例最好保留，有電影的感覺"): 40 degrees, the camera where round 3 stood
+# (CAM_DIST), so the horizon, the rocks, the pine and the maples sit in the frame as they did; at
+# 640x360 that is 494.5 px per radian (round 3: 480x270, 371), everything a third finer, and she and
+# さぢ drawn at the land's scale at her distance (fig_ppm, about 26.7 px per metre). (Round 5's first
+# try kept 371 px per radian at 51.8 degrees: round 3's picture with a margin round it, more sky and
+# more foreground, which the user saw; round 4 kept 40 degrees but pushed the camera back to 24.7 m.)
+const FOV := 40.0
+const CAM_DIST := 18.55             # round 3's: its 371 px per radian / 20 px per metre
 
 # hour, zenith, horizon, mist, cloud lit, cloud shade (sRGB)
 const SKY_KEYS := [
@@ -260,6 +262,10 @@ func _common(m: ShaderMaterial) -> void:
 	if vp:
 		m.set_shader_parameter("v_ppr", px_per_rad())
 	m.set_shader_parameter("front_c", FRONT)
+	# the 遠化's print (vista_common v_print): the blocks' flat colours and the key block's ink, from the
+	# terrain's palette and the view's own forest (no new colours)
+	for kv in _print_colours():
+		m.set_shader_parameter(kv[0], kv[1])
 	m.set_shader_parameter("eye", eye)
 	if cloud_tex:
 		m.set_shader_parameter("cloud_tex", cloud_tex)
@@ -281,6 +287,94 @@ func _tex(path: String) -> ImageTexture:
 ## The same, for maps the shaders read with bilinear filtering (distance fields).
 func _tex_lin(path: String) -> ImageTexture:
 	return _tex(path)
+
+
+var _print_cols: Array = []
+
+## The 遠化's print colours (vista_common): the key block's ink (the palette's K, sRGB) and two tones
+## for the green and the earth blocks (linear): the terrain palette's grass and fallow and bank earth,
+## the view's own forest.
+func _print_colours() -> Array:
+	if _print_cols.is_empty():
+		var pal: Image = load("res://world3d/terrain/common/palette.png")
+		var lin := func(c: Color) -> Vector3:
+			var l := c.srgb_to_linear()
+			return Vector3(l.r, l.g, l.b)
+		var k := pal.get_pixel(0, 12) if pal else Color8(58, 46, 38)
+		_print_cols = [["ink_k", Vector3(k.r, k.g, k.b)],
+			["print_green_lt", lin.call(pal.get_pixel(5, 0) if pal else Color8(85, 96, 75))],
+			["print_green_dk", lin.call(Color(0.2, 0.29, 0.16))],
+			["print_earth_lt", lin.call(pal.get_pixel(5, 8) if pal else Color8(129, 119, 103))],
+			["print_earth_dk", lin.call(pal.get_pixel(3, 9) if pal else Color8(88, 75, 61))]]
+	return _print_cols
+
+
+## The 遠化 on the CPU, as vista_common draws it (v_front_r, v_past_m): metres past the front at a
+## point (negative before it). The puffs and the sound ask it.
+func past_m(x: float, z: float) -> float:
+	var dx := x - FRONT.x
+	var dz := z - FRONT.y
+	var a := atan2(dx, -dz)
+	var w := _vnoise(a * 2.2 + 11.0, 3.0) * 0.65 + _vnoise(a * 6.1 + 2.0, 7.0) * 0.35
+	return sqrt(dx * dx + dz * dz) - FRONT.z * (0.62 + 0.8 * w)
+
+
+static func _hash2(x: float, y: float) -> float:
+	# (pixel_toon's w3_hash)
+	var p3 := Vector3(fposmod(x * 0.1031, 1.0), fposmod(y * 0.1031, 1.0), fposmod(x * 0.1031, 1.0))
+	var d := p3.dot(Vector3(p3.y + 33.33, p3.z + 33.33, p3.x + 33.33))
+	p3 += Vector3(d, d, d)
+	return fposmod((p3.x + p3.y) * p3.z, 1.0)
+
+
+static func _vnoise(x: float, y: float) -> float:
+	var ix := floorf(x)
+	var iy := floorf(y)
+	var fx := x - ix
+	var fy := y - iy
+	var ux := fx * fx * (3.0 - 2.0 * fx)
+	var uy := fy * fy * (3.0 - 2.0 * fy)
+	return lerpf(lerpf(_hash2(ix, iy), _hash2(ix + 1.0, iy), ux), lerpf(_hash2(ix, iy + 1.0), _hash2(ix + 1.0, iy + 1.0), ux), uy)
+
+
+## How much of the view the 遠化 fills toward a bearing (0..1): rays across the frame at the horizon's
+## height and a little under it, each marched over the land to where it meets the ground (or runs
+## out to the far ranges); the share of them that end past the front. Cached per degree.
+var _far_cache := {}
+var _far_sent := 0.0
+func far_share(bearing: float, pitch: float) -> float:
+	var key := Vector2i(roundi(bearing * 0.5), roundi(pitch))
+	if _far_cache.has(key):
+		return float(_far_cache[key])
+	var hits := 0
+	var total := 0
+	var half := rad_to_deg(atan(float(vp.size.x) * 0.5 / px_per_rad()))
+	for i in 7:
+		var b := deg_to_rad(bearing + lerpf(-half, half, float(i) / 6.0))
+		for el in [pitch - 1.0, pitch - 5.0]:
+			var e := deg_to_rad(el)
+			var dir := Vector3(sin(b) * cos(e), sin(e), -cos(b) * cos(e))
+			var t := 40.0
+			var end := Vector3.INF
+			while t < 16000.0:
+				var p := eye + dir * t
+				if p.y <= ground_h(p.x, p.z):
+					end = p
+					break
+				t *= 1.08
+			total += 1
+			# (a ray that never meets the land looks at the sky over the far ranges: those lie in the
+			# 遠化 when it is that way)
+			if end == Vector3.INF:
+				end = eye + dir * 16000.0
+				if el > pitch - 2.0:
+					total -= 1
+					continue
+			if past_m(end.x, end.z) > 0.0:
+				hits += 1
+	var k := float(hits) / maxf(float(total), 1.0)
+	_far_cache[key] = k
+	return k
 
 
 func _mat(shader: String) -> ShaderMaterial:
@@ -867,10 +961,17 @@ func _place_impostors(cam_at: Vector3) -> void:
 			if e < best:
 				best = e
 				pick = fr
-		var top := float(list[0]["ppm"])
+		# (the trees round 3 drew, no more: round 3 left out those too near for its finest level, 14.1
+		# px per metre at its 371 px per radian; the finer levels since are for drawing the ones it
+		# kept at round 3's frame at 640x360, G5R3-16)
+		var top3 := 0.0
+		for fr in list:
+			if float(fr["ppm"]) < 14.2:
+				top3 = maxf(top3, float(fr["ppm"]))
+		var want3 := want * 371.0 / ppr
 		var bas := Basis(Vector3.ZERO, Vector3.ZERO, Vector3.ZERO)
 		var fyaw := 0.0
-		if not pick.is_empty() and want < top * 1.3 and want > float(list[-1]["ppm"]) * 0.5:
+		if not pick.is_empty() and want3 < top3 * 1.3 and want > float(list[-1]["ppm"]) * 0.5:
 			var rc: Array = pick["rect"]
 			var pv: Array = pick["pivot"]
 			bas = Basis(Vector3(rc[0], rc[1], 0.0), Vector3(rc[2], rc[3], 0.0), Vector3(pv[0], pv[1], 0.0))
@@ -1320,8 +1421,8 @@ func _box(st: SurfaceTool, c: Vector3, s: Vector3, col: Color) -> void:
 
 
 # ------------------------------------------------------------------------------------------------
-# her and さぢ on the lookout, seen from behind (the camera stands back on the spur so that one sprite
-# pixel is one screen pixel: 20 px per metre at FIG_DIST)
+# her and さぢ on the lookout, seen from behind (the camera stands back on the spur at round 3's
+# distance; they are drawn at the land's scale there, fig_ppm)
 
 var figure_mats: Array[ShaderMaterial] = []
 var feet := Vector3.ZERO
@@ -1363,6 +1464,8 @@ func _build_figures() -> void:
 			m.set_shader_parameter("frame_rect", Vector4(0, 0, FIG_PX.x, FIG_PX.y))
 			m.set_shader_parameter("pivot_px", FIG_FOOT)
 			m.set_shader_parameter("baked", true)
+			m.set_shader_parameter("sheet_ppm", fig_ppm())
+			m.set_shader_parameter("px_scale", 1.0)
 			fig_mat = m
 		else:
 			var c: Dictionary = chars[spec[0]]
@@ -1373,6 +1476,9 @@ func _build_figures() -> void:
 			m.set_shader_parameter("sheet", CharSprite3D.pixel_texture("res://world3d/sprites/%s.png" % sh["file"]))
 			m.set_shader_parameter("frame_rect", Vector4(int(a["col"]) * fw, int(a["row"]) * fh, fw, fh))
 			m.set_shader_parameter("pivot_px", Vector2(c["pivot"][0], c["pivot"][1]))
+			# (her sprite sheets are 20 px per metre: さぢ at the land's scale is a third bigger)
+			m.set_shader_parameter("sheet_ppm", 20.0)
+			m.set_shader_parameter("px_scale", fig_ppm() / 20.0)
 		var q := QuadMesh.new()
 		q.size = Vector2(1, 1)
 		var mi := MeshInstance3D.new()
@@ -1387,9 +1493,9 @@ func _build_figures() -> void:
 
 
 # her 3D model in the view: a world of its own (her, the sun) seen by an orthographic camera from the
-# view's eye, at 20 px per metre like the view itself; she turns toward where the view looks
-const FIG_PX := Vector2i(40, 52)       # the picture's size (native px)
-const FIG_FOOT := Vector2(20.0, 47.0)  # her feet in it (px from its top left)
+# view's eye, at the land's scale at her distance (fig_ppm); she turns toward where the view looks
+const FIG_PX := Vector2i(54, 70)       # the picture's size (native px: 40 x 52 at 20 px/m, at fig_ppm)
+const FIG_FOOT := Vector2(27.0, 63.0)  # her feet in it (px from its top left)
 var fig_vp: SubViewport
 var fig_cam: Camera3D
 var fig_sun: DirectionalLight3D
@@ -1427,7 +1533,7 @@ func _build_fig3d() -> bool:
 	fig_cam = Camera3D.new()
 	fig_cam.projection = Camera3D.PROJECTION_ORTHOGONAL
 	fig_cam.keep_aspect = Camera3D.KEEP_HEIGHT
-	fig_cam.size = float(FIG_PX.y) / 20.0
+	fig_cam.size = float(FIG_PX.y) / fig_ppm()
 	fig_cam.near = 0.05
 	fig_cam.far = 40.0
 	fig_cam.current = true
@@ -1460,9 +1566,9 @@ func _update_fig3d(bearing: float) -> void:
 		_fig_eye = eye
 		var up := (Vector3.UP - look * look.y).normalized()
 		# the orthographic picture is centred on its middle: the feet FIG_FOOT px from its top left
-		var below := (FIG_FOOT.y - float(FIG_PX.y) * 0.5) / 20.0
+		var below := (FIG_FOOT.y - float(FIG_PX.y) * 0.5) / fig_ppm()
 		var right := look.cross(up).normalized()
-		var aside := (FIG_FOOT.x - float(FIG_PX.x) * 0.5) / 20.0
+		var aside := (FIG_FOOT.x - float(FIG_PX.x) * 0.5) / fig_ppm()
 		var aim := up * below - right * aside
 		fig_cam.look_at_from_position(aim - look * 12.0, aim, Vector3.UP)
 	var cam_yaw := atan2(look.x, look.z)
@@ -1489,13 +1595,13 @@ func _pause_fig3d() -> void:
 	fig_char.process_mode = Node.PROCESS_MODE_DISABLED
 
 
-## Where the camera stands: behind her, so that one sprite pixel is one screen pixel (distance = px
-## per radian / 20). Two places: looking out (up the spur north-north-west of her, 28 degrees above
+## Where the camera stands: behind her, round 3's distance (CAM_DIST; round 3 chose it so that one
+## 20 px/m sprite pixel was one screen pixel). Two places: looking out (up the spur north-north-west of her, 28 degrees above
 ## her, high enough to see the lower layer past the rock's brow) and looking back home (south of her,
 ## out over the drop, low, so the great camphor rises over the saddle). Within one the camera only
 ## turns in place (the impostors' frames, the marks' anchors and the band seams stay put).
 func cam_pos() -> Vector3:
-	var d := px_per_rad() / 20.0
+	var d := CAM_DIST
 	if sector == 0:
 		# up the spur behind her, high enough to see the lower layer past the rock's brow
 		var b := deg_to_rad(OUT_CAM_BEARING)
@@ -1531,6 +1637,17 @@ func _build_puffs() -> void:
 	# warm up so the columns stand when the view opens
 	for i in 480:
 		_step_puffs(0.1)
+	# (nothing moves in the 遠化: a source there keeps the column it had, still; vista_puff draws it
+	# as the paper)
+	var still := 0
+	for s in puff_src:
+		if past_m((s[0] as Vector3).x, (s[0] as Vector3).z) > 0.0:
+			s[1] = 0.0
+			still += 1
+	for pf in puffs:
+		if past_m((pf[0] as Vector3).x, (pf[0] as Vector3).z) > 0.0:
+			pf.append(true)
+	print("VISTA puffs sources=%d still_in_enka=%d" % [puff_src.size(), still])
 
 
 func _step_puffs(dt: float) -> void:
@@ -1554,6 +1671,9 @@ func _step_puffs(dt: float) -> void:
 	var i := 0
 	while i < puffs.size():
 		var pf: Array = puffs[i]
+		if pf.size() > 9:
+			i += 1
+			continue
 		pf[3] = float(pf[3]) + dt
 		if float(pf[3]) > float(pf[2]):
 			puffs.remove_at(i)
@@ -1593,6 +1713,11 @@ func _write_puffs() -> void:
 
 func px_per_rad() -> float:
 	return float(vp.size.y) * 0.5 / tan(deg_to_rad(FOV * 0.5))
+
+
+## Pixels per metre at her distance from the camera: she and さぢ are drawn at the land's scale there.
+func fig_ppm() -> float:
+	return px_per_rad() / CAM_DIST
 
 
 ## The pitch that suits a bearing: down over the land to the south (her feet stay in the frame),
@@ -1707,11 +1832,22 @@ func update(dt: float) -> void:
 	display.set_shader_parameter("veil", veil)
 	var kv := _sky_at(env.hours)
 	display.set_shader_parameter("veil_col", (kv[3] as Color).lerp(Color(0.95, 0.95, 0.94), 0.35))
+	var audio := get_node_or_null("/root/Audio")
 	if not shown:
 		vp.render_target_update_mode = SubViewport.UPDATE_DISABLED
 		pv.vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		_pause_fig3d()
+		if audio and _far_sent != 0.0:
+			_far_sent = 0.0
+			audio.call("far", 0.0)
 		return
+	# (the sound of the 遠化: as she turns her head toward it the wind, the birds and the insects
+	# recede, hollow and far; turned back they return. Audio.far, no new sound)
+	if audio:
+		var fk := far_share(yaw, pitch_for(yaw)) if sector == 0 else 0.0
+		if absf(fk - _far_sent) > 0.01:
+			_far_sent = fk
+			audio.call("far", fk)
 	vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	# the world view underneath stops while the view covers it
 	pv.vp.render_target_update_mode = SubViewport.UPDATE_DISABLED

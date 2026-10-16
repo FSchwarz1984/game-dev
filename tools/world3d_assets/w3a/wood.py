@@ -145,16 +145,20 @@ def _wrap_noise(R, S, cells, octaves=2):
     return (out - out.min()) / max(out.max() - out.min(), 1e-9)
 
 
-def bark_lines_texture(seed, size=256, spacing=(3, 6), ridge=('#6c6458', '#7b7365', '#8a8272'), lip='#999080',
+def bark_lines_texture(seed, size=256, spacing=(4, 8), ridge=('#6c6458', '#7b7365', '#8a8272'), lip='#999080',
                        fissure='#3a332e', deep='#2b2623', lichen=('#8f9178', '#a3a58a'), lichen_p=0.0015,
-                       moss=('#4c5a33', '#5a6a3a'), moss_p=0.0012, wave=(2.5, 1.2), merge_p=0.25, tone_len=46.0):
+                       moss=('#4c5a33', '#5a6a3a'), moss_p=0.0012, meander=(2.6, 1.0), wiggle=0.6, merge_p=0.22,
+                       join_p=0.3):
     """Round 5 (G5R3-5: the great camphor's bark in round 3's ukiyo-e manner, "更自然", never bricks):
-    round 3's line work, one-texel dark fissures running up the trunk, wavy, now and then fading out
-    and merging, a lighter lip along one edge of each; but the ridges between them change tone
-    gradually along their length (round 3 cut them into flat segments, and the segments with the
-    short dark breaks across them are what read as bricks): no breaks, no plates. Tiles both ways.
+    round 3's line work (one-texel dark fissures up the trunk, a lighter lip along one edge of each),
+    but drawn as grain: the fissures share one slow meander that changes gently across the tile, so
+    neighbours flow together instead of crossing into a net; now and then one leans into its
+    neighbour, runs with it and parts again (a Y, the way the bark's ridges interlace), or fades out
+    for a stretch. The ridges between them change tone in long slender strips (2-4 steps per ridge
+    and tile, staggered from ridge to ridge, nothing dark across them): round 3 cut them into short
+    flat segments with dark breaks across, and those read as bricks. Tiles both ways.
     Returns (size, size, 3) uint8."""
-    from .core import hex_rgb
+    from .core import hex_rgb, smoothstep
     R = rng(seed)
     S = size
     C = lambda h: np.array(hex_rgb(h), np.float64)
@@ -165,23 +169,42 @@ def bark_lines_texture(seed, size=256, spacing=(3, 6), ridge=('#6c6458', '#7b736
         x += R.uniform(*spacing)
     xs0 = np.array(xs0)
     n = len(xs0)
-    y = np.arange(S)
+    y = np.arange(S, dtype=np.float64)
+    # the shared meander: its phase turns slowly across the tile (whole turns, so it tiles in x)
+    ph_a = 2 * math.pi * xs0 / S + R.uniform(0, 2 * math.pi)
+    ph_b = 2 * math.pi * 2 * xs0 / S + R.uniform(0, 2 * math.pi)
     paths = np.zeros((n, S))
     for i in range(n):
-        f1, f2 = int(R.integers(1, 4)), int(R.integers(4, 9))
-        p1, p2 = R.uniform(0, 2 * math.pi, 2)
-        paths[i] = xs0[i] + wave[0] * np.sin(2 * math.pi * f1 * y / S + p1) + wave[1] * np.sin(2 * math.pi * f2 * y / S + p2)
+        f2 = int(R.integers(4, 9))
+        paths[i] = (xs0[i] + meander[0] * np.sin(2 * math.pi * y / S + ph_a[i]) + meander[1] * np.sin(2 * math.pi * 3 * y / S + ph_b[i])
+                    + wiggle * np.sin(2 * math.pi * f2 * y / S + R.uniform(0, 2 * math.pi)))
+    # joins: a fissure leans into its right-hand neighbour over a stretch, runs with it, parts again
+    for i in range(n):
+        if R.uniform() < join_p:
+            j = (i + 1) % n
+            y0 = R.uniform(0, S)
+            L = R.uniform(24, 70)
+            d = (y - y0) % S
+            w = smoothstep(0.0, 0.3, d / L) * (1 - smoothstep(0.7, 1.0, d / L)) * (d < L)
+            other = paths[j] + (S if j == 0 else 0.0)
+            paths[i] = paths[i] + w * (other - paths[i])
     alive = np.ones((n, S), bool)
     for i in range(n):
         if R.uniform() < merge_p:
             start = int(R.integers(0, S))
-            length = int(R.integers(10, 40))
+            length = int(R.integers(12, 44))
             alive[i, (start + np.arange(length)) % S] = False
-    # each ridge's tone: a slow periodic curve along y (a few cycles per tile), its own phase
-    k_cyc = max(int(round(S / tone_len)), 1)
+    # line weight: each fissure swells to two texels over a stretch or two (a brush line, not a pen)
+    wide = np.zeros((n, S), bool)
+    for i in range(n):
+        kw = int(R.integers(1, 4))
+        wide[i] = np.sin(2 * math.pi * kw * y / S + R.uniform(0, 2 * math.pi)) > R.uniform(0.35, 0.8)
+    # each ridge's tone: 2-4 slow steps along y (its own phase), three flat tones
+    k_cyc = R.integers(1, 3, size=n)
     ph = R.uniform(0, 2 * math.pi, n)
     ph2 = R.uniform(0, 2 * math.pi, n)
-    rc = [C(h) for h in ridge]
+    rc = np.stack([C(h) for h in ridge])
+    cf, cd, cl = C(fissure), C(deep), C(lip)
     img = np.zeros((S, S, 3))
     for yy in range(S):
         px = np.round(paths[:, yy]).astype(int) % S
@@ -192,17 +215,19 @@ def bark_lines_texture(seed, size=256, spacing=(3, 6), ridge=('#6c6458', '#7b736
         if len(cuts) == 0:
             continue
         rid = np.searchsorted(cuts, np.arange(S), side='right') % len(cuts)
-        owner = order[al][rid]                                   # the fissure to the left of each texel
-        t = 0.5 + 0.32 * np.sin(2 * math.pi * k_cyc * yy / S + ph[owner]) + 0.18 * np.sin(2 * math.pi * 2 * k_cyc * yy / S + ph2[owner])
-        # three flat tones (pixel art), stepping where each ridge's own curve crosses the thresholds,
-        # so the steps are staggered from ridge to ridge (no courses) and nothing dark marks them
+        owner = order[al][rid]
+        kk = k_cyc[owner]
+        t = 0.5 + 0.34 * np.sin(2 * math.pi * kk * yy / S + ph[owner]) + 0.16 * np.sin(2 * math.pi * 2 * kk * yy / S + ph2[owner])
         lvl = np.where(t < 0.36, 0, np.where(t < 0.64, 1, 2))
-        img[yy] = np.stack(rc)[lvl]
-        for xx in cuts:
-            img[yy, xx % S] = C(fissure) if R.uniform() > 0.3 else C(deep)
+        img[yy] = rc[lvl]
+        wd = wide[order[al], yy]
+        for xx, w2 in zip(cuts, wd):
             if R.uniform() < 0.8:
-                img[yy, (xx + 1) % S] = C(lip)
-    # lichen and moss specks, a few
+                img[yy, (xx + 1) % S] = cl
+        for xx, w2 in zip(cuts, wd):          # the fissures over the lips (two fissures side by side)
+            img[yy, xx % S] = cf if R.uniform() > 0.3 else cd
+            if w2:
+                img[yy, (xx - 1) % S] = cd
     m = R.uniform(size=(S, S))
     img[m < lichen_p] = C(lichen[0])
     img[(m >= lichen_p) & (m < lichen_p * 1.6)] = C(lichen[-1])

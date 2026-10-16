@@ -317,7 +317,9 @@ def authored(L, ctx, rng):
     for sp in specs:
         out.append({"kind": sp["kind"], "x": float(sp["x"]), "z": float(sp["z"]), "rot": float(sp.get("rot", rng.uniform(0, 6.28))),
                     "scale": float(sp.get("scale", 1.0)), "variant": int(sp.get("variant", 0)), "fixed": True,
-                    **({"role": sp["role"]} if "role" in sp else {})})
+                    **({"role": sp["role"]} if "role" in sp else {}),
+                    # (a set stone: how deep it sits, its own extents; rocks.gd reads them)
+                    **{k: float(sp[k]) for k in ("sink", "sx", "sy", "sz") if k in sp}})
     keep_out = [(float(sp["x"]), float(sp["z"]), float(sp.get("clear", 1.4))) for sp in specs]
     for g in L.get("plantings", []):
         poly = np.asarray(g["poly"], np.float64)

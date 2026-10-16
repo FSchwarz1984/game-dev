@@ -41,6 +41,8 @@ const KINDS = ['window', 'lantern', 'star', 'fire', 'bonfire'];
 // HEAD's draws from its sequence before the canopy (river lanterns and its procession plan, on HEAD's
 // map): frozen, so the crown's clumps stay the ones the user approved whatever the plain becomes
 export const HEAD_DRAWS = 1768;
+// the hour the far comes (the prologue's state from the lights' leaving on) and the night's paper
+const WAVE_TOD = 20.3, PAPER_NIGHT = 1.0;
 
 // counting RNG: the shipped variant replays the canon variant's draw count before the canopy
 function crng(seed) {
@@ -107,6 +109,8 @@ export function bakeSouth(o = {}) {
     acc = (acc - len) % step; if (acc < 0) acc += step;
   }
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
+  // the far as plates peeled (G5R3-18): the key block's lines and how far each place ends up gone
+  const fadeMap = PL.fadeMaps(ground.layer, ground.X, ground.Z, ground.mask, Wc, GH, f);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
   const RIV = PL.RIVER, near = [];
   for (let i = 0; i < RIV.length; i++) if (Math.hypot(RIV[i][0] - PL.TOWN.X, RIV[i][1] - PL.TOWN.Z) < 3.4) near.push(i);
@@ -283,13 +287,21 @@ export function bakeSouth(o = {}) {
   const envG = e => ({ ...e, sun: e.sun.map(v => v * (1 - 0.8 * e.night)) });
   const gSpace = new IdSpace().add(ground.layer.idx);
   const groundLut = lutRows(gSpace, envs.map(e => palette(GROUND_MATS, envG(e), { haze: e.mist })));
+  // the far (遠化, G5R3-18): row 0 the white of the front as it passes (the event itself: HEAD's pale
+  // front, houses keep the pale), rows 1..4 the land as a print losing its blocks (plain.js FADE_*),
+  // printed on the night's paper at the hour the far comes (20.3 h: it does not change meanwhile)
   const farPal = palette(GROUND_MATS, envG(envs[0]), { haze: envs[0].mist, far: true });
-  const farLut = lutRows(gSpace, [farPal, v => {           // row 1: the bright front (houses keep the far colour)
+  const envW = envG(todEnv(WAVE_TOD));
+  PL.setPaperK(PAPER_NIGHT);
+  const stagePals = [];
+  for (let st = 1; st <= PL.FADE_STAGES; st++) { const p = palette(PL.fadeMats(st), envW, { haze: envW.mist }); stagePals.push(v => p(v & ~7)); }
+  PL.setPaperK(1);
+  const farLut = lutRows(gSpace, [v => {
     const p = farPal(v), m = v >> 8;
     if (m === G.roof || m === G.roofLit || m === G.thatch || m === G.wall || m === G.kura || m === G.wood || m === G.iron) return p;
     const c = mix3([p & 255, (p >> 8) & 255, (p >> 16) & 255], [222, 230, 250], 0.34);
     return ((255 << 24) | (Math.round(c[2]) << 16) | (Math.round(c[1]) << 8) | Math.round(c[0])) >>> 0;
-  }]);
+  }, ...stagePals]);
   const fSpace = new IdSpace().add(back.layer.idx).add(frontC.layer.idx).add(nearL.idx);
   for (const sp of stir) fSpace.add(sp.layer.idx);
   const foliageLut = lutRows(fSpace, envs.map(e => palette(FOLIAGE_MATS, { ...e, sun: e.sun.map(v => v * (1 - 0.7 * e.night)) })));
@@ -361,6 +373,7 @@ export function bakeSouth(o = {}) {
     moteBuckets: Array.from(buckets),
     images: {
       ground: idImage(groundIds, Wc, GH, arrival),
+      groundFade: { w: Wc, h: GH, data: fadeMap, fmt: 'rgba8' },
       groundZ: { w: Wc, h: GH, data: zmap, fmt: 'rg8' },
       ...Object.fromEntries(classes.map(c => ['shore' + c.H, idImage(sSpace.map(rows(c.shore.layer.idx, Wc, c.y0, c.shoreH)), Wc, c.shoreH - c.y0)])),
       deck: { w: Wc, h: deckRows, data: deckD, fmt: 'rg8' },

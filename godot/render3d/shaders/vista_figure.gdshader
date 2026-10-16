@@ -12,18 +12,21 @@ uniform vec4 frame_rect = vec4(0.0, 0.0, 64.0, 78.0);   // px in the sheet
 uniform vec2 pivot_px = vec2(32.0, 65.0);
 uniform vec3 eye = vec3(0.0);
 uniform vec3 light_col = vec3(1.0);                      // the hour's light on her (linear)
+uniform float sheet_ppm = 20.0;                          // the sheet's px per metre
+uniform float px_scale = 1.0;                            // screen px per sheet px (the land's scale at her)
 
 varying vec3 v_wp;
 varying vec2 v_px;
 
 void vertex() {
 	vec3 o = MODEL_MATRIX[3].xyz;
-	// corners in sprite px relative to the pivot (y up), around the foot moved onto the pixel lattice:
-	// one sprite pixel is one screen pixel (the camera stands where 20 px per metre holds)
+	// corners in sprite px relative to the pivot (y up), around the foot moved onto the pixel lattice;
+	// px_scale screen px per sheet px (her 3D picture: 1, drawn at the land's scale; a 20 px/m sprite:
+	// the land's scale at her distance over 20, about 1.33)
 	vec2 c = vec2(mix(-pivot_px.x, frame_rect.z - pivot_px.x, UV.x), mix(pivot_px.y, pivot_px.y - frame_rect.w, UV.y));
 	vec2 foot = v_snap(v_px_of(o, eye));
-	POSITION = v_clip(foot + c, length(o - eye), PROJECTION_MATRIX);
-	v_wp = o + vec3(0.0, c.y / 20.0, 0.0);
+	POSITION = v_clip(foot + floor(c * px_scale + 0.5), length(o - eye), PROJECTION_MATRIX);
+	v_wp = o + vec3(0.0, c.y / sheet_ppm, 0.0);
 	v_px = vec2(UV.x * frame_rect.z, UV.y * frame_rect.w);
 }
 
