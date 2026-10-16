@@ -10,10 +10,9 @@ extends Node
 ##     shoulder, the 裏見之瀑 falling into the canyon to the west (its mist rises out of it), the lower
 ##     layer to the south (溜池, the terraces and the farm), the old road going down to the plain;
 ##   * the plain far below: fields, the river, villages and a town (vista_house), the railway on its
-##     viaduct and iron bridge (vista_line) with trains on it, the city round the station (blocks,
-##     high-rises, its lights from the dusk on); banks of cumulus over the lowland with a lane open
-##     down the middle toward the town (vista_cloud); the far land sinking into the air, faster past
-##     the 遠化's front a few kilometres out (vista_common v_air); mountains on the horizon;
+##     viaduct and iron bridge (vista_line); banks of cumulus over the lowland with a lane open down
+##     the middle toward the town (vista_cloud); past a front a few kilometres out the 遠化 has drained
+##     the land flat and white (vista_common v_air); mountains on the horizon;
 ##   * trees, the great camphor, the hut, the shrine and the graves as impostors baked from the real
 ##     assets (vista_impostor), the lookout's granite rocks, the kiln, the temple, the bridges, the
 ##     tower and its red light, the home's lanterns at night;
@@ -29,7 +28,13 @@ extends Node
 
 const DATA := "res://world3d/terrain/saddle/vista.json"
 const EYE_H := 1.45
-const FOV := 40.0                     # vertical, degrees (px per radian = half the height / tan(FOV/2)): the land in layers
+# vertical, degrees (px per radian = half the height / tan(FOV/2)). Round 5 (G5R3-1: the view as in
+# round 3): round 3 drew 480x270 at 40 degrees, 371 px per radian, the camera ppr/20 = 18.55 m
+# behind her; at 640x360 the same 371 px per radian (her sprite pixel still one screen pixel, the
+# same framing of the land) is 51.8 degrees: round 3's picture in the middle, a margin round it.
+# (Round 4 kept 40 degrees: everything a third bigger and the camera pushed back to 24.7 m, so the
+# foreground's trees and rocks came into the frame differently.)
+const FOV := 51.78
 
 # hour, zenith, horizon, mist, cloud lit, cloud shade (sRGB)
 const SKY_KEYS := [
@@ -223,9 +228,7 @@ func build() -> void:
 	_build_rocks()
 	_build_landmarks()
 	_build_plain()
-	_build_city()
 	_build_lines()
-	_build_trains()
 	_build_temple()
 	_build_figures()
 	_build_puffs()
@@ -653,6 +656,12 @@ func _tree(x: float, y: float, z: float, kind: int, h: float, w: float, seed: fl
 ## (W3Vista.props, handed over by the sample), the woods of the land around (vista.json) and the two
 ## red maples by the path.
 const IMPOSTORS := "res://world3d/vista/impostors.json"
+# round 5 (G5R3-1: "遠眺場景那些樹木植被什麼的數量和形狀狀態都需要和上一個版本保持一致"): the trees as round 3
+# drew them, their stand-ins (round 3's atlas) and their number and places (the region's props as
+# round 3's sample placed them, and its rocks; tools: git show 20e91e6), frozen for the view; the
+# heroes (the great camphor, the hut, the shrine, the graves) as they stand now
+const IMPOSTORS_R3 := "res://world3d/vista/impostors_r3.json"
+const PROPS_R3 := "res://world3d/vista/round3_props.json"
 # the baked stand-in of each catalog species, with its height (m)
 const IMP_KIND := {"sugi": [["sugi_a", 22.0], ["sugi_d", 26.0]], "pine": [["pine_a", 13.0], ["pine_c", 15.0]],
 	"konara": [["konara_a", 12.0], ["konara_c", 14.0]], "buna": [["buna_a", 15.0]], "maple_red": [["maple_red_a", 6.5]],
@@ -686,15 +695,69 @@ func _load_impostors() -> void:
 		if not imp_frames[a].has(k):
 			imp_frames[a][k] = []
 		imp_frames[a][k].append(fr)
+	var atlas_a: Image = load("res://world3d/vista/impostors_a.png")
+	var atlas_n: Image = load("res://world3d/vista/impostors_n.png")
+	var f3 := FileAccess.open(IMPOSTORS_R3, FileAccess.READ)
+	if f3:
+		# round 3's trees: its atlas stacked over the current one (whose heroes keep their frames,
+		# moved down by the height of round 3's page)
+		var m3: Dictionary = JSON.parse_string(f3.get_as_text())
+		var a3: Image = load("res://world3d/vista/impostors_r3_a.png")
+		var n3: Image = load("res://world3d/vista/impostors_r3_n.png")
+		var page := int(m3.get("page", 2048))
+		var heroes := {}
+		for a in IMP_HERO:
+			if imp_frames.has(a):
+				heroes[a] = imp_frames[a]
+				for k in heroes[a]:
+					for fr in heroes[a][k]:
+						var rc: Array = fr["rect"]
+						fr["rect"] = [rc[0], int(rc[1]) + page, rc[2], rc[3]]
+		imp_frames = {}
+		for fr in m3["frames"]:
+			var a := String(fr["asset"])
+			if a in IMP_HERO:
+				continue
+			var k := int(fr["index"])
+			if not imp_frames.has(a):
+				imp_frames[a] = {}
+			if not imp_frames[a].has(k):
+				imp_frames[a][k] = []
+			imp_frames[a][k].append(fr)
+		for a in heroes:
+			imp_frames[a] = heroes[a]
+		atlas_a = _stack(a3, atlas_a)
+		atlas_n = _stack(n3, atlas_n)
 	for a in imp_frames:
 		for k in imp_frames[a]:
 			(imp_frames[a][k] as Array).sort_custom(func(x, y): return float(x["ppm"]) > float(y["ppm"]))
 	imp_mat.shader = load("res://render3d/shaders/vista_impostor.gdshader")
-	imp_mat.set_shader_parameter("atlas_a", ImageTexture.create_from_image(load("res://world3d/vista/impostors_a.png")))
-	imp_mat.set_shader_parameter("atlas_n", ImageTexture.create_from_image(load("res://world3d/vista/impostors_n.png")))
+	imp_mat.set_shader_parameter("atlas_a", ImageTexture.create_from_image(atlas_a))
+	imp_mat.set_shader_parameter("atlas_n", ImageTexture.create_from_image(atlas_n))
 	_common(imp_mat)
 	if OS.get_cmdline_user_args().has("--debug_quads"):
 		imp_mat.set_shader_parameter("debug_quads", true)
+
+
+## Two atlas pages one over the other (the same width): the first on top.
+static func _stack(top: Image, bottom: Image) -> Image:
+	var t := top.duplicate() as Image
+	var b := bottom.duplicate() as Image
+	t.convert(Image.FORMAT_RGBA8)
+	b.convert(Image.FORMAT_RGBA8)
+	var out := Image.create(maxi(t.get_width(), b.get_width()), t.get_height() + b.get_height(), false, Image.FORMAT_RGBA8)
+	out.blit_rect(t, Rect2i(Vector2i.ZERO, t.get_size()), Vector2i.ZERO)
+	out.blit_rect(b, Rect2i(Vector2i.ZERO, b.get_size()), Vector2i(0, t.get_height()))
+	return out
+
+
+## Round 3's region props and rocks (PROPS_R3), or an empty dictionary.
+var _r3_props := {}
+func _round3_props() -> Dictionary:
+	if _r3_props.is_empty() and FileAccess.file_exists(PROPS_R3):
+		var f := FileAccess.open(PROPS_R3, FileAccess.READ)
+		_r3_props = JSON.parse_string(f.get_as_text())
+	return _r3_props
 
 
 ## The baked stand-in for a catalog prop name, and the scale that gives the prop's height.
@@ -719,8 +782,20 @@ func _build_impostors() -> void:
 	_load_impostors()
 	if imp_frames.is_empty():
 		return
-	# the region's props as the sample placed them
-	for pr in props:
+	# the region's props as the sample placed them (round 5: its trees as round 3 placed them, its
+	# heroes as they stand now)
+	var region: Array = props
+	var r3 := _round3_props()
+	if r3.has("trees"):
+		region = []
+		for pr in props:
+			if String(pr[0]) in IMP_HERO:
+				region.append(pr)
+		for t in r3["trees"]:
+			if String(t[0]) in IMP_HERO:
+				continue
+			region.append([String(t[0]), Vector3(float(t[1]), ground_h(float(t[1]), float(t[2])), float(t[2])), float(t[3]), float(t[4]), float(t[5])])
+	for pr in region:
 		var name: String = pr[0]
 		var pos: Vector3 = pr[1]
 		var seed := fposmod(pos.x * 0.137 + pos.z * 0.071, 1.0)
@@ -875,7 +950,10 @@ func _build_rocks() -> void:
 	rocks.terrain = terrain
 	var shapes := {}
 	var m := _mat("vista_solid")
-	for p in terrain.info["placements"]:
+	# (round 5: round 3's rocks, as its sample placed them: the lookout's foreground as it was)
+	var r3 := _round3_props()
+	var plist: Array = r3["rocks"] if r3.has("rocks") else terrain.info["placements"]
+	for p in plist:
 		var kind: String = p["kind"]
 		if kind != "boulder" and kind != "outcrop" and kind != "rock_slab":
 			continue
@@ -951,7 +1029,12 @@ func _build_landmarks() -> void:
 # vista_line), the ruined temple's hall (vista_solid)
 
 # roofs: silver-grey tiles (light in the sun), thatch, rust-red tin, blue tin
-const ROOFS := [Color(0.58, 0.6, 0.64), Color(0.56, 0.48, 0.35), Color(0.6, 0.32, 0.25), Color(0.36, 0.45, 0.56)]
+# roofs (round 5, G5R3-1: the user took round 3's villages for ponds, "我上一個版本把這些聚落的點誤認成了水泊":
+# their silver-grey and blue tin roofs were the colour of the flooded paddies and the river under the
+# haze). Now the warm greys and browns of old tiles and thatch, a few red-brown tin roofs: a village
+# reads as a cluster of warm dark specks on the green, never pale and blue like water.
+# weathered tile (warm grey), old dark tile, thatch, old thatch, red-brown tin
+const ROOFS := [Color(0.50, 0.46, 0.42), Color(0.38, 0.35, 0.33), Color(0.60, 0.49, 0.34), Color(0.47, 0.40, 0.31), Color(0.50, 0.32, 0.25)]
 const TOWER_H := 34.0
 var house_mat: ShaderMaterial
 var line_mat: ShaderMaterial
@@ -985,8 +1068,14 @@ func _build_plain() -> void:
 		var h: Array = hs[i]
 		mm.set_instance_transform(i, Transform3D(Basis(), Vector3(h[0], h[1], h[2])))
 		var k := int(h[7])
-		# (the town's roofs are mostly tiles; villages mix thatch and tin among them)
-		var roof: Color = ROOFS[0] if (int(h[9]) == 0 and fposmod(float(h[8]) * 0.37, 1.0) < 0.7) else ROOFS[(k + int(h[8]) % 2) % ROOFS.size()]
+		# (the town's roofs are mostly tiles, light and dark; the villages mostly thatch, a tin roof here
+		# and there)
+		var rs := fposmod(float(h[8]) * 0.37, 1.0)
+		var roof: Color
+		if int(h[9]) == 0:
+			roof = ROOFS[0] if rs < 0.5 else (ROOFS[1] if rs < 0.85 else ROOFS[4])
+		else:
+			roof = ROOFS[2] if rs < 0.45 else (ROOFS[3] if rs < 0.8 else (ROOFS[1] if rs < 0.93 else ROOFS[4]))
 		mm.set_instance_color(i, roof)
 		mm.set_instance_custom_data(i, Color(h[4], h[5], h[6], float(h[8]) / 1000.0))
 	house_mat = _mat("vista_house")
@@ -996,22 +1085,6 @@ func _build_plain() -> void:
 	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
 	root.add_child(mi)
-
-
-## The city on the plain (round 4, G5R2-1 ⑩: "a more prosperous, more modern city"): around the
-## old town's tiled roofs a modern city of concrete blocks (tall at the heart by the station, lower
-## toward its edge) on streets that run along and across the railway, with street lamps; the
-## station's long hall on the line; a factory quarter downriver (saw-tooth sheds and tall chimneys
-## smoking); road bridges over the river. Drawn by vista_house (kinds by COLOR.a), seeded, so the
-## same city every time.
-# concrete, tile and paint as they weather: greys from pale to dark, beige, brick, a few blue-grey
-# and green-grey (a city from afar is a mottle, not a white sheet)
-const CONCRETE := [Color(0.74, 0.72, 0.68), Color(0.60, 0.60, 0.59), Color(0.50, 0.51, 0.52), Color(0.68, 0.64, 0.56),
-	Color(0.56, 0.47, 0.42), Color(0.46, 0.50, 0.54), Color(0.80, 0.78, 0.72), Color(0.52, 0.56, 0.52), Color(0.64, 0.58, 0.50),
-	Color(0.42, 0.44, 0.47)]
-var city_rows: Array = []             # [foot, colour (kind in alpha), custom]
-var city_centre := Vector2.ZERO
-var city_heart := Vector3(0.0, 2000.0, 0.0)  # x, z, radius (m): the city's glow at night
 
 
 func _plain_at(x: float, z: float) -> Color:
@@ -1026,253 +1099,15 @@ func _plain_at(x: float, z: float) -> Color:
 var _plain_img: Image
 
 
-func _build_city() -> void:
-	var vs: Array = data.get("villages", [])
-	var rail: Array = data.get("railway", [])
-	if vs.is_empty() or rail.size() < 2 or not data.has("plain"):
-		return
-	var rng2 := RandomNumberGenerator.new()
-	rng2.seed = 4242
-	var c0: Array = vs[0]
-	city_centre = Vector2(float(c0[0]), float(c0[1]))
-	# the railway past the town: the station stands on it, the streets run along and across it
-	var best := 0
-	for i in rail.size():
-		var d2 := Vector2(float(rail[i][0]), float(rail[i][2])).distance_squared_to(city_centre)
-		if d2 < Vector2(float(rail[best][0]), float(rail[best][2])).distance_squared_to(city_centre):
-			best = i
-	var ra: Array = rail[maxi(best - 3, 0)]
-	var rb: Array = rail[mini(best + 3, rail.size() - 1)]
-	var axis := Vector2(float(rb[0]) - float(ra[0]), float(rb[2]) - float(ra[2])).normalized()
-	var perp := Vector2(-axis.y, axis.x)
-	var station := Vector2(float(rail[best][0]), float(rail[best][2]))
-	# the heart lies between the old town and the station
-	var heart := city_centre.lerp(station, 0.45)
-	var blk := 44.0
-	var lamps: Array = []
-	for gi in range(-18, 19):
-		for gj in range(-14, 15):
-			var p := heart + axis * (float(gi) * blk) + perp * (float(gj) * blk)
-			# an organic edge: the city thins out over its last few hundred metres
-			var edge := 640.0 + 160.0 * sin(atan2(p.y - heart.y, p.x - heart.x) * 3.0 + 1.3) + rng2.randf_range(-60.0, 60.0)
-			var r := p.distance_to(heart) / edge
-			if r > 1.0:
-				continue
-			var pd := _plain_at(p.x, p.y)
-			# not in the river, not on the railway
-			if pd.r * 255.0 < 22.0 or pd.a * 255.0 * 0.5 < 18.0:
-				continue
-			var n := 1 + rng2.randi_range(0, 2) + (1 if r < 0.45 else 0)
-			for b in n:
-				var q := p + axis * rng2.randf_range(-15.0, 15.0) + perp * rng2.randf_range(-15.0, 15.0)
-				var qd := _plain_at(q.x, q.y)
-				if qd.r * 255.0 < 18.0 or qd.a * 255.0 * 0.5 < 14.0:
-					continue
-				var tall := pow(clampf(1.0 - r, 0.0, 1.0), 1.7)
-				var h := lerpf(8.0, 46.0, tall) * rng2.randf_range(0.55, 1.35)
-				var col: Color = CONCRETE[rng2.randi() % CONCRETE.size()]
-				col.a = 0.75
-				city_rows.append([Vector3(q.x, ground_h(q.x, q.y), q.y), col, Color(rng2.randf_range(11.0, 26.0), rng2.randf_range(9.0, 18.0), h, rng2.randf())])
-			# a street lamp at the crossing, most crossings
-			if rng2.randf() < 0.6:
-				var lp := p + (axis + perp) * blk * 0.5
-				lamps.append(Vector3(lp.x, ground_h(lp.x, lp.y) + 5.0, lp.y))
-	# the heart's high-rises (round 4, lead: "the city too small and faint: a few taller buildings in
-	# the middle distance"): glass towers of 70 to 165 m round the station, the tallest nearest it
-	var towers: Array[Vector2] = []
-	var tcols := [Color(0.56, 0.62, 0.68, 0.9), Color(0.68, 0.69, 0.7, 0.9), Color(0.47, 0.54, 0.6, 0.9), Color(0.74, 0.72, 0.68, 0.9)]
-	for k in 40:
-		if towers.size() >= 14:
-			break
-		var tp := station.lerp(heart, rng2.randf_range(0.0, 0.9)) + axis * rng2.randf_range(-320.0, 320.0) + perp * rng2.randf_range(-180.0, 180.0)
-		var td := _plain_at(tp.x, tp.y)
-		if td.r * 255.0 < 30.0 or td.a * 255.0 * 0.5 < 26.0:
-			continue
-		var crowded := false
-		for o in towers:
-			if o.distance_to(tp) < 55.0:
-				crowded = true
-		if crowded:
-			continue
-		towers.append(tp)
-		var near_st := 1.0 - clampf(tp.distance_to(station) / 450.0, 0.0, 1.0)
-		var th := lerpf(70.0, 165.0, near_st) * rng2.randf_range(0.8, 1.1)
-		city_rows.append([Vector3(tp.x, ground_h(tp.x, tp.y), tp.y), tcols[k % tcols.size()], Color(rng2.randf_range(20.0, 32.0), rng2.randf_range(16.0, 26.0), th, rng2.randf())])
-	city_heart = Vector3(heart.x, heart.y, 720.0)
-	# the station: a long hall on the line, lamps along its platform
-	var sy := ground_h(station.x, station.y)
-	city_rows.append([Vector3(station.x, sy, station.y), Color(0.42, 0.5, 0.48, 0.25), Color(120.0, 22.0, 13.0, 0.13)])
-	for k in 7:
-		var lp2 := station + axis * (float(k) - 3.0) * 18.0 + perp * 14.0
-		lamps.append(Vector3(lp2.x, ground_h(lp2.x, lp2.y) + 5.0, lp2.y))
-	# the factory quarter downriver along the line: saw-tooth sheds and tall chimneys, smoking
-	var fac := heart + axis * 820.0 + perp * 160.0
-	for k in 9:
-		var fp := fac + axis * rng2.randf_range(-260.0, 260.0) + perp * rng2.randf_range(-170.0, 170.0)
-		var fd := _plain_at(fp.x, fp.y)
-		if fd.r * 255.0 < 26.0 or fd.a * 255.0 * 0.5 < 20.0:
-			continue
-		var fy := ground_h(fp.x, fp.y)
-		city_rows.append([Vector3(fp.x, fy, fp.y), Color(0.6, 0.62, 0.62, 0.25), Color(rng2.randf_range(55.0, 95.0), 30.0, rng2.randf_range(11.0, 15.0), 0.6 + rng2.randf() * 0.35)])
-		if k % 2 == 0:
-			var cp := fp + perp * 26.0
-			var ch := rng2.randf_range(48.0, 82.0)
-			var cy := ground_h(cp.x, cp.y)
-			city_rows.append([Vector3(cp.x, cy, cp.y), Color(0.74, 0.72, 0.7, 0.5), Color(5.0, 5.0, ch, rng2.randf())])
-			puff_src.append([Vector3(cp.x, cy + ch + 2.0, cp.y), 0.5, 4, rng2.randf()])
-	# road bridges: where the streets across the line meet the river near the heart
-	var bridges := 0
-	for gi in range(-10, 11, 2):
-		if bridges >= 3:
-			break
-		var a0 := heart + axis * (float(gi) * blk)
-		var last := Vector2.INF
-		var inside := false
-		var start := Vector2.ZERO
-		for t in range(-40, 41):
-			var bp := a0 + perp * (float(t) * 12.0)
-			var wet := _plain_at(bp.x, bp.y).r * 255.0 < 9.0
-			if wet and not inside:
-				inside = true
-				start = last if last != Vector2.INF else bp
-			elif not wet and inside:
-				inside = false
-				var span := start.distance_to(bp)
-				if span > 20.0 and span < 140.0:
-					var y0 := maxf(ground_h(start.x, start.y), ground_h(bp.x, bp.y)) + 4.0
-					var concrete := Color(0.7, 0.7, 0.68)
-					_line(Vector3(start.x, y0, start.y), Vector3(bp.x, y0, bp.y), 5.0, 1.0, concrete)
-					bridges += 1
-					break
-			last = bp
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.use_colors = true
-	mm.use_custom_data = true
-	mm.mesh = _uv_quad()
-	mm.instance_count = city_rows.size() + lamps.size()
-	for i in city_rows.size():
-		var row: Array = city_rows[i]
-		mm.set_instance_transform(i, Transform3D(Basis(), row[0]))
-		mm.set_instance_color(i, row[1])
-		mm.set_instance_custom_data(i, row[2])
-	for j in lamps.size():
-		mm.set_instance_transform(city_rows.size() + j, Transform3D(Basis(), lamps[j]))
-		mm.set_instance_color(city_rows.size() + j, Color(1.0, 0.8, 0.5))
-		mm.set_instance_custom_data(city_rows.size() + j, Color(-1.0, 1.0, 1.0, fposmod(float(j) * 0.618, 1.0)))
-	var mi := MultiMeshInstance3D.new()
-	mi.multimesh = mm
-	mi.material_override = house_mat if house_mat else _mat("vista_house")
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
-	root.add_child(mi)
-	print("VISTA city buildings=%d lamps=%d bridges=%d" % [city_rows.size(), lamps.size(), bridges])
-
-
 func _line(a: Vector3, b: Vector3, hw: float, min_px: float, col: Color, side := 0.0, em := 0.0) -> void:
 	line_rows.append([a, b, hw, min_px, side, em, col])
 
 
-## The plain's lights: on with the dusk (the first windows before sunset), all on at night, off
-## again at dawn.
+## The plain's lamplight: on with the dusk (the first windows before sunset), all on at night, off
+## again at dawn (round 5: the villages' scattered windows and the old road's lamps; the city is gone).
 static func city_lights_at(h: float) -> float:
 	h = fposmod(h, 24.0)
 	return maxf(smoothstep(16.9, 18.4, h), 1.0 - smoothstep(5.2, 6.4, h))
-
-
-# ------------------------------------------------------------------------------------------------
-# trains on the viaduct (round 4, lead: "a train on the long red bridge"): four trains of eight
-# cars, two each way, silver with a coloured band at the windows, the windows lit with the dusk; drawn
-# as members of the line shader (vista_line: never under a pixel across), moved along the deck every
-# frame. One passes the town every two or three minutes; at the start of the view one each way is in
-# the town.
-const TRAIN_CARS := 8
-const CAR_LEN := 20.0
-const CAR_GAP := 1.0
-const TRAINS := 4
-const TRAIN_V := 20.0                  # m/s (about 70 km/h)
-var rail_pts: Array[Vector3] = []
-var rail_s := PackedFloat32Array()
-var train_mm := MultiMesh.new()
-
-
-func _build_trains() -> void:
-	var rail: Array = data.get("railway", [])
-	if rail.size() < 2 or line_mat == null:
-		return
-	var s := 0.0
-	for i in rail.size():
-		var p := Vector3(rail[i][0], float(rail[i][1]) + 0.2, rail[i][2])
-		if i > 0:
-			s += p.distance_to(rail_pts[i - 1])
-		rail_pts.append(p)
-		rail_s.append(s)
-	train_mm.transform_format = MultiMesh.TRANSFORM_3D
-	train_mm.use_colors = true
-	train_mm.use_custom_data = true
-	train_mm.mesh = _uv_quad()
-	train_mm.instance_count = TRAINS * TRAIN_CARS * 2
-	for i in train_mm.instance_count:
-		# body rows (even): silver; window rows (odd): the coloured band, lit at night
-		train_mm.set_instance_color(i, Color(0.8, 0.81, 0.8) if i % 2 == 0 else Color(0.24, 0.55, 0.42))
-	var mi := MultiMeshInstance3D.new()
-	mi.multimesh = train_mm
-	mi.material_override = line_mat
-	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	mi.custom_aabb = AABB(Vector3(-16000, -600, -16000), Vector3(32000, 2600, 32000))
-	root.add_child(mi)
-	_place_trains(0.0)
-
-
-func _rail_at(s: float) -> Vector3:
-	s = clampf(s, 0.0, rail_s[rail_s.size() - 1])
-	var lo := 0
-	var hi := rail_s.size() - 1
-	while hi - lo > 1:
-		var mid := (lo + hi) >> 1
-		if rail_s[mid] <= s:
-			lo = mid
-		else:
-			hi = mid
-	var t := (s - rail_s[lo]) / maxf(rail_s[hi] - rail_s[lo], 1e-3)
-	return rail_pts[lo].lerp(rail_pts[hi], t)
-
-
-func _place_trains(lights: float) -> void:
-	if rail_pts.is_empty():
-		return
-	var total := rail_s[rail_s.size() - 1]
-	var length := TRAIN_CARS * (CAR_LEN + CAR_GAP)
-	var period := total + length + 900.0
-	var hide := Transform3D(Basis(Vector3(0, -9999, 0), Vector3(0, -9999, 0), Vector3(0.1, 0.0, 0.0)), Vector3(0, -9999, 0))
-	for k in TRAINS:
-		var dir := 1.0 if k % 2 == 0 else -1.0
-		# (phased so that one each way is in the town at the start of the view: down the line the
-		# head 2150 m from its top end, up the line 2600 m)
-		var at0 := 2150.0 if dir > 0.0 else total - 2600.0
-		var head := fposmod(_t * TRAIN_V + at0 + length + float(k / 2) * period * 0.5, period) - length
-		for c in TRAIN_CARS:
-			var s0 := head - float(c) * (CAR_LEN + CAR_GAP)
-			var s1 := s0 - CAR_LEN
-			if dir < 0.0:
-				s0 = total - s0
-				s1 = total - s1
-			var i := (k * TRAIN_CARS + c) * 2
-			if minf(s0, s1) < 0.0 or maxf(s0, s1) > total:
-				train_mm.set_instance_transform(i, hide)
-				train_mm.set_instance_transform(i + 1, hide)
-				continue
-			var a := _rail_at(s0) + Vector3(0.0, 2.0, 0.0)
-			var b := _rail_at(s1) + Vector3(0.0, 2.0, 0.0)
-			# the body (never under two pixels tall), then the band of windows a little nearer the eye
-			# (drawn over it: one pixel, the coloured band by day, the lit windows at night)
-			train_mm.set_instance_transform(i, Transform3D(Basis(a, b, Vector3(1.3, 2.0, 0.0)), (a + b) * 0.5))
-			var aw := a + Vector3(0.0, 0.3, 0.0) + (eye - a).normalized() * 1.5
-			var bw := b + Vector3(0.0, 0.3, 0.0) + (eye - b).normalized() * 1.5
-			train_mm.set_instance_transform(i + 1, Transform3D(Basis(aw, bw, Vector3(0.45, 1.0, 0.0)), (aw + bw) * 0.5))
-			train_mm.set_instance_custom_data(i, Color(0.0, 0, 0, 0))
-			train_mm.set_instance_color(i + 1, Color(0.24, 0.55, 0.42).lerp(Color(1.0, 0.86, 0.62), lights))
-			train_mm.set_instance_custom_data(i + 1, Color(2.4 * lights, 0, 0, 0))
 
 
 func _build_lines() -> void:
@@ -1921,7 +1756,7 @@ func update(dt: float) -> void:
 		display.set_shader_parameter(k, pv.composite.get_shader_parameter(k))
 	# (the view holds whole sunlit hillsides of leaves: the world's extra saturation would turn them
 	# lime; the distance wants quieter colour anyway)
-	display.set_shader_parameter("saturation", minf(float(pv.composite.get_shader_parameter("saturation")), 1.04))
+	# (round 5: the world's saturation as it is, as in round 3; round 4 capped it at 1.04)
 	if _vdebug.has("nograde"):
 		display.set_shader_parameter("lift", Vector3.ZERO)
 		display.set_shader_parameter("gain", Vector3.ONE)
@@ -1961,11 +1796,9 @@ func update(dt: float) -> void:
 	var night := clampf(float(env.sample(env.hours)[11]), 0.0, 1.0)
 	sky_mat.set_shader_parameter("zenith", k[1])
 	var hz: Color = (k[2] as Color).lerp(Color(0.62, 0.64, 0.67), env.rain * 0.7)
-	# (the horizon away from the sun: a little bluer by day, rose and mauve at dusk and dawn)
-	var golden := maxf(clampf(1.0 - absf(env.hours - 17.7) / 1.3, 0.0, 1.0), clampf(1.0 - absf(env.hours - 6.0) / 1.2, 0.0, 1.0)) * (1.0 - night)
-	var hz_away := hz.lerp(k[1] as Color, (0.15 + 0.3 * golden) * (1.0 - env.rain))
 	sky_mat.set_shader_parameter("horizon", hz)
-	sky_mat.set_shader_parameter("horizon_away", hz_away)
+	# (round 5: one horizon all round, as in round 3)
+	sky_mat.set_shader_parameter("horizon_away", hz)
 	sky_mat.set_shader_parameter("mist_col", k[3])
 	sky_mat.set_shader_parameter("cloud_lit", k[4])
 	sky_mat.set_shader_parameter("cloud_shade", k[5])
@@ -1982,14 +1815,12 @@ func update(dt: float) -> void:
 	# (the world's grade lifts and clips the light end: about 0.85 sRGB is the last value that keeps
 	# its difference from its neighbours, so the white sits just under it and only its edge clips)
 	# (a warm paper white, like a print faded in the sun: a cool white beside the haze read as water)
-	# (round 4, lead: the far land is aerial perspective, not a warm white band: the horizon's own
-	# blue-grey, a little lighter, so the far plain and the ranges fade into the air layer by layer)
-	var fw := hz.lerp(Color(0.58, 0.64, 0.74), 0.35 * (1.0 - night)) * 0.94
-	var sun_c := Color(1.0, 0.92, 0.75) if night < 0.5 else Color(0.9, 0.92, 1.0)
+	# (round 5, G5R3-1: round 3's band again, "すやり霞")
+	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.105, 0.11, 0.15), night)
+	if env.hours > 16.5 and env.hours < 19.5:
+		fw = fw.lerp(Color(0.68, 0.6, 0.52), clampf(1.0 - absf(env.hours - 17.8) / 1.3, 0.0, 1.0) * (1.0 - night))
 	for m in mats:
 		m.set_shader_parameter("haze_col", hz)
-		m.set_shader_parameter("haze_away", hz_away)
-		m.set_shader_parameter("haze_sun", sun_c)
 		m.set_shader_parameter("mist_col", k[3])
 		m.set_shader_parameter("haze_dist", haze_dist)
 		m.set_shader_parameter("far_white", Vector3(fw.r, fw.g, fw.b))
@@ -2029,8 +1860,6 @@ func update(dt: float) -> void:
 	for m in mats:
 		m.set_shader_parameter("cloud_time", _t)
 		m.set_shader_parameter("city_lights", cl)
-		m.set_shader_parameter("city_c", city_heart)
-	_place_trains(cl)
 	if cloud_inst and (_t - _cloud_sorted_t > 8.0 or _cloud_sorted_eye.distance_to(eye) > 1.0):
 		_sort_clouds()
 

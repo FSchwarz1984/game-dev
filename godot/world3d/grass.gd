@@ -34,6 +34,9 @@ func build(t: Terrain3D) -> void:
 	# the sprites carry their own natural greens: little of the material's extra freshness, a little
 	# light through the blades against the sun
 	mat.set_shader_parameter("lush", 0.15)
+	# (round 5, renderer: the ground cover is painted for one sRGB conversion; round 3's deeper palette
+	# for leaves, w3_ukiyo_tex, is not for it: the cover's darks went black)
+	mat.set_shader_parameter("ukiyo", 0.0)
 	mat.set_shader_parameter("transmit", 0.35)
 	var dir := "res://world3d/terrain/" + String(t.info.get("name", "saddle"))
 	var raw := W3Grass.read_blob(dir.path_join(String(info.get("file", "cover.bin"))))

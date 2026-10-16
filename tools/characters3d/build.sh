@@ -15,10 +15,14 @@ BLENDER="${BLENDER:-/home/user/blender/blender}"
 GODOT_BIN="${GODOT_BIN:-/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64}"
 STATIC=""
 for a in "$@"; do [ "$a" = "--static" ] && STATIC="--static"; done
-OUT="godot/characters/$CHAR/$CHAR.glb"
+# C3D_PROJ: build into another project view (default: the repository's godot/); C3D_VARIANT picks the
+# design (tools/characters3d/kasasagi/design.py); C3D_NOANIMS=1 builds the rig without clips
+PROJ="${C3D_PROJ:-godot}"
+OUT="$PROJ/characters/$CHAR/$CHAR.glb"
+mkdir -p "$PROJ/characters/$CHAR"
 "$BLENDER" -b --factory-startup --python tools/characters3d/build.py -- --char "$CHAR" $STATIC --out "$OUT" \
   2>&1 | grep -E "Traceback|Error|error:|File \"|EXPORTED|WARN" || true
 test -f "$OUT"
-python3 -I tools/characters3d/faces/make_faces.py "$CHAR"
-"$GODOT_BIN" --headless --path godot --import 2>&1 | grep -iE "error|warning" | grep -v "ERR_CANT_OPEN\|daemon" || true
-echo "BUILT $CHAR"
+python3 -I tools/characters3d/faces/make_faces.py "$CHAR" --out "$PROJ/characters/$CHAR"
+"$GODOT_BIN" --headless --path "$PROJ" --import 2>&1 | grep -iE "error|warning" | grep -v "ERR_CANT_OPEN\|daemon" || true
+echo "BUILT $CHAR -> $PROJ (variant ${C3D_VARIANT:-default})"

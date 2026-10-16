@@ -1,24 +1,35 @@
-"""百々かさゝぎ's colours (sRGB albedo). Sampled from the user's original art (12 packs, A_01..A_36;
-k-means over A_01: cream #f6ece2 / #e4d6d1, navy #3a3b5a / #39344a, hair #322b3d / #282231 /
-#544356, red #9e3953) and set one step lighter than the art's mid-tones, because the albedo is what
-the world's light multiplies (lit ~1.2x, shade ~0.7x with a cool turn)."""
+"""百々かさゝぎ's colours (sRGB albedo), round 5: the ChatGPT colour sheet (Tiangan_v2_kasasagi_colors.png:
+main / shadow / highlight per material, sampled from the user's original art). The albedo is the
+main colour; shadow and highlight colours are painted only where the design draws them (the jaw's
+underside, hair strands, folds), the light does the rest."""
 from c3d.surf import hex_to_rgb as H
 
-SKIN = H('#fbe3d2')
-SKIN_DEEP = H('#f1cdbb')        # under the chin, inside the ears: baked as colour, not light
-HAIR = H('#2e2539')
-HAIR_DEEP = H('#211a2b')        # the underside and the inner layer of the back hair
-CREAM = H('#f1e8dc')            # the haori, the hat's top
-CREAM_EDGE = H('#ddd0c4')       # hems and the hat's rim edge
-HAT = H('#e4d6b8')              # the sugegasa's sedge: a straw cream, warmer than the haori
-NAVY = H('#3a3d60')             # kosode, pants, linings, the hat's underside
-NAVY_DEEP = H('#25243a')        # jika-tabi (the art's near-black indigo boots)
-SOLE = H('#a7a3a8')             # the boots' rubber soles
-RED = H('#a63852')              # the sash and its bow, the hat's band
-RED_DEEP = H('#8a2c44')
-WHITE = H('#f4f0ea')            # obi, ankle bands, sandal thongs, the hair ties' white
-STRAW = H('#cdb487')            # sandal soles
-STRAW_DEEP = H('#b09468')
-WOOD = H('#8a6a4c')             # the carrying frame (shoiko)
+HAIR = H('#3e344a')
+HAIR_DEEP = H('#2a2133')        # between the sheet's strands, the cap's underside (GPT shadow #231a28, a step up)
+HAIR_HI = H('#5f5071')          # strand highlights (GPT highlight)
+SKIN = H('#fce4d2')
+SKIN_DEEP = H('#ecc0ab')        # the jaw's underside, the neck, inside the ears
+CREAM = H('#f9efe6')            # the outer kimono (haori)
+CREAM_DEEP = H('#dfd5d3')       # its painted folds and inner side
+HAT = H('#f7eadc')              # the sugegasa's top (ivory)
+HAT_DEEP = H('#ddd1c7')
+NAVY_LINING = H('#252c4b')      # the hat's underside, the sleeves' lining
+NAVY = H('#33395b')             # the kosode
+NAVY_DEEP = H('#232741')
+TROUSERS = H('#38344b')         # the lantern trousers (a violet navy)
+TROUSERS_DEEP = H('#1e1c2a')
+BOOTS = H('#332d3b')
+BOOTS_DEEP = H('#22202b')
+SOLE = H('#d5c8c0')
+RED = H('#9b324e')              # the sash, the bow, the collar, the hat's band
+RED_DEEP = H('#75253d')
+RED_HI = H('#ae3754')
+WHITE = H('#f8efe5')            # obi, hair ties, ankle bands
+WHITE_DEEP = H('#d9d1cd')
+# the carrying frame (shoiko)
+WOOD = H('#8a6a4c')
 WOOD_DEEP = H('#6b5039')
 ROPE = H('#c9b48e')
+STRAW = H('#cdb487')
+STRAW_DEEP = H('#b09468')
+NAVY_LIGHT = H('#454464')

@@ -87,7 +87,8 @@ void fragment() {
 	// gets the flattened colour; light() puts the detail back into the direct light
 	// and the painter's shade colour (w3_shade_tint, blue-green by day): only the ambient sees it,
 	// v_detail undoes it in the direct light
-	vec3 a_shade = mix(alb, flat_alb, shade_flatten) * w3_shade_tint;
+	// (round 5: the round-3 painted shade, w3_paint_shade: the hue turned cool, the chroma kept)
+	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, shade_flatten));
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;
 	AO = ao;
@@ -104,11 +105,12 @@ void fragment() {
 void light() {
 	float k = w3_far_light(far);
 	if (LIGHT_IS_DIRECTIONAL) {
-		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.3);
+		// (round 5: round 3's levels, continuous: w3_sun_level)
+		vec3 c = w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, false, 0.3);
 		// big trunks under a crown: a share of the light reaches their shade anyway (continuous)
 		c *= v_detail;
 		if (shade_fill > 0.0) {
-			float lit = w3_wrap(dot(NORMAL, LIGHT), 0.3) * ATTENUATION;
+			float lit = mix(w3_r3_body(dot(NORMAL, LIGHT)), w3_wrap(dot(NORMAL, LIGHT), 0.3), w3_night) * ATTENUATION;
 			c += LIGHT_COLOR / W3_PI * shade_fill * (1.0 - lit);
 		}
 		DIFFUSE_LIGHT += c * k;

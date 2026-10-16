@@ -37,7 +37,7 @@ uniform vec2 g_litter = vec2(65.0, 11.0);
 uniform vec2 g_needles = vec2(76.0, 7.0);
 uniform vec2 g_bamboo = vec2(83.0, 5.0);
 uniform vec2 g_bank = vec2(88.0, 8.0);
-uniform float lush : hint_range(0.0, 1.0) = 0.45;            // fresh greens over the palette (w3_lush)
+uniform float lush : hint_range(0.0, 1.0) = 0.45;            // fresh greens over the palette (w3_lush; at night only since round 5)
 uniform float dry_bias = 0.12;                              // raises the dry-grass threshold (fewer withered patches)
 uniform float shade_flatten : hint_range(0.0, 1.0) = 0.6;    // how much of the painted detail the shade drops
 
@@ -234,7 +234,7 @@ void fragment() {
 	}
 	// grass, dry grass and moss: fresh greens (w3_lush)
 	if (row < 1.5 || abs(row - 5.0) < 0.5) {
-		float lk = row > 0.5 && row < 1.5 ? lush * 0.7 : lush;
+		float lk = (row > 0.5 && row < 1.5 ? lush * 0.7 : lush) * w3_night;
 		if (!(hit && g_acc >= 0)) alb = w3_lush(alb, lk);
 		flat_alb = w3_lush(flat_alb, lk);
 	}
@@ -286,7 +286,8 @@ void fragment() {
 	// into the direct light (v_detail = detailed / flattened), so detail shows where the sun falls
 	// and the painter's shade colour (w3_shade_tint, blue-green by day): only the ambient sees it,
 	// v_detail undoes it in the direct light
-	vec3 a_shade = mix(alb, flat_alb, shade_flatten) * w3_shade_tint;
+	// (round 5: the round-3 painted shade, w3_paint_shade: the hue turned cool, the chroma kept)
+	vec3 a_shade = w3_paint_shade(mix(alb, flat_alb, shade_flatten));
 	v_detail = alb / max(a_shade, vec3(1e-4));
 	ALBEDO = a_shade;
 	AO = ao;
@@ -296,7 +297,8 @@ void fragment() {
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		float sh = max(ATTENUATION, v_fleck * 0.85);
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, sh, 0.15) * v_detail;
+		// (round 5: round 3's levels, continuous: w3_sun_level)
+		DIFFUSE_LIGHT += w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, sh, true, 0.15) * v_detail;
 	} else {
 		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.4) * v_detail;
 	}

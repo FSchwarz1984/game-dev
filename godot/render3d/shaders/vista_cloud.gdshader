@@ -117,10 +117,17 @@ void fragment() {
 	// (and a little of the billows' own churning inside the light)
 	float churn = w3_vnoise(q * 2.6 + seed * 19.0) - 0.5;
 	float lit = smoothstep(-0.1, 0.55, dot(nl, sd) + churn * 0.18);
-	// height in the bank: its top in the light, its low parts in its own blue-grey shade
+	// height in the bank: its top in the light, its low parts in shade
 	float hb = clamp((sp.y - base) / max(H, 1.0), 0.0, 1.0);
-	vec3 col = mix(deep_col, shade_col, smoothstep(0.05, 0.55, hb));
-	col = mix(col, lit_col, lit * mix(0.3, 1.0, smoothstep(0.2, 0.7, hb)));
+	// the tones (round 5, G5R3-1: the round-3 clouds' tones on the new forms, so they belong to the
+	// picture: round 3 painted its billows between its shade and its light at 0.14 / 0.44 / 0.76 / 1,
+	// mostly light; only the very foot of a bank in the deep shade)
+	float t = mix(0.14, 1.0, lit);
+	t = mix(t, max(t, 0.76), smoothstep(0.35, 0.8, hb) * 0.6);
+	vec3 col = mix(shade_col, lit_col, t);
+	col = mix(col, deep_col, 0.6 * (1.0 - smoothstep(0.0, 0.22, hb)));
+	// far away the billows settle toward the light band, as round 3's did
+	col = mix(col, mix(shade_col, lit_col, 0.78), smoothstep(2400.0, 7000.0, length(sp - eye)) * 0.55);
 	// light through the thin edge, brightest when it comes from behind the billow (a silver lining)
 	vec3 v = normalize(sp - eye);
 	float back = pow(clamp(dot(v, sd) * 0.5 + 0.5, 0.0, 1.0), 3.0);
@@ -128,10 +135,7 @@ void fragment() {
 	col = mix(col, rim_col, rim * (0.2 + 0.7 * back) * (1.0 - night * 0.6));
 	// (the world's grade lifts the light end: the brightest cloud is painted a little under white,
 	// so its tones survive the grade instead of clipping together)
-	vec3 c = w3_srgb_to_linear(col * 0.86);
-	// at night the city's lights glow on the undersides of the banks near it
-	c += v_city_glow(sp) * 9.0 * (1.0 - smoothstep(0.1, 0.8, hb));
-	c = v_air_only(c, sp, eye, FRAGCOORD.xy);
+	vec3 c = v_air_only(w3_srgb_to_linear(col * 0.84), sp, eye, FRAGCOORD.xy);
 	// the cover. The edge: crisp round the top, where the light draws the billow's round edge (a
 	// pixel and a half), melting over much more of the radius below; the base dissolves into the
 	// air. Both thinning bands are dithered on the lattice of directions (an ordered pattern fixed to

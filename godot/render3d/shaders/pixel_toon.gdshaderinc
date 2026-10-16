@@ -196,9 +196,56 @@ vec3 w3_shadow_hue(vec3 albedo, float turn) {
 	return max(w3_oklab_to_lin(vec3(lab.x, ab)), vec3(0.0));
 }
 
+// ------------------------------------------------------------------------------------------------
+// The round-3 palette (round 5, decision-log G5R3-1: the user's colours are round 3's, "浮世绘式的
+// 色调"; round 4's freshening, lush greens, a saturated grade and blue-green shade, was rolled back
+// as "画蛇添足"). Two parts of that look are reproduced here on purpose:
+// * w3_ukiyo_tex: leaf, ground-cover and old-sprite textures pass their sRGB values through the sRGB
+//   curve once more before the usual conversion: deeper, richer mid-tones. Rounds 1-3 drew them so
+//   by a double sRGB conversion (an error found and fixed in round 4: a source_color sampler and a
+//   manual conversion); the look it gave is now the palette, kept by this function on purpose, not
+//   by a sampler hint. k 0 .. 1 (1: round 3 exactly).
+// * w3_paint_shade: what the ambient light (the sky, the VoxelGI bounce) sees of a surface: its
+//   colour with the hue turned toward the cool side, the chroma kept (w3_shadow_hue), times the
+//   painter's shade tint; the sky's own colour reaches it only in part (world_env.gd gives the
+//   engine a sky of low chroma): a blue sky multiplied into warm earth greys it (knowledge/21 §6 #7).
+//   Round 3 painted its shade the same way, in EMISSION; now the engine's ambient carries it, so the
+//   VoxelGI bounce and SSAO work on it. light() undoes it for the direct light (v_detail).
+// * w3_r3_ground / w3_r3_body: the sun's levels of round 3. Round 3 drew the sun in bands (the ground
+//   0.5 / 0.68 / 0.86 / 1 above n.l 0.04 / 0.30 / 0.58 / 0.80; everything else 0.62 / 1 above 0.06 /
+//   0.42): generous to the faces turned half away, so a low sun still lit the land warmly. The look
+//   keeps those levels as a smooth curve through the middle of each band (no steps, G5R2-1: the
+//   light stays continuous). At night the moon keeps round 4's wrapped Lambert (the user: "夜里的光非
+//   常好"): w3_sun_level blends by w3_night.
+vec3 w3_ukiyo_tex(vec3 srgb, float k) {
+	// (by day; at night round 4's colours are kept)
+	return mix(srgb, w3_srgb_to_linear(srgb), k * (1.0 - w3_night));
+}
+vec3 w3_paint_shade(vec3 alb) {
+	// (round 4's night is kept: no hue turn in the dark)
+	return max(mix(w3_shadow_hue(alb, 0.38), alb, w3_night) * w3_shade_tint, alb * 0.05);
+}
+float w3_r3_ground(float ndl) {
+	return 0.5 * smoothstep(-0.08, 0.16, ndl) + 0.18 * smoothstep(0.18, 0.42, ndl)
+		+ 0.18 * smoothstep(0.46, 0.70, ndl) + 0.14 * smoothstep(0.70, 0.90, ndl);
+}
+float w3_r3_body(float ndl) {
+	return 0.62 * smoothstep(-0.10, 0.18, ndl) + 0.38 * smoothstep(0.24, 0.60, ndl);
+}
+// the sun's (or the moon's) direct light at a level: round 3's by day, round 4's wrap at night
+// (ground: true for the terrain's ramp; wrap: round 4's wrap for the night)
+vec3 w3_sun_level(vec3 n, vec3 l, vec3 light_col, float atten, bool ground, float wrap) {
+	float ndl = dot(n, l);
+	float day = ground ? w3_r3_ground(ndl) : w3_r3_body(ndl);
+	float d4 = clamp((ndl + wrap) / (1.0 + wrap), 0.0, 1.0);
+	// (no local named "tint": materials have a uniform of that name, knowledge/21 §6 #6)
+	vec3 w3_lt = mix(w3_lit_tint, mix(vec3(1.0), w3_lit_tint, d4), w3_night);
+	return light_col * w3_lt * (mix(day, d4, w3_night) * atten / W3_PI);
+}
+
 // Lush: the ground's greens made fresh (round 4, G5R2-1: "饱满自然的绿", not withered olive): chroma
-// raised and the hue turned toward a clear green. k 0 .. 1 (the renderer's knob over the palette the
-// terrain generator paints; it can be turned down as the palette itself gets greener).
+// raised and the hue turned toward a clear green. k 0 .. 1. Round 5 (G5R3-1): by day no more (the
+// callers scale it by w3_night: round 4's night, which the user kept, keeps it).
 vec3 w3_lush(vec3 c, float k) {
 	if (k <= 0.0) return c;
 	vec3 lab = w3_lin_to_oklab(c);

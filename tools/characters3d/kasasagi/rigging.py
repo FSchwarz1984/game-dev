@@ -1,15 +1,17 @@
-"""百々かさゝぎ's skeleton and skin weights.
+"""百々かさゝぎ's skeleton and skin weights (round 5).
 
 Bones follow one convention so poses are easy to write: every bone's local Z axis points forward
 (-Y, the way she faces), so local X is the hinge of a forward bend: +X bends the spine forward,
 lifts a hanging limb forward (and so bends an elbow), and -X bends a knee; local Y runs along the
-bone (twist); local Z leans sideways. Secondary chains (hair, sleeves, the haori's panels, the
-sash's tail, the hat's cords) are driven in the game by SpringBoneSimulator3D (characters/rig.json
-lists them with their settings).
+bone (twist); local Z leans sideways. Secondary chains (the long hair's three strips, the side locks,
+the sleeves' bells, the robe's panels, the sash's tails) are driven in the game by
+SpringBoneSimulator3D (rig.json lists them with their settings).
 
-Weights are computed from the parametric tags the model writes (no automatic heat weights: they
-fail on layered cloth and hair): each region blends between a few named bones along its own
-coordinate (along a sleeve, down the hair, down the haori).
+The bones the game addresses by name (character3d.gd, the modifiers) are kept from round 4: root,
+hips, spine, chest, neck, head, hat, shoulder_/upper_arm_/forearm_/hand_ L/R, thigh_/shin_/foot_/toe_ L/R.
+
+Weights are computed from the parametric tags the model writes (no heat weights: they fail on layered
+cloth and hair): each region blends between a few named bones along its own coordinate.
 """
 import math
 import bpy
@@ -17,6 +19,7 @@ from mathutils import Vector
 
 from c3d.surf import smooth, lerp
 from kasasagi import body as B
+from kasasagi.design import D
 
 FWD = Vector((0, -1, 0))
 
@@ -25,15 +28,60 @@ def M(v, side):
     return Vector((v.x * side, v.y, v.z))
 
 
+# the long hair's three chains across the sheet (x in [-1, 1]: her right, the middle, her left)
+HAIR_CHAIN_X = [-0.62, 0.0, 0.62]
+HAIR_CHAIN_N = 4
+COAT_PANELS = {'FL': 0.62, 'FR': -0.62, 'BL': 2.2, 'BR': -2.2, 'SL': 1.45, 'SR': -1.45}   # angle from the front, + her left
+
+
+def hair_chain_points(i):
+    """Five points down the sheet along x = HAIR_CHAIN_X[i], from the nape to the end."""
+    from kasasagi.model import sheet_point, sheet_frame, SHEET_TOP_H, sheet_bottom_u
+    x = HAIR_CHAIN_X[i]
+    z_top = B.CHIN_Z + SHEET_TOP_H
+    u0 = min(1.0, max(0.0, (z_top - (B.CHIN_Z - 0.03)) / (z_top - D['back_hair_end'])))
+    u1 = sheet_bottom_u(x)
+    pts = []
+    for k in range(HAIR_CHAIN_N + 1):
+        u = lerp(u0, u1, k / HAIR_CHAIN_N)
+        p = sheet_point(u, x, True)
+        pts.append(p + Vector((0, -0.015, 0)))
+    return pts
+
+
+def sleeve_chain_points(side):
+    """Down the bell's middle: from the elbow's height to the hem."""
+    from kasasagi.clothes import sleeve_frame
+    sh, hem, cx, rx, ry = sleeve_frame(side)
+    top = Vector((lerp(sh.x, cx, 0.45), 0.004, lerp(sh.z, hem, 0.45)))
+    mid = Vector((lerp(sh.x, cx, 0.75), 0.005, lerp(sh.z, hem, 0.75)))
+    bot = Vector((cx, 0.006, hem))
+    return top, mid, bot
+
+
+def coat_chain_points(ang):
+    from kasasagi.clothes import coat_slice
+    hz = D['hip_z']
+    hem = D['coat_hem']
+    pts = []
+    for z in (hz, lerp(hz, hem, 0.5), hem):
+        X, Yd, yc, g = coat_slice(z)
+        t = math.pi / 2 - ang          # 0 her left, pi/2 front
+        pts.append(Vector((X * math.cos(t) * 1.02, yc - Yd * math.sin(t) * 1.02, z)))
+    return pts
+
+
 def bone_defs():
     """(name, head, tail, parent) in rest pose."""
+    from kasasagi.model import side_lock_points
+    from kasasagi.clothes import sash_paths
     d = []
     d.append(('root', Vector((0, 0, 0)), Vector((0, -0.12, 0)), None))
-    d.append(('hips', B.HIPS, Vector((0, 0.0, 0.70)), 'root'))
-    d.append(('spine', Vector((0, 0.0, 0.70)), Vector((0, 0.004, 0.80)), 'hips'))
-    d.append(('chest', Vector((0, 0.004, 0.80)), B.NECK_BASE, 'spine'))
+    d.append(('hips', B.HIPS, B.SPINE, 'root'))
+    d.append(('spine', B.SPINE, B.CHEST, 'hips'))
+    d.append(('chest', B.CHEST, B.NECK_BASE, 'spine'))
     d.append(('neck', B.NECK_BASE, B.NECK_TOP, 'chest'))
-    d.append(('head', B.NECK_TOP, Vector((0, 0.02, 1.36)), 'neck'))
+    d.append(('head', B.NECK_TOP, Vector((0, 0.02, B.CHIN_Z + B.HEAD_H * 0.6)), 'neck'))
     d.append(('hat', B.HAT_SEAT, B.HAT_SEAT + Vector((0, 0, 0.12)), 'head'))
     for side, sx in ((1, 'L'), (-1, 'R')):
         d.append(('shoulder_' + sx, M(B.CLAV_IN, side), M(B.SHOULDER, side), 'chest'))
@@ -44,27 +92,24 @@ def bone_defs():
         d.append(('shin_' + sx, M(B.KNEE, side), M(B.ANKLE, side), 'thigh_' + sx))
         d.append(('foot_' + sx, M(B.ANKLE, side), M(B.BALL, side), 'shin_' + sx))
         d.append(('toe_' + sx, M(B.BALL, side), M(B.TOE, side), 'foot_' + sx))
-        # side lock: from below the jaw, through the tie, to its blunt end
-        pts = [Vector((side * 0.205, -0.084, 1.105)), Vector((side * 0.205, -0.088, B.CHIN_Z - 0.055)),
-               Vector((side * 0.204, -0.094, 0.93)), Vector((side * 0.198, -0.106, 0.86))]
+        # side lock: from the cheek, through the tie, to its end
+        lp = side_lock_points(side)
+        pts = [lp[1], lp[2], lp[4], lp[5]]
         par = 'head'
         for k in range(3):
             n = 'lock_%s_%d' % (sx, k)
             d.append((n, pts[k], pts[k + 1], par))
             par = n
-        # the tamoto (sleeve bag): two bones down its middle, from under the forearm to its bottom
-        s0, s1, s2 = tamoto_chain_points(side)
-        d.append(('sleeve_%s_0' % sx, s0, s1, 'forearm_' + sx))
+        s0, s1, s2 = sleeve_chain_points(side)
+        d.append(('sleeve_%s_0' % sx, s0, s1, 'upper_arm_' + sx))
         d.append(('sleeve_%s_1' % sx, s1, s2, 'sleeve_%s_0' % sx))
-    # long hair: one chain down each of its three bunches (her right, the middle, her left)
-    for i in range(len(HAIR_CHAIN_Z)):
+    for i in range(len(HAIR_CHAIN_X)):
         par = 'head'
         pts = hair_chain_points(i)
         for k in range(len(pts) - 1):
             n = 'hair_%d_%d' % (i, k)
             d.append((n, pts[k], pts[k + 1], par))
             par = n
-    # haori panels: front left / right, back left / right, from the hips to the hem
     for key, ang in COAT_PANELS.items():
         pts = coat_chain_points(ang)
         par = 'hips'
@@ -72,57 +117,14 @@ def bone_defs():
             n = 'coat_%s_%d' % (key, k)
             d.append((n, pts[k], pts[k + 1], par))
             par = n
-    # the hat cords' tails under the chin
-    knot = Vector((0.0, -0.150, B.CHIN_Z - 0.028))
-    d.append(('cord_0', knot, knot + Vector((0, -0.012, -0.05)), 'head'))
-    d.append(('cord_1', knot + Vector((0, -0.012, -0.05)), knot + Vector((0, -0.02, -0.095)), 'cord_0'))
-    # the sash's two tails from the bow
-    from kasasagi.clothes import TAIL_A, TAIL_B
-    for key, pts in (('A', TAIL_A), ('B', TAIL_B)):
+    A, Bp = sash_paths()
+    for key, pts in (('A', A), ('B', Bp)):
         par = 'hips'
         for k in range(len(pts) - 1):
             n = 'sash%s_%d' % (key, k)
             d.append((n, pts[k], pts[k + 1], par))
             par = n
     return d
-
-
-def tamoto_chain_points(side):
-    from kasasagi.clothes import tamoto_corners
-    top_o, top_i, bot_o, bot_i = tamoto_corners(side)
-    top = top_o.lerp(top_i, 0.5)
-    bot = bot_o.lerp(bot_i, 0.5)
-    return top, top.lerp(bot, 0.5), bot
-
-
-# the long hair's chains, one per bunch (model.HAIR_BUNCHES: her right, the middle, her left), from
-# the nape to the bunch's tip: each bunch swings as one piece, the outer two apart from the middle
-HAIR_CHAIN_Z = [(1.03, 0.33), (1.03, 0.64), (1.03, 0.33)]
-COAT_PANELS = {'FL': 0.62, 'FR': -0.62, 'BL': 2.2, 'BR': -2.2, 'SL': 1.45, 'SR': -1.45}   # angle from the front, + to her left
-
-
-def hair_chain_points(i):
-    """Five points down bunch i's centre line (model._bunch_centre), behind her back."""
-    from kasasagi.model import coat_back_y, HAIR_BUNCHES, _bunch_centre
-    cf, hw, n, z_end, x_end = HAIR_BUNCHES[i]
-    z0, z1 = HAIR_CHAIN_Z[i]
-    pts = []
-    for k in range(5):
-        z = z0 + (z1 - z0) * k / 4
-        x = _bunch_centre(cf, z, x_end, z_end)
-        y = coat_back_y(min(max(z, 0.2), 0.982)) * (1 - 0.45 * cf * cf) + 0.06
-        pts.append(Vector((x, y, z)))
-    return pts
-
-
-def coat_chain_points(ang):
-    from kasasagi.clothes import coat_slice
-    pts = []
-    for z in (0.66, 0.44, 0.22):
-        X, Yd, yc, g = coat_slice(z)
-        t = math.pi / 2 - ang          # 0 = her left, pi/2 = front
-        pts.append(Vector((X * math.cos(t) * 1.02, yc - Yd * math.sin(t) * 1.02, z)))
-    return pts
 
 
 def build_armature():
@@ -136,7 +138,6 @@ def build_armature():
         b = eb.new(name)
         b.head = head
         b.tail = tail
-        # bones that point forward (root, feet, toes) take "up" as their Z: forward would be along them
         along = (tail - head).normalized()
         z = FWD if abs(along.dot(FWD)) < 0.7 else Vector((0, 0, 1))
         b.align_roll(z)
@@ -159,21 +160,19 @@ def _norm(w):
     if s <= 0:
         return {'hips': 1.0}
     w = {k: v / s for k, v in w.items()}
-    # keep the four strongest
     top = sorted(w.items(), key=lambda kv: -kv[1])[:4]
     s = sum(v for _, v in top)
     return {k: v / s for k, v in top}
 
 
 def _chain(prefix, n, t):
-    """Weights along a chain of n bones for t in [0, 1] (0 = root of bone 0 .. 1 = tip of the last):
-    each bone peaks over its own span, neighbours share the joints."""
+    """Weights along a chain of n bones for t in [0, 1]."""
     w = {}
     x = t * n
     for k in range(n):
         c = k + 0.5
-        d = abs(x - c)
-        v = max(0.0, 1.0 - d / 0.85)
+        dd = abs(x - c)
+        v = max(0.0, 1.0 - dd / 0.85)
         if v > 0:
             w['%s%d' % (prefix, k)] = v
     if not w:
@@ -191,12 +190,13 @@ def _blend(a, b, t):
 
 
 def _torso_w(z):
-    if z > 0.94:
-        return _blend({'chest': 1.0}, {'neck': 1.0}, smooth((z - 0.955) / 0.03))
-    if z > 0.80:
-        return _blend({'spine': 1.0}, {'chest': 1.0}, smooth((z - 0.78) / 0.06))
-    if z > 0.68:
-        return _blend({'hips': 1.0}, {'spine': 1.0}, smooth((z - 0.68) / 0.06))
+    nb = D['neck_base']
+    if z > nb - 0.02:
+        return _blend({'chest': 1.0}, {'neck': 1.0}, smooth((z - (nb - 0.01)) / 0.03))
+    if z > B.CHEST.z - 0.02:
+        return _blend({'spine': 1.0}, {'chest': 1.0}, smooth((z - (B.CHEST.z - 0.03)) / 0.06))
+    if z > B.SPINE.z - 0.04:
+        return _blend({'hips': 1.0}, {'spine': 1.0}, smooth((z - (B.SPINE.z - 0.04)) / 0.06))
     return {'hips': 1.0}
 
 
@@ -207,70 +207,62 @@ def _side_of(x):
 def weights_for(p, tag):
     seg = tag.get('seg', '')
     if seg in ('head', 'hair_cap', 'hair_bang'):
-        if p.z < B.CHIN_Z + 0.03 and seg == 'head':
-            return _blend({'head': 1.0}, {'neck': 1.0}, smooth((B.CHIN_Z + 0.03 - p.z) / 0.06) * 0.5)
+        if p.z < B.CHIN_Z + 0.02 and seg == 'head':
+            return _blend({'head': 1.0}, {'neck': 1.0}, smooth((B.CHIN_Z + 0.02 - p.z) / 0.06) * 0.5)
         return {'head': 1.0}
     if seg == 'neck':
-        return _blend({'neck': 1.0}, {'head': 1.0}, smooth((p.z - 1.04) / 0.05)) if p.z > 1.0 else \
-            _blend({'chest': 1.0}, {'neck': 1.0}, smooth((p.z - 0.95) / 0.05))
+        return _blend({'neck': 1.0}, {'head': 1.0}, smooth((p.z - (B.CHIN_Z - 0.02)) / 0.05))
     if seg == 'hat':
         return {'hat': 1.0}
     if seg == 'hair_side':
         sx = _side_of(p.x)
-        if p.z > 1.12:
+        z0 = B.CHIN_Z + 0.20
+        z1 = B.CHIN_Z + D['lock_end_h']
+        if p.z > z0 + 0.02:
             return {'head': 1.0}
-        t = (1.105 - p.z) / (1.105 - 0.86)
+        t = (z0 - p.z) / (z0 - z1)
         w = _chain('lock_%s_' % sx, 3, max(0.0, min(1.0, t)))
-        return _blend(w, {'head': 1.0}, smooth((p.z - 1.06) / 0.06))
+        return _blend(w, {'head': 1.0}, smooth((p.z - (B.CHIN_Z + 0.10)) / 0.10))
     if seg == 'hair_back':
-        f = tag.get('x', 0.0)
-        if p.z > 1.12:
+        x = tag.get('x', 0.0)
+        u = tag.get('u', 0.0)
+        from kasasagi.model import SHEET_TOP_H
+        z_top = B.CHIN_Z + SHEET_TOP_H
+        z_nape = B.CHIN_Z - 0.03
+        if p.z > z_nape + 0.06:
             return {'head': 1.0}
-
-        def on_chain(i):
-            z0, z1 = HAIR_CHAIN_Z[i]
-            return _chain('hair_%d_' % i, 4, max(0.0, min(1.0, (z0 - p.z) / (z0 - z1))))
-        bunch = tag.get('bunch', -1)
-        if bunch >= 0:
-            # a bunch's clumps hang on its own chain only: the bunches part when they swing
-            w = on_chain(bunch)
-        else:
-            # the dark inner layer (behind the head and shoulders) shares the chains by its place
-            right = smooth((-f - 0.15) / 0.45)
-            left = smooth((f - 0.15) / 0.45)
-            mid = max(0.0, 1.0 - right - left)
-            tot = right + mid + left
-            w = {}
-            for i, k in ((0, right), (1, mid), (2, left)):
-                if k > 0:
-                    for bn, v in on_chain(i).items():
-                        w[bn] = w.get(bn, 0.0) + v * k / tot
-        return _blend(w, {'head': 1.0}, smooth((p.z - 0.99) / 0.12))
+        t = (z_nape - p.z) / max(z_nape - D['back_hair_end'], 1e-3)
+        t = max(0.0, min(1.0, t))
+        # three strips across, blended by x
+        right = smooth((-x - 0.12) / 0.5)
+        left = smooth((x - 0.12) / 0.5)
+        mid = max(0.0, 1.0 - right - left)
+        tot = right + mid + left
+        w = {}
+        for i, k in ((0, right), (1, mid), (2, left)):
+            if k > 0:
+                for bn, v in _chain('hair_%d_' % i, HAIR_CHAIN_N, t).items():
+                    w[bn] = w.get(bn, 0.0) + v * k / tot
+        return _blend(w, {'head': 1.0}, smooth((p.z - (z_nape - 0.06)) / 0.12))
     if seg in ('torso', 'bow'):
-        if seg == 'torso' and p.z > 0.90 and abs(p.x) > 0.09:
+        if seg == 'torso' and p.z > B.SHOULDER_Z - 0.06 and abs(p.x) > 0.08:
             sx = _side_of(p.x)
-            return _blend(_torso_w(p.z), {'shoulder_' + sx: 1.0}, smooth((abs(p.x) - 0.09) / 0.05) * 0.5)
+            return _blend(_torso_w(p.z), {'shoulder_' + sx: 1.0}, smooth((abs(p.x) - 0.08) / 0.05) * 0.5)
         return _torso_w(p.z)
-    if seg in ('coat', 'coat_band'):
+    if seg == 'coat':
         return _coat_w(p, tag)
     if seg == 'sleeve':
         sx = 'L' if tag.get('side', 1) > 0 else 'R'
         u = tag.get('u', 0.0)
-        u_el = 0.50
-        w = _blend({'shoulder_' + sx: 1.0}, {'upper_arm_' + sx: 1.0}, smooth(u / 0.14))
-        w = _blend(w, {'forearm_' + sx: 1.0}, smooth((u - (u_el - 0.08)) / 0.16))
-        # where the sleeve meets the body, keep it on the chest
-        if u < 0.08:
-            w = _blend(w, {'chest': 1.0}, (0.08 - u) / 0.08 * 0.6)
+        w = _blend({'shoulder_' + sx: 1.0}, {'upper_arm_' + sx: 1.0}, smooth(u / 0.18))
+        w = _blend(w, _chain('sleeve_%s_' % sx, 2, max(0.0, (u - 0.40) / 0.60)), smooth((u - 0.30) / 0.30))
+        if u < 0.10:
+            w = _blend(w, {'chest': 1.0}, (0.10 - u) / 0.10 * 0.5)
         return w
-    if seg == 'tamoto':
+    if seg == 'arm':
         sx = 'L' if tag.get('side', 1) > 0 else 'R'
         u = tag.get('u', 0.0)
-        x = tag.get('x', 0.5)
-        # the top hangs from the forearm (the outer corner from the elbow), the rest from the chain
-        arm = _blend({'forearm_' + sx: 1.0}, {'upper_arm_' + sx: 1.0}, smooth((x - 0.75) / 0.25) * 0.5)
-        ch = _chain('sleeve_%s_' % sx, 2, max(0.0, min(1.0, u)))
-        return _blend(arm, ch, smooth(u / 0.35))
+        return _blend({'upper_arm_' + sx: 1.0}, {'forearm_' + sx: 1.0}, smooth((u - 0.40) / 0.2))
     if seg == 'hand':
         sx = 'L' if tag.get('side', 1) > 0 else 'R'
         u = tag.get('u', 1.0)
@@ -278,8 +270,7 @@ def weights_for(p, tag):
     if seg == 'leg':
         sx = 'L' if tag.get('side', 1) > 0 else 'R'
         u = tag.get('u', 0.0)
-        u_knee = 0.47
-        w = _blend({'thigh_' + sx: 1.0}, {'shin_' + sx: 1.0}, smooth((u - (u_knee - 0.07)) / 0.14))
+        w = _blend({'thigh_' + sx: 1.0}, {'shin_' + sx: 1.0}, smooth((u - 0.38) / 0.16))
         if u < 0.18:
             w = _blend({'hips': 1.0}, w, smooth(u / 0.18))
         return w
@@ -288,13 +279,10 @@ def weights_for(p, tag):
         u = tag.get('u', 0.0)
         w = _blend({'shin_' + sx: 1.0}, {'foot_' + sx: 1.0}, smooth(u / 0.25))
         return _blend(w, {'toe_' + sx: 1.0}, smooth((u - 0.7) / 0.2))
-    if seg == 'cord':
-        u = tag.get('u', 0.0)
-        return _blend({'head': 1.0}, _chain('cord_', 2, u), smooth(u / 0.3))
     if seg == 'sash':
         u = tag.get('u', 0.0)
         key = tag.get('chain', 'A')
-        n = 4
+        n = 4 if key == 'A' else 3
         w = _chain('sash%s_' % key, n, max(0.0, min(1.0, (u - 0.04) / 0.96)))
         return _blend({'hips': 1.0}, w, smooth(u / 0.12))
     return {'hips': 1.0}
@@ -302,29 +290,22 @@ def weights_for(p, tag):
 
 def _coat_w(p, tag):
     z = p.z
-    if z > 0.70:
-        w = _torso_w(z)
-        if z > 0.90 and abs(p.x) > 0.10:
-            w = _blend(w, {'shoulder_' + _side_of(p.x): 1.0}, smooth((abs(p.x) - 0.10) / 0.05) * 0.6)
-        return w
-    # below the obi: the hips carry the cloth, the panels' chains swing it, the thighs push the front
-    t = (0.66 - z) / (0.66 - 0.22)
+    hz = D['hip_z']
+    hem = D['coat_hem']
+    t = (hz - z) / max(hz - hem, 1e-3)
     t = max(0.0, min(1.0, t))
     ang = math.atan2(p.x, -p.y)            # 0 front, + her left, ~pi back
     keys = list(COAT_PANELS.items())
-    # nearest two panels by angle
     dists = sorted(((abs((ang - a + math.pi) % (2 * math.pi) - math.pi), k) for k, a in keys))
     (d0, k0), (d1, k1) = dists[0], dists[1]
     share = d0 / max(1e-4, d0 + d1)
     chain = _blend(_chain('coat_%s_' % k0, 2, t), _chain('coat_%s_' % k1, 2, t), share)
     w = _blend({'hips': 1.0}, chain, smooth(t * 1.6) * 0.85)
-    # the front panels also follow her thighs a little (her knees must not poke through)
     front = smooth((math.cos(ang) - 0.2) / 0.6)
     if front > 0:
-        sx = _side_of(p.x)
-        w = _blend(w, {'thigh_' + sx: 1.0}, front * 0.35 * smooth(t * 2.0))
-    if z > 0.62:
-        w = _blend(w, _torso_w(z), smooth((z - 0.62) / 0.08))
+        w = _blend(w, {'thigh_' + _side_of(p.x): 1.0}, front * 0.35 * smooth(t * 2.0))
+    if z > hz - 0.02:
+        w = _blend(w, _torso_w(z), smooth((z - (hz - 0.02)) / 0.06))
     return w
 
 

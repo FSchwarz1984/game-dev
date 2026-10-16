@@ -86,8 +86,9 @@ void vertex() {
 
 void fragment() {
 	if (v_cus.x < 0.0) {
-		// a street lamp: only its light, at night (a single warm pixel), lit with the dusk
-		if (city_lights < 0.15 + 0.5 * v_cus.w || v_drain(v_wp.xz, v_wp.y) > 0.9) discard;
+		// a street lamp: only its light, at night (a single warm pixel), lit with the dusk; one in two
+		// (round 5: a scattering of warm lights, no city)
+		if (city_lights < 0.15 + 0.5 * v_cus.w || fract(v_cus.w * 5.17) > 0.5 || v_drain(v_wp.xz, v_wp.y) > 0.9) discard;
 		ALBEDO = w3_srgb_to_linear(window_col) * 3.4;
 	} else {
 	vec2 q = floor(v_px);
@@ -181,13 +182,15 @@ void fragment() {
 		if (q.x > v_size.x - 1.5 && v_size.x > 2.5 && sd.x > 0.0) k *= 1.1;
 		col = roof * k * (ambient_col + light_col * 0.7 * day);
 	} else {
-		vec3 wall = w3_srgb_to_linear(vec3(0.78, 0.75, 0.68));
+		// (round 5: dark wooden walls on most, white plaster on some: the storehouses, the town's
+		// fronts; a white wall under a dark roof is what reads as a house from afar)
+		vec3 wall = fract(v_cus.w * 3.73) < 0.35 ? w3_srgb_to_linear(vec3(0.86, 0.84, 0.78)) : w3_srgb_to_linear(vec3(0.44, 0.36, 0.28));
 		col = wall * (ambient_col + light_col * 0.45 * day);
 	}
-	// windows at night: most houses lit (a pane or two; a far house that is a single pixel shows
-	// only its light)
+	// windows at night: a scattering of houses lit (round 5, the lead: "夜里村子只有零星的暖灯"; a
+	// pane or two; a far house that is a single pixel shows only its light)
 	// (past the 遠化 front a house has lost its light with everything else)
-	bool lit_house = fract(v_cus.w * 7.31) > 1.0 - 0.88 * city_lights && v_drain(v_wp.xz, v_wp.y) < 0.9;
+	bool lit_house = fract(v_cus.w * 7.31) > 1.0 - 0.45 * city_lights && v_drain(v_wp.xz, v_wp.y) < 0.9;
 	float h = w3_hash(vec2(v_cus.w * 913.0, q.x));
 	bool win = lit_house && ((row >= v_roof && (h > 0.45 || v_size.x < 2.5)) || (v_size.y < 1.5 && h > 0.3));
 	vec3 c = v_air(col, v_wp, eye, FRAGCOORD.xy);

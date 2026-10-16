@@ -15,6 +15,7 @@ stencil_mode write, compare_always, 3;
 #include "res://render3d/shaders/pixel_toon.gdshaderinc"
 
 uniform sampler2D sheet : filter_nearest, hint_default_white;    // sRGB values (converted once below)
+uniform float ukiyo : hint_range(0.0, 1.0) = 1.0;                 // the round-3 palette (w3_ukiyo_tex, round 5)
 uniform sampler2D sheet_n : filter_nearest, hint_normal;
 uniform vec4 frame_rect = vec4(0.0, 0.0, 64.0, 64.0);   // px in the sheet: x, y, w, h
 uniform bool flip_h = false;
@@ -73,7 +74,7 @@ void fragment() {
 	vec2 rel = vec2(tp.x - frame_rect.x, tp.y - frame_rect.y) - pivot_px;
 	if (flip_h) rel.x = -rel.x;
 	float face = 1.0 - smoothstep(4.0, 7.0, length((rel - head_px) * vec2(1.0, 1.15)));
-	vec3 alb = w3_srgb_to_linear(c.rgb);
+	vec3 alb = w3_srgb_to_linear(w3_ukiyo_tex(c.rgb, ukiyo));
 	alb = mix(alb, w3_srgb_to_linear(flash.rgb), flash.a);
 	// rim: an opaque texel whose neighbour away from the light is empty
 	float edge_r = texelFetch(sheet, ti + ivec2(flip_h ? -1 : 1, 0), 0).a;

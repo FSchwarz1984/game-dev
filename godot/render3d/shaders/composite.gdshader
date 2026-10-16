@@ -25,9 +25,10 @@ uniform vec2 view_size = vec2(640.0, 360.0);   // logical (visible) size in nati
 uniform vec2 margin_px = vec2(1.0, 1.0);       // the low-res image's hidden border
 uniform bool hdr_input = true;            // the viewport holds linear HDR values
 uniform float exposure = 1.0;             // linear multiplier before the grade
-uniform float green_turn = 0.08;          // radians the olive hues turn toward green (a natural green keeps some yellow)
-uniform float green_gain = 1.08;          // chroma of the greens (lead 16:00: full natural greens)
-uniform float yellow_gain = 0.9;          // chroma of the yellows (straw, dry grass)
+// (round 4's hue-aware freshening of the greens; off since round 5, G5R3-1: the round-3 colours)
+uniform float green_turn = 0.0;           // radians the olive hues turn toward green
+uniform float green_gain = 1.0;           // chroma of the greens
+uniform float yellow_gain = 1.0;          // chroma of the yellows (straw, dry grass)
 uniform sampler2D blue_noise : filter_nearest, repeat_enable;
 uniform vec2 cam_cell = vec2(0.0);        // the world lattice cell at the image's centre (y up)
 uniform float dither_amp = 1.0;           // in 8-bit code values (peak to peak)

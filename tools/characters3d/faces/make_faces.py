@@ -138,6 +138,8 @@ def main():
     char = sys.argv[1] if len(sys.argv) > 1 else 'kasasagi'
     at, meta = build(char)
     out_dir = os.path.join(ROOT, 'godot', 'characters', char)
+    if '--out' in sys.argv:
+        out_dir = sys.argv[sys.argv.index('--out') + 1]
     os.makedirs(out_dir, exist_ok=True)
     at.image().save(os.path.join(out_dir, 'face_atlas.png'))
     with open(os.path.join(out_dir, 'face.json'), 'w') as f:

@@ -1,15 +1,15 @@
-"""百々かさゝぎ: the model, built from parametric surfaces (c3d.surf). Reference: the user's 12 packs
-(A_01..A_36): hime cut with blunt bangs, side locks tied with white-red-white tubes, very long
-dark violet-black hair; a wide sugegasa (cream top, navy underside, a red band across); a navy
-kosode with a white and red collar; a long cream haori with very wide sleeves lined in navy and
-navy front bands; a white obi with a red cord bowed at her front left whose long tail hangs to
-the knee; navy balloon trousers gathered at the ankle with cream bands; navy tabi and sandals.
+"""百々かさゝぎ, round 5: head, face plate, hair and hat, from parametric surfaces (c3d.surf).
+
+Design (docs/knowledge/24 §3, design.py): a big round cranium under the hat and a small face plate
+low on the head, wider than tall (about 11 x 6 native px on screen); thick hime-cut bangs that end on
+the eyes' top row (the brows never show, decision-log G5R3-8); side locks framing the cheeks, tied
+white-red-white; the long hair as one sheet down her back; a wide sugegasa worn tipped back so its
+white top frames the face from above (the game tips it: hat_tilt_modifier.gd).
 
 Every function returns Parts whose vertices carry tags for the rigger:
-  tag['seg']   which region (head, face, hair_bang, hair_side, hair_back, hat, torso, coat, ...)
-  tag['side']  -1 right / +1 left / 0 centre, where it matters
+  tag['seg']   region (head, hair_cap, hair_bang, hair_side, hair_back, hat, ...)
+  tag['side']  -1 her right / +1 her left / 0 centre
   tag['u']     position along a strand / chain (0 root .. 1 tip)
-  tag['k']     strand or panel index
 """
 import math
 from mathutils import Vector
@@ -18,55 +18,76 @@ from c3d.surf import (Part, grid, sweep, cap, Path, interp, superellipse, smooth
                       M_SKIN, M_FACE, M_HAIR, M_CLOTH, M_HAT_TOP, M_HAT_UNDER, M_STRAW, M_WOOD, M_ROPE, M_TIE)
 from kasasagi import body as B
 from kasasagi import palette as C
+from kasasagi.design import D
 
 TAU = 2 * math.pi
 
 # =================================================================================================
-# head
-# h = height above the chin; per slice: half width W, front y, back y, y of the widest point
-HEAD_PROFILE = [
-    # h      W      yf      yb      yc
-    (0.000, 0.046, -0.146, -0.120, -0.133),
-    (0.014, 0.104, -0.162, -0.076, -0.108),
-    (0.036, 0.150, -0.176, -0.010, -0.064),
-    (0.072, 0.184, -0.188, 0.066, -0.026),
-    (0.122, 0.203, -0.195, 0.132, -0.006),
-    (0.186, 0.214, -0.199, 0.186, 0.002),
-    (0.256, 0.220, -0.198, 0.220, 0.006),
-    (0.330, 0.222, -0.190, 0.232, 0.010),
-    (0.395, 0.213, -0.170, 0.226, 0.012),
-    (0.445, 0.187, -0.136, 0.196, 0.016),
-    (0.478, 0.140, -0.096, 0.150, 0.020),
-    (0.495, 0.080, -0.050, 0.092, 0.022),
-    (0.500, 0.000, 0.022, 0.022, 0.022),
-]
+# head: per height h above the chin, a slice with half width W, front distance F and back distance K
+# from the head's axis (y = HEAD_YC); F, K > 0 forward / backward. The face's half (front) is a
+# squarer superellipse: a near-vertical plate, so the face keeps its height on screen.
+
+
+def _head_table():
+    fw, fy = B.FACE_W, B.FACE_Y
+    cw, cb, hh = D['cranium_w'], D['cranium_back'], B.HEAD_H
+    t = [
+        # h      W              F              K
+        (0.000, 0.040,         fy - 0.044,    -0.100),
+        (0.016, 0.092,         fy - 0.020,    -0.040),
+        (0.042, 0.136,         fy - 0.007,     0.020),
+        (0.080, fw - 0.016,    fy,             0.085),
+        (0.130, fw - 0.003,    fy,             0.135),
+        (0.190, fw,            fy,             0.172),
+        (0.250, fw + 0.010,    fy - 0.002,     0.198),
+    ]
+    h0 = 0.25
+    for s, w, f, k in ((0.22, 0.5 * (fw + cw) + 0.014, fy - 0.010, cb - 0.006),
+                       (0.46, cw, fy - 0.026, cb),
+                       (0.66, cw - 0.006, fy - 0.048, cb - 0.008),
+                       (0.80, cw * 0.88, fy - 0.082, cb - 0.036),
+                       (0.90, cw * 0.70, fy - 0.118, cb - 0.078),
+                       (0.96, cw * 0.46, fy - 0.158, cb - 0.132),
+                       (1.00, 0.0, 0.0, 0.0)):
+        t.append((h0 + (hh - h0) * s, w, f, k))
+    return t
+
+
+HEAD_TABLE = _head_table()
 
 
 def head_slice(h):
-    W = interp([(p[0], p[1]) for p in HEAD_PROFILE], h)
-    yf = interp([(p[0], p[2]) for p in HEAD_PROFILE], h)
-    yb = interp([(p[0], p[3]) for p in HEAD_PROFILE], h)
-    yc = interp([(p[0], p[4]) for p in HEAD_PROFILE], h)
-    return W, yf, yb, yc
+    W = interp([(p[0], p[1]) for p in HEAD_TABLE], h)
+    F = interp([(p[0], p[2]) for p in HEAD_TABLE], h)
+    K = interp([(p[0], p[3]) for p in HEAD_TABLE], h)
+    return W, F, K
+
+
+def _n_front(h):
+    # the face plate (flat front, rounded corners) blends into the round cranium
+    return lerp(3.2, 2.15, smooth((h - 0.24) / 0.12))
 
 
 def head_point(h, t, grow=0.0, grow_front=None):
-    """Point on the head surface at height h above the chin and angle t (0 = her left, pi/2 = front,
-    pi = right, 3pi/2 = back), pushed out by `grow` metres (hair layers)."""
-    W, yf, yb, yc = head_slice(h)
+    """The head's surface at height h above the chin and angle t (0 her left, pi/2 front, pi her right,
+    3pi/2 back), pushed out by `grow` (hair layers; `grow_front` for the front half)."""
+    h = min(max(h, 0.0), B.HEAD_H)
+    W, F, K = head_slice(h)
     gf = grow if grow_front is None else grow_front
-    n_front = 2.35 if h < 0.36 else 2.1
-    cx, sy = superellipse(t, 1.0, 1.0, n_front if math.sin(t) > 0 else 2.0)
-    x = (W + grow) * cx
-    if sy > 0:
-        y = yc - (yc - yf + gf) * sy
+    c, s = math.cos(t), math.sin(t)
+    if s >= 0:
+        e = 2.0 / _n_front(h)
+        x = (W + gf) * math.copysign(abs(c) ** e, c)
+        y = B.HEAD_YC - (F + gf) * (s ** e)
     else:
-        y = yc - (yb - yc + grow) * sy
+        e = 2.0 / 2.05
+        x = (W + grow) * math.copysign(abs(c) ** e, c)
+        y = B.HEAD_YC + (K + grow) * ((-s) ** e)
     return Vector((x, y, B.CHIN_Z + h))
 
 
-HEAD_C = Vector((0.0, 0.012, B.CHIN_Z + 0.25))     # centre of the ellipsoid that lends its normals
-HEAD_R = Vector((0.215, 0.215, 0.262))
+HEAD_C = Vector((0.0, B.HEAD_YC + 0.01, B.CHIN_Z + 0.24))
+HEAD_R = Vector((0.20, 0.20, 0.27))
 
 
 def ellipsoid_normal(p, c=HEAD_C, r=HEAD_R):
@@ -74,46 +95,55 @@ def ellipsoid_normal(p, c=HEAD_C, r=HEAD_R):
     return Vector((d.x / (r.x * r.x), d.y / (r.y * r.y), d.z / (r.z * r.z))).normalized()
 
 
+def face_normal(p):
+    """The face's normals: mostly forward, turning toward the cheeks (clean, one-tone face; the stamps'
+    facing tests read the same field)."""
+    h = p.z - B.CHIN_Z
+    W, F, K = head_slice(min(max(h, 0.0), B.HEAD_H))
+    xs = p.x / max(W, 1e-3)
+    n = Vector((0.85 * xs, -1.0, 0.25 * (h - 0.13) / 0.13))
+    return n.normalized()
+
+
 def head():
     part = Part('head', M_FACE)
-    nu, nv = 26, 36
-    # rows bunch up around the face (u -> h)
+    nu, nv = 30, 40
+
     def h_of(u):
-        return B.HEAD_H * (u ** 1.0)
+        return B.HEAD_H * u
 
     def pos(u, v):
         if u <= 0.0:
-            W, yf, yb, yc = head_slice(0.0)
-            return Vector((0.0, yf + 0.006, B.CHIN_Z - 0.002))
+            return Vector((0.0, B.HEAD_YC - head_slice(0.0)[1] + 0.004, B.CHIN_Z - 0.002))
         if u >= 1.0:
-            return Vector((0.0, 0.022, B.CHIN_Z + B.HEAD_H))
+            return Vector((0.0, B.HEAD_YC, B.CHIN_Z + B.HEAD_H))
         return head_point(h_of(u), v * TAU)
 
     def col(u, v):
         h = h_of(u)
         t = v * TAU
-        # the underside of the jaw and the throat side take a deeper skin tone (painted, not lit)
-        under = smooth((0.05 - h) / 0.05) * smooth((-math.sin(t) + 0.2) / 0.6)
-        return mix_col(C.SKIN, C.SKIN_DEEP, 0.5 * under)
+        # the jaw's underside and the throat side: a deeper skin, painted
+        under = smooth((0.03 - h) / 0.03) * smooth((-math.sin(t) + 0.35) / 0.6)
+        return mix_col(C.SKIN, C.SKIN_DEEP, 0.85 * under)
 
     grid(part, nu, nv, pos, close_v=True, pole0=True, pole1=True, col=col,
          uvf=lambda u, v: (u, v), auxf=lambda u, v: (M_FACE, 0.0),
          tagf=lambda u, v: {'seg': 'head'}, flip=True)
-    # the shading of an anime face is a clean, round gradient: normals from an ellipsoid, a little of
-    # the real surface kept so the chin and cheeks still turn
     for i, p in enumerate(part.v):
-        n_e = ellipsoid_normal(p)
-        part.nrm[i] = n_e
+        h = p.z - B.CHIN_Z
+        if h < 0.30 and p.y < B.HEAD_YC - 0.05:
+            part.nrm[i] = face_normal(p)
+        else:
+            part.nrm[i] = ellipsoid_normal(p)
     return [part, neck()]
 
 
 def face_point(h, x, grow=0.0):
-    """The point of the head's front surface (or a layer `grow` above it) at height h and x."""
+    """The point of the front surface (or a layer `grow` above it) at height h and lateral x."""
     lo, hi = (0.0, math.pi / 2) if x > 0 else (math.pi / 2, math.pi)
-    for _ in range(40):
+    for _ in range(48):
         mid = (lo + hi) / 2
         px = head_point(h, mid, grow).x
-        # x falls from + to - as t runs from 0 to pi
         if px > x:
             lo = mid
         else:
@@ -121,24 +151,29 @@ def face_point(h, x, grow=0.0):
     return head_point(h, (lo + hi) / 2, grow)
 
 
+# the eyes' landmarks are their OUTER columns (the stamp's pivot): 3 px from the face's centre column,
+# so with 2 px eyes there are 3 px between them (the head sits on a pixel centre: head_snap_modifier.gd)
+EYE_PIVOT_X = 3.0 / 30.0
+
+
 def landmarks():
-    """Face landmarks (Blender coordinates, bind pose) and the surface normal at each: the game projects
-    them every frame and draws the face's pixel stamps there (characters/character3d.gd)."""
+    """Face landmarks (Blender coordinates, bind pose) with a normal each: the game projects them every
+    frame and draws the face's pixel stamps there (characters/character3d.gd)."""
     L = {}
+
     def put(name, p, n=None):
-        L[name] = (p, n if n is not None else ellipsoid_normal(p))
+        L[name] = (p, n if n is not None else face_normal(p))
     put('face', face_point(B.EYE_H, 0.0))
-    put('eye_R', face_point(B.EYE_H, -B.EYE_X))
-    put('eye_L', face_point(B.EYE_H, B.EYE_X))
-    # the brows ride on the bangs (drawn over the hair, the anime way)
-    put('brow_R', face_point(B.BROW_H, -B.EYE_X * 0.95))
-    put('brow_L', face_point(B.BROW_H, B.EYE_X * 0.95))
+    put('eye_R', face_point(B.EYE_H, -EYE_PIVOT_X))
+    put('eye_L', face_point(B.EYE_H, EYE_PIVOT_X))
     put('mouth', face_point(B.MOUTH_H, 0.0))
-    put('cheek_R', face_point(0.118, -0.135))
-    put('cheek_L', face_point(0.118, 0.135))
-    put('mark', head_point(0.40, math.pi / 2 - 0.75, grow=0.04))
-    put('sweat', head_point(0.27, math.pi / 2 + 1.15, grow=0.03))
-    # eye normals turn outward a little more than the face's (each eye looks its own way round)
+    put('cheek_R', face_point(D['cheek_h'], -D['cheek_x']))
+    put('cheek_L', face_point(D['cheek_h'], D['cheek_x']))
+    # marks drawn over the hair or the hat: the anger vein up on her right temple, the sweat drop
+    put('mark', head_point(B.HEAD_H * 0.62, math.pi / 2 - 0.85, grow=0.06), ellipsoid_normal(
+        head_point(B.HEAD_H * 0.62, math.pi / 2 - 0.85)))
+    put('sweat', head_point(0.26, math.pi / 2 + 1.05, grow=0.05), ellipsoid_normal(
+        head_point(0.26, math.pi / 2 + 1.05)))
     return L
 
 
@@ -148,7 +183,7 @@ def neck():
                 up=(0, -1, 0))
 
     def section(u, a):
-        r = 0.043 - 0.004 * u
+        r = 0.040 - 0.004 * u
         return (r * math.cos(a), r * 0.95 * math.sin(a))
     sweep(part, path, 6, 12, section, col=lambda u, v: C.SKIN_DEEP,
           auxf=lambda u, v: (M_SKIN, 0.0), tagf=lambda u, v: {'seg': 'neck', 'u': u})
@@ -158,279 +193,237 @@ def neck():
 # =================================================================================================
 # hair
 
-def _strand(part, pts, width, thick, nu, nv=10, tip='point', up=None, col=None, tagf=None,
-            shape=None, aux_extra=0.0):
-    """One anime hair clump: a flattened tube along a path (lens-shaped section: width across, thick
-    outward). width(u), thick(u) are callables. tip: 'point' (closes to a point), 'blunt' (flat cut)."""
+def _strand(part, pts, width, thick, nu, nv=10, tip='point', up=None, col=None, tagf=None, aux_extra=0.0,
+            uvf=None):
+    """One hair clump: a flattened tube along a path (lens section: `width` across, `thick` outward)."""
     path = Path(pts, up=up or (0, -1, 0))
 
     def section(u, a):
         w = width(u)
         th = thick(u)
         ca, sa = math.cos(a), math.sin(a)
-        # lens: the outer face is rounder than the inner one
         out = th * (sa if sa > 0 else sa * 0.55)
         across = w * math.copysign(abs(ca) ** 0.85, ca)
-        if shape:
-            out, across = shape(u, a, out, across)
         return (out, across)
 
     rows = sweep(part, path, nu, nv, section, close_v=True, pole1=(tip == 'point'),
                  col=col or (lambda u, v: C.HAIR), auxf=lambda u, v: (M_HAIR, aux_extra), tagf=tagf,
-                 flip=True)
+                 uvf=uvf, flip=True)
     if tip == 'blunt':
         p, t, n, b = path.at(1.0)
         cap(part, rows[-1], p + t * 0.004, col=(col(1.0, 0.5) if col else C.HAIR), aux=(M_HAIR, aux_extra))
     return path
 
 
-def hair_cap():
-    """The hair over the skull: the head shape grown outward, from a hairline that runs low at the back
-    and the sides and high at the front (the bangs come down from there)."""
-    part = Part('hair_cap', M_HAIR)
-    nu, nv = 14, 40
+def _hairline(t):
+    """Height (above the chin) where the hair cap ends, by angle round the head: high over the face
+    (the bangs hang from there), down over the temples and ears to the jaw, low at the nape."""
+    phi = abs(((t - math.pi / 2 + math.pi) % TAU) - math.pi)      # 0 front .. pi back
+    h = B.BANG_CUT_H + 0.07
+    h -= (B.BANG_CUT_H + 0.07 - 0.10) * smooth((phi - 0.95) / 0.45)   # the sides: down to the jaw
+    h -= 0.10 * smooth((phi - 1.9) / 0.6)                              # the back: to the nape
+    return h
 
-    def h_low(t):
-        # phi: the angle from the front. Over the bangs the hairline is high (0.435); round the temples
-        # it stays above the brows (0.335) until just in front of the ear, then drops behind it (the
-        # side of the face is skin, so her profile shows a cheek and an eye, not a wall of hair), and
-        # runs low round the back
-        phi = abs(((t - math.pi / 2 + math.pi) % TAU) - math.pi)
-        h = 0.435 - 0.10 * smooth(phi / 1.2)
-        h -= 0.20 * smooth((phi - 1.45) / 0.35)
-        h -= 0.03 * smooth((phi - 2.2) / 0.6)
-        return h
+
+def hair_cap():
+    """The hair over the cranium, grown out a little; the bangs, side locks and the long sheet hang from it."""
+    part = Part('hair_cap', M_HAIR)
+    nu, nv = 16, 48
 
     def pos(u, v):
         t = v * TAU
         if u >= 1.0:
-            return Vector((0, 0.022, B.CHIN_Z + B.HEAD_H + 0.028))
-        hl = h_low(t)
-        h = lerp(hl, B.HEAD_H, u ** 0.9)
-        g = 0.024 + 0.008 * smooth((h - 0.25) / 0.2)
-        return head_point(min(h, 0.499), t, grow=g)
+            return Vector((0, B.HEAD_YC, B.CHIN_Z + B.HEAD_H + 0.026))
+        hl = _hairline(t)
+        h = lerp(hl, B.HEAD_H, u ** 0.85)
+        g = 0.022 + 0.006 * smooth((h - 0.25) / 0.2)
+        return head_point(min(h, B.HEAD_H - 0.001), t, grow=g)
 
-    def col(u, v):
-        return mix_col(C.HAIR_DEEP, C.HAIR, smooth(u * 3.0))
-
-    grid(part, nu, nv, pos, close_v=True, pole1=True, col=col, auxf=lambda u, v: (M_HAIR, 0.0),
-         tagf=lambda u, v: {'seg': 'hair_cap', 'u': 0.0}, flip=True)
+    grid(part, nu, nv, pos, close_v=True, pole1=True, col=lambda u, v: C.HAIR,
+         auxf=lambda u, v: (M_HAIR, 0.0), tagf=lambda u, v: {'seg': 'hair_cap', 'u': 0.0}, flip=True)
     for i, p in enumerate(part.v):
-        part.nrm[i] = ellipsoid_normal(p, HEAD_C + Vector((0, 0.01, 0.02)), HEAD_R * 1.12)
+        part.nrm[i] = ellipsoid_normal(p, HEAD_C + Vector((0, 0.0, 0.04)), HEAD_R * 1.1)
     return part
 
 
 def bangs():
-    """Hime-cut bangs: a row of flat clumps over the forehead, cut straight just above the eyes, a touch
-    longer toward the temples so they frame the face."""
+    """Thick hime-cut bangs: a curtain of flat clumps over the forehead, cut straight across on the eyes'
+    top row (G5R3-8: the brows never show); the outer clumps a little longer, rounding the face's top
+    corners into the side locks."""
     part = Part('bangs', M_HAIR)
-    n = 9
-    spread = 1.02                     # half the arc covered (radians either side of the front)
+    n = 11
+    spread = 1.12
     for k in range(n):
-        f = (k + 0.5) / n * 2 - 1     # -1 .. 1, her right .. left
+        f = (k + 0.5) / n * 2 - 1           # -1 her right .. 1 her left
         t = math.pi / 2 - f * spread
         side = abs(f)
-        cut = B.BANG_CUT_H - 0.022 * side ** 2 - (0.004 if k % 2 else 0.0)
-        hs = [0.488, 0.474, 0.46, 0.445, cut + 0.01, cut]
-        grows = [0.028, 0.030, 0.032, 0.034, 0.037, 0.039]
+        cut = B.BANG_CUT_H - 0.030 * smooth((side - 0.62) / 0.38)
+        hs = [B.HEAD_H - 0.07, B.HEAD_H - 0.14, 0.36, 0.30, cut + 0.03, cut]
+        grows = [0.030, 0.032, 0.030, 0.026, 0.024, 0.024]
         pts = [head_point(h, t, grow=g) for h, g in zip(hs, grows)]
-        w_tip = 0.044 if side < 0.8 else 0.038
-        out = (pts[0] - HEAD_C).normalized()
+        w_tip = 0.050 if side < 0.8 else 0.044
+        out = (pts[-2] - HEAD_C).normalized()
 
         def width(u, w_tip=w_tip):
-            return lerp(0.030, w_tip, smooth(u * 1.4)) * (1.0 - 0.18 * smooth((u - 0.92) / 0.08))
+            return lerp(0.034, w_tip, smooth(u * 1.3))
 
         def thick(u):
-            return lerp(0.012, 0.016, u)
+            return lerp(0.010, 0.016, u)
 
         def tag(u, v, k=k, f=f):
             return {'seg': 'hair_bang', 'u': u, 'k': k, 'side': f}
 
-        _strand(part, pts, width, thick, nu=8, nv=10, tip='blunt', up=out,
-                col=lambda u, v: mix_col(C.HAIR, C.HAIR_DEEP, 0.35 * smooth((u - 0.85) / 0.15)), tagf=tag)
+        _strand(part, pts, width, thick, nu=10, nv=10, tip='blunt', up=out,
+                col=lambda u, v: C.HAIR, tagf=tag)
     for i, p in enumerate(part.v):
-        part.nrm[i] = (ellipsoid_normal(p, HEAD_C + Vector((0, 0.0, 0.03)), HEAD_R * 1.15) * 0.75 +
-                       Vector((0, -1, 0.15)).normalized() * 0.25).normalized()
+        part.nrm[i] = (ellipsoid_normal(p, HEAD_C + Vector((0, 0.0, 0.05)), HEAD_R * 1.15) * 0.6 +
+                       Vector((0, -1, 0.25)).normalized() * 0.4).normalized()
     return part
 
 
-SIDE_TIE_Z = 1.005
+def side_lock_points(side):
+    fw = B.FACE_W
+    tie_h, end_h = D['lock_tie_h'], D['lock_end_h']
+    t = math.pi / 2 - side * 1.28
+    return [head_point(0.34, t, grow=0.024),
+            Vector((side * (fw + 0.032), B.HEAD_YC - 0.118, B.CHIN_Z + 0.20)),
+            Vector((side * (fw + 0.030), B.HEAD_YC - 0.112, B.CHIN_Z + 0.06)),
+            Vector((side * (fw + 0.024), -0.094, B.CHIN_Z + tie_h + 0.05)),
+            Vector((side * (fw + 0.020), -0.090, B.CHIN_Z + tie_h)),
+            Vector((side * (fw + 0.018), -0.086, B.CHIN_Z + end_h))]
 
 
 def side_locks():
-    """The hime side locks: from the temples down past the jaw to the chest, cut blunt, each through a
-    white-red-white tie a little below the chin."""
+    """The hime side locks: from the temples down past the cheeks (just outside the face's outline, so
+    the round cheeks show against them) to the tie, white-red-white, and a short blunt end."""
     parts = []
+    fw = B.FACE_W
+    tie_h, end_h = D['lock_tie_h'], D['lock_end_h']
     for side in (1, -1):
         part = Part('side_lock', M_HAIR)
-        # at the sides of the head, just in front of the ears: further forward they hung over her
-        # cheek and hid the whole face in profile
-        t = math.pi / 2 - side * 1.50
-        p0 = head_point(0.42, t, grow=0.026)
-        p1 = head_point(0.30, t + side * 0.02, grow=0.040)
-        p2 = head_point(0.14, t + side * 0.07, grow=0.050)
-        # hanging a little out from the head, so from behind they show beside the long hair
-        p3 = Vector((side * 0.232, -0.040, SIDE_TIE_Z + 0.01))
-        p4 = Vector((side * 0.236, -0.048, 0.93))
-        p5 = Vector((side * 0.230, -0.056, 0.865))
-        pts = [p0, p1, p2, p3, p4, p5]
+        pts = side_lock_points(side)
+        p0, p1, p2, p3, p4, p5 = pts
+        L = Path(pts).length
+        tie_u = (Path(pts[:5]).length) / L
 
-        def width(u):
-            # pinched by the tie, a little fuller below it
-            w = lerp(0.036, 0.046, smooth(u * 2))
-            tie_u = 0.60
-            w *= 1.0 - 0.28 * math.exp(-((u - tie_u) / 0.05) ** 2)
+        def width(u, tie_u=tie_u):
+            w = lerp(0.040, 0.034, smooth(u))
+            w *= 1.0 - 0.25 * math.exp(-((u - tie_u) / 0.05) ** 2)
             return w
 
-        def thick(u):
-            return 0.022 * (1.0 - 0.25 * math.exp(-((u - 0.60) / 0.05) ** 2))
+        def thick(u, tie_u=tie_u):
+            return 0.024 * (1.0 - 0.25 * math.exp(-((u - tie_u) / 0.05) ** 2))
 
         def tag(u, v, side=side):
             return {'seg': 'hair_side', 'u': u, 'side': side}
 
-        outward = Vector((side * 1.0, -0.4, 0.0)).normalized()
+        outward = Vector((side * 1.0, -0.35, 0.0)).normalized()
         n0 = len(part.v)
-        _strand(part, pts, width, thick, nu=14, nv=10, tip='blunt', up=outward,
+        _strand(part, pts, width, thick, nu=16, nv=10, tip='blunt', up=outward,
                 col=lambda u, v: C.HAIR, tagf=tag)
         for i in range(n0, len(part.v)):
-            part.nrm[i] = Vector((side * 0.85, -0.5, 0.15)).normalized()
-        # the tie: a short tube around the lock, white - red - white
-        path = Path([Vector((side * 0.233, -0.042, SIDE_TIE_Z + 0.045)),
-                     Vector((side * 0.234, -0.044, SIDE_TIE_Z - 0.035))], up=outward)
+            part.nrm[i] = Vector((side * 0.8, -0.55, 0.12)).normalized()
+        # the tie: white - red - white, three native rows
+        tc = p4 + Vector((0, 0, 0.012))
+        path = Path([tc + Vector((0, -0.002, 0.050)), tc + Vector((0, 0.002, -0.050))], up=outward)
 
         def section(u, a):
-            r = 0.034
-            return (r * math.cos(a) * 1.05, r * math.sin(a) * 1.15)
+            r = 0.031
+            return (r * math.cos(a) * 1.05, r * math.sin(a) * 1.10)
 
         def tcol(u, v):
-            return C.RED if 0.36 < u < 0.64 else C.WHITE
+            return C.RED if 0.34 < u < 0.66 else C.WHITE
 
-        sweep(part, path, 6, 12, section, col=tcol, auxf=lambda u, v: (M_TIE, 0.0),
-              tagf=lambda u, v, side=side: {'seg': 'hair_side', 'u': 0.60, 'side': side})
+        sweep(part, path, 9, 12, section, col=tcol, auxf=lambda u, v: (M_TIE, 0.0),
+              tagf=lambda u, v, side=side, tie_u=tie_u: {'seg': 'hair_side', 'u': tie_u, 'side': side})
         parts.append(part)
     return parts
 
 
-BACK_CHAINS_X = [-0.17, -0.085, 0.0, 0.085, 0.17]
+SHEET_TOP_H = 0.36          # where the long hair's sheet leaves the cranium (above the chin)
+SHEET_THICK = 0.034
 
 
-def coat_back_y(z):
-    """y of the haori's back surface at height z (the long hair lies on it)."""
-    from kasasagi.clothes import coat_slice
-    X, Yd, yc, g = coat_slice(min(max(z, 0.2), 0.982))
-    return yc + Yd
+def _back_y(z):
+    from kasasagi.clothes import back_y
+    return back_y(z)
 
 
-# The long hair in three bunches (the lead, 2026-10-15: from behind she was one dark purple column):
-# left, middle and right, each shaded as its own rounded mass with the darker inner layer showing
-# in the gaps; the middle one ends at the waist, the two outer ones go on to mid-thigh as two tails
-# that swing apart when she walks. (centre f, half width in f, clumps, tip height, tip x)
-# The lead, 2026-10-15 (round 3): the two tails further apart and the middle shorter, so the white robe
-# flashes between them as they swing; each bunch hangs on its own spring chain (rigging.HAIR_CHAINS).
-HAIR_BUNCHES = [(-0.70, 0.24, 4, 0.30, -0.205), (0.0, 0.17, 3, 0.62, 0.0), (0.70, 0.24, 4, 0.30, 0.205)]
+def sheet_frame(u):
+    """The long hair's sheet at u (0 where it leaves the cranium .. 1 its end): height z, the arc's centre
+    y, half width, wrap angle and depth. Round the head it follows the cranium; down the back it lies
+    on the body (clothes.back_y)."""
+    z_top = B.CHIN_Z + SHEET_TOP_H
+    z_end = D['back_hair_end']
+    W0 = D['back_hair_w']
+    z = lerp(z_top, z_end, u)
+    h = z - B.CHIN_Z
+    W, F, K = head_slice(min(max(h, 0.0), B.HEAD_H))
+    K = max(K, 0.10)
+    hf = (B.HEAD_YC + K * 0.35, max(W, 0.20) + 0.026, lerp(1.28, 1.08, smooth((SHEET_TOP_H - h) / SHEET_TOP_H)),
+          K * 0.65 + 0.03)
+    by = _back_y(z)
+    bf = (by - 0.04, W0 * (1.0 - 0.10 * smooth((-h - 0.05) / 0.5)), 0.95, 0.07)
+    k = smooth((h + 0.14) / 0.18)                 # 1 round the head, 0 down the back
+    yc, hw, wrap, depth = (lerp(bf[i], hf[i], k) for i in range(4))
+    return z, yc, hw, wrap, depth
 
 
-def _bunch_path(cf, f, l, z_end, x_end, off):
-    """Points of one clump: from its root on the head, behind the shoulders, then gathered toward its
-    bunch's centre line and down to the bunch's tip."""
-    t = 3 * math.pi / 2 + f * 1.78
-    side = abs(f)
-    p0 = head_point(0.40 + 0.04 * side, t, grow=0.024)
-    p1 = head_point(0.22 + 0.06 * side, t, grow=0.054 + 0.012 * (1 - side))
-    z2 = B.CHIN_Z - 0.04
-    x2 = f * 0.205
-    y2 = max(head_point(0.05, t, grow=0.0).y + 0.05, coat_back_y(z2) * (1 - 0.55 * f * f) + off + 0.03)
-    z3 = 0.80
-    x3 = f * 0.222
-    y3 = coat_back_y(z3) * (1 - 0.45 * f * f) + off + 0.02
-    if z_end < 0.5:
-        # the outer bunches: gathered below the waist into a tail
-        z4 = 0.56
-        x4 = x_end * 1.02 + l * 0.050
-        z5 = z_end
-        x5 = x_end + l * 0.010
-    else:
-        z4 = (z3 + z_end) / 2
-        x4 = cf * 0.2 + l * 0.055
-        z5 = z_end
-        x5 = cf * 0.2 + l * 0.020
-    y4 = coat_back_y(z4) * (1 - 0.40 * f * f) + off + 0.025
-    y5 = coat_back_y(max(z5, 0.2)) * (1 - 0.40 * f * f) + off + 0.03
-    return [p0, p1, Vector((x2, y2, z2)), Vector((x3, y3, z3)), Vector((x4, y4, z4)), Vector((x5, y5, z5))], t
+def sheet_point(u, x, outer=True):
+    """A point of the sheet: x in [-1, 1] across (her right .. her left); outer: the visible face."""
+    z, yc, hw, wrap, depth = sheet_frame(u)
+    a = x * wrap
+    px = hw * math.sin(a) / math.sin(wrap)
+    py = yc + depth * math.cos(a) + (SHEET_THICK if outer else 0.0) * (0.6 + 0.4 * math.cos(a))
+    return Vector((px, py, z))
 
 
-def _bunch_centre(cf, z, x_end, z_end):
-    """x of a bunch's centre line at height z (for its shading)."""
-    if z_end < 0.5:
-        table = [(0.30, x_end), (0.56, x_end * 1.02), (0.80, cf * 0.222), (1.02, cf * 0.205), (1.4, cf * 0.15)]
-    else:
-        table = [(0.40, cf * 0.2), (0.80, cf * 0.222), (1.02, cf * 0.205), (1.4, cf * 0.15)]
-    return interp(table, z)
+def sheet_bottom_u(x):
+    """The end is rounded: the sides finish higher than the middle."""
+    return 1.0 - 0.13 * (abs(x) ** 2.2) * (1.0 if D['back_hair_end'] > 0.5 else 0.6)
 
 
 def back_hair():
-    """The long hair: three bunches of clumps from the back and sides of the head, behind the
-    shoulders and down her back; the middle bunch ends at the waist, the outer two hang on as two tails
-    to mid-thigh. A darker inner layer behind them fills the gaps (and shows in them: the parting
-    between the bunches)."""
+    """The long hair as one sheet down her back (the v0.2 sprite's back view): from the back of the
+    cranium over the shoulders and down, wrapping round her back, its end rounded.
+    UV: x across the sheet (0 her right .. 1 her left), y down it (the shader paints strand highlights
+    in vertical lines across x)."""
     part = Part('back_hair', M_HAIR)
-    import random
-    rnd = random.Random(11)
-    # the inner layer: one dark sheet of clumps, a little shorter than the tails
-    for k in range(7):
-        f = (k + 0.5) / 7 * 2 - 1
-        cf = -0.68 if f < -0.34 else (0.68 if f > 0.34 else 0.0)
-        # only behind the head and the shoulders: lower down the white robe shows between the bunches
-        z_end = 0.80
-        x_end = 0.17 * (1 if cf > 0 else -1) if cf else 0.0
-        pts, t = _bunch_path(cf, f * 0.95, (f - cf) * 0.5, z_end, x_end, 0.012)
-        pts[0] = head_point(0.30 + 0.04 * abs(f), t, grow=0.020)
-        w0 = 0.074
-
-        def width(u, w0=w0):
-            return w0 * (0.82 + 0.38 * smooth(u * 2.2)) * (1.0 - 0.75 * smooth((u - 0.80) / 0.20) ** 1.3)
-
-        def thick(u):
-            return 0.030 * (1.0 - 0.45 * smooth((u - 0.78) / 0.22))
-
-        out = Vector((math.cos(t), -math.sin(t), 0.0)).normalized()
-        _strand(part, pts, width, thick, nu=18, nv=10, tip='point', up=out, col=lambda u, v: C.HAIR_DEEP,
-                tagf=lambda u, v, f=f: {'seg': 'hair_back', 'u': u, 'x': f, 'inner': True, 'bunch': -1},
-                aux_extra=0.5)
-    n_inner = len(part.v)
-    owners = []
-    for bi, (cf, hw, n, z_end, x_end) in enumerate(HAIR_BUNCHES):
-        for k in range(n):
-            l = (k + 0.5) / n * 2 - 1                       # -1 .. 1 across the bunch
-            f = cf + l * hw
-            pts, t = _bunch_path(cf, f, l, z_end + rnd.uniform(-0.012, 0.012), x_end, 0.040)
-            w0 = 0.064
-
-            def width(u, w0=w0):
-                return w0 * (0.82 + 0.38 * smooth(u * 2.2)) * (1.0 - 0.75 * smooth((u - 0.80) / 0.20) ** 1.3)
-
-            def thick(u):
-                return 0.034 * (1.0 - 0.45 * smooth((u - 0.78) / 0.22))
-
-            out = Vector((math.cos(t), -math.sin(t), 0.0)).normalized()
-            n0 = len(part.v)
-            _strand(part, pts, width, thick, nu=18, nv=10, tip='point', up=out, col=lambda u, v: C.HAIR,
-                    tagf=lambda u, v, f=f, bi=bi: {'seg': 'hair_back', 'u': u, 'x': f, 'inner': False,
-                                                   'bunch': bi},
-                    aux_extra=0.2)
-            owners.append((n0, len(part.v), cf, z_end, x_end))
-    # shading: each bunch as one rounded mass round its own centre line (the bunches part in light and
-    # shade like three strands); the inner layer as one sheet
-    for i in range(n_inner):
-        p = part.v[i]
-        part.nrm[i] = Vector((p.x * 0.6, 1.0, 0.10)).normalized()
-    for (i0, i1, cf, z_end, x_end) in owners:
-        for i in range(i0, i1):
-            p = part.v[i]
-            xc = _bunch_centre(cf, p.z, x_end, z_end)
-            yc = coat_back_y(min(max(p.z, 0.2), 0.982)) + 0.02
-            d = Vector(((p.x - xc) * 2.4, max(p.y - yc, 0.02) * 1.0, 0.18 if p.z > 0.95 else 0.06))
-            part.nrm[i] = d.normalized()
+    nu, nv = 34, 26
+    rows_out, rows_in = [], []
+    for i in range(nu + 1):
+        r_o, r_i = [], []
+        for j in range(nv + 1):
+            x = j / nv * 2 - 1
+            u = i / nu * sheet_bottom_u(x)
+            uu = (x + 1) / 2
+            tag = {'seg': 'hair_back', 'u': u, 'x': x}
+            r_o.append(part.add(sheet_point(u, x, True), C.HAIR, (uu, u), (M_HAIR, 0.2), tag))
+            r_i.append(part.add(sheet_point(u, x, False), C.HAIR_DEEP, (uu, u), (M_HAIR, 0.5), dict(tag)))
+        rows_out.append(r_o)
+        rows_in.append(r_i)
+    for i in range(nu):
+        for j in range(nv):
+            a, b, c, d = rows_out[i][j], rows_out[i][j + 1], rows_out[i + 1][j + 1], rows_out[i + 1][j]
+            part.f.append((a, b, c, d))                        # the outer face looks back (+y)
+            a, b, c, d = rows_in[i][j], rows_in[i][j + 1], rows_in[i + 1][j + 1], rows_in[i + 1][j]
+            part.f.append((a, d, c, b))
+    # close the edges (sides and the end): a strip between the outer and inner faces
+    for i in range(nu):
+        for j in (0, nv):
+            o0, o1, i0, i1 = rows_out[i][j], rows_out[i + 1][j], rows_in[i][j], rows_in[i + 1][j]
+            part.f.append((o0, o1, i1, i0) if j == 0 else (o0, i0, i1, o1))
+    for j in range(nv):
+        o0, o1, i0, i1 = rows_out[nu][j], rows_out[nu][j + 1], rows_in[nu][j], rows_in[nu][j + 1]
+        part.f.append((o0, o1, i1, i0))
+    # shading: one rounded mass (normals from the arc's centre, up a little toward the head)
+    z_top = B.CHIN_Z + SHEET_TOP_H
+    z_end = D['back_hair_end']
+    for i, p in enumerate(part.v):
+        u = min(max((z_top - p.z) / max(z_top - z_end, 1e-3), 0.0), 1.0)
+        zz, yc, hw, wrap, depth = sheet_frame(u)
+        d = Vector((p.x / max(hw, 0.05) * 0.9, 1.0, 0.25 * smooth((p.z - B.CHIN_Z + 0.05) / 0.3)))
+        part.nrm[i] = d.normalized()
     return part
 
 
@@ -438,106 +431,139 @@ def hair():
     return [hair_cap(), bangs(), back_hair()] + side_locks()
 
 
-CORD_KNOT = None
-
-
-def chin_cords():
-    """The hat's cords (系绳): from the head ring down behind the side locks, tied under her chin in a
-    small knot; two short tails hang from it and swing (spring chain 'cord'). Crimson, a shade deeper
-    than the sash, so the knot reads as a ribbon on the white collar, not as a mouth."""
-    part = Part('cords', M_CLOTH)
-    col = C.RED_DEEP
-    knot = Vector((0.0, -0.150, B.CHIN_Z - 0.028))
-    for side in (1, -1):
-        # behind the side lock and the jaw's corner, then under the jaw: from above only the knot
-        # and the tails show
-        pts = [head_point(0.36, math.pi / 2 - side * 1.62, grow=0.03),
-               head_point(0.16, math.pi / 2 - side * 1.58, grow=0.02),
-               head_point(0.02, math.pi / 2 - side * 1.45, grow=0.004) + Vector((0, 0, -0.02)),
-               Vector((side * 0.06, -0.09, B.CHIN_Z - 0.035)),
-               knot + Vector((side * 0.02, 0.006, 0.0))]
-        path = Path(pts, up=(side, 0, 0))
-        sweep(part, path, 10, 6, lambda u, a: (0.012 * math.cos(a), 0.016 * math.sin(a)), col=lambda u, v: col,
-              auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'head'})
-    # the knot
-    kp = Path([knot + Vector((-0.024, 0, 0)), knot, knot + Vector((0.024, 0, 0))], up=(0, -1, 0))
-    sweep(part, kp, 4, 8, lambda u, a: (0.018 * math.cos(a), 0.017 * math.sin(a)), pole0=True, pole1=True,
-          col=lambda u, v: col, auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'head'})
-    # two tails
-    for side in (1, -1):
-        tp = Path([knot + Vector((side * 0.008, -0.004, -0.006)), knot + Vector((side * 0.022, -0.016, -0.05)),
-                   knot + Vector((side * 0.03, -0.02, -0.095))], up=(0, -1, 0))
-        sweep(part, tp, 6, 6, lambda u, a: (0.011 * math.cos(a), 0.016 * math.sin(a)), pole1=True,
-              col=lambda u, v: col, auxf=lambda u, v: (M_CLOTH, 0.0),
-              tagf=lambda u, v: {'seg': 'cord', 'u': u})
-    return part
-
-
 # =================================================================================================
-# hat (sugegasa): built level at the seat; the hat bone carries it (and tilts it toward the camera
-# in the game, docs/knowledge/24)
+# hat (sugegasa): built level, its seat on the crown; the hat bone carries it, the game tips it
+# (hat_tilt_modifier.gd: back, away from the camera, so the white top frames the face)
+
+def hat_top_z(s):
+    """Height of the top surface above the brim plane at radius fraction s (0 apex .. 1 rim): a shallow
+    cone, the apex rounded, the rim turned down a touch."""
+    Hh = B.HAT_H
+    cone = (1.0 - s) ** 0.95
+    apex = -0.10 * Hh * math.exp(-(s / 0.07) ** 2)
+    droop = -0.018 * smooth((s - 0.86) / 0.14)
+    return Hh * cone + apex + droop
+
 
 def hat(tilt_deg=0.0, roll_deg=0.0):
     part = Part('hat', M_HAT_TOP)
-    R, Hh = B.HAT_R, B.HAT_H
+    R = B.HAT_R
     seat = B.HAT_SEAT
-    # the cone sits ON the head ring (atama-wa) at the crown, so the brim comes down to the brow
-    # like a real sugegasa (not a lid on top of the head)
-    base_z = seat.z - 0.105
-
-    def profile(s):
-        # height of the top surface at radius fraction s (0 apex .. 1 rim): a shallow cone, the apex
-        # rounded, the rim turned down a touch
-        cone = (1.0 - s) ** 0.92
-        apex = 0.06 * math.exp(-(s / 0.06) ** 2)
-        droop = -0.025 * smooth((s - 0.85) / 0.15)
-        return Hh * cone + apex * 0.3 + droop
-
+    base_z = seat.z - B.HAT_SINK
     thick = 0.016
-    nu, nv = 12, 48
+    rim = 0.026                      # the rim's edge band: the navy line under the white (v0.2)
+    nu, nv = 14, 64
 
     def top_pos(u, v):
-        s = u
         a = v * TAU
-        r = R * s
-        return Vector((seat.x + r * math.cos(a), seat.y + r * math.sin(a), base_z + profile(s) + thick))
+        r = R * u
+        return Vector((seat.x + r * math.cos(a), seat.y + r * math.sin(a), base_z + hat_top_z(u) + thick))
 
     def under_pos(u, v):
         s = 1.0 - u
         a = v * TAU
-        r = R * s
-        return Vector((seat.x + r * math.cos(a), seat.y + r * math.sin(a), base_z + profile(s) - 0.004))
+        r = R * s * 0.995
+        return Vector((seat.x + r * math.cos(a), seat.y + r * math.sin(a), base_z + hat_top_z(s) - rim + 0.004))
 
     top = grid(part, nu, nv, top_pos, close_v=True, pole0=True,
                col=lambda u, v: C.HAT, uvf=lambda u, v: (u, v), auxf=lambda u, v: (M_HAT_TOP, 0.0),
                tagf=lambda u, v: {'seg': 'hat'}, flip=True)
-    # rim edge band between the top and the underside
-    rim_top = top[-1]
     under_rows = grid(part, nu, nv, under_pos, close_v=True, pole1=True,
-                      col=lambda u, v: C.NAVY, uvf=lambda u, v: (1.0 - u, v),
+                      col=lambda u, v: C.NAVY_LINING, uvf=lambda u, v: (1.0 - u, v),
                       auxf=lambda u, v: (M_HAT_UNDER, 0.0), tagf=lambda u, v: {'seg': 'hat'}, flip=True)
-    rim_under = under_rows[0]
+    # the rim band: its own vertices (navy), from the top's edge down to the underside's edge
+    rim_top_ring = top[-1]
+    rim_under_ring = under_rows[0]
+    ra = [part.add(part.v[rim_top_ring[j]].copy(), C.NAVY_LINING, (1.0, j / nv),
+                   (M_HAT_UNDER, 0.0), {'seg': 'hat'}) for j in range(nv)]
+    rb = [part.add(part.v[rim_under_ring[j]].copy(), C.NAVY_LINING, (1.0, j / nv), (M_HAT_UNDER, 0.0), {'seg': 'hat'})
+          for j in range(nv)]
     for j in range(nv):
         j1 = (j + 1) % nv
-        part.f.append((rim_top[j], rim_top[j1], rim_under[j1], rim_under[j]))
-    # the rim edge reads as the cream edge (top colour), its vertices are shared
-    # the head ring under the hat
+        part.f.append((ra[j], rb[j], rb[j1], ra[j1]))          # facing out
+    for i, p in enumerate(part.v):
+        if part.aux[i][0] == M_HAT_UNDER and abs((p - seat).to_2d().length - R) < 0.02:
+            part.nrm[i] = Vector(((p - seat).x, (p - seat).y, 0.0)).normalized()
+    # the head ring inside (atama-wa): the hat stands on it
     ring = Part('hat_ring', M_HAT_UNDER)
-    path = Path([seat + Vector((0, 0, 0.035)), seat + Vector((0, 0, -0.035))], up=(0, -1, 0))
+    path = Path([seat + Vector((0, 0, -0.012)), seat + Vector((0, 0, -0.07))], up=(0, -1, 0))
 
     def section(u, a):
-        r = 0.120 - 0.012 * u
+        r = 0.105 + 0.025 * u
         return (r * math.cos(a), r * math.sin(a))
 
-    sweep(ring, path, 2, 20, section, col=lambda u, v: C.NAVY, auxf=lambda u, v: (M_HAT_UNDER, 0.0),
+    sweep(ring, path, 2, 20, section, col=lambda u, v: C.NAVY_LINING, auxf=lambda u, v: (M_HAT_UNDER, 0.0),
           tagf=lambda u, v: {'seg': 'hat'})
     part.extend(ring)
+    part.extend(hat_band())
     if tilt_deg or roll_deg:
-        # previews only (the game tilts the hat bone toward the camera, HatTiltModifier): the top
-        # turned back by -tilt_deg (Blender X; negative = away from a front camera) and to the
-        # screen's right by roll_deg
+        # previews only (the game tilts the hat bone): the top turned back by tilt_deg
         T, r = math.radians(-tilt_deg), math.radians(roll_deg)
         up = Vector((math.sin(r), math.cos(r) * math.sin(T), math.cos(r) * math.cos(T)))
         rot = Vector((0, 0, 1)).rotation_difference(up).to_matrix().to_4x4()
         part.transform(lambda p: seat + (rot @ (p - seat)))
+    return part
+
+
+def _on_top(s, a, lift):
+    """A point on the hat's top surface at radius fraction s and angle a (0 her left, pi/2 front),
+    lifted off it by `lift` along the surface normal (roughly up)."""
+    seat = B.HAT_SEAT
+    base_z = seat.z - B.HAT_SINK
+    R = B.HAT_R
+    r = R * s
+    p = Vector((seat.x + r * math.cos(a), seat.y - r * math.sin(a), base_z + hat_top_z(s) + 0.016))
+    slope = (hat_top_z(max(s - 0.01, 0.0)) - hat_top_z(min(s + 0.01, 1.0))) / (0.02 * R)
+    n = Vector((math.cos(a) * slope, -math.sin(a) * slope, 1.0)).normalized()
+    return p + n * lift
+
+
+def hat_band():
+    """The red on the hat. B: a stripe from the apex down to the brim, on its front left (the sprite's
+    right-hand stripe). A: the ChatGPT sheet's ribbon round the crown and a band across the top."""
+    part = Part('hat_band', M_CLOTH)
+    style = D['hat_band']
+    lift = 0.006
+    if style == 'stripe':
+        a0 = math.pi / 2 - 0.62                 # front, toward her left (the screen's right)
+        w = 0.070
+        n = 18
+        rows = []
+        for i in range(n + 1):
+            s = lerp(0.10, 0.995, i / n)
+            p = _on_top(s, a0, lift)
+            # across: perpendicular to the radial line, in the surface
+            across = Vector((-math.sin(a0), -math.cos(a0), 0.0))
+            ww = w * lerp(0.55, 1.0, smooth(s / 0.5))
+            rows.append([part.add(p + across * (ww * (k - 1)), C.RED, (s, k / 2), (M_CLOTH, 0.0),
+                                  {'seg': 'hat'}) for k in range(3)])
+        for i in range(n):
+            for k in range(2):
+                part.f.append((rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]))
+    else:
+        # the ribbon round the crown (s 0.26..0.36), and a band across the top through the apex
+        n = 48
+        s0, s1 = 0.24, 0.35
+        r0 = [part.add(_on_top(s0, j / n * TAU, lift), C.RED, (0, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
+        r1 = [part.add(_on_top(s1, j / n * TAU, lift), C.RED, (1, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
+        for j in range(n):
+            j1 = (j + 1) % n
+            part.f.append((r0[j], r0[j1], r1[j1], r1[j]))
+        a0 = math.pi / 2 - 0.70
+        w = 0.062
+        for sgn in (1, -1):
+            a = a0 if sgn > 0 else a0 + math.pi
+            rows = []
+            m = 12
+            for i in range(m + 1):
+                s = lerp(0.35, 0.995, i / m)
+                p = _on_top(s, a, lift * 0.8)
+                across = Vector((-math.sin(a), -math.cos(a), 0.0))
+                rows.append([part.add(p + across * (w * (k - 1)), C.RED_DEEP if sgn < 0 else C.RED, (s, k / 2),
+                                      (M_CLOTH, 0.0), {'seg': 'hat'}) for k in range(3)])
+            for i in range(m):
+                for k in range(2):
+                    part.f.append((rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]))
+    for i in range(len(part.v)):
+        part.nrm[i] = Vector((0, 0, 1))
     return part

@@ -20,19 +20,19 @@ var fog_haze_focus := 0.0       # height the haze is measured from (her height)
 
 # hour, sun colour (linear), sun energy, sky ambient, ground bounce, fog colour,
 # grade lift, grade gain, saturation, shadow tone, high tone, night
-# Round 4 (decision-log G5R2-1): verdant and soft instead of withered yellow and hard. The sun is
-# near-white at noon (warm, never yellow), golden only at the ends of the day; the shade is lit by a
-# blue-cyan sky and a green bounce off the grass, so shadows lean blue-green; the grade's contrast is
-# soft and its saturation favours the greens (composite.gdshader).
+# Round 5 (decision-log G5R3-1): the day is round 3's again (the user: round 4's freshening, the
+# lush greens, the saturated grade, the blue-green shade, was "画蛇添足"; "全面 roll back"): the rows
+# from 6:24 to 17:24 are round 3's own values. The night (the user: "夜里的光非常好，就按这个来") keeps
+# round 4's rows: midnight, 4:24, the dawn twilight at 5:24, the sunset at 18:24, 19:36.
 const KEYS := [
 	[0.0, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[4.4, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[5.4, Color(0.95, 0.62, 0.58), 0.35, Color(0.22, 0.24, 0.36), Color(0.07, 0.07, 0.07), Color(0.45, 0.42, 0.52), Color(0.02, 0.012, 0.04), Color(1.02, 0.99, 1.02), 0.92, Color(-0.004, 0.002, 0.02), Color(0.02, 0.01, 0.0), 0.6],
-	[6.4, Color(1.0, 0.80, 0.60), 2.0, Color(0.60, 0.67, 0.77), Color(0.15, 0.17, 0.11), Color(0.80, 0.78, 0.74), Color(0.005, 0.007, 0.011), Color(1.04, 1.02, 1.0), 1.0, Color(-0.01, 0.004, 0.02), Color(0.025, 0.012, 0.0), 0.0],
-	[8.0, Color(1.0, 0.92, 0.80), 1.75, Color(0.52, 0.66, 0.88), Color(0.16, 0.20, 0.12), Color(0.80, 0.84, 0.86), Color(0.004, 0.006, 0.011), Color(1.03, 1.03, 1.01), 1.15, Color(-0.012, 0.004, 0.02), Color(0.018, 0.012, 0.0), 0.0],
-	[12.0, Color(1.0, 0.95, 0.88), 1.8, Color(0.54, 0.68, 0.87), Color(0.17, 0.21, 0.12), Color(0.78, 0.85, 0.90), Color(0.004, 0.006, 0.011), Color(1.03, 1.03, 1.02), 1.16, Color(-0.012, 0.005, 0.02), Color(0.012, 0.010, 0.0), 0.0],
-	[15.5, Color(1.0, 0.92, 0.80), 1.8, Color(0.54, 0.65, 0.86), Color(0.17, 0.20, 0.12), Color(0.80, 0.80, 0.80), Color(0.005, 0.005, 0.011), Color(1.03, 1.02, 1.0), 1.15, Color(-0.012, 0.004, 0.022), Color(0.02, 0.012, 0.0), 0.0],
-	[17.4, Color(1.0, 0.80, 0.55), 1.9, Color(0.50, 0.54, 0.78), Color(0.15, 0.15, 0.10), Color(0.86, 0.74, 0.62), Color(0.006, 0.004, 0.016), Color(1.04, 1.01, 0.98), 1.1, Color(-0.02, 0.0, 0.05), Color(0.03, 0.02, 0.0), 0.0],
+	[6.4, Color(1.0, 0.74, 0.50), 1.30, Color(0.42, 0.43, 0.56), Color(0.140, 0.110, 0.095), Color(0.88, 0.72, 0.60), Color(0.012, 0.006, 0.022), Color(1.08, 1.04, 1.00), 1.0, Color(-0.012, 0.0, 0.024), Color(0.035, 0.02, 0.0), 0.0],
+	[8.0, Color(1.0, 0.90, 0.72), 1.65, Color(0.70, 0.78, 0.97), Color(0.20, 0.175, 0.14), Color(0.86, 0.80, 0.72), Color(0.012, 0.012, 0.03), Color(1.06, 1.04, 1.01), 1.0, Color(-0.012, 0.0, 0.022), Color(0.03, 0.018, 0.0), 0.0],
+	[12.0, Color(1.0, 0.96, 0.88), 1.72, Color(0.70, 0.80, 1.0), Color(0.20, 0.18, 0.15), Color(0.78, 0.82, 0.86), Color(0.012, 0.012, 0.03), Color(1.07, 1.05, 1.02), 1.08, Color(-0.014, 0.0, 0.022), Color(0.025, 0.015, 0.0), 0.0],
+	[15.5, Color(1.0, 0.87, 0.62), 1.75, Color(0.71, 0.76, 0.96), Color(0.21, 0.175, 0.14), Color(0.80, 0.75, 0.70), Color(0.014, 0.01, 0.03), Color(1.07, 1.04, 1.0), 1.0, Color(-0.012, 0.0, 0.022), Color(0.035, 0.018, 0.0), 0.0],
+	[17.4, Color(1.0, 0.86, 0.60), 1.8, Color(0.45, 0.48, 0.71), Color(0.17, 0.145, 0.11), Color(0.82, 0.74, 0.62), Color(0.010, 0.008, 0.026), Color(1.05, 1.03, 0.97), 1.07, Color(-0.024, -0.004, 0.066), Color(0.03, 0.026, 0.0), 0.0],
 	[18.4, Color(1.0, 0.62, 0.40), 1.2, Color(0.34, 0.34, 0.56), Color(0.08, 0.07, 0.06), Color(0.50, 0.44, 0.50), Color(0.014, 0.010, 0.034), Color(1.02, 0.99, 0.98), 1.0, Color(-0.02, 0.0, 0.05), Color(0.025, 0.015, 0.0), 0.5],
 	[19.6, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
 	[24.0, Color(0.55, 0.65, 1.0), 0.6, Color(0.065, 0.088, 0.16), Color(0.020, 0.024, 0.034), Color(0.06, 0.08, 0.13), Color(0.006, 0.010, 0.022), Color(0.97, 1.0, 1.08), 0.86, Color(-0.004, 0.0, 0.014), Color(0.0, 0.0, 0.0), 1.0],
@@ -41,9 +41,13 @@ const KEYS := [
 
 var sky_mat: ShaderMaterial          # the hemisphere the ambient light comes from (not drawn)
 var ambient_gain := 1.0
-# by day the sky light is strong next to the sun (round 4: soft contrast; a shaded patch keeps about
-# half the light of a sunlit one, so the shade reads as a large blue-green mass, not a black hole)
-var ambient_day_gain := 1.3
+# by day: how strong the sky's light is in the shade (round 3's painted shade took the sky's luma
+# as it was, 1.0)
+var ambient_day_gain := 1.0
+# by day the engine's ambient sky carries only this share of the sky's hue (round 3's painted shade:
+# the luma and a fifth of the colour; the materials turn their own hue cool, w3_paint_shade); at
+# night all of it (round 4's night, kept)
+var ambient_day_hue := 0.2
 
 
 func setup(v: PixelView3D) -> void:
@@ -225,13 +229,13 @@ func set_time(h: float) -> void:
 	var k := sample(hours)
 	var dir := sun_direction(hours)
 	var wet := rain
-	var rain_dim := 1.0 - 0.8 * rain           # overcast: hardly a shadow
+	var rain_dim := 1.0 - 0.55 * rain          # overcast (round 3's)
 	sun.light_color = k[1]
 	sun.light_energy = float(k[2]) * rain_dim
 	if absf(dir.y) > 0.999:
 		dir = (dir + Vector3(0.01, 0, 0)).normalized()
 	sun.basis = Basis.looking_at(-dir, Vector3.UP)
-	var sky: Color = (k[3] as Color).lerp(Color(0.44, 0.5, 0.54) * (1.0 - float(k[11]) * 0.8), rain * 0.6)
+	var sky: Color = (k[3] as Color).lerp(Color(0.2, 0.22, 0.26), rain * 0.5)
 	var ground: Color = k[4]
 	var fog: Color = (k[5] as Color).lerp(Color(0.5, 0.53, 0.56) * (1.0 - float(k[11]) * 0.75), rain * 0.6)
 	var night := float(k[11])
@@ -241,21 +245,20 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_ground", Vector3(ground.r, ground.g, ground.b))
 	if sky_mat:
 		var ag := ambient_gain * lerpf(ambient_day_gain, 1.0, float(k[11]))
-		sky_mat.set_shader_parameter("top", sky * ag)
-		sky_mat.set_shader_parameter("bottom", ground * ag)
+		var hue := lerpf(ambient_day_hue, 1.0, float(k[11]))
+		sky_mat.set_shader_parameter("top", _hue_share(sky, hue) * ag)
+		sky_mat.set_shader_parameter("bottom", _hue_share(ground, hue) * ag)
 	RenderingServer.global_shader_parameter_set("w3_fog_col", Vector3(fog.r, fog.g, fog.b))
 	RenderingServer.global_shader_parameter_set("w3_night", night)
 	RenderingServer.global_shader_parameter_set("w3_wet", wet)
 	# the golden hour: what the low sun does not reach is lit by the blue-violet sky (long cool shadows)
 	var golden := clampf(1.0 - absf(hours - 17.7) / 1.3, 0.0, 1.0) * (1.0 - night)
-	# the painter's shade colour (multiplies the ambient light only: sky, VoxelGI bounce): blue-green
-	# by day, so the warm bounce off the sunlit earth never turns the shade brown (round 4: "大块的蓝绿阴影");
-	# blue-violet in the golden hour; neutral at night (the night grade does it)
-	var shade_tint := Vector3(0.88, 0.98, 1.08).lerp(Vector3(0.92, 0.95, 1.1), golden).lerp(Vector3(0.97, 1.0, 1.03), night)
-	# inside the barrier the shade leans a little further to blue-green (not lighter: no grey veil)
-	shade_tint *= Vector3(0.97, 1.0, 1.03).lerp(Vector3.ONE, 1.0 - realm * (1.0 - night))
+	# the painter's shade colour (multiplies the ambient light only: sky, VoxelGI bounce; the materials
+	# also turn their own hue cool, w3_paint_shade): round 3's by day, a little cool, blue-violet in the
+	# golden hour; round 4's at night
+	var shade_tint := Vector3(0.95, 0.98, 1.05).lerp(Vector3(0.93, 0.94, 1.14), golden).lerp(Vector3(0.97, 1.0, 1.03), night)
 	RenderingServer.global_shader_parameter_set("w3_shade_tint", shade_tint)
-	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.01, 1.0, 0.98).lerp(Vector3(0.95, 1.0, 1.06), night))
+	RenderingServer.global_shader_parameter_set("w3_lit_tint", Vector3(1.03, 1.0, 0.96).lerp(Vector3(0.95, 1.0, 1.06), night))
 	environment.background_color = fog
 	# valley mist: thick in the early morning, thin at noon, back at dusk and at night
 	var mist_k := clampf(1.0 - absf(hours - 6.6) / 3.2, 0.0, 1.0) * 0.85 + clampf(1.0 - absf(hours - 19.5) / 3.0, 0.0, 1.0) * 0.45 + night * 0.35 + rain * 0.4
@@ -269,27 +272,28 @@ func set_time(h: float) -> void:
 	RenderingServer.global_shader_parameter_set("w3_mist", Vector4(mist_top, mist_bottom, clampf(0.25 + mist_k, 0.0, lerpf(0.92, 0.6, morning)), 0.012))
 	_fog_for_hour()
 	var c := view.composite
-	# inside the barrier (lead 16:00): no lift, no whitening; the two ends of the tone curve are eased
-	# (highlights do not burn, darks do not crush, black stays black), the colour kept or a little
-	# richer, the shade bluer-green and the light warmer. The fairyland is the shafts, the motes and
-	# the petals, the moss and the flowers, not a haze.
-	var rk := realm * (1.0 - 0.6 * night)
+	# the grade (round 5, G5R3-1): round 3's by day: its lift, gain and saturation (the keys), its
+	# split toning as keyed, its S-curve (0.32), no exposure change; round 4's at night (a softer
+	# curve, the toning a little stronger, the eye opened a quarter). The barrier has no grade of its
+	# own any more: its difference is its content (the ground mist, the motes, the flowers), not a hue.
 	c.set_shader_parameter("lift", Vector3(k[6].r, k[6].g, k[6].b))
-	c.set_shader_parameter("soft_ends", 0.6 * rk)
+	c.set_shader_parameter("soft_ends", 0.0)
 	c.set_shader_parameter("gain", Vector3(k[7].r, k[7].g, k[7].b))
-	# (rain: wet leaves and wet earth are deeper, not greyer; the light is what goes flat)
-	c.set_shader_parameter("saturation", float(k[8]) * (1.0 + 0.06 * rk) * (1.0 + 0.18 * rain))
-	# split toning, a little stronger than the keys (round 4): shade leans blue-green, light warm
-	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b) * 1.6 + Vector3(0.0, 0.004, 0.004) * (1.0 - night) + Vector3(-0.006, 0.004, 0.007) * rk)
-	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * 1.3 + Vector3(0.012, 0.006, -0.004) * rk)
-	# a soft S-curve (round 4: soft contrast, nothing crushed), softer still at night and inside the
-	# barrier
-	c.set_shader_parameter("contrast", lerpf(0.16, 0.08, night))
-	# exposure: a low sun lights the ground at a grazing angle; the eye (and a camera) open up for it
-	var el_k := 1.0 - smoothstep(0.25, 0.75, maxf(dir.y, 0.0))
-	# (the night and the rain open up a little too: the eye adapts; what she must see stays readable)
-	# (by day a touch over 1: the air is clear and the light luminous, without lifting the darks)
-	c.set_shader_parameter("exposure", (1.0 + 0.6 * el_k * (1.0 - night)) * lerpf(1.06, 1.0, night) * (1.0 + 0.25 * night) * (1.0 + 0.15 * rain))
+	c.set_shader_parameter("saturation", float(k[8]) * (1.0 - 0.15 * rain))
+	c.set_shader_parameter("shadow_tone", Vector3(k[9].r, k[9].g, k[9].b) * lerpf(1.0, 1.6, night))
+	c.set_shader_parameter("high_tone", Vector3(k[10].r, k[10].g, k[10].b) * lerpf(1.0, 1.3, night))
+	c.set_shader_parameter("contrast", lerpf(0.32, 0.08, night))
+	c.set_shader_parameter("exposure", 1.0 + 0.25 * night)
+	# (round 4's hue-aware freshening of the greens: at night only, as round 4 had it)
+	c.set_shader_parameter("green_turn", 0.08 * night)
+	c.set_shader_parameter("green_gain", lerpf(1.0, 1.08, night))
+	c.set_shader_parameter("yellow_gain", lerpf(1.0, 0.9, night))
+
+
+## A colour with only a share of its hue left (the rest its luma): the ambient sky of the day.
+static func _hue_share(c: Color, k: float) -> Color:
+	var l := c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
+	return Color(l, l, l).lerp(c, k)
 
 
 ## How deep she stands in a gate's mist band (0 .. 1): the mist rises around her (ground_fog band_swell).

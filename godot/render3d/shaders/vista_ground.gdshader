@@ -310,26 +310,8 @@ void fragment() {
 			EMISSION += w3_lamp_light(alb, wp, n, cell, 1.0) * v_air_keep(wp, eye, FRAGCOORD.xy);
 		}
 	}
-	// at night the villages' streets glow warm between their lit windows (the drained ones do not);
-	// in the city the streets, the shop fronts and the cars' lights join the windows into one carpet
-	// of light (round 4, lead: "the city's lights must run together at night"), with points brighter
-	// here and there; they come on with the dusk
-	// (the city's own footprint, as vista3d.gd _build_city lays it out round its heart)
-	vec2 dc = xz - city_c.xy;
-	float c_in = 1.0 - smoothstep(0.8, 1.0, length(dc) / (640.0 + 160.0 * sin(atan(dc.y, dc.x) * 3.0 + 1.3)));
-	if (water) c_in = 0.0;
-	if (city_lights > 0.05 && max(v_town, c_in) > 0.05 && !local && wp.y < -200.0) {
-		float drained = 1.0 - step(0.9, v_drain(xz, wp.y));
-		vec2 pc = v_dir_cell(wp, eye);
-		float c = c_in;
-		float t = max(min(v_town * 1.6, 1.0), c * 0.9) * (0.75 + 0.5 * w3_hash(pc * 0.9));
-		vec3 warm = vec3(1.0, 0.52, 0.18);
-		EMISSION += warm * (0.13 + 0.22 * c) * t * city_lights * drained;
-		float pt = w3_hash(pc * 1.37 + 4.1);
-		if (pt > 1.0 - (0.08 + 0.3 * c) * max(min(v_town * 2.0, 1.0), c) * city_lights) {
-			EMISSION += mix(warm, vec3(0.85, 0.92, 1.0), step(0.5, fract(pt * 13.0))) * (0.6 + 1.4 * c) * drained;
-		}
-	}
+	// (round 5, G5R3-1: no glow of streets at night any more, the city is gone and the lead wants
+	// only a scattering of warm windows in the villages: vista_house)
 	// (the 遠化's edge, a line of light where the white meets the land, is drawn by vista_post)
 }
 

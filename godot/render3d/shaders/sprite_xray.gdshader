@@ -66,7 +66,7 @@ void fragment() {
 		if (w3_hash(k * 1.37 + 11.0) > fill) {
 			discard;
 		}
-		col = mix(w3_srgb_to_linear(c.rgb), w3_srgb_to_linear(line_col), 0.35) * 0.9;
+		col = mix(w3_srgb_to_linear(w3_ukiyo_tex(c.rgb, 1.0)), w3_srgb_to_linear(line_col), 0.35) * 0.9;
 	}
 	ALBEDO = col;
 	ALPHA = 1.0;

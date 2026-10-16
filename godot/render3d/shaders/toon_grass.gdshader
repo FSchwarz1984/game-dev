@@ -14,12 +14,13 @@ stencil_mode write, compare_always, 5;
 
 uniform sampler2D tufts : filter_nearest;
 uniform sampler2D palette : filter_nearest;
-uniform float lush : hint_range(0.0, 1.0) = 0.45;   // fresh greens over the palette (w3_lush)
+uniform float lush : hint_range(0.0, 1.0) = 0.45;   // fresh greens over the palette (w3_lush; at night only since round 5)
 
 varying vec3 v_wp;
 varying vec3 v_n;
 varying flat vec4 v_inst;
 varying vec2 v_cell;
+varying vec3 v_detail;      // albedo / the shade's albedo (round 5: the painted shade; light() undoes it)
 
 void vertex() {
 	vec3 anchor = MODEL_MATRIX[3].xyz;
@@ -66,20 +67,24 @@ void fragment() {
 	}
 	int prow = int(v_inst.y + 0.5);
 	if (acc < 0 && (prow <= 1 || prow == 5)) {
-		alb = w3_lush(alb, prow == 1 ? lush * 0.7 : lush);
+		alb = w3_lush(alb, (prow == 1 ? lush * 0.7 : lush) * w3_night);
 	}
 	alb = w3_wetten(alb, 0.6);
 	v_cell = cell;
-	ALBEDO = alb;
+	// (round 5: the round-3 painted shade, as the ground the tuft grows from)
+	vec3 a_shade = w3_paint_shade(alb);
+	v_detail = alb / max(a_shade, vec3(1e-4));
+	ALBEDO = a_shade;
 }
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
 		// grass blades: a wide wrap, and the light through them when they are seen against it
-		vec3 c = w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5);
-		c += w3_transmit(NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, vec3(0.8, 1.0, 0.5) * 0.4);
-		DIFFUSE_LIGHT += c;
+		// (round 5: round 3's levels, the ground's, continuous; round 4's at night)
+		vec3 c = w3_sun_level(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, true, 0.5);
+		c += w3_transmit(NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, vec3(0.8, 1.0, 0.5) * 0.4 * w3_night);
+		DIFFUSE_LIGHT += c * v_detail;
 	} else {
-		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5);
+		DIFFUSE_LIGHT += w3_direct(NORMAL, LIGHT, LIGHT_COLOR, ATTENUATION, 0.5) * v_detail;
 	}
 }
