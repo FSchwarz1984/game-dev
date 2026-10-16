@@ -1,0 +1,223 @@
+<title>天岸 美术样章 Windows 版</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&family=Noto+Serif+SC:wght@600;900&display=swap">
+<style>
+/* Layout: one reading column (40rem) like the review pages; the download is the one framed object, a card with a seal */
+:root {
+  --paper: #f3f4f7; --card: #ffffff; --ink: #1c1f2b; --muted: #5a6074; --rule: #d7dbe4; --wash: #e9ecf3;
+  --indigo: #2c4689; --vermil: #b8432c; --ok: #2f6b4f; --bar: #2c4689; --on-indigo: #ffffff;
+  --f-display: "Noto Serif SC", "Songti SC", "SimSun", serif;
+  --f-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --f-mono: ui-monospace, "Cascadia Mono", "Consolas", "Menlo", monospace;
+  --s-1: .8125rem; --s0: 1rem; --s1: 1.1875rem; --s2: 1.5rem; --s3: 2.125rem;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #11131a; --card: #171a24; --ink: #e5e7ee; --muted: #9ba1b2; --rule: #2a3040; --wash: #1c2130;
+  --indigo: #9db1ea; --vermil: #f0876a; --ok: #7cc8a2; --bar: #9db1ea; --on-indigo: #10131c;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #11131a; --card: #171a24; --ink: #e5e7ee; --muted: #9ba1b2; --rule: #2a3040; --wash: #1c2130;
+  --indigo: #9db1ea; --vermil: #f0876a; --ok: #7cc8a2; --bar: #9db1ea; --on-indigo: #10131c;
+  color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font-family: var(--f-body); font-size: var(--s0); line-height: 1.78; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 40rem; margin: 0 auto; padding-block: 2.5rem 5rem; }
+h1, h2 { font-family: var(--f-display); text-wrap: balance; line-height: 1.3; margin: 0; }
+h1 { font-size: var(--s3); font-weight: 900; letter-spacing: .02em; margin-top: .4rem; }
+h2 { font-size: var(--s1); font-weight: 900; margin-top: 2.6rem; padding-top: 1.2rem; border-top: 1px solid var(--rule); }
+p { margin: .7rem 0; }
+.eyebrow { font-size: var(--s-1); letter-spacing: .14em; color: var(--muted); margin: 0; }
+.lede { font-size: var(--s1); margin-top: 1rem; }
+a { color: var(--indigo); text-underline-offset: 2px; }
+ol, ul { padding-left: 1.3rem; margin: .6rem 0; }
+li { margin: .3rem 0; }
+li::marker { color: var(--muted); }
+.small { font-size: var(--s-1); color: var(--muted); }
+.get { position: relative; background: var(--card); border: 1px solid var(--rule); border-radius: 8px; padding: 1.3rem 1.2rem 1.2rem; margin-top: 1.8rem; display: grid; gap: .8rem; }
+.get h2 { margin: 0 4.2rem 0 0; padding: 0; border: 0; }
+.seal { position: absolute; top: 1rem; right: 1rem; width: 3.1rem; height: 3.1rem; border: 2px solid var(--vermil); color: var(--vermil); border-radius: 4px; display: grid; place-items: center; font-family: var(--f-display); font-weight: 900; font-size: .95rem; line-height: 1.05; text-align: center; transform: rotate(-6deg); opacity: .9; }
+.facts { display: flex; flex-wrap: wrap; gap: .2rem 1.4rem; font-size: var(--s-1); color: var(--muted); margin: 0; font-variant-numeric: tabular-nums; }
+button { font: inherit; font-weight: 700; color: var(--on-indigo); background: var(--indigo); border: 0; border-radius: 6px; padding: .8rem 1.2rem; cursor: pointer; justify-self: start; max-width: 100%; }
+button:disabled { opacity: .5; cursor: default; }
+button:focus-visible { outline: 2px solid var(--indigo); outline-offset: 3px; }
+.prog { display: grid; gap: .35rem; }
+progress { width: 100%; height: .6rem; appearance: none; border: 0; border-radius: 3px; background: var(--wash); overflow: hidden; }
+progress::-webkit-progress-bar { background: var(--wash); }
+progress::-webkit-progress-value { background: var(--bar); }
+progress::-moz-progress-bar { background: var(--bar); }
+.status { font-size: var(--s-1); color: var(--muted); min-height: 1.4em; margin: 0; font-variant-numeric: tabular-nums; }
+.status.ok { color: var(--ok); }
+.status.bad { color: var(--vermil); }
+code, .hash { font-family: var(--f-mono); font-size: .8125rem; }
+.hash { display: block; overflow-wrap: anywhere; background: var(--wash); border-radius: 4px; padding: .45rem .6rem; margin-top: .3rem; }
+.tbl { overflow-x: auto; margin-top: .9rem; border: 1px solid var(--rule); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: var(--s-1); line-height: 1.62; }
+th, td { text-align: left; vertical-align: top; padding: .5rem .65rem; border-bottom: 1px solid var(--rule); }
+th { background: var(--wash); font-weight: 700; white-space: nowrap; }
+td:first-child { white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow">天岸 · 第五轮 · __DATE__</p>
+  <h1>美术样章 Windows 版</h1>
+  <p class="lede">给你亲自验证画面用的版本：家一带、眺望岩、序章的树顶远景、立绘。可以走动，调时刻和天气；没有剧情和对白。</p>
+
+  <section class="get" aria-labelledby="get-h">
+    <div class="seal" aria-hidden="true">試<br>用</div>
+    <h2 id="get-h">下载</h2>
+    <p class="facts"><span>Tengan_ArtSample.zip</span><span id="size"></span><span id="parts"></span></p>
+    <button type="button" id="go" disabled>正在准备…</button>
+    <div class="prog" id="prog" hidden>
+      <progress id="bar" max="1" value="0" aria-label="下载进度"></progress>
+    </div>
+    <p class="status" id="status" role="status" aria-live="polite"></p>
+    <p class="small">文件分成几块放在这个页面里，点按钮后页面把它们取回、逐块核对 SHA-256、拼回一个 zip，再请你确认保存。</p>
+  </section>
+
+  <h2>运行</h2>
+  <ol>
+    <li>把 zip 里的整个文件夹解压出来。<code>tengan.exe</code> 和 <code>tengan.pck</code> 必须在同一个文件夹里。</li>
+    <li>双击 <code>tengan.exe</code>。程序没有数字签名，Windows 可能提示"Windows 已保护你的电脑"：点"更多信息"，再点"仍要运行"。</li>
+    <li>默认全屏。F11 或 Alt+Enter 在全屏和窗口之间切换。</li>
+  </ol>
+  <p class="small">需要 64 位的 Windows 10 或 11，显卡支持 Vulkan（不支持时自动改用 Direct3D 12）。</p>
+
+  <h2>操作</h2>
+  <div class="tbl">
+    <table>
+      <thead><tr><th>做什么</th><th>键盘</th><th>手柄</th></tr></thead>
+      <tbody>
+        <tr><td>菜单选择、确定</td><td>↑↓、Enter</td><td>十字键、A</td></tr>
+        <tr><td>走</td><td>WASD 或方向键</td><td>左摇杆</td></tr>
+        <tr><td>时刻往回 / 往后</td><td>按住 Q / E</td><td>LB / RB</td></tr>
+        <tr><td>清晨、正午、黄昏、夜</td><td>1 2 3 4</td><td></td></tr>
+        <tr><td>让时间自己走</td><td>T（一小时约 30 秒）</td><td></td></tr>
+        <tr><td>下雨 / 停雨</td><td>R</td><td>Y</td></tr>
+        <tr><td>隐藏按键提示</td><td>H</td><td></td></tr>
+        <tr><td>回菜单</td><td>Esc</td><td>B 或 Start</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="small">眺望岩：走上岩石，站定一会儿，她会望向远方；A / D 转头，W / S 回来。树顶远景放完后按 Enter 重放。立绘：↑↓ 换表情，←→ 换人物。zip 里的 README.txt 有同样的说明。</p>
+
+  <h2>这一版验证到哪里</h2>
+  __VERIFIED__
+
+  <h2>自己核对文件</h2>
+  <p class="small">页面已经逐块核对过。想再核对一次：在 zip 所在的文件夹打开命令提示符，运行 <code>certutil -hashfile Tengan_ArtSample.zip SHA256</code>，结果应该是：</p>
+  <code class="hash" id="zipsha"></code>
+  <p class="small">授权：zip 里的 licenses 文件夹有引擎（Godot，MIT）和它用到的第三方组件的许可、字体（SIL OFL 1.1）的许可，以及环境录音（CC0 或公有领域）的来源。</p>
+</div>
+
+<script>
+const M = __MANIFEST__;
+const $ = (id) => document.getElementById(id);
+const mb = (n) => (n / 1048576).toFixed(1) + " MB";
+$("size").textContent = mb(M.bytes);
+$("parts").textContent = M.parts.length + " 块";
+$("zipsha").textContent = M.sha256;
+
+let zip = null;          // the joined, checked file, kept so a declined save can be offered again
+let busy = false;
+const go = $("go");
+const say = (t, cls) => { const s = $("status"); s.textContent = t; s.className = "status" + (cls ? " " + cls : ""); };
+
+async function hex(buf) {
+  const d = new Uint8Array(await crypto.subtle.digest("SHA-256", buf));
+  let s = "";
+  for (const b of d) s += b.toString(16).padStart(2, "0");
+  return s;
+}
+
+async function fetchPart(p, done, onBytes) {
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const r = await fetch(p.path, { cache: "no-store" });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const chunks = [];
+      let got = 0;
+      if (r.body && r.body.getReader) {
+        const rd = r.body.getReader();
+        for (;;) {
+          const { done: end, value } = await rd.read();
+          if (end) break;
+          chunks.push(value);
+          got += value.length;
+          onBytes(done + got);
+        }
+      } else {
+        const b = new Uint8Array(await r.arrayBuffer());
+        chunks.push(b);
+        got = b.length;
+        onBytes(done + got);
+      }
+      const buf = new Uint8Array(got);
+      let o = 0;
+      for (const c of chunks) { buf.set(c, o); o += c.length; }
+      if (got !== p.bytes) throw new Error("大小不对（" + got + " / " + p.bytes + "）");
+      if ((await hex(buf)) !== p.sha256) throw new Error("SHA-256 不一致");
+      return buf;
+    } catch (e) {
+      if (attempt === 3) throw new Error(p.path + "：" + e.message);
+      say("第 " + (M.parts.indexOf(p) + 1) + " 块没取好（" + e.message + "），重试…");
+    }
+  }
+}
+
+async function assemble() {
+  $("prog").hidden = false;
+  const bar = $("bar");
+  const bufs = [];
+  let done = 0;
+  for (let i = 0; i < M.parts.length; i++) {
+    const p = M.parts[i];
+    say("正在取第 " + (i + 1) + " / " + M.parts.length + " 块…");
+    bufs.push(await fetchPart(p, done, (n) => { bar.value = n / M.bytes; }));
+    done += p.bytes;
+    bar.value = done / M.bytes;
+  }
+  return new Blob(bufs, { type: "application/zip" });
+}
+
+async function save(dl) {
+  say("已核对全部 " + M.parts.length + " 块。请在弹出的提示里确认保存。", "ok");
+  try {
+    await dl.save({ filename: "Tengan_ArtSample.zip", data: zip });
+    say("已交给浏览器保存：Tengan_ArtSample.zip（" + mb(M.bytes) + "）。", "ok");
+  } catch (e) {
+    const code = e && e.code;
+    if (code === "declined") say("你取消了保存。文件已经取好，再点一次按钮就会重新询问。");
+    else if (code === "rate_limited") say("已经有一个保存提示开着，先处理它，过一会儿再点。");
+    else if (code === "too_large") say("这个应用不能保存这么大的文件，请改用电脑上的浏览器打开这个页面。", "bad");
+    else say("这里不能保存文件（" + (code || "unavailable") + "）。请在电脑上的浏览器里打开这个页面。", "bad");
+  }
+}
+
+claude.use("downloads").then((dl) => {
+  if (!dl) {
+    go.textContent = "这里不能下载";
+    say("下载要在 claude.ai 里打开这个页面才能用（电脑上的浏览器最好）。", "bad");
+    return;
+  }
+  go.disabled = false;
+  go.textContent = "下载 Tengan_ArtSample.zip（" + mb(M.bytes) + "）";
+  go.addEventListener("click", async () => {
+    if (busy) return;
+    busy = true;
+    go.disabled = true;
+    try {
+      if (!zip) zip = await assemble();
+      await save(dl);
+    } catch (e) {
+      say("没能取回文件：" + e.message + "。刷新页面后再试一次。", "bad");
+    } finally {
+      busy = false;
+      go.disabled = false;
+    }
+  });
+});
+</script>
