@@ -410,10 +410,10 @@ def outer_strands():
         (0.31, 0.53, 0.58, 0.030), (0.31, 0.50, 0.66, 0.026), (0.30, 0.44, 0.56, 0.028)]
     for side in (1, -1):
         for k, (x0, x1, zend, w) in enumerate(specs):
-            pts = [Vector((side * (x0 - 0.04), 0.02, 1.30)),
-                   Vector((side * x0, 0.03, 1.12)),
-                   Vector((side * lerp(x0, x1, 0.6), 0.05, 0.86)),
-                   Vector((side * x1, 0.06, zend))]
+            pts = [Vector((side * (x0 - 0.04), 0.05, 1.30)),
+                   Vector((side * x0, 0.08, 1.12)),
+                   Vector((side * lerp(x0, x1, 0.6), 0.14, 0.86)),
+                   Vector((side * x1, 0.16, zend))]
 
             def width(u, w=w):
                 return w * (1.0 - 0.7 * smooth((u - 0.6) / 0.4))
@@ -473,8 +473,11 @@ def hat():
         k = (v * 24.0) % 1.0
         return C.HAT_DEEP if k < 0.05 else C.HAT
 
+    # (UV: the radius fraction and the angle fraction, for the shader's sedge; the normals face up and
+    # out, so the camera sees the top's front faces: a back face with UV2.y in 0.5..1.5 is painted as
+    # the navy lining)
     grid(part, nu, nv, lambda u, v: hat_point(max(u, 0.0), v * TAU), close_v=True, pole0=True,
-         col=col_top, auxf=lambda u, v: (M_HAT_TOP, u), tagf=lambda u, v: {'seg': 'hat'})
+         col=col_top, auxf=lambda u, v: (M_HAT_TOP, 0.0), tagf=lambda u, v: {'seg': 'hat'}, flip=True)
     # the rim: a thin rolled edge (cream)
     rim = 0.012
 
@@ -485,7 +488,7 @@ def hat():
         return Cc + radial * (R + rim * math.sin(a) * 0.6) + U * (rim * math.cos(a) - rim)
 
     grid(part, 4, nv, pos_rim, close_v=True, col=lambda u, v: C.HAT,
-         auxf=lambda u, v: (M_HAT_TOP, 1.0), tagf=lambda u, v: {'seg': 'hat'})
+         auxf=lambda u, v: (M_HAT_TOP, 0.0), tagf=lambda u, v: {'seg': 'hat'}, flip=True)
     # the underside (navy), from the rim in to the head ring
     under_off = 2 * rim
     r_in = 0.235
@@ -523,7 +526,7 @@ def hat_band():
     def pos_ring(u, v):
         return hat_point(ring + (u - 0.5) * wfrac, v * TAU, lift=0.010 + 0.004 * math.sin(u * math.pi))
     grid(part, 3, nv, pos_ring, close_v=True, col=lambda u, v: C.RED,
-         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'hat'})
+         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'hat'}, flip=True)
     # two straps down the cone: one over her front-left (the front view), one to the knot behind her left
     th_t = math.radians(D['hat_tail_angle'])
     half = D['hat_band_w'] / 2.0
@@ -534,7 +537,7 @@ def hat_band():
             dth = (v - 0.5) * 2 * half / r
             return hat_point(rho, th_s + dth, lift=0.011 + 0.003 * math.sin(v * math.pi))
         grid(part, 10, 3, pos_strap, col=lambda u, v: C.RED, auxf=lambda u, v: (M_CLOTH, 0.0),
-             tagf=lambda u, v: {'seg': 'hat'})
+             tagf=lambda u, v: {'seg': 'hat'}, flip=True)
     # the knot at the brim edge, and the tail down her back
     Cc, U, Fw, L = B.hat_frame()
     radial = Fw * math.cos(th_t) + L * math.sin(th_t)
@@ -567,3 +570,50 @@ def hat_band():
          tagf=lambda u, v: {'seg': 'hat_tail', 'u': u})
     # the tail's cut end: a shallow V
     return [part]
+
+
+# =================================================================================================
+# face landmarks for the game's pixel stamps (characters/character3d.gd)
+#
+# The face on screen (30 px per metre): 0.336 m wide at the cheeks, so 10 px; the sheet's eyes are
+# 0.109 m wide, 0.095 m tall, their centres 0.19 m apart: 3 x 3 px each, laid out
+# [skin][eye eye eye][gap gap][eye eye eye][skin], the face's centre on a pixel edge (head_snap x 0).
+# A landmark is where the stamp's pivot lands: an eye's outer column, middle row.
+EYE_PIVOT_X = 3.5 / 30.0
+CHEEK_X = 3.5 / 30.0
+CHEEK_H = D['eye_h'] - 2.0 / 30.0
+
+
+def face_point(z, x):
+    """The head's front surface at height z (absolute) and her-left x."""
+    h = z - B.CHIN_Z
+    sgn = 1.0 if x >= 0 else -1.0
+    lo, hi = 0.0, math.pi / 2
+    # t from pi/2 (front) toward 0 (her left) or pi (her right)
+    for _ in range(40):
+        mid = 0.5 * (lo + hi)
+        t = math.pi / 2 - sgn * mid
+        if abs(head_point(h, t).x) < abs(x):
+            lo = mid
+        else:
+            hi = mid
+    return head_point(h, math.pi / 2 - sgn * 0.5 * (lo + hi))
+
+
+def landmarks():
+    """Face landmarks (Blender coordinates, bind pose) with a normal each."""
+    L = {}
+
+    def put(name, p, n=None):
+        L[name] = (p, n if n is not None else face_normal(p))
+    put('face', face_point(B.EYE_H, 0.0))
+    put('eye_R', face_point(B.EYE_H, -EYE_PIVOT_X))
+    put('eye_L', face_point(B.EYE_H, EYE_PIVOT_X))
+    put('mouth', face_point(B.MOUTH_H, 0.0))
+    put('cheek_R', face_point(CHEEK_H, -CHEEK_X))
+    put('cheek_L', face_point(CHEEK_H, CHEEK_X))
+    put('mark', head_point(B.HEAD_H * 0.62, math.pi / 2 - 0.85, grow=0.07), ellipsoid_normal(
+        head_point(B.HEAD_H * 0.62, math.pi / 2 - 0.85)))
+    put('sweat', head_point(0.26, math.pi / 2 + 1.05, grow=0.06), ellipsoid_normal(
+        head_point(0.26, math.pi / 2 + 1.05)))
+    return L

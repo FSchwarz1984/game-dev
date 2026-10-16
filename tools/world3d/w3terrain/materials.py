@@ -57,7 +57,7 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     # earth any more, so the edge is ragged at the scale of a step
     edge = np.asarray(F.get("edge_k", 0.0)) * np.ones_like(Hs)
     nb = noise.fbm(Xs / 0.75, Zs / 0.75, 2, seed + 111) * 0.65 + noise.fbm(Xs / 2.2, Zs / 2.2, 2, seed + 112) * 0.35
-    bite = edge * geom.smoothstep(0.5, 0.64, nb)
+    bite = edge * geom.smoothstep(0.56, 0.68, nb)
     road = road * (1.0 - 0.9 * bite)
     dirt = np.maximum(road, yard)
     W["dirt"] = dirt * (1.0 - rock * 0.8)

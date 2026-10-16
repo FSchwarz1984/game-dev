@@ -136,6 +136,9 @@ func _ready() -> void:
 					ch.springs.set_collision_count(k, 0)
 				"stiff":
 					ch.springs.set_stiffness(k, 4.0)
+	if args.has("depth"):
+		# --depth=k: her own view compensation (char_common.gdshaderinc c3_depth_scale; 1 = none)
+		ch.set_depth_scale(float(args["depth"]))
 	if args.has("mat"):
 		# --mat=name:value,name:value: the character material's uniforms (checks)
 		for kv in String(args["mat"]).split(","):

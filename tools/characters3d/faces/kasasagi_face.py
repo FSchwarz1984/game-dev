@@ -1,16 +1,17 @@
-"""百々かさゝぎ's face stamps, round 5 (decision-log G5R3-6..8; docs/knowledge/24 §8).
+"""百々かさゝぎ's face stamps, round 6 (the model sheet's face: big grey eyes under hime bangs that hide
+the brows, decision-log G5R3-8; docs/knowledge/24 §0).
 
-The face is about 11 x 6 native px under thick bangs, drawn like the v0.2 sprite's face the user liked:
-two small eyes close under the bangs (2 wide, 3 tall, 3 px apart, low on the head), a soft one-pixel
-blush on each cheek, and almost no mouth. No brows ever (the bangs cover them, G5R3-8). Emotion is
-carried by the eyes' shape (open, blink, half, ^ ^, > <, wide), tears, the blush, and the body
-(anims.py); the mouth is at most one or two dark-pink pixels when she talks. Nothing red, no teeth.
+At the game's scale (30 px per metre) the sheet's face is 10 px wide and its eyes 3 x 3 px each, laid
+out [skin][eye eye eye][gap gap][eye eye eye][skin] (tools/characters3d/kasasagi/model.py, landmarks).
+The bangs end on the eyes' top row. An eye: a dark top (lash and pupil), a glint, the grey iris
+underneath (the sheet's iris is light at the bottom). Emotion is carried by the eyes' shape (open,
+blink, half, ^ ^, > <, wide), tears, the blush and the body; the mouth is at most one or two
+dark-pink pixels. Nothing red, no teeth.
 
-Colours: the ChatGPT sheet's iris (#3d414f dark, #6f7887 iris, #aaafb8 light), not black. Each stamp is
-text in an 8 x 8 cell; `pivot` is the cell pixel (x right, y down) that lands on the landmark the game
-projects (eyes: the outer column, middle row). Her right eye (the viewer's left) is drawn, column 0
-its outer side; her left eye is its mirror image (the highlights stay symmetric, both on the inner
-side, as in the sprite). Views: 'f' front, 't' three-quarter, 's' profile (the near eye only).
+Colours: the ChatGPT sheet's iris (#3d414f dark, #6f7887 iris, #aaafb8 light). Each stamp is text in an
+8 x 8 cell; `pivot` is the cell pixel (x right, y down) that lands on the landmark the game projects
+(eyes: the outer column, middle row). Her right eye (the viewer's left) is drawn, column 0 its outer
+side; her left eye is its mirror image. Views: 'f' front, 't' three-quarter, 's' profile.
 
 A glow pixel (the eye's light, tears) is stored with alpha 200 and keeps its light at night.
 """
@@ -42,72 +43,64 @@ EYE_LIGHT = 'mirror'
 # eyes: her right eye, column 0 its outer side; 3 rows (the top row lies under the bangs' edge)
 EYE_PIVOT = (0, 1)
 EYES = {
-    # (the top row of every eye lies under the bangs: the shape a stamp shows lives in its two lower rows)
-    'open': ['KK',               # the sprite's eye: three dark pixels and a glint
-             'KW',
-             'KK'],
-    'blink': ['..',
-              '..',
-              'kk'],
-    'half': ['..',               # sleepy: the lid half down
-             'kk',
-             'KW'],
-    'smug': ['..',               # half-lidded over the glint (mischief)
-             'kk',
-             'KW'],
-    'happy': ['.k.',             # ^ (three wide: its middle on the eye's outer column, see pivots)
-              'k.k'],
-    'wide': ['KK',               # startled: a white ring round the dark, a row taller
-             'SK',
-             'SW',
-             'KK'],
-    'look_in': ['KK',            # glancing toward her nose (the glint moves out)
-                'WK',
-                'KK'],
-    'angry': ['K.',              # the lid slants down to the inner corner
-              'K.',
-              'KW'],
-    'sad': ['.K',                # the inner corner up
-            '.K',
-            'KW'],
-    'teary': ['KK',
-              'KW',
-              'CC'],
-    'cry0': ['k.',               # squeezed shut (>), a tear falling from the inner corner
-             '.k',
-             'k.',
-             '.C',
-             '..',
-             '..'],
-    'cry1': ['k.',
-             '.k',
-             'k.',
-             '..',
-             '.c',
-             '.C'],
-    'shut': ['k.',               # squeezed shut without tears (a wince, a giggle)
-             '.k',
-             'k.'],
+    'open': ['KKK',              # the lash and the pupil
+             'KWI',              # the glint, the iris
+             'IIK'],             # the iris light at the bottom, the outer corner closed
+    'blink': ['...',
+              'kkk',
+              '...'],
+    'half': ['...',              # sleepy: the lid half down
+             'kkk',
+             'IWK'],
+    'smug': ['...',              # half-lidded over the glint (mischief)
+             'kkk',
+             'KWI'],
+    'happy': ['.k.',             # ^
+              'k.k',
+              '...'],
+    'wide': ['KKK',              # startled: round, the glint small, the white showing below
+             'KWK',
+             'SKS'],
+    'look_in': ['KKK',           # glancing toward her nose (the glint moves out)
+                'IWK',
+                'KII'],
+    'angry': ['K..',             # the lid slants down to the inner corner
+              'KK.',
+              'KWI'],
+    'sad': ['..K',               # the inner corner up
+            '.KK',
+            'KWI'],
+    'teary': ['KKK',
+              'KWI',
+              'CCC'],
+    'cry0': ['k..',              # squeezed shut (>), a tear falling from the inner corner
+             '.k.',
+             'k..',
+             '..C',
+             '...',
+             '...'],
+    'cry1': ['k..',
+             '.k.',
+             'k..',
+             '...',
+             '..c',
+             '..C'],
+    'shut': ['k..',              # squeezed shut without tears (a wince, a giggle)
+             '.k.',
+             'k..'],
 }
-# per-stamp pivots where they differ from EYE_PIVOT: the ^ centred over the eye's outer column; the
-# squeezed-shut > one row lower, so all three of its rows show under the bangs
-EYE_PIVOTS = {'happy': (1, 0), 'cry0': (0, 0), 'cry1': (0, 0), 'shut': (0, 0)}
+# per-stamp pivots where they differ from EYE_PIVOT
+EYE_PIVOTS = {}
 
 # columns kept per view (None: all). In profile only the near eye shows, one column wide (its outer,
 # dark column: a dark dash under the bangs reads as an eye seen from the side).
-VIEW_COLS = {'f': None, 't': None, 's': [0]}
+VIEW_COLS = {'f': None, 't': None, 's': [0, 1]}
 
 # placement (character3d.gd). The facing (cos of the angle between a landmark's normal and the
-# camera) where a stamp turns from front to three-quarter to side: the far eye keeps its full two
-# columns to about 45 deg of head turn.
+# camera) where a stamp turns from front to three-quarter to side.
 VIEW_CUTS = [0.80, 0.25, 0.10]
-# both eyes (and both blush pixels) at the height of the one nearer the camera: projected as they are,
-# the far eye of a three-quarter face sits 2-3 px higher, under the bangs and the hat's brim
+# both eyes (and both blush pixels) at the height of the one nearer the camera
 LEVEL_PAIRS = 'near'
-# by the face's yaw (deg from facing the camera): px toward the back of the head, px down. Past
-# three-quarter the side bangs (longer, and nearer the camera) come down over the near eye; a sprite
-# artist draws the turned eye a little lower and back from the face's edge
-EYE_SHIFT = [[0, 0, 0], [50, 0, 0], [70, 1, 1], [90, 1, 2]]
 
 # ------------------------------------------------------------------------------------------------
 # no brows (G5R3-8): the bangs cover them

@@ -1,0 +1,9 @@
+[gd_scene format=3]
+
+[ext_resource type="ArrayMesh" path="res://world3d/assets/props/shoryouma/shoryouma_mesh.res" id="1"]
+
+[node name="Shoryouma" type="Node3D" unique_id=21163300]
+metadata/w3a_kind = "props"
+
+[node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
+mesh = ExtResource("1")

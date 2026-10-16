@@ -54,15 +54,53 @@ def cut_corridor(h, X, Z, P, prof, width, bank, bank_slope=1.0, crown=0.04, wobb
     return out, d, arc, ph
 
 
-def flatten_path(h, X, Z, pts, width, depth=0.06, smooth_m=4.0, cell=0.5):
-    """Footpaths follow the land: the cross-slope is eased and the tread worn a little lower."""
+def flatten_path(h, X, Z, pts, width, depth=0.06, smooth_m=4.0, cell=0.5, profile_fn=None):
+    """Footpaths follow the land: the cross-slope is eased and the tread worn a little lower.
+    profile_fn(s, prof) -> prof: a path that is built rather than worn (the approach: flights of
+    steps and level landings) replaces the land's long profile with its own, and holds to it."""
     P, s = geom.resample_polyline(pts, 0.5)
     hs = ndimage.gaussian_filter(h, smooth_m / cell * 0.5)
     prof = ndimage.map_coordinates(hs, [(P[:, 1] - Z[0, 0]) / cell, (P[:, 0] - X[0, 0]) / cell], order=1, mode="nearest")
+    hold = 0.75
+    if profile_fn is not None:
+        prof = profile_fn(s, prof)
+        hold = 0.97
     d, arc, ph = geom.polyline_field(X, Z, P, prof)
     k = geom.smoothstep(width * 0.5 + 1.2, width * 0.5 - 0.2, d)
     target = ph - depth * geom.smoothstep(width * 0.5, 0.0, d)
-    return h * (1.0 - k * 0.75) + target * k * 0.75, d, arc
+    return h * (1.0 - k * hold) + target * k * hold, d, arc
+
+
+def terrace_profile(ranges, grade=0.03):
+    """A built path's long profile (round 5, the approach: "two flights of natural stone steps and a
+    延段"): the rise from its start to its end goes into the stretches of steps; everything else (the
+    landing, the paved strip along the forecourt) climbs at most `grade`. ranges: [(s0, s1, kind)]."""
+    def fn(s, prof):
+        h0, h1 = float(prof[0]), float(prof[-1])
+        total = h1 - h0
+        L = float(s[-1])
+        cuts = sorted(set([0.0, L] + [float(np.clip(a, 0, L)) for a, b, k in ranges] + [float(np.clip(b, 0, L)) for a, b, k in ranges]))
+        pieces = []
+        for a, b in zip(cuts[:-1], cuts[1:]):
+            if b - a < 1e-6:
+                continue
+            m = 0.5 * (a + b)
+            kind = next((k for (a_, b_, k) in ranges if a_ <= m <= b_), "flat")
+            pieces.append((a, b, kind.startswith("steps")))
+        climb_len = sum(b - a for a, b, c in pieces if c)
+        if climb_len < 0.5:
+            return prof
+        sign = 1.0 if total >= 0 else -1.0
+        flat_rise = sum(min(grade * (b - a), abs(total) * 0.25) for a, b, c in pieces if not c) * sign
+        per_m = (total - flat_rise) / climb_len
+        knots_s, knots_h = [0.0], [h0]
+        hh = h0
+        for a, b, c in pieces:
+            hh += (per_m * (b - a)) if c else (min(grade * (b - a), abs(total) * 0.25) * sign)
+            knots_s.append(b)
+            knots_h.append(hh)
+        return np.interp(s, knots_s, knots_h)
+    return fn
 
 
 def rect_sdf(X, Z, centre, size, angle_deg, corner=0.0):

@@ -129,33 +129,8 @@ HAIR_COLLIDE = ['col_head', 'col_chest', 'col_spine', 'col_hips', 'col_thigh_L',
 
 
 def spring_chains():
-    from kasasagi import rigging as R
-    out = []
-    # the long hair's sheet: three strips (her right, the middle, her left); the sides freer
-    for i in range(len(R.HAIR_CHAIN_X)):
-        outer = i != 1
-        out.append({'name': 'hair_%d' % i, 'root': 'hair_%d_0' % i, 'end': 'hair_%d_%d' % (i, R.HAIR_CHAIN_N - 1),
-                    'stiffness': 1.1 if outer else 1.5, 'drag': 0.42 if outer else 0.5,
-                    'gravity': 0.5 if outer else 0.4, 'radius': 0.035, 'tip': 0.05, 'collide': HAIR_COLLIDE,
-                    'wind': 0.24 if outer else 0.2})
-    for sx in ('L', 'R'):
-        out.append({'name': 'lock_' + sx, 'root': 'lock_%s_0' % sx, 'end': 'lock_%s_2' % sx, 'stiffness': 2.2,
-                    'drag': 0.55, 'gravity': 0.3, 'radius': 0.02, 'tip': 0.03, 'collide': ['col_chest', 'col_head'],
-                    'wind': 0.15})
-        out.append({'name': 'sleeve_' + sx, 'root': 'sleeve_%s_0' % sx, 'end': 'sleeve_%s_1' % sx, 'stiffness': 2.6,
-                    'drag': 0.5, 'gravity': 0.12, 'radius': 0.05, 'tip': 0.04,
-                    'collide': ['col_chest', 'col_spine', 'col_hips', 'col_thigh_' + sx], 'wind': 0.2})
-    for key in ('FL', 'FR', 'BL', 'BR', 'SL', 'SR'):
-        out.append({'name': 'coat_' + key, 'root': 'coat_%s_0' % key, 'end': 'coat_%s_1' % key, 'stiffness': 2.2,
-                    'drag': 0.55, 'gravity': 0.3, 'radius': 0.035, 'tip': 0.03,
-                    'collide': ['col_thigh_L', 'col_thigh_R', 'col_shin_L', 'col_shin_R'], 'wind': 0.12})
-    out.append({'name': 'sashA', 'root': 'sashA_0', 'end': 'sashA_3', 'stiffness': 1.5, 'drag': 0.34,
-                'gravity': 0.30, 'radius': 0.02, 'tip': 0.04,
-                'collide': ['col_hips', 'col_thigh_L', 'col_thigh_R', 'col_shin_L', 'col_shin_R'], 'wind': 0.35})
-    out.append({'name': 'sashB', 'root': 'sashB_0', 'end': 'sashB_2', 'stiffness': 1.4, 'drag': 0.34,
-                'gravity': 0.30, 'radius': 0.02, 'tip': 0.04,
-                'collide': ['col_hips', 'col_thigh_L', 'col_thigh_R'], 'wind': 0.40})
-    return out
+    """Round 6, step 1 (the shape gate): no secondary chains yet; they come with the animation."""
+    return []
 
 
 def colliders():
@@ -180,17 +155,21 @@ def export(built, path):
     for a in bpy.data.actions:
         clips[a.name] = dict(anims.CLIP_INFO.get(a.name, {}))
         clips[a.name].setdefault('loop', False)
-    # the head snap puts the head's origin on a pixel centre horizontally (the face is an odd 11 px wide,
-    # its centre column between the eyes): head_snap_modifier.gd reads this
-    head_snap = {'x': 0.5, 'y': 0.0}
-    # her material (godot/characters/shaders/char_toon.gdshader; its defaults are the round-4 look)
+    # the head snap: the face is 10 px wide (round 6), its centre on a pixel edge
+    head_snap = {'x': 0.0, 'y': 0.0}
+    # her material (godot/characters/shaders/char_toon.gdshader; its defaults are the round-4 look).
+    # C3D_DEPTH_SCALE: her own view compensation (char_common.gdshaderinc c3_depth_scale; 1 = none)
     material = {'c3_style': 5, 'key_side': 0.55, 'key_up': 0.30, 'key_neutral': 0.60, 'white_point': 0.66,
-                'face_white_point': 0.76, 'face_rim_keep': 0.0, 'face_rim_back': 0.0, 'hair_sheen': 0.0}
+                'face_white_point': 0.76, 'face_rim_keep': 0.0, 'face_rim_back': 0.0, 'hair_sheen': 0.0,
+                'c3_depth_scale': float(os.environ.get('C3D_DEPTH_SCALE', '1.0'))}
     meta = {'note': 'landmarks: model space, bind pose, Godot axes (x east, y up, z toward the camera)',
             'variant': _VARIANT, 'design': _D['name'],
             'landmarks': lm, 'clips': clips, 'hat_tilt_deg': HAT_TILT_DEG, 'hat_tilt_away_deg': HAT_TILT_AWAY_DEG,
             'hat_roll_deg': HAT_ROLL_DEG, 'head_turn_bias_deg': HEAD_TURN_BIAS_DEG, 'hat_brim': HAT_BRIM,
-            'springs': spring_chains(), 'colliders': colliders(), 'head_snap': head_snap, 'material': material}
+            'springs': spring_chains(), 'colliders': colliders(), 'head_snap': head_snap, 'material': material,
+            # round 6: the hat is worn as the sheet draws it (tipped back 14 deg, a little to her left)
+            # and rides the head; no camera-relative tilt (hat_tilt_modifier.gd is not used)
+            'hat_mode': 'rigid'}
     with open(os.path.join(os.path.dirname(path), 'rig.json'), 'w') as f:
         json.dump(meta, f, indent=1)
     export_pack(os.path.join(os.path.dirname(os.path.dirname(path)), 'props', 'shoiko.glb'))

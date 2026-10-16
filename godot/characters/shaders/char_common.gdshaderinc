@@ -34,9 +34,18 @@ vec3 c3_leaned_anchor() {
 	return vec3(c3_anchor.x, c3_anchor.y, c3_anchor.z - w3_view.w * (c3_anchor.y - c3_base_y));
 }
 
+// her own view compensation (round 6, rig.json "material"): her depth toward the camera, measured
+// from her ground point, is scaled before the lean, so she is drawn as if seen from lower down than
+// the world (a sprite's near-front view: the face under a wide hat). 1 = none (rounds 4 and 5). Only the
+// camera's pass: her shadow is cast by her real shape.
+uniform float c3_depth_scale = 1.0;
+
 vec3 c3_lean_snap(vec3 wp) {
 	if (c3_no_lean > 0.5) {
 		return wp;
+	}
+	if (c3_depth_scale != 1.0) {
+		wp.z = c3_anchor.z + (wp.z - c3_anchor.z) * c3_depth_scale;
 	}
 	wp = w3_lean(wp, c3_base_y, 1.0);
 	return wp + w3_snap(c3_leaned_anchor());

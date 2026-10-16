@@ -15,7 +15,8 @@ extends Node
 ##                      by default: standing still on the rock for a moment she looks out)
 ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
 ##   --pitch=deg        camera pitch (evidence renders)
-##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, and debugging switches
+##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, --ambience=wind,night
+##   (recordings: the ambience loops), and debugging switches
 ##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
 ##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse): docs/knowledge/21 §12
 ## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
@@ -171,6 +172,11 @@ func _ready() -> void:
 		env.sun.directional_shadow_pancake_size = float(args["pancake"])
 	if args.has("sblur"):
 		env.sun.shadow_blur = float(args["sblur"])
+	if args.has("ambience"):
+		# recordings: the ambience loops (audio/ambience), as a shell would start them (godot/showcase)
+		var amb := get_node_or_null("/root/Audio")
+		if amb:
+			amb.call("ambience", Array(String(args["ambience"]).split(",")))
 	if args.has("nolamps"):
 		lamps.enabled = false                       # debugging: the night without its lanterns
 	if args.has("noxray"):

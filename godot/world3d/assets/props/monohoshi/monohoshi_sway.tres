@@ -14,6 +14,7 @@ shader_parameter/porosity = 0.7
 shader_parameter/hi_band = null
 shader_parameter/transmit = 0.25
 shader_parameter/lush = null
+shader_parameter/ukiyo = null
 shader_parameter/cutaway = false
 shader_parameter/cutaway_scale = null
 shader_parameter/cutaway_keep_px = null

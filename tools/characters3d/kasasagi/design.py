@@ -119,8 +119,9 @@ D = {
     # ---- the arms, in the sheet's A pose (front: shoulder joint ~(165, 285), wrist ~(65, 370), hand
     # centre (42, 392): 41 deg below level)
     'arm_angle': 41.0,
-    'wrist': (xf(65) * -1, hf(370)),           # (|x|, h) = (0.440, 0.835)
-    'hand_len': 0.10,
+    'wrist': (0.470, 0.840),                   # (|x|, h): at the cuff's top (sheet: the hand leaves the
+                                               # cuff at (60, 365), the fingertips at (20, 405))
+    'hand_len': 0.14,
     # ---- sleeves (front: the cuff from (50, 355) down to the lowest point (78, 480); side: the bag
     # 0.26 m front to back, lowest at h 0.486)
     'sleeve_bottom': hf(480),                  # 0.518

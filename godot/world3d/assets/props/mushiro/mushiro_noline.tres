@@ -1,6 +1,6 @@
 [gd_resource type="ShaderMaterial" format=3]
 
-[ext_resource type="Shader" path="res://render3d/shaders/toon_solid.gdshader" id="1"]
+[ext_resource type="Shader" path="res://render3d/shaders/toon_solid_noline.gdshader" id="1"]
 
 [resource]
 render_priority = 0
@@ -17,5 +17,7 @@ shader_parameter/emission_energy = null
 shader_parameter/emission_at_night = null
 shader_parameter/far = null
 shader_parameter/shade_fill = null
-shader_parameter/cutaway = false
+shader_parameter/cutaway = null
 shader_parameter/cutaway_scale = null
+shader_parameter/cutaway_keep_px = null
+shader_parameter/shade_flatten = null

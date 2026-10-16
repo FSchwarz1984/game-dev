@@ -72,7 +72,12 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     for P in L["paths"]:
         pts = geom.catmull(np.asarray(P["points"], np.float64), 8)
         wmean = float(np.mean(P["widths"])) if P.get("widths") else P["width"]
-        h, d, arc = edits.flatten_path(h, X, Z, pts, wmean, cell=cell)
+        pfn = None
+        if P.get("terrace") and P.get("segments"):
+            # a built path: its rise goes into the flights of steps, the landings stay level
+            rt0 = RO.Route(P["points"], 8, widths=P.get("widths"), width=P["width"], seed=len(P["id"]))
+            pfn = edits.terrace_profile([(a, b, sg["kind"]) for a, b, sg in RO.resolve(rt0, P["points"], P["segments"])])
+        h, d, arc = edits.flatten_path(h, X, Z, pts, wmean, cell=cell, profile_fn=pfn)
         path_fields.append((P, pts, d))
         # a lane's ditch on its uphill side: a shallow swale beside the tread (round 5, road iron rule)
         for sg in P.get("segments", []):
@@ -229,7 +234,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
                 sd = np.where(np.isfinite(d), d, 99.0) * side
                 tr = geom.smoothstep(0.62 * hw, 0.1 * hw, np.abs(sd - off)) * v
                 tread_k[sel] = np.maximum(tread_k[sel], tr[sel])
-                ed = v * geom.smoothstep(0.4 * hw, 0.95 * hw, d - wob * 1.3 - wob2)
+                ed = v * geom.smoothstep(0.55 * hw, 1.0 * hw, d - wob * 1.3 - wob2)
                 edge_k[sel] = np.maximum(edge_k[sel], ed[sel])
             elif kind == "lane":
                 # two trodden tracks, grass along the middle where neither feet nor wheels go

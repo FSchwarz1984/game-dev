@@ -73,7 +73,7 @@ def torso():
         return torso_point(lerp(h0, h1, u), v * TAU - math.pi / 2)
 
     grid(part, 20, 40, pos, close_v=True, col=lambda u, v: _collar_col(pos(u, v)),
-         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'torso', 'h': lerp(h0, h1, u)}, flip=True)
+         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'torso', 'h': lerp(h0, h1, u)}, flip=False)
     return part
 
 
@@ -190,13 +190,13 @@ def coat():
         return C.CREAM_DEEP if (k < 0.06 and u > 0.35) else C.CREAM
 
     grid(part, nu, nv, pos, col=col, auxf=lambda u, v: (M_CLOTH, 0.0),
-         tagf=lambda u, v: {'seg': 'coat', 'u': u, 'a': a_of(u, v)}, flip=False)
+         tagf=lambda u, v: {'seg': 'coat', 'u': u, 'a': a_of(u, v)}, flip=True)
     # the inside (a step deeper), so the open front shows the coat's inner face
     def pos_in(u, v):
         p = pos(u, v)
         return Vector((p.x * 0.985, p.y * 0.985, p.z))
     grid(part, nu, nv, pos_in, col=lambda u, v: C.CREAM_DEEP, auxf=lambda u, v: (M_CLOTH, 0.0),
-         tagf=lambda u, v: {'seg': 'coat', 'u': u, 'a': a_of(u, v)}, flip=True)
+         tagf=lambda u, v: {'seg': 'coat', 'u': u, 'a': a_of(u, v)}, flip=False)
     return part
 
 
@@ -232,8 +232,9 @@ def sleeve_depth(x, z):
     w = lerp(0.10, D['sleeve_depth'], smooth((x - 0.195) / 0.12))
     zt, zb = sleeve_top(x), sleeve_bottom(x)
     t = (z - zb) / max(zt - zb, 1e-3)
-    # narrow over the arm, full lower down, rounded at the bottom
-    return w * (math.sin(math.pi * min(1.0, max(0.0, t)) ** 0.8) ** 0.7) + 0.02
+    # narrow over the arm, full lower down, coming to a point at the bottom (the sheet's diamond)
+    t = min(1.0, max(0.0, t))
+    return w * (math.sin(math.pi * t ** 0.8) ** 0.7) * smooth(t / 0.45) ** 0.6 + 0.012
 
 
 def sleeve_point(side, x, phi, inset=0.0):
@@ -306,7 +307,7 @@ def hands():
         Wr = Vector((side * B.WRIST.x, B.WRIST.y, B.WRIST.z))
         d = Vector((side * B.ARM_DIR.x, B.ARM_DIR.y, B.ARM_DIR.z))
         dd = (d + Vector((0, 0, -0.35))).normalized()
-        tip = Wr + dd * 0.135 + Vector((0, -0.01, 0))
+        tip = Wr + dd * D['hand_len'] + Vector((0, -0.01, 0))
         path = Path([Wr - d * 0.02, Wr + dd * 0.05, tip], up=(0, -1, 0))
 
         def section(u, a):
@@ -343,7 +344,7 @@ def obi():
         return Vector(((W + grow) * math.copysign(abs(s) ** e, s), -(Dp + 0.01 + grow) * math.copysign(abs(c) ** e, c) + 0.004, z))
 
     grid(part, 6, 44, pos, close_v=True, col=lambda u, v: C.WHITE, auxf=lambda u, v: (M_CLOTH, 0.0),
-         tagf=lambda u, v: {'seg': 'obi'}, flip=True)
+         tagf=lambda u, v: {'seg': 'obi'}, flip=False)
     # tops and bottoms closed against the coat
     band = Part('band', M_CLOTH)
 
@@ -351,7 +352,7 @@ def obi():
         z = lerp(b0, b1, u)
         return pos((z - z0) / (z1 - z0), v, grow=0.008)
     grid(band, 3, 44, pos_b, close_v=True, col=lambda u, v: C.RED, auxf=lambda u, v: (M_CLOTH, 0.0),
-         tagf=lambda u, v: {'seg': 'obi'}, flip=True)
+         tagf=lambda u, v: {'seg': 'obi'}, flip=False)
     return [part, band]
 
 
@@ -384,7 +385,7 @@ def bow():
             p.z += side * p.x * 0.30
             return c + p
         grid(part, 8, 20, pos, close_v=True, pole0=True, pole1=True, col=lambda u, v: C.RED,
-             auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'bow'})
+             auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'bow'}, flip=True)
     # the knot
     def posk(u, v):
         a = v * TAU
@@ -392,7 +393,7 @@ def bow():
         return knot + Vector((0.030 * math.sin(b) * math.cos(a), -0.028 * math.cos(b) - 0.008,
                               0.034 * math.sin(b) * math.sin(a)))
     grid(part, 6, 14, posk, close_v=True, pole0=True, pole1=True, col=lambda u, v: C.RED_DEEP,
-         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'bow'})
+         auxf=lambda u, v: (M_CLOTH, 0.0), tagf=lambda u, v: {'seg': 'bow'}, flip=True)
     return part, knot
 
 

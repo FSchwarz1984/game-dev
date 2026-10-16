@@ -102,6 +102,10 @@ var _blink_on := 0.0
 var _talk_t := 0.0
 var _talk_i := 0
 var _anim_frame_t := 0.0
+var _cuts := Vector3(FACE_FRONT, FACE_THREE, FACE_SIDE)
+## her own view compensation (rig.json "material" c3_depth_scale; 1 = none): her depth toward the
+## camera is scaled about her ground point before the lean (char_common.gdshaderinc)
+var depth_scale := 1.0
 var _face_dt := 0.0
 
 var pack: Node3D
@@ -116,6 +120,11 @@ func setup(id: String) -> void:
 	add_child(model)
 	face_meta = _load_json("%s/face.json" % dir)
 	rig_meta = _load_json("%s/rig.json" % dir)
+	# face.json "view_cuts" [front, three-quarter, side]: the facings where a feature's stamp changes
+	# view (round 6: the far eye keeps its full shape longer); older faces keep the constants
+	var vc: Array = face_meta.get("view_cuts", [])
+	if vc.size() == 3:
+		_cuts = Vector3(float(vc[0]), float(vc[1]), float(vc[2]))
 	mat = ShaderMaterial.new()
 	mat.shader = load("res://characters/shaders/char_toon.gdshader")
 	xray_mat = ShaderMaterial.new()
@@ -132,6 +141,7 @@ func setup(id: String) -> void:
 	for k in mset:
 		var val = mset[k]
 		mat.set_shader_parameter(k, int(val) if String(k) == "c3_style" else val)
+	set_depth_scale(float(mset.get("c3_depth_scale", 1.0)))
 	_collect(model)
 	for m in meshes:
 		m.material_override = mat
@@ -147,6 +157,13 @@ func setup(id: String) -> void:
 		_setup_head_turn()
 		skel.skeleton_updated.connect(_on_skeleton_updated)
 	_read_landmarks()
+
+
+## Her own view compensation (1 = none): both her passes and the face's projection follow it.
+func set_depth_scale(k: float) -> void:
+	depth_scale = k
+	mat.set_shader_parameter("c3_depth_scale", k)
+	xray_mat.set_shader_parameter("c3_depth_scale", k)
 
 
 func _load_json(path: String) -> Dictionary:
@@ -342,16 +359,19 @@ func _setup_hat() -> void:
 	var hb := skel.find_bone("hat")
 	if hb < 0:
 		return
-	hat_mod = HatTiltModifier.new()
-	hat_mod.name = "HatTilt"
-	hat_mod.bone = hb
-	hat_mod.head_bone = head_bone
-	hat_mod.tilt = deg_to_rad(float(rig_meta.get("hat_tilt_deg", 52.0)))
-	hat_mod.tilt_away = deg_to_rad(float(rig_meta.get("hat_tilt_away_deg", 24.0)))
-	hat_mod.roll = deg_to_rad(float(rig_meta.get("hat_roll_deg", 12.0)))
-	skel.add_child(hat_mod)
-	# the hat turns before the springs run
-	skel.move_child(hat_mod, 0)
+	# rig.json "hat_mode": "rigid" (round 6): the hat is modelled as the sheet wears it and rides the
+	# head; no camera-relative tilt
+	if String(rig_meta.get("hat_mode", "")) != "rigid":
+		hat_mod = HatTiltModifier.new()
+		hat_mod.name = "HatTilt"
+		hat_mod.bone = hb
+		hat_mod.head_bone = head_bone
+		hat_mod.tilt = deg_to_rad(float(rig_meta.get("hat_tilt_deg", 52.0)))
+		hat_mod.tilt_away = deg_to_rad(float(rig_meta.get("hat_tilt_away_deg", 24.0)))
+		hat_mod.roll = deg_to_rad(float(rig_meta.get("hat_roll_deg", 12.0)))
+		skel.add_child(hat_mod)
+		# the hat turns before the springs run
+		skel.move_child(hat_mod, 0)
 	# the hand on the brim: after the hat's tilt (it reads the tilted brim), before the springs (the
 	# sleeve hangs from the raised arm)
 	var brim: Dictionary = rig_meta.get("hat_brim", {})
@@ -692,6 +712,8 @@ func _screen(wp: Vector3, v: Vector4) -> Vector2:
 
 ## The rendered (leaned, snapped) position of a point of her body, exactly as the shader does it.
 func _rendered(wp: Vector3, v: Vector4) -> Vector3:
+	if depth_scale != 1.0:
+		wp.z = global_position.z + (wp.z - global_position.z) * depth_scale
 	wp.z -= v.w * (wp.y - ground_y)
 	var a := global_position
 	a.z -= v.w * (a.y - ground_y)
@@ -725,11 +747,11 @@ static func _facing_of(n: Vector3) -> float:
 
 
 func _view_tag(f: float) -> String:
-	if f >= FACE_FRONT:
+	if f >= _cuts.x:
 		return "f"
-	if f >= FACE_THREE:
+	if f >= _cuts.y:
 		return "t"
-	if f >= FACE_SIDE:
+	if f >= _cuts.z:
 		return "s"
 	return ""
 
@@ -784,10 +806,24 @@ func _update_face(dt: float) -> void:
 	# face.json "level_pairs" (round 5 writes false; older faces without the key keep the round-4 rule):
 	# the round-5 eyes sit under the bangs, whose edge tilts with the head in a three-quarter view, so
 	# each eye follows its own projection, or the near one slides under the bangs
-	var level: bool = face_meta.get("level_pairs", true)
-	var eye_y := _pair_y("eye", hg, v) if level else NAN
-	var brow_y := _pair_y("brow", hg, v) if level else NAN
-	var cheek_y := _pair_y("cheek", hg, v) if level else NAN
+	# "near" (round 6): both take the height of the one nearer the camera (the far eye of a
+	# three-quarter face projects 2-3 px higher, under the bangs and the hat; the near one is where
+	# the face was drawn to be)
+	var lp = face_meta.get("level_pairs", true)
+	var eye_y := NAN
+	var brow_y := NAN
+	var cheek_y := NAN
+	if lp is bool and lp:
+		eye_y = _pair_y("eye", hg, v)
+		brow_y = _pair_y("brow", hg, v)
+		cheek_y = _pair_y("cheek", hg, v)
+	elif lp is String and lp == "near":
+		eye_y = _near_y("eye", hg, v)
+		cheek_y = _near_y("cheek", hg, v)
+	# face.json "eye_shift" [[yaw deg, px toward the back of the head, px down], ...]: as the face
+	# turns past three-quarter, the eyes and the blush step back from the face's edge and down below
+	# the side bangs (hand-set per angle, as a sprite artist draws the turned head)
+	var shift := _eye_shift(face_f, face_n)
 	# the shader draws the stamps in order, a later one over an earlier: cheeks first, so the eyes
 	# (a squeezed-shut > reaches down into the blush's row) always stay whole
 	for side in ["R", "L"]:
@@ -796,10 +832,10 @@ func _update_face(dt: float) -> void:
 		var ck = ex.get("cheeks", "blush" if ex.get("blush", false) else "soft")
 		if ck is String and ck != "":
 			_feature(feats, norms, "cheek_" + side, "cheek_%s_%s" % [side, ck], hg, v, cs, c_px, 0.2, false,
-					false, false, cheek_y)
+					false, false, cheek_y, shift)
 	for side in ["R", "L"]:
 		_feature(feats, norms, "eye_" + side, "eye_%s_%s" % [side, eye_name], hg, v, cs, c_px, 0.12, false,
-				false, false, eye_y)
+				false, false, eye_y, shift)
 		# brows: one name for both, or {"R": name, "L": name} (one brow cocked)
 		var brows = ex.get("brows", "")
 		if brows is Dictionary:
@@ -818,6 +854,50 @@ func _update_face(dt: float) -> void:
 	mat.set_shader_parameter("c3_feat_count", feats.size())
 	mat.set_shader_parameter("c3_feat", feats)
 	mat.set_shader_parameter("c3_feat_n", norms)
+
+
+## The projected screen height of the one of a left-right pair of landmarks that faces the camera
+## more, when both are drawn, else NAN (each keeps its own).
+func _near_y(base: String, hg: Transform3D, v: Vector4) -> float:
+	var best := -2.0
+	var y := NAN
+	for side in ["R", "L"]:
+		var lm := "%s_%s" % [base, side]
+		if not landmarks.has(lm):
+			return NAN
+		var l: Array = landmarks[lm]
+		var f := _facing_of((hg.basis * (l[1] as Vector3)).normalized())
+		if _view_tag(f) == "":
+			return NAN
+		if f > best:
+			best = f
+			y = _screen(_rendered(hg * (l[0] as Vector3), v), v).y
+	return y
+
+
+## The screen offset (px, y up) of the eyes and blush for the face's yaw (face.json "eye_shift").
+func _eye_shift(face_f: float, face_n: Vector3) -> Vector2:
+	var tab: Array = face_meta.get("eye_shift", [])
+	if tab.is_empty():
+		return Vector2.ZERO
+	var yaw := rad_to_deg(acos(clampf(face_f, -1.0, 1.0)))
+	var back := 0.0
+	var down := 0.0
+	for i in tab.size():
+		var r: Array = tab[i]
+		if yaw <= float(r[0]) or i == tab.size() - 1:
+			if i == 0 or yaw >= float(r[0]):
+				back = float(r[1])
+				down = float(r[2])
+			else:
+				var q: Array = tab[i - 1]
+				var k := (yaw - float(q[0])) / maxf(float(r[0]) - float(q[0]), 1e-3)
+				back = lerpf(float(q[1]), float(r[1]), k)
+				down = lerpf(float(q[2]), float(r[2]), k)
+			break
+	# the back of the head is on the screen side the face turns away from
+	var sx := -signf(face_n.x) if absf(face_n.x) > 1e-3 else 0.0
+	return Vector2(roundf(back) * sx, -roundf(down))
 
 
 ## The mean projected screen height of a left-right pair of landmarks when both face the camera
@@ -841,7 +921,7 @@ func _pair_y(base: String, hg: Transform3D, v: Vector4) -> float:
 ## facing, and its normal for the shader's side test.
 func _feature(feats: Array, norms: Array, lm: String, stamp_base: String, hg: Transform3D, v: Vector4,
 		cs: Vector2, c_px: Vector2, min_dot: float, over_hair: bool, mirror := false, no_view := false,
-		y_level := NAN) -> void:
+		y_level := NAN, shift := Vector2.ZERO) -> void:
 	if not landmarks.has(lm):
 		return
 	var l: Array = landmarks[lm]
@@ -859,7 +939,7 @@ func _feature(feats: Array, norms: Array, lm: String, stamp_base: String, hg: Tr
 	var s := _screen(_rendered(wp, v), v)
 	if not is_nan(y_level):
 		s.y = y_level
-	var px := c_px + (s - cs).round()
+	var px := c_px + (s - cs).round() + shift
 	var piv: Array = st["pivot"]
 	var size: Array = st["size"]
 	var cell := 8

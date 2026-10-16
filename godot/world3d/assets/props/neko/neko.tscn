@@ -1,9 +1,30 @@
 [gd_scene format=3]
 
 [ext_resource type="ArrayMesh" path="res://world3d/assets/props/neko/neko_mesh.res" id="1"]
+[ext_resource type="ArrayMesh" path="res://world3d/assets/props/neko/neko_breath.res" id="2"]
+[ext_resource type="ArrayMesh" path="res://world3d/assets/props/neko/neko_tail.res" id="3"]
+[ext_resource type="ArrayMesh" path="res://world3d/assets/props/neko/neko_awake.res" id="4"]
 
 [node name="Neko" type="Node3D" unique_id=1801496488]
 metadata/w3a_kind = "props"
 
 [node name="Mesh" type="MeshInstance3D" parent="." unique_id=1705641404]
 mesh = ExtResource("1")
+
+[node name="Breath" type="MeshInstance3D" parent="." unique_id=684490109]
+visible = false
+mesh = ExtResource("2")
+metadata/w3a_far_mesh = ""
+metadata/w3a_mesh = "res://world3d/assets/props/neko/neko_breath.res"
+
+[node name="Tail" type="MeshInstance3D" parent="." unique_id=2029161399]
+visible = false
+mesh = ExtResource("3")
+metadata/w3a_far_mesh = ""
+metadata/w3a_mesh = "res://world3d/assets/props/neko/neko_tail.res"
+
+[node name="Awake" type="MeshInstance3D" parent="." unique_id=646412592]
+visible = false
+mesh = ExtResource("4")
+metadata/w3a_far_mesh = ""
+metadata/w3a_mesh = "res://world3d/assets/props/neko/neko_awake.res"
