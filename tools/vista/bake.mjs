@@ -56,6 +56,12 @@ if (shots.includes('south') || shots.includes('title')) {
     fs.writeFileSync(path.join(site, `w3_${k}.bin`), p.data);
     keep[k + 'Size'] = [p.w, p.h];
   }
+  // the mid grid's land use (vista_mat.png: R cultivated, G road, B rock, A dry-stone wall)
+  {
+    const p = readPNG(path.join(W3DIR, json.mid.mat));
+    fs.writeFileSync(path.join(site, 'w3_mat.bin'), p.data);
+    keep.matSize = [p.w, p.h];
+  }
   fs.writeFileSync(path.join(site, 'w3.json'), JSON.stringify(keep));
 }
 await build({ entryPoints: [path.join(ROOT, 'tools/vista/bake/page.js')], bundle: true, format: 'iife', target: 'es2020', charset: 'ascii', outfile: path.join(site, 'bake.js'), logLevel: 'warning' });

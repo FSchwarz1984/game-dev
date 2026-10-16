@@ -145,6 +145,8 @@ function prepare() {
   ROAD = J.road.map(([x, z]) => P(x, z));
   VILLAGES = J.villages.map(([x, z, r, n], i) => { const [X, Z] = P(x, z); return { i, X, Z, r: r / U, n, x, z }; });
   HOUSES = J.plain_houses.map(([x, y, z, rot, w, d, hgt, roof, seed, vi]) => { const [X, Z] = P(x, z); return { X, Z, w, roof, seed, vi }; });
+  // the water-wheel farm in the lower layer below the pass (the 3D landmarks' houses): thatched
+  for (const [x, , z] of (J.landmarks && J.landmarks.houses) || []) { const [X, Z] = P(x, z); HOUSES.push({ X, Z, w: 10, roof: 0, seed: 0, vi: -1, farm: true }); }
   LAMPS = J.plain_lamps.map(([x, y, z]) => P(x, z));
   TOWN = VILLAGES[0];
   // the headman's compound: the biggest house of the nearest village in front of the pass, right of
@@ -272,6 +274,30 @@ function forestAt(x, z) {
   return 0.5;
 }
 
+// The lower layer below the pass (G5R3-23: the mid-ground the lookout sees, from the 3D mid grid:
+// vista_mat.png R cultivated, G road, B rock, A dry-stone wall; vista_mid.png B forest, A water): the
+// 溜池, the terraces flooded for rice (the water holds the sky; bunds along the contours), the old
+// road's switchbacks, walls, rock, woods, grass. 0 outside the grid's sample area.
+function midUse(x, z) {
+  const mid = W3.mid, M = W3.mat;
+  if (!M) return 0;
+  const fx = (x - mid.x0) / mid.cell, fz = (z - mid.z0) / mid.cell;
+  if (fx < 2 || fz < 2 || fx >= mid.w - 3 || fz >= mid.h - 3) return 0;
+  const o = (Math.round(fz) * mid.w + Math.round(fx)) * 4;
+  const water = mid.data[o + 3] > 127, forest = mid.data[o + 2] / 255;
+  const cult = M.data[o] / 255, road = M.data[o + 1] / 255, rock = M.data[o + 2] / 255, wall = M.data[o + 3] / 255;
+  if (water) return G.pond;
+  if (road > 0.5) return G.path;
+  if (wall > 0.5) return G.rock;
+  if (cult > 0.5) {
+    const y = landY(x, z);
+    return ((y / 1.6) % 1 + 1) % 1 < 0.3 ? G.levee : G.paddy;
+  }
+  if (rock > 0.5) return G.rock;
+  if (forest > 0.35) return vnoise(x / 40, z / 40, 51) > 0.56 ? G.cedar : G.forest;
+  return G.meadow;
+}
+
 // ---------------------------------------------------------------- render the ground
 
 /** The ground as an index layer, marched from the crown (fork of src/vista/ground.js buildGroundGen). */
@@ -313,6 +339,8 @@ export function* buildPlainGen({ w, h, cx, yh, f, S, sun, seed }) {
       } else if (dist > 4200 && t > 0.05) {
         // the ring of mountains: forest below, rock on the steep upper slopes
         mat = ny < 0.6 && t > 1.3 ? G.farRock : dist > 9000 ? G.farForest : G.hillForest;
+      } else if (dist > 120 && (mat = midUse(xm, zm))) {
+        // the lower layer below the pass, as the 3D has it
       } else {
         const fo = forestAt(xm, zm);
         const cedar = vnoise(X * 0.8, Z * 0.6, 51) > 0.56;
@@ -383,6 +411,11 @@ export function paintHouses(L, Xb, Zb, cam, seed) {
   const sizeAt = (Z, wm, k = 1) => Math.max(2, Math.round(f * (wm / U) / Z * 1.6 * k));
   const list = [];
   for (const ho of HOUSES) {
+    if (ho.farm) {
+      // (the farm below the pass, near: drawn at its own size, its windows lit, a lantern at the door)
+      list.push({ X: ho.X, Z: ho.Z, w: sizeAt(ho.Z, ho.w), kind: 'thatch', vi: -1, farm: true, win: true, lantern: true });
+      continue;
+    }
     if (ho.Z < 3) continue;
     const town = ho.vi === TOWN.i, head = ho.X === HEAD.X && ho.Z === HEAD.Z;
     const kind = head ? 'thatch' : town ? (R() < 0.82 ? 'tile' : 'thatch') : (ho.roof === 0 ? 'thatch' : R() < 0.5 ? 'thatch' : 'tile');

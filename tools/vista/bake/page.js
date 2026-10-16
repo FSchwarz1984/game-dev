@@ -46,7 +46,9 @@ async function loadW3() {
     const [w, h] = json[k + 'Size'];
     return { w, h, x0: json[k].x0, z0: json[k].z0, cell: json[k].cell, data };
   };
-  setW3({ json, far: await map('far'), mid: await map('mid'), plain: await map('plain') });
+  const matData = new Uint8Array(await (await fetch('w3_mat.bin')).arrayBuffer());
+  const mat = { w: json.matSize[0], h: json.matSize[1], x0: json.mid.x0, z0: json.mid.z0, cell: json.mid.cell, data: matData };
+  setW3({ json, far: await map('far'), mid: await map('mid'), plain: await map('plain'), mat });
   return true;
 }
 
