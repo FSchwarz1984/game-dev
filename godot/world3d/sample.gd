@@ -86,6 +86,8 @@ func _ready() -> void:
 	env.setup(pv)
 	if args.has("amb"):
 		env.ambient_day_gain = float(args["amb"])     # tuning: the day sky light next to the sun
+	if args.has("fill"):
+		env.shadow_fill = float(args["fill"])         # tuning: the sky's light let back into the sun's shadow (low sun)
 	if args.get("ssao", "1") == "0":
 		env.environment.ssao_enabled = false          # comparisons
 	if args.has("noglow"):
