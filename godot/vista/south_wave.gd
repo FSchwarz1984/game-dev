@@ -247,15 +247,16 @@ func ghost_k(x: float, z: float) -> float:
 	var a := atan2(dx, -dz)
 	var w := 0.9 + 0.2 * (_vnoise(a * 2.6 + 4.0, 1.7) * 0.7 + _vnoise(a * 7.3 + 1.0, 5.1) * 0.3)
 	var r := sqrt(dx * dx + dz * dz) / w
+	var K: Array = g.get("k", [1.0, 0.75, 0.4, 0.0])
 	var k := 0.0
 	if r < float(R[0]):
-		k = 1.0
+		k = float(K[0])
 	elif r < float(R[1]):
-		k = lerpf(1.0, 0.75, smoothstep(float(R[0]), float(R[1]), r))
+		k = lerpf(float(K[0]), float(K[1]), smoothstep(float(R[0]), float(R[1]), r))
 	elif r < float(R[2]):
-		k = lerpf(0.75, 0.4, smoothstep(float(R[1]), float(R[2]), r))
+		k = lerpf(float(K[1]), float(K[2]), smoothstep(float(R[1]), float(R[2]), r))
 	else:
-		k = lerpf(0.4, 0.0, smoothstep(float(R[2]), float(R[3]), r))
+		k = lerpf(float(K[2]), float(K[3]), smoothstep(float(R[2]), float(R[3]), r))
 	var h: Dictionary = g.get("home", {})
 	if not h.is_empty():
 		var e := Vector2((x - float(h["cx"])) / float(h["rx"]), (z - float(h["cz"])) / float(h["rz"])).length()

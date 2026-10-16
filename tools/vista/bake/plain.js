@@ -626,8 +626,10 @@ export { heightBase as _heightBase, plainAt as _plainAt, forestAt as _forestAt }
 // key block's lines on the paper, G5R3-18; the user, G5R3-22: "太脏、像灰模".)
 /** ground zero (m, the 3D frame): the town, vista.json's largest village */
 export function ghostZero() { const v = VILLAGES.reduce((a, b) => (b.n > a.n ? b : a)); return [v.x, v.z]; }
-/** the rings (m from ground zero): full within r0, 0.75 at r1, 0.4 at r2, nothing past r3 (vista3d.gd GHOST_R) */
-export const GHOST_R = [400, 1100, 2600, 5500];
+/** the rings (m from ground zero): full within r0, GHOST_K[1] at r1, GHOST_K[2] at r2, nothing past r3
+ *  (vista3d.gd GHOST_R, GHOST_K; VISTA_GHOST_R / VISTA_GHOST_K in the environment try others) */
+export const GHOST_R = (globalThis.VISTA_GHOST_R || [400, 1100, 2600, 5500]);
+export const GHOST_K = (globalThis.VISTA_GHOST_K || [1, 0.75, 0.4, 0]);
 /** the region's ellipse round home (vista.json mist: cx, cz, rx, rz in m) */
 export function ghostHome() { const m = W3.json.mist; return { cx: m.cx, cz: m.cz, rx: m.rx, rz: m.rz }; }
 // pixel_toon's w3_hash and vista3d.gd _vnoise (fposmod = the GLSL fract)
@@ -651,12 +653,12 @@ export function ghostK(x, z) {
   const dx = x - cx, dz = z - cz;
   const a = Math.atan2(dx, -dz);
   const w = 0.9 + 0.2 * (w3vnoise(a * 2.6 + 4.0, 1.7) * 0.7 + w3vnoise(a * 7.3 + 1.0, 5.1) * 0.3);
-  const r = Math.hypot(dx, dz) / w, [r0, r1, r2, r3] = GHOST_R;
+  const r = Math.hypot(dx, dz) / w, [r0, r1, r2, r3] = GHOST_R, [k0, k1, k2, k3] = GHOST_K;
   let k;
-  if (r < r0) k = 1;
-  else if (r < r1) k = lerp(1, 0.75, smooth(r0, r1, r));
-  else if (r < r2) k = lerp(0.75, 0.4, smooth(r1, r2, r));
-  else k = lerp(0.4, 0, smooth(r2, r3, r));
+  if (r < r0) k = k0;
+  else if (r < r1) k = lerp(k0, k1, smooth(r0, r1, r));
+  else if (r < r2) k = lerp(k1, k2, smooth(r1, r2, r));
+  else k = lerp(k2, k3, smooth(r2, r3, r));
   const h = ghostHome(), e = Math.hypot((x - h.cx) / h.rx, (z - h.cz) / h.rz);
   return k * smooth(1.15, 1.8, e);
 }
