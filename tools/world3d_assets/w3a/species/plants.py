@@ -2,8 +2,13 @@
 
   take_*     madake bamboo clumps (竹): straight jointed culms, the leaves in hanging fans high up
   tsutsuji_* azalea mounds (つつじ, summer: green), low and dense, small leaves
-  ajisai_*   hydrangea (紫陽花): a rounded bush with big mophead flowers (blue, violet, dusty)
-  tsubaki_*  camellia (椿): a dark glossy shrub-tree, a few red flowers
+  ajisai_*   tama-ajisai (玉紫陽花, round 5: the mountain hydrangea that flowers in August; the
+             mopheads of June were out of season at Obon): flat lilac heads ringed by pale florets
+  tsubaki_*  camellia (椿): a dark glossy shrub-tree; in August no flowers, a few green fruit
+  sakaki_*   sakaki (榊), the shrine's sacred evergreen: upright, small glossy leaves in flat sprays
+  sarusuberi_* crape myrtle (百日紅, the Obon flower of graves and temples): smooth mottled stems,
+             a light crown, pink panicles at the tips
+  ikegaki_*  a clipped evergreen hedge (生垣) segment, 2 m
   fern_*     bracken / shield-fern clumps (羊歯) as card sprites
   susuki_*   pampas grass clumps (薄) with silvery plumes, as card sprites
 Each species is one folder with several variants (contract: <= 600 cards, <= 8k triangles a tree)."""
@@ -168,13 +173,14 @@ def build_shrubs(out):
     m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 0.8},
                         textures={'albedo_tex': a.texture('bark', WD.bark_texture(8701, size=64, spacing=(3, 5),
                                                                                   ridge=('#6a5a48', '#756450', '#7e6c58')))})
-    blues = [((70, 92, 150), (104, 128, 190), (150, 170, 220)), ((104, 84, 150), (138, 112, 186), (176, 152, 214)),
-             ((112, 122, 150), (146, 156, 184), (184, 192, 214))]
+    # tama-ajisai: lilac and blue-violet fertile florets, pale sterile ones round the rim
+    blues = [((112, 104, 168), (138, 132, 192), (168, 162, 210)), ((126, 106, 164), (152, 132, 186), (182, 164, 206)),
+             ((118, 118, 160), (146, 146, 184), (176, 176, 204))]
     specs = {'mass': [(LV.broad_leaves, dict(W=int(15 + (i % 3) * 2), H=int(13 + (i % 2) * 2), seed=8702 + i, size=(4.0, 6.0),
                                              wid=(2.6, 3.4), gloss=0.1)) for i in range(7)],
              'interior': [(LV.broad_leaves, dict(W=16, H=14, seed=8750 + i, gloss=0.0)) for i in range(2)]}
     for j, cols in enumerate(blues):
-        specs[f'flower{j}'] = [(LV.flower_head, dict(W=int(9 + (k % 2) * 2), seed=8760 + j * 10 + k, colours=cols)) for k in range(3)]
+        specs[f'flower{j}'] = [(LV.lacecap, dict(W=int(8 + (k % 2) * 2), seed=8760 + j * 10 + k, colours=cols)) for k in range(3)]
     atlas, rects, sets = FO.build_tiles(specs)
     m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=0.8),
                         textures={'leaf_tex': a.texture('leaves', atlas)})
@@ -185,7 +191,7 @@ def build_shrubs(out):
         limbs, masses, cc, span = shrub_variant('ajisai', key, H, W, 4, R, vs, mass_n=3, flat=0.4)
         flowers = []
         for m in masses:
-            for k in range(9):
+            for k in range(6):
                 for _ in range(20):
                     dd = normalize(R.normal(0, 1, 3) + back * 0.8 + np.array([0, 0.5, 0]))
                     if dd @ back > 0.1:
@@ -200,7 +206,7 @@ def build_shrubs(out):
                   max_cards=260 - len(flowers))
         cat = {'category': 'shrub', 'species': 'hydrangea', 'footprint': [[0.0, 0.0, W * 0.4]], 'height': H,
                'crown': {'centre': [float(x) for x in cc], 'radius': float(span), 'base': 0.1}, 'tags': ['shrub', 'flower'],
-               'anchors': {}, 'notes': f'紫陽花, {key} flowers.'}
+               'anchors': {}, 'notes': f'玉紫陽花 (tama-ajisai, flowers in August), {key}.'}
         st[key] = TR.build_variant(a, key, limbs, masses, (atlas, rects), sets, kw, m_bark, m_leaf, cat, extra_cards=flowers,
                                    seed=8700 + vs, max_tris=1800, max_cards=260)
     stats['ajisai'] = st
@@ -213,7 +219,7 @@ def build_shrubs(out):
     specs = {'mass': [(LV.broad_leaves, dict(W=int(14 + (i % 3) * 2), H=int(12 + (i % 2) * 2), seed=8802 + i, size=(3.0, 4.5),
                                              wid=(1.8, 2.4), gloss=0.6)) for i in range(8)],
              'interior': [(LV.broad_leaves, dict(W=16, H=14, seed=8850 + i, gloss=0.0)) for i in range(2)],
-             'flower': [(LV.fruit, dict(W=4, seed=8860 + k, colours=[(140, 30, 34), (190, 44, 46), (226, 92, 86)])) for k in range(2)]}
+             'flower': [(LV.fruit, dict(W=3, seed=8860 + k, colours=[(74, 92, 44), (98, 120, 56), (128, 146, 74)])) for k in range(2)]}
     atlas, rects, sets = FO.build_tiles(specs)
     m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=0.6),
                         textures={'leaf_tex': a.texture('leaves', atlas)})
@@ -225,7 +231,7 @@ def build_shrubs(out):
             m.r = np.array([m.r[0] * 0.85, m.r[1] * 0.9, m.r[2] * 0.85])
         flowers = []
         for m in masses:
-            for k in range(5):
+            for k in range(2):
                 dd = normalize(R.normal(0, 1, 3) + back * 0.9)
                 t = sets['flower'][int(R.integers(0, 2))]
                 flowers.append(CD.Card(m.c + dd * m.r * 0.9, normalize(dd + np.array([0, 0.4, 0])), t[1], t[2], t[0], 0.9,
@@ -236,10 +242,127 @@ def build_shrubs(out):
                   max_cards=300 - len(flowers))
         cat = {'category': 'shrub', 'species': 'camellia', 'footprint': [[0.0, 0.0, W * 0.35]], 'height': H,
                'crown': {'centre': [float(x) for x in cc], 'radius': float(span), 'base': 0.3}, 'tags': ['shrub', 'flower'],
-               'anchors': {}, 'notes': '椿: dark glossy leaves, a few red flowers.'}
+               'anchors': {}, 'notes': '椿: dark glossy leaves; in August a few green fruit, no flowers.'}
         st[key] = TR.build_variant(a, key, limbs, masses, (atlas, rects), sets, kw, m_bark, m_leaf, cat, extra_cards=flowers,
                                    seed=8800 + vs, max_tris=2000, max_cards=300)
     stats['tsubaki'] = st
+    stats.update(build_sacred_shrubs(out, back))
+    return stats
+
+
+def build_sacred_shrubs(out, back):
+    """Round 5 (composition plan): the sakaki beside the shrine, the crape myrtle behind the graves,
+    the clipped hedge between the yard and the forecourt."""
+    stats = {}
+    # sakaki: upright, dense, small glossy dark leaves; in August a few small green berries
+    a = out.asset('sakaki', 'trees')
+    m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 0.8},
+                        textures={'albedo_tex': a.texture('bark', WD.bark_texture(9001, size=64, spacing=(5, 9),
+                                                                                  ridge=('#6e6a5e', '#78746a', '#827e72')))})
+    specs = {'mass': [(LV.broad_leaves, dict(W=int(13 + (i % 3) * 2), H=int(12 + (i % 2) * 2), seed=9002 + i, size=(2.4, 3.4),
+                                             wid=(1.4, 1.9), gloss=0.65, droop=0.1)) for i in range(8)],
+             'interior': [(LV.broad_leaves, dict(W=15, H=13, seed=9050 + i, size=(2.4, 3.2), gloss=0.0)) for i in range(2)]}
+    atlas, rects, sets = FO.build_tiles(specs)
+    m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=0.6),
+                        textures={'leaf_tex': a.texture('leaves', atlas)})
+    R = rng(9000)
+    st = {}
+    for key, H, W, vs in (('a', 3.0, 1.4, 1), ('b', 2.3, 1.1, 2)):
+        limbs, masses, cc, span = shrub_variant('sakaki', key, H, W, 2, R, vs, mass_n=4, flat=0.1, lean=0.05)
+        for k, m in enumerate(masses):
+            # an upright, slightly columnar habit: masses stacked up the stems
+            m.c = np.array([m.c[0] * 0.6, H * (0.35 + 0.16 * k), m.c[2] * 0.6])
+            m.r = np.array([m.r[0] * (0.9 - 0.1 * k), H * 0.2, m.r[2] * (0.9 - 0.1 * k)])
+        kw = dict(centre=tuple(np.mean([m.c for m in masses], axis=0)), radii=(span * 0.7, H * 0.45, span * 0.7),
+                  base_tint=TR.tint_for('#2f4a36'), young_tint=TR.tint_for('#3e5c3e'), old_tint=TR.tint_for('#263e32'),
+                  overlap=1.5, fill_density=1.25, clump_overlap=1.0, interior_frac=0.3, spray_rate=0.0, env_k=0.3, up_bias=0.3,
+                  flex_r=span, max_cards=300)
+        cat = {'category': 'shrub', 'species': 'sakaki', 'footprint': [[0.0, 0.0, W * 0.3]], 'height': H,
+               'crown': {'centre': [0.0, H * 0.55, 0.0], 'radius': float(span * 0.7), 'base': 0.3}, 'tags': ['shrub', 'sacred'],
+               'anchors': {}, 'notes': '榊: the shrine\'s evergreen (its sprays go on the altar), upright, small glossy leaves.'}
+        st[key] = TR.build_variant(a, key, limbs, masses, (atlas, rects), sets, kw, m_bark, m_leaf, cat, seed=9000 + vs,
+                                   max_tris=2000, max_cards=300)
+    stats['sakaki'] = st
+    # crape myrtle: three to five smooth mottled stems leaning out, a light crown, pink panicles
+    a = out.asset('sarusuberi', 'trees')
+    m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 0.6},
+                        textures={'albedo_tex': a.texture('bark', WD.bark_texture(9101, size=64, spacing=(8, 14),
+                                                                                  ridge=('#a08c78', '#b29c86', '#c0aa92'), lip='#cdb8a0',
+                                                                                  fissure='#8c7866', deep='#7c6a5a', break_p=0.03,
+                                                                                  lichen=('#b9b49c', '#c6c0a6'), lichen_p=0.004))})
+    pinks = ((176, 72, 118), (204, 98, 142), (226, 138, 172))
+    specs = {'mass': [(LV.broad_leaves, dict(W=int(13 + (i % 3) * 2), H=int(11 + (i % 2) * 2), seed=9102 + i, size=(2.2, 3.0),
+                                             wid=(1.5, 2.0), gloss=0.2, droop=0.2)) for i in range(7)],
+             'interior': [(LV.broad_leaves, dict(W=14, H=12, seed=9150 + i, size=(2.2, 3.0), gloss=0.0)) for i in range(2)],
+             'flower': [(LV.panicle, dict(W=int(5 + (k % 2)), seed=9160 + k, colours=pinks)) for k in range(4)]}
+    atlas, rects, sets = FO.build_tiles(specs)
+    m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=1.0),
+                        textures={'leaf_tex': a.texture('leaves', atlas)})
+    R = rng(9100)
+    st = {}
+    for key, H, W, stems, vs in (('a', 4.6, 3.4, 4, 1),):
+        limbs, masses = [], []
+        az0 = R.uniform(0, 2 * math.pi)
+        for s_ in range(stems):
+            az = az0 + s_ * 2 * math.pi / stems + R.normal(0, 0.3)
+            d = np.array([math.cos(az) * 0.45, 1.0, math.sin(az) * 0.45])
+            path = TR.wander(R, [math.cos(az) * 0.08, -0.2, math.sin(az) * 0.08], d, H * R.uniform(0.62, 0.8), 4, bend=0.22, up=0.0)
+            stem = WD.Limb(f's{s_}', path, [0.1, 0.085, 0.065, 0.045, 0.025], kind='trunk', n_around=7, step_fn=lambda f: 0.5, moss=0.05)
+            WD.build_limb(stem)
+            limbs.append(stem)
+            top = stem.spine.pos[-1]
+            masses.append(CD.Mass(top + np.array([0, 0.15, 0]), (W * 0.28, 0.6, W * 0.26), flat=0.5, seed=9100 + vs * 50 + s_,
+                                  clumps=0.2, clump_r=(0.3, 0.5), tiles='mass', interior=True, lump=0.12))
+        flowers = []
+        for m in masses:
+            for k in range(7):
+                dd = normalize(R.normal(0, 1, 3) * np.array([1, 0.4, 1]) + np.array([0, 0.9, 0]) + back * 0.4)
+                t = sets['flower'][int(R.integers(0, 4))]
+                flowers.append(CD.Card(m.c + dd * m.r * 0.95, normalize(dd + np.array([0, 0.5, 0])), t[1], t[2], t[0], 0.95,
+                                       np.array([1.0, 1.0, 1.0]), 0.6, 'flower', 3.0))
+        cc = np.mean([m.c for m in masses], axis=0)
+        span = max(np.max([np.linalg.norm((m.c - cc)[[0, 2]]) + m.r[0] for m in masses]), 1.0)
+        kw = dict(centre=tuple(cc), radii=(span, 0.9, span), base_tint=TR.tint_for('#55703e'), young_tint=TR.tint_for('#678244'),
+                  old_tint=TR.tint_for('#45603c'), overlap=1.1, fill_density=0.9, clump_overlap=1.0, interior_frac=0.2,
+                  spray_rate=0.0, env_k=0.35, up_bias=0.4, flex_r=span, max_cards=420 - len(flowers))
+        cat = {'category': 'tree', 'species': 'crape myrtle', 'footprint': [[0.0, 0.0, 0.3]], 'height': H + 0.6,
+               'crown': {'centre': [float(x) for x in cc], 'radius': float(span), 'base': float(H * 0.5)}, 'tags': ['tree', 'flower'],
+               'anchors': {}, 'notes': '百日紅: flowers through the summer (July to September), the tree of Obon by graves and temples.'}
+        st[key] = TR.build_variant(a, key, limbs, masses, (atlas, rects), sets, kw, m_bark, m_leaf, cat, extra_cards=flowers,
+                                   seed=9100 + vs, max_tris=4000, max_cards=420)
+    stats['sarusuberi'] = st
+    # the clipped hedge: a 2 m segment of camellia trimmed square, a few stems showing at the foot
+    a = out.asset('ikegaki', 'trees')
+    m_bark = a.material('bark', 'toon_solid.gdshader', params={'albedo_mode': 1, 'porosity': 0.8},
+                        textures={'albedo_tex': a.texture('bark', WD.bark_texture(9201, size=64, spacing=(5, 9),
+                                                                                  ridge=('#6e6a5e', '#78746a', '#827e72')))})
+    specs = {'mass': [(LV.broad_leaves, dict(W=int(13 + (i % 3) * 2), H=int(12 + (i % 2) * 2), seed=9202 + i, size=(2.6, 3.6),
+                                             wid=(1.6, 2.1), gloss=0.55, droop=0.05)) for i in range(8)],
+             'interior': [(LV.broad_leaves, dict(W=15, H=13, seed=9250 + i, gloss=0.0)) for i in range(2)]}
+    atlas, rects, sets = FO.build_tiles(specs)
+    m_leaf = a.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=0.3),
+                        textures={'leaf_tex': a.texture('leaves', atlas)})
+    R = rng(9200)
+    st = {}
+    for key, Lh, H, vs in (('a', 2.0, 1.25, 1), ('b', 2.0, 1.15, 2)):
+        limbs, masses = [], []
+        for s_ in range(4):
+            x = -Lh / 2 + (s_ + 0.5) * Lh / 4 + R.normal(0, 0.06)
+            limbs.append(WD.Limb(f's{s_}', [[x, -0.1, 0.0], [x + R.normal(0, 0.03), H * 0.4, R.normal(0, 0.03)]], [0.035, 0.025],
+                                 kind='branch', n_around=4, step_fn=lambda f: 0.4))
+        for k in range(4):
+            x = -Lh / 2 + (k + 0.5) * Lh / 4
+            masses.append(CD.Mass(np.array([x, H * 0.62, 0.0]), (Lh / 4 * 0.85, H * 0.36, 0.34), flat=0.9, seed=9200 + vs * 40 + k,
+                                  clumps=0.0, tiles='mass', interior=True, lump=0.04, lump_scale=1.0))
+        kw = dict(centre=(0.0, H * 0.62, 0.0), radii=(Lh / 2, H * 0.36, 0.35), base_tint=TR.tint_for('#33503a'),
+                  young_tint=TR.tint_for('#41603e'), old_tint=TR.tint_for('#2a4436'), overlap=1.6, fill_density=1.5,
+                  clump_overlap=1.0, interior_frac=0.35, spray_rate=0.0, env_k=0.2, up_bias=0.2, flex_r=0.6, max_cards=320)
+        cat = {'category': 'shrub', 'species': 'hedge', 'footprint': [[-0.5, 0.0, 0.42], [0.5, 0.0, 0.42]], 'height': H,
+               'crown': {'centre': [0.0, H * 0.62, 0.0], 'radius': Lh / 2, 'base': 0.2}, 'tags': ['shrub', 'hedge'], 'anchors': {},
+               'notes': '生垣: a clipped camellia hedge, 2 m a segment (place along a line, yaw along it).'}
+        st[key] = TR.build_variant(a, key, limbs, masses, (atlas, rects), sets, kw, m_bark, m_leaf, cat, seed=9200 + vs,
+                                   max_tris=1800, max_cards=320)
+    stats['ikegaki'] = st
     return stats
 
 

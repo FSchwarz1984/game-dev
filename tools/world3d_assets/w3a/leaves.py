@@ -445,6 +445,49 @@ def flower_head(W, seed, colours):
     return c.finish()
 
 
+def lacecap(W, seed, colours, rim=(232, 228, 238)):
+    """Tama-ajisai (玉紫陽花, the mountain hydrangea of August): a flat head of tiny fertile florets in
+    lilac and blue-violet (darker in the middle), a few bigger pale sterile florets round its rim
+    (RGB tile; the card tint stays white)."""
+    R = rng(seed)
+    H = max(int(W * 0.72), 4)
+    c = Canvas(W, H)
+    cx, cy = W / 2, H / 2
+    rx, ry = W * 0.44, H * 0.4
+    for i in range(int(W * H / 2.6)):
+        a = R.uniform(0, 2 * math.pi)
+        rr = math.sqrt(R.uniform())
+        px, py = cx + math.cos(a) * rr * rx, cy + math.sin(a) * rr * ry
+        col = np.array(colours[0] if rr < 0.45 else (colours[1] if rr < 0.8 else colours[2])) / 255.0
+        c.put(px, py, 1.0, py * 0.01 + R.uniform(0, 0.005), col)
+    for k in range(int(R.integers(3, 6))):
+        a = k * 2 * math.pi / 5 + R.normal(0, 0.4)
+        px, py = cx + math.cos(a) * rx * 0.92, cy + math.sin(a) * ry * 0.9
+        col = np.array(rim) / 255.0
+        for dx, dy in ((0, 0), (1, 0), (0, 1), (-1, 0), (0, -1)):
+            c.put(px + dx, py + dy, 1.0, 0.9 + R.uniform(0, 0.01), col)
+    c.sep(R, 0.3)
+    return c.finish()
+
+
+def panicle(W, seed, colours):
+    """Crape myrtle (百日紅) flowers: an upright cone of crinkled florets, pink to magenta, lighter on
+    top (RGB tile)."""
+    R = rng(seed)
+    H = int(W * 1.25)
+    c = Canvas(W, H)
+    cx = W / 2
+    for i in range(int(W * H / 2.2)):
+        t = R.uniform() ** 0.8                     # 0 top .. 1 bottom
+        half = (0.12 + 0.38 * t) * W
+        px = cx + R.uniform(-half, half)
+        py = 1 + t * (H - 2)
+        col = np.array(colours[2] if t < 0.3 else (colours[1] if R.uniform() < 0.6 else colours[0])) / 255.0
+        c.put(px, py, 1.0, py * 0.01 + R.uniform(0, 0.005), col)
+    c.sep(R, 0.4)
+    return c.finish()
+
+
 def fruit(W, seed, colours):
     """A round fruit (persimmon), shaded as a ball lit from the sky, with a calyx."""
     R = rng(seed)

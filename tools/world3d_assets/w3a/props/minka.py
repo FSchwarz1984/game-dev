@@ -6,7 +6,9 @@ A hipped thatch (寄棟の茅葺) in three trimmed courses with a thick cut eave
 smoke-darkened posts, earth plaster over boards; along the front an engawa (縁側) under the deep
 eave; behind it shoji (one slid open: tatami, a low table, a brazier glowing at night), a reed blind
 (簾) half down, a wind chime (風鈴) at the corner; the east bay is the doma (土間) door with an indigo
-noren; under the eave hang strings of drying persimmons (吊るし柿) and red peppers; a straw raincoat
+noren; under the eave hang bunches of onions (吊り玉葱, the summer harvest drying; round 5: the dried
+persimmons of round 4 were late autumn) and red peppers, two bon lanterns (盆提灯) light the engawa at
+Obon (paper lit from inside after dusk); a straw raincoat
 and a sedge hat on the wall; on the engawa a tea tray, a fan, a mosquito-coil pig; the step stone
 with geta; potted morning glories at the engawa's ends; a drip line of pebbles where the rain falls
 off the thatch. To the west a board-roofed lean-to (下屋, stones on the boards) with the kitchen
@@ -525,22 +527,59 @@ def geya_pieces(R):
 def hangings(R):
     P = []
     sd = lambda: int(R.integers(0, 1 << 20))
-    # dried persimmons on strings from a bamboo pole under the eave of the first bay
+    # onions tied in bunches by their dried tops, hanging from a bamboo pole under the eave of the first bay
     pole_y = 2.55
     pz = ENG_Z1 - 0.12
     P.append(_w(cyl((-3.55, pole_y, pz), (-2.25, pole_y, pz), 0.02, BAMBOO, n=4), 'plain', 0.0, sd()))
+    onion = K.col('#b8864a')
+    tops = K.col('#a89660')
     for k in range(4):
-        x = -3.4 + k * 0.33 + R.normal(0, 0.02)
-        rope = cyl((x, pole_y, pz), (x, pole_y - 0.82, pz), 0.006, K.col('#6a5a40'), n=3)
-        rope.swaying((x, pole_y, pz), 0.5)
-        P.append(rope)
-        for j in range(6):
-            y = pole_y - 0.12 - j * 0.12
-            c = PERSIMMON * (0.85 + 0.25 * R.uniform())
-            fr = K.lathe([(0.0, -0.06), (0.045, -0.045), (0.055, 0.0), (0.045, 0.04), (0.0, 0.05)], c, n=6,
-                         base=(x + R.normal(0, 0.01), y, pz + 0.02), pattern='plain', amount=0.0, var=0.04, seed=sd())
-            fr.swaying((x, pole_y, pz), 0.5)
-            P.append(fr)
+        x = -3.38 + k * 0.32 + R.normal(0, 0.02)
+        drop = R.uniform(0.18, 0.3)
+        knot = (x, pole_y - drop, pz)
+        stalk = cyl((x, pole_y, pz), knot, 0.014, tops, n=4)
+        stalk.swaying((x, pole_y, pz), 0.35)
+        P.append(stalk)
+        n_on = int(R.integers(5, 9))
+        for j in range(n_on):
+            a = j * 2.4 + R.normal(0, 0.3)
+            rr = 0.03 + 0.02 * (j % 3)
+            cy = knot[1] - 0.07 - 0.05 * (j // 3) - R.uniform(0.0, 0.03)
+            c = onion * R.uniform(0.82, 1.12)
+            ob = K.lathe([(0.0, -0.035), (0.03, -0.028), (0.04, 0.0), (0.03, 0.026), (0.008, 0.045), (0.0, 0.05)], c, n=6,
+                         base=(x + math.cos(a) * rr, cy, pz + 0.02 + math.sin(a) * rr * 0.6), pattern='plain', amount=0.0, var=0.05, seed=sd())
+            ob.swaying((x, pole_y, pz), 0.4)
+            P.append(ob)
+            neck = cyl((x + math.cos(a) * rr * 0.6, cy + 0.045, pz + 0.02), knot, 0.006, tops, n=3)
+            neck.swaying((x, pole_y, pz), 0.4)
+            P.append(neck)
+    # two bon lanterns (盆提灯, gifu style): egg-shaped paper with bellflowers painted, black lacquer
+    # caps, a tassel; hung from the engawa's beam to light the dead home at Obon (paper glows after dusk)
+    for bx in (-1.95, 1.05):
+        by = LINTEL + 0.62
+        bz = ENG_Z1 - 0.28
+        P.append(cyl((bx, by + 0.42, bz), (bx, by + 0.17, bz), 0.004, K.col('#3a3030'), n=3))
+        cap = K.lathe([(0.0, 0.0), (0.05, 0.0), (0.055, 0.025), (0.0, 0.03)], K.col('#2a2224'), n=8, base=(bx, by + 0.15, bz), var=0.0)
+        cap.swaying((bx, by + 0.42, bz), 0.15)
+        P.append(cap)
+        body = K.lathe([(0.0, -0.14), (0.055, -0.13), (0.095, -0.06), (0.1, 0.0), (0.09, 0.07), (0.05, 0.13), (0.0, 0.14)],
+                       K.col('#e8e4d8'), n=12, base=(bx, by, bz), mat='shoji', pattern='paper', amount=0.15, var=0.0)
+
+        def flowers(Pp, N, bx=bx, by=by, bz=bz):
+            a = np.arctan2(Pp[:, 2] - bz, Pp[:, 0] - bx)
+            m = np.ones((len(Pp), 3))
+            blue = (np.sin(a * 5.0 + 1.0) > 0.55) & (np.abs(Pp[:, 1] - by) < 0.07)
+            m[blue] = np.array([0.62, 0.62, 0.86])
+            leaf = (np.sin(a * 5.0 + 2.2) > 0.75) & (Pp[:, 1] - by < -0.03) & (Pp[:, 1] - by > -0.1)
+            m[leaf] = np.array([0.66, 0.78, 0.62])
+            return m
+        body.shade = flowers
+        P.append(body)
+        foot = K.lathe([(0.0, -0.03), (0.045, -0.03), (0.05, 0.0), (0.0, 0.0)], K.col('#2a2224'), n=8, base=(bx, by - 0.14, bz), var=0.0)
+        P.append(foot)
+        tassel = K.cbox((0.03, 0.16, 0.03), K.col('#6a4a7a'), centre=(bx, by - 0.26, bz), bevel=0.0, var=0.0)
+        tassel.swaying((bx, by - 0.17, bz), 0.6)
+        P.append(tassel)
     # red peppers from the east post of the doma
     for k in range(3):
         x = 3.92 + k * 0.07

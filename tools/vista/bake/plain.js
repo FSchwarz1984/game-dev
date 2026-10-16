@@ -120,6 +120,11 @@ function catmull(pts, n) {
 const RIVER3 = [[-1100, 420], [-1250, 800], [-1150, 1250], [-700, 1650], [-150, 1900], [350, 2350], [520, 3000], [250, 3700],
   [700, 4500], [1500, 5200], [1900, 6400], [1600, 7800], [2400, 9500], [3200, 12500]];
 
+// the old road from the foot of the pass to the town (vista.py old_road: the same control points,
+// Catmull-Rom with 12 steps a span), in prologue units
+const OLD_ROAD3 = [[24, 600], [60, 900], [-40, 1300], [-150, 1700], [-260, 2160]];
+export function oldRoad() { return catmull(OLD_ROAD3, 12).map(([x, z]) => P(x, z)); }
+
 function prepare() {
   const J = W3.json;
   FARH = u16(W3.far, J.far.hmin, J.far.hrange);

@@ -234,7 +234,10 @@ func update(rise_k: float, t: float) -> void:
 		p.set_param("t", t)
 
 
-## The floating lanterns drifting down the river toward us (灯籠流し), positioned on the CPU.
+## The floating lanterns drifting down the river (灯籠流し), positioned on the CPU. Since round 5 the
+## river is the 3D lookout's: out of the western canyon, past the town's front and away to the south-
+## east, so they drift away from us; dimmer as they go (a trail into the distance, not a blob where
+## the river turns away and they crowd on screen).
 func update_river(t: float, tod: float, rise_k: float, wave: float) -> void:
 	var ra := VistaEnv.smoothj(19.1, 19.5, tod) * (1.0 - VistaEnv.smoothj(0.12, 0.6, rise_k))
 	river.visible = ra > 0.02
@@ -267,7 +270,7 @@ func update_river(t: float, tod: float, rise_k: float, wave: float) -> void:
 				var o := (int(y) * w + int(x)) * 2
 				var zg := (zb[o] + zb[o + 1] * 256) * 1024.0 / 65535.0
 				if zg >= Z * 0.9:
-					a = ra
+					a = ra * clampf(1.0 - (Z - 11.0) / 12.0, 0.4, 1.0)
 					if wave >= 0.0:
 						var arr := VistaSouthLights.wave_at(Vector2(X, Z).distance_to(Vector2(s.m["Xc"], s.m["Zc"])) / float(s.m["waveR"]))
 						a *= 1.0 - VistaEnv.smoothj(arr - 0.004, arr + 0.012, wave)

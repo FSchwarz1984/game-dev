@@ -26,7 +26,7 @@
     "flower"
    ],
    "anchors": {},
-   "notes": "紫陽花, blue flowers.",
+   "notes": "玉紫陽花 (tama-ajisai, flowers in August), blue.",
    "scene": "res://world3d/assets/trees/ajisai/ajisai_blue.tscn"
   },
   "ajisai_dusty": {
@@ -42,11 +42,11 @@
    "height": 1.4,
    "crown": {
     "centre": [
-     -0.006604050591151887,
-     0.7473705754488306,
-     -0.04072856878559198
+     -0.10020036225501923,
+     0.741659038873113,
+     -0.04879003553103232
     ],
-    "radius": 1.1103472170748891,
+    "radius": 1.289903573284533,
     "base": 0.1
    },
    "tags": [
@@ -54,7 +54,7 @@
     "flower"
    ],
    "anchors": {},
-   "notes": "紫陽花, dusty flowers.",
+   "notes": "玉紫陽花 (tama-ajisai, flowers in August), dusty.",
    "scene": "res://world3d/assets/trees/ajisai/ajisai_dusty.tscn"
   },
   "ajisai_violet": {
@@ -70,11 +70,11 @@
    "height": 1.1,
    "crown": {
     "centre": [
-     -0.065995534033547,
-     0.5414791872608182,
-     -0.06645203393892106
+     0.0427326884721091,
+     0.5634090394392371,
+     0.028995894987044562
     ],
-    "radius": 0.9674331689859059,
+    "radius": 0.8707609437348938,
     "base": 0.1
    },
    "tags": [
@@ -82,7 +82,7 @@
     "flower"
    ],
    "anchors": {},
-   "notes": "紫陽花, violet flowers.",
+   "notes": "玉紫陽花 (tama-ajisai, flowers in August), violet.",
    "scene": "res://world3d/assets/trees/ajisai/ajisai_violet.tscn"
   },
   "backpack_frame": {
@@ -1490,15 +1490,15 @@
      0.8370000000000001
     ]
    ],
-   "height": 9.8,
+   "height": 10.2,
    "crown": {
     "centre": [
      0.0,
-     7.8,
+     8.0,
      0.0
     ],
-    "radius": 1.8,
-    "base": 5.2
+    "radius": 1.9,
+    "base": 4.6
    },
    "tags": [
     "tree",
@@ -1512,8 +1512,43 @@
      0.0
     ]
    },
-   "notes": "An old cedar broken at 7.2 m long ago, two upturned leaders to 9.6 m; trunk 1.2-1.5 m across at the foot. The gates' trees (the michikiri rope is tied round it at 4.6 m).",
+   "notes": "An old cedar broken long ago; one strong leader leaning east to 9.6 m, a short one low on the west, a dead snag. The gates' trees (the michikiri rope is tied round it at 4.6 m).",
    "scene": "res://world3d/assets/trees/furusugi/furusugi_a.tscn"
+  },
+  "furusugi_b": {
+   "category": "tree",
+   "species": "furusugi",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.783
+    ]
+   ],
+   "height": 9.8,
+   "crown": {
+    "centre": [
+     0.0,
+     7.6,
+     0.0
+    ],
+    "radius": 1.9,
+    "base": 4.6
+   },
+   "tags": [
+    "tree",
+    "conifer",
+    "old"
+   ],
+   "anchors": {
+    "rope": [
+     0.0,
+     4.6,
+     0.0
+    ]
+   },
+   "notes": "An old cedar broken long ago; three unequal leaders fanned north-west, a long bleached dead limb. The gates' trees (the michikiri rope is tied round it at 4.6 m).",
+   "scene": "res://world3d/assets/trees/furusugi/furusugi_b.tscn"
   },
   "gate_stones": {
    "footprint": [
@@ -1918,6 +1953,72 @@
    ],
    "scene": "res://world3d/assets/buildings/hut/hut.tscn"
   },
+  "ikegaki_a": {
+   "category": "shrub",
+   "species": "hedge",
+   "footprint": [
+    [
+     -0.5,
+     0.0,
+     0.42
+    ],
+    [
+     0.5,
+     0.0,
+     0.42
+    ]
+   ],
+   "height": 1.25,
+   "crown": {
+    "centre": [
+     0.0,
+     0.775,
+     0.0
+    ],
+    "radius": 1.0,
+    "base": 0.2
+   },
+   "tags": [
+    "shrub",
+    "hedge"
+   ],
+   "anchors": {},
+   "notes": "生垣: a clipped camellia hedge, 2 m a segment (place along a line, yaw along it).",
+   "scene": "res://world3d/assets/trees/ikegaki/ikegaki_a.tscn"
+  },
+  "ikegaki_b": {
+   "category": "shrub",
+   "species": "hedge",
+   "footprint": [
+    [
+     -0.5,
+     0.0,
+     0.42
+    ],
+    [
+     0.5,
+     0.0,
+     0.42
+    ]
+   ],
+   "height": 1.15,
+   "crown": {
+    "centre": [
+     0.0,
+     0.713,
+     0.0
+    ],
+    "radius": 1.0,
+    "base": 0.2
+   },
+   "tags": [
+    "shrub",
+    "hedge"
+   ],
+   "anchors": {},
+   "notes": "生垣: a clipped camellia hedge, 2 m a segment (place along a line, yaw along it).",
+   "scene": "res://world3d/assets/trees/ikegaki/ikegaki_b.tscn"
+  },
   "itabashi": {
    "footprint": [],
    "tags": [
@@ -2267,60 +2368,10 @@
       2.889,
       2.656,
       -0.045
-     ],
-     [
-      -0.724,
-      4.599,
-      4.41
-     ],
-     [
-      2.532,
-      3.545,
-      -0.508
-     ],
-     [
-      0.285,
-      3.982,
-      4.444
-     ],
-     [
-      1.692,
-      3.649,
-      2.567
-     ],
-     [
-      0.67,
-      3.324,
-      -0.948
-     ],
-     [
-      -2.592,
-      3.749,
-      4.648
-     ],
-     [
-      4.816,
-      3.42,
-      -0.752
-     ],
-     [
-      -3.045,
-      4.648,
-      3.675
-     ],
-     [
-      -0.514,
-      4.101,
-      2.151
-     ],
-     [
-      -0.874,
-      5.699,
-      2.797
      ]
     ]
    },
-   "notes": "柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.",
+   "notes": "柿 in August: green fruit among the leaves; anchors.fruit lists them.",
    "scene": "res://world3d/assets/trees/kaki/kaki_a.tscn"
   },
   "kaki_b": {
@@ -2404,45 +2455,10 @@
       -0.234,
       3.255,
       -0.256
-     ],
-     [
-      -2.971,
-      5.131,
-      -0.255
-     ],
-     [
-      -1.614,
-      3.551,
-      -0.084
-     ],
-     [
-      0.384,
-      3.038,
-      0.76
-     ],
-     [
-      -0.359,
-      3.458,
-      0.816
-     ],
-     [
-      -0.181,
-      4.611,
-      1.626
-     ],
-     [
-      -2.335,
-      5.523,
-      -1.336
-     ],
-     [
-      0.497,
-      5.117,
-      1.139
      ]
     ]
    },
-   "notes": "柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.",
+   "notes": "柿 in August: green fruit among the leaves; anchors.fruit lists them.",
    "scene": "res://world3d/assets/trees/kaki/kaki_b.tscn"
   },
   "kaki_c": {
@@ -2561,70 +2577,10 @@
       -0.596,
       4.751,
       -0.293
-     ],
-     [
-      2.22,
-      8.38,
-      0.399
-     ],
-     [
-      1.517,
-      5.527,
-      1.697
-     ],
-     [
-      2.05,
-      7.017,
-      0.299
-     ],
-     [
-      1.112,
-      5.64,
-      -0.199
-     ],
-     [
-      0.029,
-      6.032,
-      3.556
-     ],
-     [
-      1.73,
-      5.947,
-      0.156
-     ],
-     [
-      1.581,
-      5.623,
-      0.712
-     ],
-     [
-      -3.993,
-      5.896,
-      -0.031
-     ],
-     [
-      0.965,
-      5.518,
-      2.096
-     ],
-     [
-      2.086,
-      8.371,
-      -1.735
-     ],
-     [
-      1.359,
-      4.779,
-      1.431
-     ],
-     [
-      -0.748,
-      4.395,
-      0.6
      ]
     ]
    },
-   "notes": "柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.",
+   "notes": "柿 in August: green fruit among the leaves; anchors.fruit lists them.",
    "scene": "res://world3d/assets/trees/kaki/kaki_c.tscn"
   },
   "kare_a": {
@@ -2938,7 +2894,7 @@
     "accent"
    ],
    "anchors": {},
-   "notes": "イロハモミジ, red (accent)",
+   "notes": "イロハモミジ, 野村紅葉, wine red in summer (accent)",
    "scene": "res://world3d/assets/trees/maple/maple_red_a.tscn"
   },
   "maple_red_b": {
@@ -2966,7 +2922,7 @@
     "accent"
    ],
    "anchors": {},
-   "notes": "イロハモミジ, red (accent)",
+   "notes": "イロハモミジ, 野村紅葉, wine red in summer (accent)",
    "scene": "res://world3d/assets/trees/maple/maple_red_b.tscn"
   },
   "massha": {
@@ -3406,6 +3362,90 @@
     0.18
    ],
    "scene": "res://world3d/assets/props/radio/radio.tscn"
+  },
+  "sakaki_a": {
+   "category": "shrub",
+   "species": "sakaki",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.42
+    ]
+   ],
+   "height": 3.0,
+   "crown": {
+    "centre": [
+     0.0,
+     1.6500000000000001,
+     0.0
+    ],
+    "radius": 0.5276578681415187,
+    "base": 0.3
+   },
+   "tags": [
+    "shrub",
+    "sacred"
+   ],
+   "anchors": {},
+   "notes": "榊: the shrine's evergreen (its sprays go on the altar), upright, small glossy leaves.",
+   "scene": "res://world3d/assets/trees/sakaki/sakaki_a.tscn"
+  },
+  "sakaki_b": {
+   "category": "shrub",
+   "species": "sakaki",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.33
+    ]
+   ],
+   "height": 2.3,
+   "crown": {
+    "centre": [
+     0.0,
+     1.265,
+     0.0
+    ],
+    "radius": 0.45180328926897567,
+    "base": 0.3
+   },
+   "tags": [
+    "shrub",
+    "sacred"
+   ],
+   "anchors": {},
+   "notes": "榊: the shrine's evergreen (its sprays go on the altar), upright, small glossy leaves.",
+   "scene": "res://world3d/assets/trees/sakaki/sakaki_b.tscn"
+  },
+  "sarusuberi_a": {
+   "category": "tree",
+   "species": "crape myrtle",
+   "footprint": [
+    [
+     0.0,
+     0.0,
+     0.3
+    ]
+   ],
+   "height": 5.199999999999999,
+   "crown": {
+    "centre": [
+     0.26197719445736795,
+     2.6016335604059777,
+     0.518100908091726
+    ],
+    "radius": 3.8423932977429907,
+    "base": 2.3
+   },
+   "tags": [
+    "tree",
+    "flower"
+   ],
+   "anchors": {},
+   "notes": "百日紅: flowers through the summer (July to September), the tree of Obon by graves and temples.",
+   "scene": "res://world3d/assets/trees/sarusuberi/sarusuberi_a.tscn"
   },
   "sekimori": {
    "footprint": [],
@@ -4066,7 +4106,7 @@
     "flower"
    ],
    "anchors": {},
-   "notes": "椿: dark glossy leaves, a few red flowers.",
+   "notes": "椿: dark glossy leaves; in August a few green fruit, no flowers.",
    "scene": "res://world3d/assets/trees/tsubaki/tsubaki_a.tscn"
   },
   "tsubaki_b": {
@@ -4082,11 +4122,11 @@
    "height": 2.0,
    "crown": {
     "centre": [
-     0.0035854876916184045,
-     1.033521056649952,
-     0.022660345135921706
+     0.03160087291971324,
+     1.0888377029402876,
+     -0.01650027947425541
     ],
-    "radius": 0.8733422341126116,
+    "radius": 0.9166256522220666,
     "base": 0.3
    },
    "tags": [
@@ -4094,7 +4134,7 @@
     "flower"
    ],
    "anchors": {},
-   "notes": "椿: dark glossy leaves, a few red flowers.",
+   "notes": "椿: dark glossy leaves; in August a few green fruit, no flowers.",
    "scene": "res://world3d/assets/trees/tsubaki/tsubaki_b.tscn"
   },
   "tsutsuji_a": {

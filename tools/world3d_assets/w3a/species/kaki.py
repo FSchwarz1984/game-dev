@@ -1,5 +1,6 @@
 """Kaki 柿 (persimmon): a crooked dark trunk splitting low into gnarled limbs, an open rounded crown
-of large glossy leaves, orange fruit hanging on the outside (late summer: some still green-gold).
+of large glossy leaves, fruit hanging on the outside. Round 5 (Obon, mid-August): the fruit is still green,
+half hidden among the leaves (ripe orange is October; the hanging dried persimmons of round 4 were late autumn).
 Three variants. The fruit positions are listed in the catalog anchors ('fruit') for picking.
 """
 from __future__ import annotations
@@ -19,12 +20,12 @@ SEED = 7401
 NAME = 'kaki'
 
 VARIANTS = [  # key, height, limbs, spread, fruits, seed
-    ('a', 7.5, 4, 3.4, 26, 1),
-    ('b', 6.0, 3, 2.8, 18, 2),
-    ('c', 8.5, 4, 3.9, 30, 3),
+    ('a', 7.5, 4, 3.4, 16, 1),
+    ('b', 6.0, 3, 2.8, 11, 2),
+    ('c', 8.5, 4, 3.9, 18, 3),
 ]
-FRUIT_RIPE = [(150, 66, 28), (214, 112, 40), (242, 164, 74)]
-FRUIT_GOLD = [(140, 110, 40), (196, 158, 58), (226, 196, 100)]
+FRUIT_RIPE = [(66, 92, 40), (98, 128, 54), (138, 160, 78)]       # (named for the old slot) green in August
+FRUIT_GOLD = [(84, 98, 42), (124, 136, 58), (160, 170, 84)]       # a little yellower
 
 
 def tiles():
@@ -84,7 +85,7 @@ def variant(key, H, nl, spread, nfruit, vs, sets):
            'crown': {'centre': [float(cc[0]), float(cc[1]), float(cc[2])], 'radius': float(span), 'base': float(fork)},
            'tags': ['tree', 'broadleaf', 'fruit'],
            'anchors': {'fruit': [[round(float(v), 3) for v in f.p] for f in fruits]},
-           'notes': '柿 with fruit (ripe orange and a few still gold); anchors.fruit lists them.'}
+           'notes': '柿 in August: green fruit among the leaves; anchors.fruit lists them.'}
     return limbs, masses, crown_kw, cat, fruits
 
 

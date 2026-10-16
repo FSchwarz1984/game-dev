@@ -12,6 +12,14 @@ surroundings should feel holy, a place apart, entered "by a special way").
   jizo          a roadside Jizo with a red bib and cap, a flower in a bamboo cup
   sekimori      a boundary stone (関守石): a round stone tied with a black cross of rope, set on a path
                 ("go no further"); for the barrier's lesser gates
+  goban         (round 5, 烂柯, G5R3-11 5.2 A) a stone go board by the iwakura, a game left half played,
+                moss grown over the stones and into the grid, one bowl tipped
+  ono           (烂柯) an axe by the great camphor's root whose handle has rotted away to a stump: the
+                rusted head, moss on the stump
+  kumotsu_old   (烂柯) offerings from different times on the shrine's offering stone: a holed copper
+                coin gone green, a brown glass medicine bottle, a rusted drop-candy tin, a fresh cup
+  shoryouma     (Obon) the spirit horse and cow (精霊馬): a cucumber horse and an eggplant cow on
+                legs of hemp stalk, on a lotus leaf before the graves
 Origins on the ground, fronts toward +z (south, the camera)."""
 from __future__ import annotations
 
@@ -509,8 +517,139 @@ def radio(out):
     return export_prop(out, 'radio', 'props', prop, cat, porosity=0.4, far=True, budget=600, ground=False)
 
 
+def goban(out):
+    """A go board cut in stone (碁盤石) on a low rock, 0.46 m square: grid lines worn into it, a game
+    half played (black and white stones on one corner and side), moss in the grid and over some
+    stones; two bowls, one tipped over and its stones spilled in the moss."""
+    R = rng(9971)
+    P = []
+
+    def base(Q):
+        d = K.sd_box(Q - np.array([0.0, 0.1, 0.0]), (0.3, 0.13, 0.27), r=0.08)
+        return d + K.weathered(Q, 0.03, 0.18, 9972)
+    P.append(K.sdf_piece(base, (-0.42, -0.05, -0.38), (0.42, 0.26, 0.38), STONE_OLD * 0.92, h=0.03, tris=260, pattern='stone',
+                         amount=0.8, var=0.06, seed=9972))
+    top = 0.25
+    board = K.cbox((0.46, 0.09, 0.46), STONE * 1.05, centre=(0.0, top + 0.045, 0.0), bevel=0.012, var=0.05, seed=9973,
+                   pattern='stone', amount=0.35)
+
+    def grid(Pp, N):
+        m = np.ones((len(Pp), 3))
+        on_top = N[:, 1] > 0.8
+        gx = np.abs(((Pp[:, 0] + 0.2) / 0.066) - np.round((Pp[:, 0] + 0.2) / 0.066)) < 0.12
+        gz = np.abs(((Pp[:, 2] + 0.2) / 0.066) - np.round((Pp[:, 2] + 0.2) / 0.066)) < 0.12
+        m[on_top & (gx | gz)] = np.array([0.62, 0.62, 0.6])
+        moss = on_top & (fbm3(Pp[:, 0] * 9, Pp[:, 1] * 9, Pp[:, 2] * 9, 2, 9974) > 0.55)
+        m[moss] = np.array([0.6, 0.74, 0.46])
+        return m
+    board.shade = grid
+    P.append(board)
+    # the game: stones on the grid points of one corner and one side
+    pts = [(i, j) for i in range(7) for j in range(7)]
+    R.shuffle(pts)
+    black, white = K.col('#2a2a2c'), K.col('#e4e2da')
+    moss = K.col('#6e8a4a')
+    for k, (i, j) in enumerate(pts[:19]):
+        if i > 4 and j > 4:
+            continue
+        x, z = -0.2 + i * 0.066, -0.2 + j * 0.066
+        c = black if k % 2 else white
+        if R.uniform() < 0.35:
+            c = moss * R.uniform(0.9, 1.1)
+        P.append(K.lathe([(0.0, 0.0), (0.022, 0.0), (0.022, 0.008), (0.0, 0.014)], c, n=6, base=(x, top + 0.09, z), var=0.0, dirt=False))
+    # the bowls: one upright, one tipped over with its stones spilled
+    P.append(K.lathe([(0.0, 0.0), (0.07, 0.0), (0.085, 0.05), (0.07, 0.09), (0.0, 0.09)], K.col('#5a4232'), n=10, base=(0.42, 0.0, 0.18),
+                     pattern='planks', amount=0.2, var=0.05, seed=9975))
+    P.append(K.lathe([(0.0, 0.0), (0.07, 0.0), (0.085, 0.05), (0.07, 0.09), (0.0, 0.09)], K.col('#4e3a2c'), n=10,
+                     R=K.rot_z(1.4), base=(-0.44, 0.07, 0.22), pattern='planks', amount=0.2, var=0.05, seed=9976))
+    for k in range(7):
+        c = white if k % 3 else black
+        P.append(K.lathe([(0.0, 0.0), (0.022, 0.0), (0.022, 0.008), (0.0, 0.014)], c * (0.85 if R.uniform() < 0.5 else 1.0), n=6,
+                         base=(-0.55 - R.uniform(0, 0.2), 0.0, 0.25 + R.normal(0, 0.08)), var=0.0, dirt=False))
+    prop = K.Prop('goban', 9971).add(P)
+    cat = {'footprint': [[0.0, 0.0, 0.36]], 'tags': ['sacred', 'interact', 'ranka'],
+           'notes': '烂柯: a stone go board on a low rock by the iwakura, a game left half played, moss in the grid and over some '
+                    'stones, a bowl tipped over. 0.46 m square, top at 0.34 m.',
+           'anchors': {'interact': [0.0, 0.0, 0.55], 'perch': [[0.0, 0.36, 0.0]]}}
+    return export_prop(out, 'goban', 'props', prop, cat, porosity=0.5, far=False, budget=1800)
+
+
+def ono(out):
+    """An axe left by the great camphor's root long ago: the handle rotted away to a stump in the iron,
+    the head rusted dark, lying in the moss against the root."""
+    R = rng(9981)
+    P = []
+    iron = K.col('#5a4234')
+    head = K.cbox((0.2, 0.025, 0.08), iron, centre=(0.0, 0.03, 0.0), bevel=0.006, R=K.rot_y(0.5) @ K.rot_z(0.25), var=0.12, seed=9982,
+                  pattern='stone', amount=0.4)
+    P.append(head)
+    blade = K.cbox((0.06, 0.02, 0.14), iron * 0.9, centre=(0.1, 0.032, 0.05), bevel=0.004, R=K.rot_y(0.5) @ K.rot_z(0.25), var=0.1, seed=9983)
+    P.append(blade)
+    stump = cyl((-0.06, 0.03, -0.02), (-0.2, 0.06, -0.12), 0.022, K.col('#4e4232'), n=5)
+    P.append(_w(stump, 'bark', 0.8, 9984))
+    P.append(K.lathe([(0.0, 0.0), (0.08, 0.0), (0.0, 0.03)], K.col('#6a8648'), n=7, base=(-0.12, 0.0, -0.06), var=0.08, dirt=False))
+    prop = K.Prop('ono', 9981).add(P)
+    cat = {'footprint': [], 'tags': ['sacred', 'interact', 'ranka'],
+           'notes': '烂柯: an axe whose handle has rotted away to a stump, the head rusted, in the moss by the camphor\'s root.',
+           'anchors': {'interact': [0.0, 0.0, 0.35]}}
+    return export_prop(out, 'ono', 'props', prop, cat, porosity=0.5, far=False, budget=400)
+
+
+def kumotsu_old(out):
+    """Offerings from different times on a flat stone before the shrine: a holed copper coin gone
+    green (穴銭), a brown glass medicine bottle, a rusted drop-candy tin, and a fresh cup of water
+    with a sprig of sakaki (hers, this morning). No dates anywhere."""
+    R = rng(9991)
+    P = []
+
+    def slab(Q):
+        d = K.sd_box(Q - np.array([0.0, 0.06, 0.0]), (0.3, 0.07, 0.18), r=0.04)
+        return d + K.weathered(Q, 0.01, 0.08, 9992)
+    P.append(K.sdf_piece(slab, (-0.36, -0.03, -0.24), (0.36, 0.16, 0.24), STONE_OLD, h=0.02, tris=180, pattern='stone', amount=0.6,
+                         var=0.05, seed=9992))
+    y = 0.13
+    P.append(K.lathe([(0.0, 0.0), (0.03, 0.0), (0.03, 0.006), (0.0, 0.006)], K.col('#4a7a62'), n=8, base=(-0.2, y, 0.04), var=0.05, dirt=False))
+    P.append(K.lathe([(0.0, 0.0), (0.028, 0.0), (0.03, 0.06), (0.012, 0.085), (0.012, 0.11), (0.0, 0.11)], K.col('#6a4026'), n=8,
+                     base=(-0.06, y, -0.05), var=0.02, dirt=False))
+    P.append(K.cbox((0.07, 0.11, 0.045), K.col('#8a3a2a'), centre=(0.08, y + 0.055, -0.04), bevel=0.008, var=0.15, seed=9993,
+                    pattern='stone', amount=0.3))
+    P.append(K.lathe([(0.0, 0.0), (0.03, 0.0), (0.035, 0.05), (0.0, 0.05)], K.col('#e6e2d6'), n=8, base=(0.2, y, 0.05), var=0.0, dirt=False))
+    P.append(K.cbox((0.012, 0.12, 0.012), K.col('#3a5a3a'), centre=(0.2, y + 0.1, 0.05), bevel=0.0, var=0.0))
+    for k in range(3):
+        P.append(K.cbox((0.035, 0.012, 0.02), K.col('#2f4a34'), centre=(0.2 + (k - 1) * 0.02, y + 0.14 + k * 0.012, 0.05),
+                        bevel=0.0, R=K.rot_z((k - 1) * 0.6), var=0.0))
+    prop = K.Prop('kumotsu_old', 9991).add(P)
+    cat = {'footprint': [[0.0, 0.0, 0.3]], 'tags': ['sacred', 'interact', 'ranka'],
+           'notes': '烂柯: offerings from different times on a flat stone before the shrine: a holed copper coin gone green, a brown glass '
+                    'medicine bottle, a rusted candy tin, and a fresh cup with a sakaki sprig.',
+           'anchors': {'interact': [0.0, 0.0, 0.45]}}
+    return export_prop(out, 'kumotsu_old', 'props', prop, cat, porosity=0.5, far=False, budget=900)
+
+
+def shoryouma(out):
+    """精霊馬 for Obon: a cucumber horse (the dead come home fast) and an eggplant cow (and go back
+    slowly), on legs of hemp stalk, standing on a lotus leaf before the graves."""
+    R = rng(9995)
+    P = []
+    leaf = K.lathe([(0.0, 0.0), (0.2, 0.004), (0.24, 0.02), (0.0, 0.012)], K.col('#4a7044'), n=12, base=(0.0, 0.0, 0.0), var=0.05,
+                   seed=9996)
+    P.append(leaf)
+    ogara = K.col('#d8cfb2')
+    for (x, colour, L_, r) in ((-0.08, K.col('#3e6a32'), 0.2, 0.024), (0.1, K.col('#3e2a48'), 0.13, 0.035)):
+        body = K.cprism(7, r, r * 0.85, L_, colour, base=(x - L_ / 2, 0.075, 0.0), bevel=0.0, R=K.frame_to(np.array([1.0, 0.0, 0.0])))
+        P.append(body)
+        for dx in (-L_ * 0.35, L_ * 0.35):
+            for dz in (-r * 0.6, r * 0.6):
+                P.append(K.cbox((0.006, 0.07, 0.006), ogara, centre=(x + dx, 0.04, dz), bevel=0.0, var=0.0))
+    prop = K.Prop('shoryouma', 9995).add(P)
+    cat = {'footprint': [], 'tags': ['sacred', 'season'],
+           'notes': '精霊馬 (Obon): a cucumber horse and an eggplant cow on hemp-stalk legs, on a lotus leaf.', 'anchors': {}}
+    return export_prop(out, 'shoryouma', 'props', prop, cat, porosity=0.6, far=False, budget=400)
+
+
 def build(out):
     return {'gate_stones': gate_stones(out), 'michikiri_e': michikiri_e(out), 'michikiri_n': michikiri_n(out),
             'chozubachi': chozubachi(out), 'ema_kake': ema_kake(out), 'massha': massha(out),
             'iwakura': iwakura(out), 'jizo': jizo(out), 'sekimori': sekimori(out), 'hiraishi': hiraishi(out),
-            'shoikago': shoikago(out), 'radio': radio(out)}
+            'shoikago': shoikago(out), 'radio': radio(out), 'goban': goban(out), 'ono': ono(out), 'kumotsu_old': kumotsu_old(out),
+            'shoryouma': shoryouma(out)}

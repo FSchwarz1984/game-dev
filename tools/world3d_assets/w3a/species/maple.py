@@ -1,6 +1,7 @@
 """Iroha-momiji イロハモミジ (Japanese maple): a small multi-stemmed tree, smooth grey bark, branches
-spreading in airy horizontal layers of small star leaves. Summer green (three variants) and a red
-one for accents (two variants; the same tiles, tinted).
+spreading in airy horizontal layers of small star leaves. Summer green (three variants) and a red-
+leaved one for accents (two variants; the same tiles, tinted): round 5, a nomura-momiji (野村紅葉) kind,
+deep wine red all summer (the autumn scarlet of round 4 was out of season at Obon).
 """
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ SEED = 7301
 NAME = 'maple'
 
 GREEN = ('#6b8a43', '#7e9a49', '#58773f')
-RED = ('#a3412c', '#b5552f', '#86352a')
+RED = ('#7a3438', '#8c4040', '#62292f')      # nomura-momiji in summer: wine red, not autumn scarlet
 VARIANTS = [  # key, height, stems, spread, palette, seed
     ('a', 7.0, 3, 4.2, GREEN, 1),
     ('b', 5.5, 2, 3.4, GREEN, 2),
@@ -80,7 +81,7 @@ def variant(key, H, stems, spread, pal, vs):
            'footprint': [[0.0, 0.0, 0.35]], 'height': H,
            'crown': {'centre': [float(cc[0]), float(cc[1]), float(cc[2])], 'radius': float(span), 'base': float(H * 0.35)},
            'tags': ['tree', 'accent' if pal is RED else 'broadleaf'], 'anchors': {},
-           'notes': 'イロハモミジ, ' + ('red (accent)' if pal is RED else 'summer green')}
+           'notes': 'イロハモミジ, ' + ('野村紅葉, wine red in summer (accent)' if pal is RED else 'summer green')}
     return limbs, masses, crown_kw, cat
 
 

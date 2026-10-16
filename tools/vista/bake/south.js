@@ -1,9 +1,15 @@
 // Bake of the treetop vista south over the plain ("south" shot) for Godot (godot/vista).
 //
-// Scene = HEAD (src/vista/south.js and the modules it uses, unchanged); rising lights = the early
-// v0.2 plan of commit 8196ebf (src/vista/south.js@8196ebf L106-154), ported verbatim: every lamp on
-// the plain leaves on its own cubic Bezier toward the gate, the lamps of a place in a random order,
-// two lone lights first (R-8, docs/knowledge/14 §4).
+// Scene: the sky, the cloud deck, the crown and the sky shore are HEAD's (src/vista/south.js and the
+// modules it uses). Since round 5 (G5R3-10) the plain is the 3D lookout's: plain.js reads the 3D
+// region's vista data (godot/world3d/terrain/saddle/vista.json and its far / mid / plain maps, which
+// bake.mjs hands the page) and draws its river, red viaduct, town, villages, roads, lamps and ring of
+// mountains at the same bearings, in the same order of depth (only the depression angles are scaled
+// back into the prologue's band, and the mountains lowered just clear of the sky shore: plain.js).
+// Re-bake when that data changes. The near branches are near.js's (round 5). Rising lights = the
+// early v0.2 plan of commit 8196ebf (src/vista/south.js@8196ebf L106-154), ported verbatim: every lamp
+// on the plain leaves on its own cubic Bezier toward the gate, the lamps of a place in a random
+// order, two lone lights first (R-8, docs/knowledge/14 §4).
 //
 // Layout. The composition is the 480x270 frame of the JS vista (the reference frame). Godot shows any
 // logical size from ~480x270 up to 1024 wide / 560 tall (integer scale, expand), so the bake paints a
@@ -13,9 +19,9 @@
 // canopy clumps) is derived from the reference frame instead and offset into the canvas.
 //   ref = { W: 480, H: 270 }    canvas: Wc wide, the reference frame's left edge at ox
 //   far group: horizon at row YL (rowsAbove), GH rows        canopy group: reference row 0 at oyC
-// variant "canon" (Wc 480, the JS rows exactly) reproduces the JS frame pixel for pixel; it is used to
-// verify the Godot renderer against the JS one. The shipped variant reuses canon's random state for
-// the canopy so its clumps are the same as the JS frame's.
+// variant "canon" (Wc 480, the JS rows exactly) reproduced the JS frame pixel for pixel, to verify the
+// Godot renderer against the JS one; since round 5 that holds for its sky, deck, crown and shore only.
+// The crown's clumps stay the JS frame's: the canopy's draws start after HEAD_DRAWS, frozen.
 
 import { clamp, lerp, smooth, rng, hash2, mix3, TAU, run } from '../../../src/vista/util.js';
 import { todEnv, palette, skyAt } from '../../../src/vista/tod.js';
@@ -84,6 +90,22 @@ export function bakeSouth(o = {}) {
     }
     acc = (acc - len) % step; if (acc < 0) acc += step;
   }
+  // the old road on across the plain to the town: on the night of the 送魂 paper lanterns hang
+  // between its street lamps (the 3D's, in plainLanterns), one every ~12 m, so that from the crown it
+  // is a thread of light winding into the town (HEAD's procession road was one)
+  const OR = PL.oldRoad(), taken = new Set(lights.map(L => L.x + ':' + L.y));
+  for (let i = 0, acc = 0; i < OR.length - 1; i++) {
+    const [ax, az] = OR[i], [bx, bz] = OR[i + 1], len = Math.hypot(bx - ax, bz - az), step = 12 / PL.U;
+    for (let d = acc; d < len; d += step) {
+      const X = ax + (bx - ax) * d / len, Z = az + (bz - az) * d / len;
+      const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f * (1 - ground.height(X, Z)) / Z) - 1;
+      if (x < 0 || x >= Wc || y < 0 || y >= GH || taken.has(x + ':' + y)) continue;
+      if (ground.Z[(y + 1) * Wc + x] < Z * 0.85) continue;
+      taken.add(x + ':' + y);
+      lights.push({ x, y, X, Z, kind: 'lantern', path: true });
+    }
+    acc = (acc - len) % step; if (acc < 0) acc += step;
+  }
   paintViaduct(ground.layer, ground.X, ground.Z, cam);
   // bonfires on the river bank by the town (where the lanterns are set on the water)
   const RIV = PL.RIVER, near = [];
@@ -94,12 +116,19 @@ export function bakeSouth(o = {}) {
     const x = Math.round(Cx + f * X / Z), y = Math.round(YL + f / Z);
     if (x > 0 && x < Wc && y > 0 && y < GH && ground.Z[y * Wc + x] > Z * 0.9) lights.push({ x, y, X, Z, kind: 'bonfire', river: true });
   }
-  // the floating lanterns (灯籠流し): HEAD's 26 draws, set on the stretch from just above the town to
-  // ~7 points downstream. The river flows away from us (out of the canyon, off to the south-east):
-  // Godot moves a lantern toward the start of meta.river, so that list runs from the far end back
+  // the floating lanterns (灯籠流し), set on the water just above the town and carried down the
+  // stretch below it, ~18 points (~5 km), thinning out downstream: past the town's front and away
+  // along the river toward the far south-east, a trail of lights going off into the distance (the
+  // river's course at night; Godot dims them with distance). The
+  // river flows away from us (out of the canyon, off to the south-east): Godot moves a lantern toward
+  // the start of meta.river, so that list runs from the far end back. HEAD's 26 draws for the first
+  // 26 (its count before the crown is frozen), the rest from their own sequence.
   const riverRev = RIV.slice().reverse(), uTown = RIV.length - 1 - near[0];
-  const river = [];
-  for (let k = 0; k < 26; k++) { const v = { u0: 3 + RH() * 7.5, ph: RH(), side: (RH() - 0.5) * 0.06 }; v.u0 = uTown + 0.5 - (v.u0 - 3) / 7.5 * 7; river.push(v); }
+  const river = [], RL = rng(seed * 13 + 5), SPAN = 18;
+  for (let k = 0; k < 64; k++) {
+    const R = k < 26 ? RH : RL, a = R(), ph = R(), sd = R();
+    river.push({ u0: uTown + 0.5 - a * a * SPAN, ph, side: (sd - 0.5) * 0.06 });   // fewer further down
+  }
   R8.skip(78);
   const stars = makeStars(Wc, YL, seed * 3 + 1);
   const paddyStars = [];

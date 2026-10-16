@@ -129,6 +129,11 @@ def build(char):
         at.add('mark_%s' % name, rows, F.MARK_PIVOT)
     meta = {'cell': CELL, 'cols': COLS, 'stamps': at.index, 'expressions': F.EXPRESSIONS, 'talk': F.TALK,
             'level_pairs': getattr(F, 'LEVEL_PAIRS', False)}
+    # optional placement rules (character3d.gd): the facings where a stamp changes view, and the
+    # eyes' hand-set offset by the face's yaw
+    for key, name in (('view_cuts', 'VIEW_CUTS'), ('eye_shift', 'EYE_SHIFT')):
+        if hasattr(F, name):
+            meta[key] = getattr(F, name)
     return at, meta
 
 

@@ -90,54 +90,86 @@ def variant(R, key, H, cb, r0, cr, lean, vseed):
     return limbs, masses, crown_kw, cat
 
 
-def old_broken(R):
+def old_broken(R, var='a'):
     """An old cedar whose top a storm broke off long ago (the gates' trees, round 4b): a thick old
-    trunk ending in a splintered break at 7.2 m, two side branches turned up into new leaders, a
-    small crown on them to about 9.5 m, tufts sprouting from the trunk. Short on purpose: at the
-    gates a 22-26 m cedar would cover everything 25-30 m north of it in the 3/4 view (the camphor,
-    the graves); this one hides at most 11 m."""
-    Rv = rng(SEED * 10 + 77)
-    H = 7.2
-    r0 = 0.62
-    pts = [[0, -0.5, 0], [0, 2.4, 0], [0.04, 4.8, 0.02], [0.07, H, 0.04]]
+    trunk ending in a splintered break, side branches turned up into new leaders, small crowns on
+    them, tufts sprouting from the trunk. Short on purpose: at the gates a 22-26 m cedar would cover
+    everything 25-30 m north of it in the 3/4 view (the camphor, the graves); this one hides at most 11 m.
+    Round 5 (G5R3-5: "其中有一颗他的顶冠的叶子是完全对称的……现实中怎么可能有这样完全对称的树"): no two
+    leaders mirror each other. Variant 'a': one strong leader leaning with the wind and a short
+    second one low on the other side, a dead snag above the break. Variant 'b': three leaders of
+    unequal height fanned to one side, a long bleached dead limb, a heavy tuft low on the trunk.
+    Tiers are uneven: sizes, gaps and sideways drift differ, some are missing."""
+    Rv = rng(SEED * 10 + (77 if var == 'a' else 91))
+    H = 7.2 if var == 'a' else 6.4
+    r0 = 0.62 if var == 'a' else 0.58
+    lean = np.array([0.18, 0.0, 0.05]) if var == 'a' else np.array([-0.12, 0.0, -0.08])
+    pts = [[0, -0.5, 0], [0, 2.4, 0], (np.array([0.04, 4.8, 0.02]) + lean * 0.5).tolist(), (np.array([0.07, H, 0.04]) + lean).tolist()]
     trunk = WD.Limb('trunk', pts, [r0 * 1.2, r0 * 0.95, r0 * 0.82, r0 * 0.7], kind='trunk', n_around=12,
                     step_fn=lambda f: 0.6, moss=0.35, cap_end=True,
                     rfun=lambda th, k, f, sp: sp.rad[k] * (1 + 0.28 * np.exp(-max(sp.pos[k, 1], 0) / 0.6)
                                                           * (1 + 0.3 * np.cos(4 * th + 0.5)) + 0.04 * np.sin(7 * th + sp.pos[k, 1])))
     limbs = [trunk]
-    top = np.array([0.07, H, 0.04])
-    # the splintered break: thin wedges sticking up round the rim
+    top = np.array([0.07, H, 0.04]) + lean
+    # the splintered break: wedges of different heights round the rim, one tall dead snag
     for k in range(6):
-        a = k * 2 * math.pi / 6 + Rv.normal(0, 0.3)
+        a = k * 2 * math.pi / 6 + Rv.normal(0, 0.35)
         d = np.array([math.cos(a), 0, math.sin(a)])
         b0 = top + d * r0 * 0.55 + np.array([0, -0.12, 0])
-        b1 = b0 + d * 0.05 + np.array([0, Rv.uniform(0.25, 0.75), 0])
-        limbs.append(WD.Limb(f'sp{k}', [b0, b1], [0.09, 0.012], kind='branch', n_around=4, step_fn=lambda f: 0.3))
-    # two side branches turned up into new leaders, a dead stub or two
-    leaders = [((0.55, 5.4, 0.25), (1.2, 7.0, 0.6), (1.35, 9.2, 0.7)), ((-0.5, 5.9, -0.2), (-1.0, 7.4, -0.6), (-1.05, 9.6, -0.75))]
+        tall = 1.35 if (k == 2 and var == 'a') else Rv.uniform(0.2, 0.7)
+        b1 = b0 + d * 0.05 + np.array([0, tall, 0])
+        limbs.append(WD.Limb(f'sp{k}', [b0, b1], [0.1 if tall > 1 else 0.09, 0.012], kind='branch', n_around=4, step_fn=lambda f: 0.3))
+    if var == 'a':
+        # one strong leader east, leaning with the wind; a short one low on the west
+        leaders = [((0.55, 5.4, 0.25), (1.35, 7.1, 0.5), (1.85, 9.6, 0.55), 1.0),
+                   ((-0.45, 4.6, -0.3), (-1.15, 5.6, -0.65), (-1.3, 7.7, -0.8), 0.62)]
+    else:
+        # three leaders fanned to the north-west (the prevailing wind from the south-east)
+        leaders = [((-0.5, 5.0, -0.15), (-1.25, 6.4, -0.55), (-1.55, 9.2, -0.95), 0.92),
+                   ((0.2, 5.6, -0.45), (0.3, 6.9, -1.05), (0.15, 8.2, -1.55), 0.74),
+                   ((0.45, 4.2, 0.2), (0.95, 5.1, 0.3), (1.05, 6.8, 0.1), 0.5)]
     masses = []
-    for i, (a_, b_, c_) in enumerate(leaders):
-        limbs.append(WD.Limb(f'ld{i}', [np.array([0.0, a_[1] - 0.2, 0.0]), a_, b_, c_], [0.24, 0.2, 0.13, 0.04], kind='branch',
-                             n_around=6, step_fn=lambda f: 0.5, moss=0.2))
+    for i, (a_, b_, c_, size) in enumerate(leaders):
+        limbs.append(WD.Limb(f'ld{i}', [np.array([0.0, a_[1] - 0.2, 0.0]), a_, b_, c_], [0.24 * size + 0.04, 0.2 * size + 0.02, 0.13 * size, 0.04],
+                             kind='branch', n_around=6, step_fn=lambda f: 0.5, moss=0.2))
         c = np.array(c_)
-        for t, (rr, hh) in enumerate(((1.35, 0.55), (1.05, 0.5), (0.7, 0.45), (0.38, 0.6))):
-            masses.append(CD.Mass(c + np.array([0, -2.2 + t * 0.75, 0]), (rr, hh, rr * 0.85), seed=SEED + 7700 + i * 10 + t,
-                                  clumps=0.0, sag=0.5, tiles='mass' if rr > 0.5 else 'small', interior=rr > 1.0, lump=0.06))
-    for i, (h, az) in enumerate(((2.9, 0.6), (3.6, 3.4), (4.4, 5.0))):
+        # uneven tiers: each its own size, gap and sideways drift; now and then one missing
+        n_t = int(Rv.integers(3, 5)) if size > 0.7 else 2
+        yy = -2.0 * size
+        for t in range(n_t):
+            if t > 0 and Rv.uniform() < 0.22:
+                yy += Rv.uniform(0.5, 0.9) * size
+                continue
+            rr = (1.4 - 0.28 * t) * size * Rv.uniform(0.75, 1.2)
+            drift = np.array([Rv.normal(0, 0.25), 0, Rv.normal(0, 0.2)]) + lean * (t + 1) * 0.8
+            masses.append(CD.Mass(c + np.array([0, yy, 0]) + drift, (rr, Rv.uniform(0.38, 0.6), rr * Rv.uniform(0.7, 0.95)),
+                                  seed=SEED + 7700 + i * 10 + t + (0 if var == 'a' else 300), clumps=0.0, sag=0.5,
+                                  tiles='mass' if rr > 0.5 else 'small', interior=rr > 1.0, lump=0.07))
+            yy += Rv.uniform(0.55, 0.95) * size
+    tufts = ((2.9, 0.6, 0.55), (3.6, 3.4, 0.5), (4.4, 5.0, 0.45)) if var == 'a' else ((2.2, 4.1, 0.85), (3.9, 1.2, 0.45))
+    for i, (h, az, rr) in enumerate(tufts):
         d = np.array([math.cos(az), 0, math.sin(az)])
-        masses.append(CD.Mass(np.array([0, h, 0]) + d * (r0 * 0.9 + 0.35), (0.55, 0.35, 0.45), seed=SEED + 7800 + i,
+        masses.append(CD.Mass(np.array([0, h, 0]) + d * (r0 * 0.9 + 0.35), (rr, rr * 0.65, rr * 0.8), seed=SEED + 7800 + i + (0 if var == 'a' else 50),
                               clumps=0.0, sag=0.4, tiles='small', interior=False, lump=0.05))
-    limbs.append(WD.Limb('stub', [[0.0, 3.2, 0.0], [-0.8, 3.4, 0.35], [-1.2, 3.35, 0.5]], [0.12, 0.08, 0.04], kind='branch',
-                         n_around=5, step_fn=lambda f: 0.4))
-    crown_kw = dict(centre=(0.0, 7.4, 0.0), radii=(1.8, 2.6, 1.8),
+    if var == 'a':
+        limbs.append(WD.Limb('stub', [[0.0, 3.2, 0.0], [-0.8, 3.4, 0.35], [-1.2, 3.35, 0.5]], [0.12, 0.08, 0.04], kind='branch',
+                             n_around=5, step_fn=lambda f: 0.4))
+    else:
+        # a long dead limb bleached by the weather, sticking out over the lane
+        limbs.append(WD.Limb('dead', [[0.0, 4.9, 0.0], [0.9, 5.15, 0.55], [1.9, 5.05, 1.0], [2.6, 4.8, 1.25]], [0.14, 0.1, 0.06, 0.025],
+                             kind='branch', n_around=5, step_fn=lambda f: 0.4))
+        limbs.append(WD.Limb('stub', [[0.0, 2.7, 0.0], [0.55, 2.9, -0.5]], [0.1, 0.05], kind='branch', n_around=5, step_fn=lambda f: 0.4))
+    top_y = max(c_[1] for _, _, c_, _ in leaders) + 0.4
+    crown_kw = dict(centre=(float(lean[0] * 2), 7.2 if var == 'a' else 6.9, float(lean[2] * 2)), radii=(1.9, 2.6, 1.8),
                     base_tint=TR.tint_for('#3d5e48'), young_tint=TR.tint_for('#526e48'), old_tint=TR.tint_for('#31504a'),
                     overlap=1.4, fill_density=1.0, clump_overlap=1.0, interior_frac=0.2, spray_rate=0.0,
                     env_k=0.55, up_bias=0.4, trunk_axis=(0.0, 0.0), flex_r=1.8)
-    cat = {'category': 'tree', 'species': 'furusugi', 'footprint': [[0.0, 0.0, r0 * 1.35]], 'height': 9.8,
-           'crown': {'centre': [0.0, 7.8, 0.0], 'radius': 1.8, 'base': 5.2}, 'tags': ['tree', 'conifer', 'old'],
+    cat = {'category': 'tree', 'species': 'furusugi', 'footprint': [[0.0, 0.0, r0 * 1.35]], 'height': round(top_y + 0.2, 2),
+           'crown': {'centre': [0.0, top_y - 2.0, 0.0], 'radius': 1.9, 'base': 4.6}, 'tags': ['tree', 'conifer', 'old'],
            'anchors': {'rope': [0.0, 4.6, 0.0]},
-           'notes': 'An old cedar broken at 7.2 m long ago, two upturned leaders to 9.6 m; trunk 1.2-1.5 m across at the foot. '
-                    'The gates\' trees (the michikiri rope is tied round it at 4.6 m).'}
+           'notes': ('An old cedar broken long ago; ' + ('one strong leader leaning east to 9.6 m, a short one low on the west, a dead snag. '
+                     if var == 'a' else 'three unequal leaders fanned north-west, a long bleached dead limb. ') +
+                     'The gates\' trees (the michikiri rope is tied round it at 4.6 m).')}
     return limbs, masses, crown_kw, cat
 
 
@@ -169,7 +201,8 @@ def build(out):
                         textures={'albedo_tex': b.texture('bark', bark(SEED + 1))})
     b_leaf = b.material('leaves', 'toon_foliage.gdshader', params=FO.foliage_params(wind_px=1.0),
                         textures={'leaf_tex': b.texture('leaves', atlas)})
-    limbs, masses, crown_kw, cat = old_broken(R)
-    stats['old'] = TR.build_variant(b, 'a', limbs, masses, (atlas, rects), sets, crown_kw, b_bark, b_leaf, cat,
-                                    colour_fn=TR.default_colour(), seed=SEED + 77)
+    for var in ('a', 'b'):
+        limbs, masses, crown_kw, cat = old_broken(R, var)
+        stats['old_' + var] = TR.build_variant(b, var, limbs, masses, (atlas, rects), sets, crown_kw, b_bark, b_leaf, cat,
+                                               colour_fn=TR.default_colour(), seed=SEED + (77 if var == 'a' else 91))
     return stats

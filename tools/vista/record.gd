@@ -17,6 +17,8 @@ extends SceneTree
 ## objects, primitives) and the instance counts of the light layers.
 ## --data=DIR reads the vista's baked data from DIR instead of res://vista/data (e.g. an earlier bake,
 ## for before/after recordings).
+## --standalone plays Vista.play_standalone() instead (the art sample's entry: the vista runs itself,
+## its own director and her figure, autoplay on) and stops 3 s after its "hold" beat.
 ## The first two frames are drawn before the vista exists (black).
 
 var v: Vista
@@ -41,6 +43,9 @@ var frame := 0
 var grabbed := 0
 var stats := false
 var _stat_sec := -1
+var standalone := false
+var clock := 0.0
+var held_at := -1.0
 
 
 func _initialize() -> void:
@@ -67,6 +72,8 @@ func _initialize() -> void:
 			stats = true
 		elif a.begins_with("--data="):
 			data_dir = a.substr(7)
+		elif a == "--standalone":
+			standalone = true
 	if grab != "":
 		DirAccess.make_dir_recursive_absolute(grab)
 	if rise_dir != "":
@@ -91,7 +98,7 @@ func _start() -> void:
 	layer.layer = 1
 	root.add_child(layer)
 	v = Vista.new()
-	v.autoplay = false
+	v.autoplay = standalone
 	v.quality = quality
 	if data_dir != "":
 		v.data_dir = data_dir
@@ -99,9 +106,11 @@ func _start() -> void:
 	d = Director.new()
 	if shot == "title":
 		v.show_shot("title")
+	elif standalone:
+		v.show_shot("south")
 	else:
 		v.begin()
-	if v.figure_slot() != null:
+	if not standalone and v.figure_slot() != null:
 		stand = VistaStandIn.new() if figure_kind == "stand_in" else VistaFigure.new()
 		v.figure_slot().add_child(stand)
 	if grab != "" or rise_dir != "" or stats:
@@ -116,6 +125,18 @@ func _process(delta: float) -> bool:
 	if shot == "title":
 		v.advance(delta)
 		return float(frame) * delta >= seconds
+	if standalone:
+		if not started:
+			started = true
+			v.beat.connect(func(n: String) -> void:
+				if n == "hold":
+					held_at = clock)
+			v.play_standalone()
+		clock += delta
+		if clock >= to or (held_at >= 0.0 and clock - held_at >= 3.0):
+			_finish()
+			return true
+		return false
 	if not started:
 		started = true
 		d.scene(func(dd: Director) -> void: await v.play_prologue(dd))

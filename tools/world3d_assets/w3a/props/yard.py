@@ -1,7 +1,10 @@
 """The yard and the garden of the home (round 4): the life of the house around it.
 
-  monohoshi       laundry pole on two forked posts: an indigo kimono through its sleeves, two
-                  tenugui, a small red cloth (cloth swings with the wind: mesh-mode foliage)
+  monohoshi       laundry pole on two forked posts: an indigo kasuri yukata through its sleeves, two
+                  tenugui folded over the pole, a small red cloth. Round 5 (G5R3-5: "一张非常单薄的贴图"):
+                  every cloth is a draped surface, over the pole at the top, soft folds deepening
+                  toward the hem, the hem a little uneven, a hem band of double thickness; it swings
+                  with the wind in bands (mesh-mode foliage)
   kakehi_yard     split-bamboo pipes on forked stakes from the hill into a stone trough; beside it a
                   tub of spring water with cucumbers, tomatoes and a watermelon cooling in it
   mizugame        a big glazed water jar with a board lid and a ladle
@@ -15,7 +18,8 @@
   neko            a calico cat asleep, curled up (on the engawa)
   kago_tall, zaru, wara_sheaves, wara_heap   baskets and straw (the round-3 ones under new names:
                   the assembly's fixed positions for the old names no longer apply)
-  mushiro         a straw mat (筵) on the ground with red peppers and beans drying on it
+  mushiro         a straw mat (筵) on the ground; round 5 (Obon): umeboshi drying on three round bamboo
+                  sieves (土用干し) and a few red shiso leaves (the red peppers and azuki were autumn)
   wara_kuzu       loose straw bits scattered on the ground (before the engawa, by the straw heap)
   makiwari        the chopping block (薪割り台): a stump, a split log on it, wood chips all round
   houki           a bamboo broom (竹箒) leaning on a wall
@@ -83,6 +87,103 @@ def cloth(x0, x1, y_top, y_bot, z, colour, anchor, flex_top=0.25, flex_bot=0.8, 
     return P
 
 
+def drape(x0, x1, y_top, length, z, colour, anchor, R, flex=(0.15, 0.85), bands=3, folds=3, depth=0.035, sag=0.03,
+          over=True, hem=None, specks=None, stripes=None, thick=0.006, seed=0):
+    """A cloth hanging from a pole as a surface, not a board: it comes over the pole at the top (the
+    pole's radius), falls in soft vertical folds that deepen toward the hem (pinned at the pole, free
+    below), the hem uneven where the folds take up the cloth; front and back faces `thick` apart.
+    Cut into `bands` from the top, each swinging with the wind a little more (whole-pixel sway).
+    hem: (height, colour) a band of the hem; specks: (density, colour) small marks (kasuri);
+    stripes: [(y, colour, h)] bands across."""
+    P = []
+    W = x1 - x0
+    nx = max(int(W / 0.03), 4)
+    ny_total = max(int(length / 0.03), 6)
+    lam = [W / max(folds, 1) * f for f in (1.0, 0.55, 0.32)]
+    ph = [R.uniform(0, 2 * math.pi) for _ in lam]
+    amp = [depth, depth * 0.45, depth * 0.2]
+    xs = np.linspace(x0, x1, nx + 1)
+
+    def hem_y(x):
+        u = (x - x0) / W
+        return -length + sag * math.sin(math.pi * u) * 0.0 + depth * 0.6 * math.cos(2 * math.pi * (x - x0) / lam[0] + ph[0])
+
+    def surf(x, t):
+        # t 0 at the pole .. 1 at the hem
+        y = y_top + (hem_y(x) * t)
+        k = t ** 0.75
+        zz = sum(a * k * math.sin(2 * math.pi * (x - x0) / l + p_) for a, l, p_ in zip(amp, lam, ph))
+        # the cloth bellies out a little toward the hem (the wind side)
+        zz += 0.012 * t * t
+        return np.array([x, y, z + zz])
+
+    def colour_at(x, t, y):
+        c = np.array(colour, np.float64)
+        if hem is not None and y < y_top + hem_y(x) + hem[0]:
+            c = np.array(hem[1], np.float64)
+        for (sy, sc, sh) in (stripes or []):
+            if abs(y - sy) < sh / 2:
+                c = np.array(sc, np.float64)
+        if specks is not None:
+            hsh = math.sin(x * 917.3 + y * 413.7 + seed) * 43758.5453
+            if hsh - math.floor(hsh) < specks[0]:
+                c = np.array(specks[1], np.float64)
+        return c
+    for b in range(bands):
+        t0, t1 = b / bands, (b + 1) / bands
+        ny = max(int(ny_total / bands), 2)
+        ts = np.linspace(t0, t1, ny + 1)
+        V = np.array([[surf(x, t) for x in xs] for t in ts])            # (ny+1, nx+1, 3)
+        # normals by finite differences
+        dx = np.gradient(V, axis=1)
+        dy = np.gradient(V, axis=0)
+        N = np.cross(dy, dx)
+        N /= np.maximum(np.linalg.norm(N, axis=2, keepdims=True), 1e-9)
+        N[N[..., 2] < 0] *= -1.0
+        pts, nrm, cols, idx = [], [], [], []
+        for side in (1, -1):
+            base = len(pts)
+            for j in range(ny + 1):
+                for i in range(nx + 1):
+                    pts.append(V[j, i] - np.array([0, 0, thick * (side < 0)]))
+                    nrm.append(N[j, i] * side)
+                    cols.append(colour_at(xs[i], ts[j], V[j, i][1]))
+            for j in range(ny):
+                for i in range(nx):
+                    a_ = base + j * (nx + 1) + i
+                    b_, c_, d_ = a_ + 1, a_ + nx + 1, a_ + nx + 2
+                    if side > 0:
+                        idx += [(a_, c_, b_), (b_, c_, d_)]
+                    else:
+                        idx += [(a_, b_, c_), (b_, d_, c_)]
+        pc = K.Piece(np.array(pts), np.array(nrm), np.array(idx), np.array(colour, np.float64), pattern='plain', amount=0.0,
+                     var=0.0, seed=seed + b)
+        cols = np.array(cols)
+        base_c = np.array(colour, np.float64)
+        pc.shade = (lambda cc, bc: (lambda P_, N_: cc / np.maximum(bc, 1e-4)))(cols, base_c)
+        pc.swaying(anchor, flex[0] + (flex[1] - flex[0]) * (b + 0.5) / bands)
+        P.append(pc)
+    if over:
+        # over the pole: a half tube of the cloth's colour
+        rr = 0.03
+        pts, nrm, idx = [], [], []
+        n_a = 6
+        for i, x in enumerate(xs):
+            for k in range(n_a + 1):
+                a = math.pi * k / n_a
+                d = np.array([0.0, math.sin(a), math.cos(a)])
+                pts.append(np.array([x, y_top, z - rr]) + d * rr)
+                nrm.append(d)
+        for i in range(nx):
+            for k in range(n_a):
+                a_ = i * (n_a + 1) + k
+                idx += [(a_, a_ + 1, a_ + n_a + 1), (a_ + 1, a_ + n_a + 2, a_ + n_a + 1)]
+        pc = K.Piece(np.array(pts), np.array(nrm), np.array(idx), np.array(colour, np.float64) * 0.95, pattern='plain', amount=0.0, var=0.0)
+        pc.swaying(anchor, flex[0])
+        P.append(pc)
+    return P
+
+
 def forked_post(x, z, h, R, colour=WOOD_GREY):
     """A post cut from a forked branch: the trunk and two short tines holding a pole at h."""
     P = [_w(cyl((x, -0.25, z), (x + R.normal(0, 0.015), h - 0.08, z), 0.045, colour, n=6), 'bark', 0.4, int(R.integers(0, 1 << 20)))]
@@ -101,24 +202,29 @@ def monohoshi(out):
         P += forked_post(x, 0.0, hp, R)
     P.append(_w(cyl((-span / 2 - 0.25, hp, 0.0), (span / 2 + 0.25, hp + 0.02, 0.0), 0.022, BAMBOO_OLD, n=6), 'plain', 0.0, 9502))
     z = 0.03
-    # the kimono through its sleeves: sleeves along the pole, the body hanging
+    # the yukata through its sleeves: the sleeves along the pole, the body hanging below them
     kx = -0.75
-    P += cloth(kx - 0.7, kx + 0.7, hp - 0.03, hp - 0.42, z, INDIGO, (kx, hp, z), 0.15, 0.3, 1)
-    P += cloth(kx - 0.32, kx + 0.32, hp - 0.42, hp - 1.35, z + 0.004, INDIGO * 1.06, (kx, hp, z), 0.35, 0.9, 3,
-               stripes=[(hp - 0.7, K.col('#d8d4c4')), (hp - 1.05, K.col('#d8d4c4'))])
-    P.append(K.cbox((0.64, 0.05, 0.016), K.col('#a83a2e'), centre=(kx, hp - 0.45, z + 0.012), bevel=0.0, var=0.0).swaying((kx, hp, z), 0.35))
-    # two tenugui folded over the pole, a blue stripe at the hem
+    kas = (0.05, K.col('#c8ccd0'))
+    P += drape(kx - 0.7, kx + 0.7, hp, 0.4, z, INDIGO, (kx, hp, z), R, flex=(0.12, 0.3), bands=1, folds=5, depth=0.02,
+               specks=kas, seed=9503)
+    P += drape(kx - 0.33, kx + 0.33, hp - 0.38, 0.95, z + 0.012, INDIGO * 1.04, (kx, hp, z), R, flex=(0.3, 0.9), bands=3, folds=3,
+               depth=0.04, over=False, specks=kas, hem=(0.05, INDIGO * 0.8), seed=9504)
+    # the obi over it, folded
+    P += drape(kx - 0.32, kx + 0.32, hp - 0.4, 0.07, z + 0.03, K.col('#a83a2e'), (kx, hp, z), R, flex=(0.35, 0.35), bands=1, folds=2,
+               depth=0.008, over=False, seed=9505)
+    # two tenugui folded over the pole, a blue band at the hem
     for k, x in enumerate((0.45, 0.85)):
-        P += cloth(x - 0.16, x + 0.16, hp - 0.02, hp - 0.62, z, WHITE_CLOTH * (1.0 - 0.03 * k), (x, hp, z), 0.3, 0.9, 2,
-                   stripes=[(hp - 0.52, K.col('#3a5a8a'))])
+        P += drape(x - 0.16, x + 0.16, hp, 0.46 + 0.04 * k, z, WHITE_CLOTH * (1.0 - 0.03 * k), (x, hp, z), R, flex=(0.25, 0.9), bands=2,
+                   folds=2, depth=0.022, hem=(0.06, K.col('#3a5a8a')), seed=9506 + k)
     # a small red cloth
-    P += cloth(1.25, 1.52, hp - 0.02, hp - 0.42, z, K.col('#b04034'), (1.38, hp, z), 0.35, 1.0, 2)
+    P += drape(1.25, 1.52, hp, 0.38, z, K.col('#b04034'), (1.38, hp, z), R, flex=(0.3, 1.0), bands=2, folds=2, depth=0.02, seed=9508)
     prop = K.Prop('monohoshi', 9501).add(P)
     cat = {'footprint': [[-span / 2, 0.0, 0.12], [span / 2, 0.0, 0.12]], 'tags': ['life'],
-           'notes': 'Laundry pole on two forked posts (3.6 m), an indigo kimono through its sleeves, two tenugui, a red cloth; '
-                    'the cloth swings with the wind (foliage material, mesh mode).',
+           'notes': 'Laundry pole on two forked posts (3.6 m), an indigo kasuri yukata through its sleeves with its obi, two tenugui, '
+                    'a red cloth; each cloth drapes over the pole and falls in folds deepening toward the hem, and swings with the wind '
+                    'in bands (foliage material, mesh mode).',
            'anchors': {'perch': [[-span / 2, hp + 0.12, 0.0], [span / 2, hp + 0.12, 0.0], [0.1, hp + 0.03, 0.0]]}}
-    return export_prop(out, 'monohoshi', 'props', prop, cat, porosity=0.8, far=False, budget=1800)
+    return export_prop(out, 'monohoshi', 'props', prop, cat, porosity=0.8, far=False, budget=4800)
 
 
 # ------------------------------------------------------------------------------------------- water
@@ -464,14 +570,14 @@ def _bit(c, length, width, height, ang, colour, tilt=0.0, **kw):
 
 
 def mushiro(out):
-    """A straw mat (筵) spread on the ground, 1.8 x 0.9 m, its far end rolled a little; red peppers
-    drying in rows on one half, a heap of beans on the other, a few strays."""
+    """A straw mat (筵) spread on the ground, 1.8 x 0.9 m, its far end rolled a little; on it three round
+    bamboo sieves of umeboshi drying in the sun (土用干し: the plums of June, three days and nights in
+    the dog days, still out at Obon), a few red shiso leaves drying beside them."""
     R = rng(9731)
     P = []
     W_, D = 1.8, 0.9
     mat = K.col('#b7a06a')
     P.append(K.cbox((W_, 0.012, D), mat, centre=(0, 0.006, 0), bevel=0.0, pattern='thatch', amount=0.15, var=0.04, seed=9732))
-    # the weave: darker cords across every 12 cm, the edges bound
     for k in range(int(W_ / 0.12) + 1):
         x = -W_ / 2 + 0.04 + k * 0.12
         if x > W_ / 2 - 0.02:
@@ -479,34 +585,40 @@ def mushiro(out):
         P.append(K.cbox((0.012, 0.004, D - 0.02), mat * 0.78, centre=(x, 0.0135, 0), bevel=0.0, var=0.0))
     for z in (-D / 2 + 0.015, D / 2 - 0.015):
         P.append(K.cbox((W_, 0.016, 0.03), mat * 0.86, centre=(0, 0.008, z), bevel=0.0, var=0.02))
-    # the far end rolled: a straw cylinder lying along z
     P.append(_w(cyl((W_ / 2 + 0.05, 0.05, -D / 2), (W_ / 2 + 0.05, 0.05, D / 2), 0.05, mat * 0.95, n=7), 'thatch', 0.2, 9733))
-    # red peppers in loose rows (唐辛子), each 6-8 cm
-    red = K.col('#b8321f')
-    for row in range(4):
-        z = -D / 2 + 0.16 + row * 0.19
-        x = -W_ / 2 + 0.12
-        while x < -0.05:
-            ang = R.normal(0.3, 0.5)
-            P.append(_bit((x + R.normal(0, 0.012), z + R.normal(0, 0.02)), R.uniform(0.06, 0.085), 0.024, 0.02, ang,
-                          red * R.uniform(0.85, 1.08), var=0.03, seed=int(R.integers(0, 1 << 20))))
-            x += R.uniform(0.045, 0.075)
-    # beans (小豆) in a low heap, and some spread thin
-    bean = K.col('#5c2a24')
-
-    def heap(Q):
-        return K.sd_ellipsoid(Q - np.array([0.42, 0.0, 0.02]), (0.3, 0.05, 0.24)) + K.weathered(Q, 0.006, 0.04, 9734)
-    P.append(K.sdf_piece(heap, (0.08, -0.02, -0.26), (0.76, 0.06, 0.3), bean, h=0.02, tris=90, pattern='plain', amount=0.0,
-                         var=0.12, seed=9735, mat='noline', dirt=False))
-    for _ in range(26):
-        P.append(_bit((R.uniform(0.0, 0.85), R.uniform(-0.38, 0.38)), 0.022, 0.018, 0.016, R.uniform(0, 3), bean * R.uniform(0.9, 1.15),
-                      var=0.02, seed=int(R.integers(0, 1 << 20))))
+    sieve = K.col('#b9a874')
+    ume = K.col('#9a3438')
+    for k, (cx, cz, r) in enumerate(((-0.52, -0.08, 0.27), (0.08, 0.1, 0.28), (0.58, -0.12, 0.25))):
+        # the sieve: a shallow woven dish with a bound rim
+        P.append(K.lathe([(0.0, 0.0), (r * 0.8, 0.0), (r, 0.03), (r, 0.04), (r * 0.82, 0.012), (0.0, 0.012)], sieve, n=14,
+                         base=(cx, 0.012, cz), pattern='thatch', amount=0.25, var=0.03, seed=9740 + k))
+        P.append(K.lathe([(r - 0.012, 0.03), (r + 0.006, 0.03), (r + 0.006, 0.046), (r - 0.012, 0.046)], sieve * 0.82, n=14,
+                         base=(cx, 0.012, cz), var=0.0, cap_top=False, cap_bottom=False))
+        # the plums in loose rows, wrinkled, red to dark red, a little paler where the sun dried them most
+        n = 0
+        for row in range(-3, 4):
+            zz = row * 0.062
+            half = math.sqrt(max(r * r * 0.72 - zz * zz, 0.0))
+            xx = -half + R.uniform(0.0, 0.03)
+            while xx < half:
+                c = ume * R.uniform(0.82, 1.15)
+                P.append(K.lathe([(0.0, 0.0), (0.024, 0.004), (0.026, 0.016), (0.012, 0.028), (0.0, 0.028)], c, n=5,
+                                 base=(cx + xx + R.normal(0, 0.006), 0.022, cz + zz + R.normal(0, 0.006)), pattern='plain', amount=0.0,
+                                 var=0.05, seed=int(R.integers(0, 1 << 20)), dirt=False))
+                xx += R.uniform(0.055, 0.07)
+                n += 1
+    # red shiso leaves drying on the mat's corner
+    shiso = K.col('#6a2a3c')
+    for k in range(9):
+        c = (R.uniform(-0.85, -0.6), R.uniform(0.18, 0.4))
+        P.append(_bit(c, R.uniform(0.06, 0.09), 0.05, 0.004, R.uniform(0, 3), shiso * R.uniform(0.85, 1.15), var=0.03,
+                      seed=int(R.integers(0, 1 << 20))))
     prop = K.Prop('mushiro', 9731).add(P)
     cat = {'footprint': [], 'tags': ['life', 'interact'],
-           'notes': 'A straw mat (筵) 1.8 x 0.9 m lying flat, its +x end rolled; red peppers drying on the -x half, a heap of '
-                    'beans on the +x half. Walkable over (no footprint).',
+           'notes': 'A straw mat (筵) 1.8 x 0.9 m lying flat, its +x end rolled; umeboshi drying on three round bamboo sieves '
+                    '(土用干し), red shiso leaves on the -x corner. Walkable over (no footprint).',
            'anchors': {'perch': [[0.9, 0.1, 0.0]]}}
-    return export_prop(out, 'mushiro', 'props', prop, cat, porosity=0.9, far=False, budget=2600)
+    return export_prop(out, 'mushiro', 'props', prop, cat, porosity=0.9, far=False, budget=3400)
 
 
 def wara_kuzu(out):

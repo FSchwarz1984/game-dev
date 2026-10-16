@@ -97,6 +97,18 @@ EYE_PIVOTS = {'happy': (1, 0), 'cry0': (0, 0), 'cry1': (0, 0), 'shut': (0, 0)}
 # dark column: a dark dash under the bangs reads as an eye seen from the side).
 VIEW_COLS = {'f': None, 't': None, 's': [0]}
 
+# placement (character3d.gd). The facing (cos of the angle between a landmark's normal and the
+# camera) where a stamp turns from front to three-quarter to side: the far eye keeps its full two
+# columns to about 45 deg of head turn.
+VIEW_CUTS = [0.80, 0.25, 0.10]
+# both eyes (and both blush pixels) at the height of the one nearer the camera: projected as they are,
+# the far eye of a three-quarter face sits 2-3 px higher, under the bangs and the hat's brim
+LEVEL_PAIRS = 'near'
+# by the face's yaw (deg from facing the camera): px toward the back of the head, px down. Past
+# three-quarter the side bangs (longer, and nearer the camera) come down over the near eye; a sprite
+# artist draws the turned eye a little lower and back from the face's edge
+EYE_SHIFT = [[0, 0, 0], [50, 0, 0], [70, 1, 1], [90, 1, 2]]
+
 # ------------------------------------------------------------------------------------------------
 # no brows (G5R3-8): the bangs cover them
 BROW_PIVOT = (0, 0)
