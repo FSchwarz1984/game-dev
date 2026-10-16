@@ -218,13 +218,14 @@ func _ready() -> void:
 		var pts: Array = []
 		for p in lay_routes[rname]:
 			pts.append(Vector2(float(p[0]), float(p[1])))
-		_make_route(pts)
+		# (--route_from=k: start at the k-th point; a short recording)
+		_make_route(pts.slice(int(args.get("route_from", "0"))))
 	elif rname == "walk":
 		_make_route()
 	elif rname == "night":
 		_make_route(NIGHT_ROUTE)
 	elif rname == "lookout":
-		_make_route(LOOKOUT_ROUTE)
+		_make_route(LOOKOUT_ROUTE.slice(int(args.get("route_from", "0"))))
 	if not route.is_empty():
 		# (the camera starts on her where the route starts, not swooping in from the spawn)
 		pv.follow(_cam_target, {"cut": true})

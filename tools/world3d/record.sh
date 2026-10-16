@@ -7,7 +7,8 @@
 # recording came out 1280x720 and smeared. So this runs the project through a view of it whose
 # override is WxH (tools/world3d/out/proj_WxH: a copy of project.godot, everything else symlinked)
 # in a WxH window: frames are the window as shown, every native pixel an exact square.
-# Output: <out_dir>/frames/f########.png, <out_dir>/route_WxH.mp4, <out_dir>/log.txt.
+# Output: <out_dir>/frames/f########.png, <out_dir>/route_WxH.mp4, <out_dir>/log.txt. FPS=n: frames per
+# second (default 30; a slow machine can record a long take at 15).
 set -uo pipefail
 GODOT_BIN="${GODOT_BIN:-/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64}"
 SRC="$(cd "$(dirname "$0")/../../godot" && pwd)"
@@ -33,12 +34,12 @@ trap 'kill $XP 2>/dev/null' EXIT
 for _ in $(seq 1 50); do DISPLAY="$DISP" xdpyinfo >/dev/null 2>&1 && break; sleep 0.1; done
 DISPLAY="$DISP" timeout "${TIMEOUT:-5400}" "$GODOT_BIN" --path "$VIEW" --rendering-method "${METHOD:-forward_plus}" \
 	--rendering-driver vulkan --resolution "$RES" --position 0,0 \
-	--write-movie "$OUT/frames/f.png" --fixed-fps 30 res://world3d/sample.tscn -- \
+	--write-movie "$OUT/frames/f.png" --fixed-fps ${FPS:-30} res://world3d/sample.tscn -- \
 	--route=walk --route_quit --route_log "${@:---hours=16.6}" > "$OUT/log.txt" 2>&1
 # the first frame is drawn before the shadow map and the camera have settled (a flash of flat light):
 # the recording starts two frames in
 for k in 0 1; do rm -f "$OUT/frames/$(printf 'f%08d.png' $k)"; done
 n=$(ls "$OUT"/frames/f*.png 2>/dev/null | wc -l)
-echo "frames: $n ($(awk "BEGIN{printf \"%.1f\", $n/30}") s)"
-ffmpeg -hide_banner -loglevel error -y -framerate 30 -start_number 2 -i "$OUT/frames/f%08d.png" -c:v libx264 -crf 14 \
+echo "frames: $n ($(awk "BEGIN{printf \"%.1f\", $n/${FPS:-30}}") s)"
+ffmpeg -hide_banner -loglevel error -y -framerate ${FPS:-30} -start_number 2 -i "$OUT/frames/f%08d.png" -c:v libx264 -crf 14 \
 	-preset slow -pix_fmt yuv420p -movflags +faststart "$OUT/route_${RES}.mp4" && echo "$OUT/route_${RES}.mp4"

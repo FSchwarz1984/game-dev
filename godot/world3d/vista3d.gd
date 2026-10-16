@@ -1916,7 +1916,7 @@ func update(dt: float) -> void:
 	# (a warm paper white, like a print faded in the sun: a cool white beside the haze read as water)
 	# (round 5, G5R3-1: round 3's band again, "すやり霞")
 	# (at night the 遠化's paper is as dark as the night, never a glow: its lines just legible)
-	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.055, 0.06, 0.085), night)
+	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.04, 0.044, 0.063), night)
 	if env.hours > 16.5 and env.hours < 19.5:
 		fw = fw.lerp(Color(0.68, 0.6, 0.52), clampf(1.0 - absf(env.hours - 17.8) / 1.3, 0.0, 1.0) * (1.0 - night))
 	for m in mats:

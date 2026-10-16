@@ -107,6 +107,7 @@ void fragment() {
 	bool water = false;
 	int plate = V_GREEN;        // the block that prints this ground in the 遠化 (vista_common v_print)
 	float ink = 0.0;            // 1 on a line of the key block (the borders of fields, woods, water, roads, villages)
+	float wood = 0.0;           // 1 in a wood (the key block draws its crowns once the green is gone)
 	bool local = xz.x > local_bounds.x && xz.x < local_bounds.z && xz.y > local_bounds.y && xz.y < local_bounds.w;
 	if (local) {
 		// the walkable region, as the top-down ground paints it (toon_terrain): its dominant ground
@@ -257,6 +258,7 @@ void fragment() {
 		if (!plain && abs(forest - 0.4) < max(fwidth(forest) * 0.6, 1e-4)) ink = 1.0;
 		if (!plain && abs(wat - 0.5) < max(fwidth(wat) * 0.6, 1e-4)) ink = 1.0;
 		bool far_hill = !plain && dist > 2600.0;
+		wood = (forest > 0.4 && !plain) ? 1.0 : 0.0;
 		if (forest > 0.4 && !plain) {
 			// canopy seen from above: dark clumps, lit crowns
 			float k = dist > 160.0 ? vnoise3(wq / max(4.0, dist * 0.012) + 3.0) : w3_vnoise(pl / max(4.0, dist * 0.012) + 3.0);
@@ -326,6 +328,15 @@ void fragment() {
 		EMISSION = v_print(v_air(w3_ambient(alb, n, 1.0) * (1.0 - v_shade * 0.25), wp, eye, FRAGCOORD.xy), v_flat(plate, alb), plate, n, wp, eye, FRAGCOORD.xy);
 		// the key block's lines where the print has lost its gradations
 		if (ink > 0.5 && v_past(wp, eye, FRAGCOORD.xy)) EMISSION = v_ink();
+		// and its woods: once the green block is gone a wood is small crowns in ink on the paper, as a
+		// print draws a wooded hill (a white field there read as snow)
+		if (wood > 0.5 && v_past(wp, eye, FRAGCOORD.xy) && v_plate_on(V_GREEN, xz, dist, FRAGCOORD.xy) < 0.5) {
+			vec2 pc = v_dir_cell(wp, eye);
+			vec2 cc = floor(pc / vec2(4.0, 3.0));
+			vec2 q = pc - cc * vec2(4.0, 3.0) - vec2(floor(w3_hash(cc + 9.1) * 2.0), 0.0);
+			bool crown = (q.y == 1.0 && q.x == 1.0) || (q.y == 0.0 && (q.x == 0.0 || q.x == 2.0));
+			if (crown && w3_hash(cc * 1.7 + 3.0) < 0.6) EMISSION = v_ink();
+		}
 		if (dbg_mode == 1) { EMISSION = vec3(clamp(slope / 60.0, 0.0, 1.0), n.y, 0.0); ALBEDO = vec3(0.0); }
 		if (dbg_mode == 3) { EMISSION = alb; ALBEDO = vec3(0.0); }
 		if (dbg_mode == 4) { EMISSION = w3_ambient(alb, n, 1.0); ALBEDO = vec3(0.0); }
