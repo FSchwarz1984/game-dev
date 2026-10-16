@@ -82,9 +82,9 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     # under the canopy the grass thins and moss creeps in among the leaves
     W["moss"] = np.maximum(W["moss"], canopy * geom.smoothstep(0.5, 0.68, n1) * 0.55 * (1.0 - dirt))
 
-    # the paddies, and the packed earth of the yard's trodden paths (same row of the palette: dark earth,
-    # smooth, no pebbles: the feet pushed them aside)
-    W["paddy"] = np.maximum(F["paddy"], F.get("yard_wear", 0.0) * 0.97)
+    # the paddies (round 5: the yard's trodden paths are no longer paddy mud: they read as dark olive
+    # bands; they are the yard's own packed earth, worn lighter, below: m2.b)
+    W["paddy"] = F["paddy"]
     # the yard: gravel in the drip channels, leaves blown against the walls, scratched earth by the hens,
     # a little moss where the trough spills
     yard_in = geom.smoothstep(0.3, -0.2, F["yard_sdf"])
@@ -92,7 +92,7 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     W["litter"] = np.maximum(W["litter"], F.get("drift_k", 0.0) * 1.0)
     W["bank"] = np.maximum(W["bank"], F.get("scratch_k", 0.0) * 0.9 * yard_in)
     feat = np.maximum.reduce([np.broadcast_to(np.asarray(F.get(k, 0.0), np.float64), Hs.shape)
-                              for k in ("yard_wear", "drift_k", "drip_k")] + [F.get("scratch_k", np.zeros_like(Hs)) * yard_in])
+                              for k in ("drift_k", "drip_k")] + [F.get("scratch_k", np.zeros_like(Hs)) * yard_in])
     W["dirt"] = W["dirt"] * (1.0 - 0.8 * feat)
 
     # --- grass: whatever is left, and it is everywhere else
@@ -128,6 +128,9 @@ def compute(L, F, Xs, Zs, Hs, cell_s, placements):
     # the yard: swept a little in the open middle (fewer pebbles), pebbles gather toward the edges
     yard_mid = geom.smoothstep(-0.6, -2.4, F["yard_sdf"]) * geom.smoothstep(0.45, 0.6, n2)
     wear = np.maximum(wear, 0.3 * yard_mid * W["dirt"])
+    # the yard's trodden paths: the same earth, packed smooth and a tone lighter, the pebbles pushed to
+    # their edges (the shader: dirt tone + wear, pebbles 0.12 + 0.55 (1 - wear))
+    wear = np.maximum(wear, np.asarray(F.get("yard_wear", 0.0)) * 0.95 * W["dirt"])
     open_meadow = W["grass"] * (1.0 - geom.smoothstep(0.1, 0.4, canopy)) * geom.smoothstep(26.0, 14.0, slope)
     flowers = open_meadow * geom.smoothstep(0.5 - 0.12 * sanct, 0.75 - 0.12 * sanct, noise.fbm(Xs / 5.5, Zs / 5.5, 3, seed + 105))
     litter_kind = F["litter_kind"]

@@ -33,11 +33,11 @@ ROWS = {
     "needles": (33.0, 10.0, 72.0),
     "bamboo_litter": (45.0, 12.0, 86.0),
     "bank": (35.0, 11.0, 70.0),
-    "paddy": (38.5, 9.5, 74.0),      # also the yard's trodden paths (packed earth, smooth): round 4b
+    "paddy": (30.0, 11.0, 96.0),     # paddy mud (round 5: no longer also the yard's paths)
 }
 # how far a row's tones spread (1 = the full ramp): vegetation reads below the characters and the
 # things she can touch (lead 12:45: by day the greens' contrast was stronger than the characters')
-ROW_CONTRAST = {"grass": 0.78, "grass_dry": 0.8, "moss": 0.6, "litter": 0.85, "paddy": 0.7}
+ROW_CONTRAST = {"grass": 0.78, "grass_dry": 0.8, "moss": 0.6, "litter": 0.85}
 ROW_INDEX = {k: i for i, k in enumerate(ROWS)}
 ACCENT_ROW = 11
 ACCENTS = {

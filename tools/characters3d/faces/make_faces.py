@@ -79,18 +79,22 @@ class Atlas:
 def build(char):
     F = load(char)
     at = Atlas(F.PALETTE)
+    keep_left = getattr(F, 'EYE_LIGHT', 'one') != 'mirror'
+    eye_pivots = getattr(F, 'EYE_PIVOTS', {})
     for name, rows in F.EYES.items():
         rows = pad(rows)
+        ep = eye_pivots.get(name, F.EYE_PIVOT)
         for view, cols in F.VIEW_COLS.items():
             if cols is None:
                 cols = list(range(len(rows[0])))
-            cols = [c for c in cols if c < len(rows[0])]
+            cols = [c for c in cols if c < len(rows[0])] or [0]
             r = take_cols(rows, cols)
-            px = cols.index(min(cols, key=lambda c: abs(c - F.EYE_PIVOT[0])))
-            piv = (px, F.EYE_PIVOT[1])
+            px = cols.index(min(cols, key=lambda c: abs(c - ep[0])))
+            piv = (px, ep[1])
             at.add('eye_R_%s_%s' % (name, view), r, piv)
-            # one light for both eyes: the mirror keeps the highlight on the screen's left
-            ml = mirror(r, keep_highlight_left=True)
+            # EYE_LIGHT 'one': the mirror keeps the highlight on the screen's left (one light for both
+            # eyes); 'mirror': a plain mirror image (both lights on the inner side)
+            ml = mirror(r, keep_highlight_left=keep_left)
             at.add('eye_L_%s_%s' % (name, view), ml, (len(ml[0]) - 1 - piv[0], piv[1]))
     for name, rows in F.BROWS.items():
         rows = pad(rows)
@@ -111,13 +115,18 @@ def build(char):
             px = kept.index(min(kept, key=lambda c: abs(c - F.MOUTH_PIVOT[0])))
             at.add('mouth_%s_%s' % (name, view), r, (px, F.MOUTH_PIVOT[1]))
     for name, rows in F.BLUSH.items():
+        rows = pad(rows)
         at.add('cheek_R_%s_f' % name, rows, F.BLUSH_PIVOT)
-        at.add('cheek_L_%s_f' % name, mirror(pad(rows), False), (len(rows[0]) - 1 - F.BLUSH_PIVOT[0], F.BLUSH_PIVOT[1]))
-        at.add('cheek_R_%s_t' % name, [r[1:] for r in rows], (0, F.BLUSH_PIVOT[1]))
-        at.add('cheek_L_%s_t' % name, [r[:-1] for r in rows], (len(rows[0]) - 2, F.BLUSH_PIVOT[1]))
+        at.add('cheek_L_%s_f' % name, mirror(rows, False), (len(rows[0]) - 1 - F.BLUSH_PIVOT[0], F.BLUSH_PIVOT[1]))
+        # three-quarter: one column narrower (a one-pixel blush stays as it is)
+        tr = [r[1:] for r in rows] if len(rows[0]) > 1 else rows
+        tl = [r[:-1] for r in rows] if len(rows[0]) > 1 else rows
+        at.add('cheek_R_%s_t' % name, tr, (0, F.BLUSH_PIVOT[1]))
+        at.add('cheek_L_%s_t' % name, tl, (len(tl[0]) - 1, F.BLUSH_PIVOT[1]))
     for name, rows in F.MARKS.items():
         at.add('mark_%s' % name, rows, F.MARK_PIVOT)
-    meta = {'cell': CELL, 'cols': COLS, 'stamps': at.index, 'expressions': F.EXPRESSIONS, 'talk': F.TALK}
+    meta = {'cell': CELL, 'cols': COLS, 'stamps': at.index, 'expressions': F.EXPRESSIONS, 'talk': F.TALK,
+            'level_pairs': getattr(F, 'LEVEL_PAIRS', False)}
     return at, meta
 
 

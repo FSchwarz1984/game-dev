@@ -15,6 +15,8 @@ render_mode ambient_light_disabled, specular_disabled, fog_disabled, cull_disabl
 
 uniform sampler2D atlas_a : filter_nearest, repeat_disable;   // albedo (sRGB), A: 0 empty, .5 wood, 1 leaves
 uniform sampler2D atlas_n : filter_nearest, repeat_disable;   // normal * .5 + .5 (bake frame), A: AO
+uniform float hero_leaf_ukiyo = 0.4;   // the heroes' leaves (the great camphor): round 3's palette in part (w3_ukiyo_tex)
+uniform int r3_page_h = 0;          // rows of the atlas that are round 3's page (round 5); the heroes' page below
 uniform vec3 eye = vec3(0.0);
 uniform float emission_night = 0.0;                            // the lit windows of the buildings (later)
 uniform bool debug_quads = false;
@@ -61,6 +63,13 @@ void fragment() {
 	float sy = sin(v_yaw);
 	vec3 n = vec3(cy * nb.x + sy * nb.z, nb.y, -sy * nb.x + cy * nb.z);
 	float leaf = a.a > 0.75 ? 1.0 : 0.0;
+	// (round 5: the trees come from round 3's page of the atlas, baked when the leaves were drawn
+	// deeper; the heroes' page below it was baked in round 4: the great camphor's leaves, painted since
+	// for one conversion, take a part of round 3's palette as they do in the world, sample.gd
+	// ONE_CONVERSION_LEAVES)
+	if (leaf > 0.5 && r3_page_h > 0 && tp.y >= r3_page_h) {
+		a.rgb = w3_ukiyo_tex(a.rgb, hero_leaf_ukiyo);
+	}
 	vec3 alb = w3_srgb_to_linear(a.rgb);
 	// a little variety between trees of one kind
 	alb *= 0.94 + 0.12 * v_seed;
@@ -68,9 +77,8 @@ void fragment() {
 	v_alb = alb;
 	// leaves in the sun: quieter, a little darker than a surface (the world's foliage, v1.4)
 	vec3 lab = w3_lin_to_oklab(alb);
-	// (round 4: the baked leaves now carry their painted colour, lighter than before the sRGB fix;
-	// in the sun they are held a little lower and quieter so a sunlit hillside never goes lime)
-	v_alb_sun = (leaf > 0.5 && lab.y < 0.0) ? max(w3_oklab_to_lin(vec3(lab.x * 0.93, lab.yz * 0.6)), vec3(0.0)) * 0.72 : alb;
+	// (round 5: round 3's again: its atlas carries round 3's deeper leaves)
+	v_alb_sun = (leaf > 0.5 && lab.y < 0.0) ? max(w3_oklab_to_lin(vec3(lab.x, lab.yz * 0.72)), vec3(0.0)) * 0.88 : alb;
 	v_leaf = leaf;
 	NORMAL = normalize((VIEW_MATRIX * vec4(n, 0.0)).xyz);
 	ALBEDO = vec3(1.0);
@@ -80,9 +88,10 @@ void fragment() {
 
 void light() {
 	if (LIGHT_IS_DIRECTIONAL) {
-		// continuous (round 4): a wrapped light, the leaves facing the sun a touch brighter
+		// continuous (round 4); round 3's levels by day (round 5, w3_r3_body), the leaves facing the
+		// sun a touch brighter
 		float ndl = dot(NORMAL, LIGHT);
-		float band = w3_wrap(ndl, 0.25);
+		float band = mix(w3_r3_body(ndl), w3_wrap(ndl, 0.25), w3_night);
 		vec3 c = v_alb_sun * w3_lit_tint * LIGHT_COLOR / W3_PI * band;
 		if (v_leaf > 0.5) {
 			c *= mix(vec3(1.0), vec3(1.13, 1.12, 1.06), smoothstep(0.65, 0.95, ndl));

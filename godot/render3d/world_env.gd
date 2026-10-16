@@ -41,9 +41,11 @@ const KEYS := [
 
 var sky_mat: ShaderMaterial          # the hemisphere the ambient light comes from (not drawn)
 var ambient_gain := 1.0
-# by day: how strong the sky's light is in the shade (round 3's painted shade took the sky's luma
-# as it was, 1.0)
-var ambient_day_gain := 1.0
+# by day: how strong the sky's light is in the shade. Round 3 painted its shade with the sky's luma
+# as it was; the engine's ambient from the sky hemisphere (its radiance map, filtered) delivers about
+# three quarters to four fifths of that to a surface facing up: x1.2 matches round 3's shade (round 5, measured
+# with render3d/dev/asset_preview on the same assets through both renderers)
+var ambient_day_gain := 1.2
 # by day the engine's ambient sky carries only this share of the sky's hue (round 3's painted shade:
 # the luma and a fifth of the colour; the materials turn their own hue cool, w3_paint_shade); at
 # night all of it (round 4's night, kept)

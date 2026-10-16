@@ -1,142 +1,127 @@
-"""百々かさゝぎ's face stamps: pixel art for the screen lattice (see docs/knowledge/24 §8).
+"""百々かさゝぎ's face stamps, round 5 (decision-log G5R3-6..8; docs/knowledge/24 §8).
 
-The face is about 13 x 10 native pixels, so it is drawn the way sprite faces of that size are drawn
-(Eastward, Stardew Valley, Octopath Traveler): eyes 2 x 3 with one highlight pixel, brows one pixel
-thick, a mouth of 1-3 pixels (a short dark line; a small arc for a smile; a 2 x 2 dark block for an
-open mouth), a pale 2-pixel blush. No big shapes, no bright reds: at native size those read as a
-wound (the lead, 2026-10-15). The mischief lives in the half-lidded eyes, the one raised brow and the
-one raised corner of the mouth.
+The face is about 11 x 6 native px under thick bangs, drawn like the v0.2 sprite's face the user liked:
+two small eyes close under the bangs (2 wide, 3 tall, 3 px apart, low on the head), a soft one-pixel
+blush on each cheek, and almost no mouth. No brows ever (the bangs cover them, G5R3-8). Emotion is
+carried by the eyes' shape (open, blink, half, ^ ^, > <, wide), tears, the blush, and the body
+(anims.py); the mouth is at most one or two dark-pink pixels when she talks. Nothing red, no teeth.
 
-Each stamp is drawn here as text in an 8 x 8 cell; `pivot` is the cell pixel (x right, y down) that
-lands on the landmark the game projects every frame (eye centre, brow, mouth, cheek). Her right eye
-(on the viewer's left when she faces us) is drawn, column 0 its outer side; her left eye is its
-mirror, with the highlight kept on the same (screen-left) side: one light for both eyes. Views: 'f'
-front, 't' three-quarter, 's' profile (the near eye only, one column).
+Colours: the ChatGPT sheet's iris (#3d414f dark, #6f7887 iris, #aaafb8 light), not black. Each stamp is
+text in an 8 x 8 cell; `pivot` is the cell pixel (x right, y down) that lands on the landmark the game
+projects (eyes: the outer column, middle row). Her right eye (the viewer's left) is drawn, column 0
+its outer side; her left eye is its mirror image (the highlights stay symmetric, both on the inner
+side, as in the sprite). Views: 'f' front, 't' three-quarter, 's' profile (the near eye only).
 
-Colours (sRGB); a glow pixel (eye highlight, tears) is stored with alpha 200 and keeps its light.
+A glow pixel (the eye's light, tears) is stored with alpha 200 and keeps its light at night.
 """
 
 PALETTE = {
-    'K': (34, 24, 46, 255),       # the eye's dark (lid line, pupil)
-    'I': (58, 62, 104, 255),      # iris (a deep navy, a step lighter than the lid)
-    'k': (120, 84, 96, 255),      # a soft lower lid
-    'W': (255, 255, 255, 200),    # highlight (glow)
-    'S': (236, 240, 252, 255),    # white of the eye (surprise only; a cool white, apart from the skin)
-    'M': (110, 44, 58, 255),      # mouth (a dark red-brown, never a bright red)
-    'B': (246, 188, 186, 255),    # blush (pale)
-    'C': (186, 230, 255, 200),    # tear, light (glow)
-    'c': (112, 172, 236, 255),    # tear
-    'b': (78, 54, 80, 255),       # brow
-    'V': (222, 60, 70, 255),      # anger mark
+    'K': (61, 65, 79, 255),       # the eye's dark (the iris shadow, ChatGPT sheet #3d414f)
+    'k': (46, 46, 60, 255),       # a closed eye's line (a step deeper than K, so a 1 px line reads)
+    'I': (111, 120, 135, 255),    # iris (#6f7887)
+    'W': (176, 190, 216, 255),    # the eye's light: a pale blue-grey catch-light (the v0.2 sprite's is a
+                                  # light blue; a white glow pixel read as a stare)
+    'S': (250, 248, 246, 255),    # the white of a startled eye
+    'M': (176, 92, 104, 255),     # mouth: a dark pink, never red
+    'm': (222, 150, 146, 255),    # a soft mouth (a pale pink dot)
+    'B': (246, 168, 160, 255),    # blush, soft (always on)
+    'b': (238, 132, 138, 255),    # blush, warm (happy, shy, pouting)
+    'C': (214, 238, 255, 200),    # tear, light (glow)
+    'c': (150, 190, 236, 255),    # tear
+    'V': (214, 64, 78, 255),      # anger mark
     'D': (200, 236, 255, 200),    # sweat drop (glow)
-    'Z': (226, 232, 255, 200),    # a sleepy 'z' (glow)
+    'Z': (226, 232, 255, 200),    # sleepy 'z' (glow)
 }
 
+# eyes mirror without moving the light (both lights on the inner side)
+EYE_LIGHT = 'mirror'
+
 # ------------------------------------------------------------------------------------------------
-# eyes: her right eye, 2 wide x 3 tall; column 0 is the outer side; the landmark is the middle row
+# eyes: her right eye, column 0 its outer side; 3 rows (the top row lies under the bangs' edge)
 EYE_PIVOT = (0, 1)
 EYES = {
     'open': ['KK',
-             'WI',
-             'II'],
+             'KW',
+             'KI'],
     'blink': ['..',
               '..',
-              'KK'],
+              'kk'],
     'half': ['..',               # sleepy: the lid half down
-             'KK',
-             'II'],
-    'smug': ['..',               # half-lidded, the pupil and its light under a flat lid (mischief)
-             'KK',
-             'WI'],
-    'happy': ['...',             # ^ (three wide, the arch over the eye's place)
-              '.K.',
-              'K.K'],
-    'wide': ['KK',               # surprise: the white shows round a dot of a pupil
+             'kk',
+             'KI'],
+    'smug': ['..',               # half-lidded, the light under a flat lid (mischief)
+             'kk',
+             'KW'],
+    'happy': ['.k.',             # ^ (three wide: its middle on the eye's outer column, see pivots)
+              'k.k'],
+    'wide': ['KK',               # startled: the eye opens a row taller, a white ring round the dark
              'SK',
-             'SS'],
-    'angry': ['K.',              # the lid slants down to the inner corner
+             'SW',
+             'KK'],
+    'look_in': ['KK',            # glancing toward her nose side (the light kept inner)
+                'WK',
+                'IK'],
+    'look_out': ['KK',
+                 'KW',
+                 'KK'],
+    'angry': ['K.',              # the lid slants down to the inner corner (under the bangs)
               'KK',
-              'II'],
-    'sad': ['.K',                # the inner corner up, the outer down
+              'KW'],
+    'sad': ['.K',                # the inner corner up
             'KK',
-            'II'],
-    'grin': ['KK',               # smiling eyes: the cheeks push the lower lid up
-             'WI',
-             '..'],
+            'KI'],
     'teary': ['KK',
-              'WI',
-              'CC',
-              '.c'],
-    'cry0': ['K.',               # squeezed shut (>), a tear running
-             '.K',
-             'K.',
-             'c.',
-             'C.',
-             'c.'],
-    'cry1': ['K.',
-             '.K',
-             'K.',
-             'C.',
-             'c.',
-             '.c'],
+              'KW',
+              'CC'],
+    'cry0': ['k.',               # squeezed shut (>), a tear falling from the inner corner
+             '.k',
+             'k.',
+             '.C',
+             '..',
+             '..'],
+    'cry1': ['k.',
+             '.k',
+             'k.',
+             '..',
+             '.c',
+             '.C'],
+    'shut': ['..',               # squeezed shut without tears (a wince, a grin)
+             'k.',
+             '.k'],
 }
+# per-stamp pivots where they differ from EYE_PIVOT (the ^ centred over the eye's two columns)
+EYE_PIVOTS = {'happy': (1, 0)}
 
-# columns kept per view (None: all). In profile only the near eye shows, one column wide.
-VIEW_COLS = {'f': None, 't': None, 's': [1]}
+# columns kept per view (None: all). In profile only the near eye shows, one column wide (its outer,
+# dark column: a dark dash under the bangs reads as an eye seen from the side).
+VIEW_COLS = {'f': None, 't': None, 's': [0]}
 
 # ------------------------------------------------------------------------------------------------
-# brows: her right brow, one pixel thick (column 0 its outer end), on the strip of forehead under
-# the bangs; an expression gives one name for both, or {'R': name, 'L': name} (one brow raised)
+# no brows (G5R3-8): the bangs cover them
 BROW_PIVOT = (0, 0)
-BROWS = {
-    'normal': ['bb'],
-    'angry': ['b.', '.b'],       # inner end down
-    'sad': ['.b', 'b.'],         # inner end up
-    'up': ['bb'],                # raised a row
-    'arch': ['bb'],              # raised two rows (the cocked brow)
-    'flat': ['bb'],
-    'low': ['bb'],               # lowered a row (the narrowed side)
-}
-BROW_UP_SHIFT = {'up': 1, 'arch': 2, 'low': -1}
+BROWS = {}
+BROW_UP_SHIFT = {}
 
 # ------------------------------------------------------------------------------------------------
-# mouths: 1-3 pixels; the landmark is column 1, row 0
-MOUTH_PIVOT = (1, 0)
+# mouths: 0-2 pixels; the landmark is column 0, row 0
+MOUTH_PIVOT = (0, 0)
 MOUTHS = {
-    'neutral': ['MM'],
-    'smile': ['M.M',             # a small arc
-              '.M.'],
-    'laugh': ['MM',              # open: a 2 x 2 dark block
-              'MM'],
-    'grin': ['MMM',              # a wide open smile (D)
-             '.M.'],
-    'o': ['MM',
-          'MM'],
-    'frown': ['.M.',
-              'M.M'],
-    'grit': ['MMM'],
-    'wail': ['MM',
-             'MM',
-             'MM'],
-    'smirk': ['..M',             # one corner up (her left)
-              'MM.'],
-    'pout': ['M',                # pursed and pushed out
+    'soft': ['m'],               # a pale dot (a content face)
+    'o': ['M'],                  # surprise: a dark-pink dot
+    'open': ['M',                # talking, open: 1 x 2
              'M'],
-    'yawn': ['MM',
-             'MM',
-             'MM'],
-    'talk_a': ['MM',
-               'MM'],
-    'talk_b': ['MM'],
-    'talk_c': ['MMM',
-               '.M.'],
+    'line': ['M'],
+    'pout': ['m'],
+    'wail': ['M',                # crying: open, 1 x 2
+             'M'],
+    'smirk': ['.m'],             # one corner up: a pale dot off-centre (her left)
 }
 MOUTH_VIEW_DROP = {'f': [], 't': [], 's': []}
 
 # ------------------------------------------------------------------------------------------------
-# cheeks and marks
+# cheeks: one soft pixel always; two warm ones when she blushes
 BLUSH_PIVOT = (0, 0)
-BLUSH = {'blush': ['BB']}
+BLUSH = {'soft': ['B'], 'blush': ['bb']}
 MARK_PIVOT = (1, 1)
 MARKS = {
     'anger': ['V.V', '.V.', 'V.V'],
@@ -145,26 +130,27 @@ MARKS = {
 }
 
 # ------------------------------------------------------------------------------------------------
-# expressions: which stamp each feature uses. 'eyes' may be a (name, name) pair of animation
-# frames; the game alternates them.
+# expressions: which stamp each feature uses. 'eyes' may be a (name, name) pair of animation frames
+# (the game alternates them at 6 Hz); 'cheeks' a blush stamp ('soft' by default, '' none); 'mouth' ''
+# for none (most of the time).
 EXPRESSIONS = {
-    'neutral':   {'eyes': 'open', 'brows': 'normal', 'mouth': 'neutral'},
-    'smile':     {'eyes': 'open', 'brows': 'normal', 'mouth': 'smile'},
-    'happy':     {'eyes': 'happy', 'brows': 'up', 'mouth': 'laugh', 'blush': True},
-    'grin':      {'eyes': 'grin', 'brows': 'up', 'mouth': 'grin'},
-    # 古灵精怪: the half-narrowed eyes, one brow cocked, the smirk's one corner
-    'mischief':  {'eyes': 'smug', 'brows': {'R': 'low', 'L': 'arch'}, 'mouth': 'smirk'},
-    'cat':       {'eyes': 'grin', 'brows': 'normal', 'mouth': 'smile'},
-    # "huh?" (the head tilt): one brow up, the little o
-    'curious':   {'eyes': 'open', 'brows': {'R': 'normal', 'L': 'up'}, 'mouth': 'o'},
-    'surprised': {'eyes': 'wide', 'brows': 'up', 'mouth': 'o'},
-    'angry':     {'eyes': 'angry', 'brows': 'angry', 'mouth': 'grit', 'mark': 'anger'},
-    'sad':       {'eyes': 'sad', 'brows': 'sad', 'mouth': 'frown'},
-    'teary':     {'eyes': 'teary', 'brows': 'sad', 'mouth': 'frown'},
-    'cry':       {'eyes': ('cry0', 'cry1'), 'brows': 'sad', 'mouth': 'wail'},
-    'smug':      {'eyes': 'smug', 'brows': 'flat', 'mouth': 'smile'},
-    'sleepy':    {'eyes': 'half', 'brows': 'flat', 'mouth': 'yawn', 'mark': 'zzz'},
-    'pout':      {'eyes': 'angry', 'brows': 'angry', 'mouth': 'pout', 'blush': True},
-    'embarrassed': {'eyes': 'open', 'brows': 'sad', 'mouth': 'frown', 'blush': True, 'mark': 'sweat'},
+    'neutral':   {'eyes': 'open', 'mouth': ''},
+    'smile':     {'eyes': 'open', 'mouth': 'soft'},
+    'happy':     {'eyes': 'happy', 'mouth': 'soft', 'cheeks': 'blush'},
+    'grin':      {'eyes': 'happy', 'mouth': 'smirk', 'cheeks': 'blush'},
+    # 坏笑 / 古灵精怪: half-lidded eyes over a sly one-sided dot of a smile
+    'mischief':  {'eyes': 'smug', 'mouth': 'smirk'},
+    'cat':       {'eyes': 'happy', 'mouth': ''},
+    'curious':   {'eyes': 'look_out', 'mouth': 'o'},
+    'surprised': {'eyes': 'wide', 'mouth': 'o', 'cheeks': ''},
+    'angry':     {'eyes': 'angry', 'mouth': 'line', 'mark': 'anger', 'cheeks': 'blush'},
+    'sad':       {'eyes': 'sad', 'mouth': ''},
+    'teary':     {'eyes': 'teary', 'mouth': ''},
+    'cry':       {'eyes': ('cry0', 'cry1'), 'mouth': 'wail', 'cheeks': 'blush'},
+    'smug':      {'eyes': 'smug', 'mouth': 'soft'},
+    'sleepy':    {'eyes': 'half', 'mouth': '', 'mark': 'zzz'},
+    'pout':      {'eyes': 'angry', 'mouth': 'pout', 'cheeks': 'blush'},
+    'embarrassed': {'eyes': 'look_in', 'mouth': '', 'cheeks': 'blush', 'mark': 'sweat'},
+    'blink':     {'eyes': 'blink', 'mouth': ''},
 }
-TALK = ['talk_a', 'talk_b', 'talk_c', 'neutral']
+TALK = ['open', 'line', 'open', '']

@@ -20,6 +20,7 @@ render_mode unshaded, depth_draw_never, depth_test_disabled, cull_disabled, skip
 uniform sampler2D screen_tex : hint_screen_texture, filter_nearest;
 uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 uniform float strength = 0.75;
+uniform float band_edge = 1.0;          // the 遠化's bright edge (round 3: 1)
 uniform vec3 eye = vec3(0.0);
 uniform sampler2D glyphs : filter_nearest;  // 16 x 16 glyphs of 8 x 8 (R tone + 4, G accent + 1, A)
 uniform sampler2D tufts : filter_nearest;   // 4 x 4 tufts of 16 x 16
@@ -101,10 +102,10 @@ void fragment() {
 		// where is this pixel in the world: past the ring the 遠化 has taken the land's relief
 		vec3 wp = world_at(uv, ip, VIEWPORT_SIZE);
 		float dr = v_drain(wp.xz, wp.y);
-		if (dr > 0.5 || c > 6000.0) {
-			// far off, in the air: only a faint darker line on the ridges, so the ranges stand one
-			// behind the other
-			col *= 0.94;
+		if (dr > 0.99) {
+			// in the 遠化's white only the land's drawing is left: its ridges a faint warm line
+			// (round 5: round 3's again)
+			col = v_paper(0.9);
 		} else {
 			float keep = 1.0 - smoothstep(0.2, 0.45, dr);
 			vec3 bcol = texture(screen_tex, uv + behind).rgb;
@@ -112,6 +113,25 @@ void fragment() {
 			float lb = dot(base, vec3(0.3, 0.59, 0.11));
 			vec3 tint = mix(vec3(0.55, 0.58, 0.68), vec3(0.86, 0.88, 0.94), smoothstep(0.5, 0.75, lb));
 			col = mix(col, base * tint, strength * keep * (1.0 - smoothstep(1500.0, 6000.0, c)) * mix(1.0, 0.7, smoothstep(0.5, 0.75, lb)));
+		}
+	}
+
+	// ---- the 遠化's edge (round 3's; back in round 5): where the white meets land that keeps its
+	// colour on the same ground (not where something nearer stands in front of it), a line of light
+	// one pixel wide on the white's side, wherever it runs: across the plain, up and over the hills
+	// (it glows a little). band_edge: 1 as round 3 drew it, 0 none (the variants for the lead)
+	if (c < 20000.0 && band_edge > 0.0) {
+		vec3 wc = world_at(uv, ip, VIEWPORT_SIZE);
+		if (v_drain(wc.xz, wc.y) > 0.99) {
+			bool edge = false;
+			for (int k = 0; k < 4; k++) {
+				vec2 o = k == 0 ? vec2(px.x, 0.0) : (k == 1 ? vec2(-px.x, 0.0) : (k == 2 ? vec2(0.0, px.y) : vec2(0.0, -px.y)));
+				float dn = view_depth(uv + o, ip);
+				if (abs(dn - c) > c * 0.12 + 2.0) continue;
+				vec3 wn = world_at(uv + o, ip, VIEWPORT_SIZE);
+				if (v_drain(wn.xz, wn.y) < 0.99) edge = true;
+			}
+			if (edge) col = mix(col, far_white * 1.3, band_edge);
 		}
 	}
 

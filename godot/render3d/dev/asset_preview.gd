@@ -77,7 +77,16 @@ func _process(dt: float) -> void:
 	wait = 0
 	var out: String = args.get("out", "/tmp")
 	var h := times[step]
-	var img := pv.vp.get_texture().get_image()
+	# (the picture as shown: the window, graded, one pixel per native pixel; the 3D viewport itself
+	# holds linear HDR values since round 4, which saved as a PNG read far too dark)
+	var win := get_viewport().get_texture().get_image()
+	var s := pv.scale_factor
+	var lg := Vector2i(pv.logical)
+	var img := Image.create(lg.x, lg.y, false, Image.FORMAT_RGB8)
+	var off := Vector2i(pv.margin) + Vector2i(s / 2, s / 2)
+	for y in lg.y:
+		for x in lg.x:
+			img.set_pixel(x, y, win.get_pixel(mini(off.x + x * s, win.get_width() - 1), mini(off.y + y * s, win.get_height() - 1)))
 	var base := "%s/%s_%s" % [out, name_, String.num(h, 1).replace(".", "h")]
 	img.save_png(base + ".png")
 	var big := img.duplicate()

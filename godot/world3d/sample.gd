@@ -126,6 +126,7 @@ func _ready() -> void:
 	dressing.lean_k = pv_lean()
 	dressing.build(terrain, catalog)
 	_place_marker_props()
+	_round3_leaf_palette(pv.world_root)
 	_set_hours(env.hours)
 	atmos = W3Atmosphere.new()
 	atmos.name = "Atmosphere"
@@ -276,6 +277,55 @@ func _asset_for(kind: String, variant: int) -> String:
 		return ""
 	names.sort()
 	return names[variant % names.size()]
+
+
+# Round 5 (decision-log G5R3-1, renderer): the leaves take round 3's deeper palette (pixel_toon
+# w3_ukiyo_tex, the foliage material's `ukiyo` 1 by default). It reproduces how round 3 drew the
+# textures it had (measured: the cedar within dE 1.7 of round 3, render3d/dev/asset_preview through
+# both renderers). Textures painted since round 4's sRGB fix were painted for one conversion: the
+# deeper palette in full would turn their darks black, so they take less of it (their `ukiyo`): the
+# great camphor's new leaves 0.4 (measured: its crown then as light as round 3's, L* 58 lit, where
+# 0 gave 75 and 1 gave 33), the rest 0 (their painted colour). Their owners can set the value in the
+# material instead; this table then shrinks.
+const ONE_CONVERSION_LEAVES := {
+	"res://world3d/assets/trees/camphor_great/camphor_great_leaves.png": 0.4,
+	"res://world3d/assets/trees/furusugi/furusugi_leaves.png": 0.0,
+	"res://world3d/assets/buildings/hut/hut_cards.png": 0.0,
+	"res://world3d/assets/props/fence_yotsume_a/fence_yotsume_a_vines.png": 0.0,
+	"res://world3d/assets/props/fence_yotsume_b/fence_yotsume_b_vines.png": 0.0,
+	"res://world3d/assets/props/fence_yotsume_c/fence_yotsume_c_vines.png": 0.0,
+	"res://world3d/assets/props/hatake/hatake_plants.png": 0.0,
+}
+
+
+func _round3_leaf_palette(n: Node) -> void:
+	var seen := {}
+	var stack: Array[Node] = [n]
+	while not stack.is_empty():
+		var c: Node = stack.pop_back()
+		for ch in c.get_children():
+			stack.append(ch)
+		if not (c is MeshInstance3D):
+			continue
+		var mi := c as MeshInstance3D
+		var mats: Array[Material] = []
+		if mi.material_override:
+			mats.append(mi.material_override)
+		for i in mi.get_surface_override_material_count():
+			if mi.get_surface_override_material(i):
+				mats.append(mi.get_surface_override_material(i))
+		if mi.mesh:
+			for i in mi.mesh.get_surface_count():
+				if mi.mesh.surface_get_material(i):
+					mats.append(mi.mesh.surface_get_material(i))
+		for m in mats:
+			if not (m is ShaderMaterial) or seen.has(m):
+				continue
+			seen[m] = true
+			var sm := m as ShaderMaterial
+			var tex = sm.get_shader_parameter("leaf_tex")
+			if tex is Texture2D and ONE_CONVERSION_LEAVES.has(String((tex as Texture2D).resource_path)):
+				sm.set_shader_parameter("ukiyo", float(ONE_CONVERSION_LEAVES[String((tex as Texture2D).resource_path)]))
 
 
 func _place_props() -> void:

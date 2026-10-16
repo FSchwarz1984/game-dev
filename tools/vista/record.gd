@@ -6,7 +6,7 @@ extends SceneTree
 ##   godot --path godot --rendering-method forward_plus --resolution 1280x720 --fixed-fps 30 \
 ##     [--write-movie /tmp/rec/f.png] -s tools/vista/record.gd -- [--shot=prologue|title] \
 ##     [--seconds=8] [--quality=high|low] [--to=999] [--grab=DIR] [--rise=DIR --from=0 --every=1] \
-##     [--stats]
+##     [--stats] [--data=DIR]
 ## The prologue runs to its end and one second more (or to --to seconds); the title for --seconds.
 ## Movie Maker writes the project's window size (1280x720 here: the 640x360 logical canvas at 2x);
 ## --grab=DIR writes every frame at one pixel per native pixel (DIR/g00000.png ...), at any window.
@@ -15,9 +15,12 @@ extends SceneTree
 ## on, with the timeline time in DIR/times.txt: the long exposure is the maximum over these.
 ## --stats prints, once a second of the timeline, the renderer's counters for the frame (draw calls,
 ## objects, primitives) and the instance counts of the light layers.
+## --data=DIR reads the vista's baked data from DIR instead of res://vista/data (e.g. an earlier bake,
+## for before/after recordings).
 ## The first two frames are drawn before the vista exists (black).
 
 var v: Vista
+var data_dir := ""
 var d: Director
 var stand: Node2D
 var figure_kind := "real"
@@ -62,6 +65,8 @@ func _initialize() -> void:
 			figure_kind = a.substr(9)
 		elif a == "--stats":
 			stats = true
+		elif a.begins_with("--data="):
+			data_dir = a.substr(7)
 	if grab != "":
 		DirAccess.make_dir_recursive_absolute(grab)
 	if rise_dir != "":
@@ -88,6 +93,8 @@ func _start() -> void:
 	v = Vista.new()
 	v.autoplay = false
 	v.quality = quality
+	if data_dir != "":
+		v.data_dir = data_dir
 	layer.add_child(v)
 	d = Director.new()
 	if shot == "title":

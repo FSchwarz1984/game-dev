@@ -21,6 +21,12 @@ characters and interactables: knowledge/25). Weeds grow where people do not trea
 walls and fences, around posts, troughs and stones (the layout's yard.weeds lines and rings, and every
 walled pad's edge).
 
+Round 5 (decision-log G5R3-2: "草…太雜亂了，顏色深一塊淺一塊"): the grasses themselves moved to the grass
+field (grassfield.py: a continuous sward coloured and lit as its ground). What stays here are the
+accents that are not grass: ferns, dwarf bamboo, pampas grass, sedges, horsetail, plantain, clover,
+moss cushions, the late-summer flowers and the weeds at the feet of walls. They are lit with the
+ground normal (as the ground and the sward) and carry no per-clump tint: no light and dark blobs.
+
 Output: cover.png (the atlas, RGBA: albedo + coverage; terrain/common) and cover.bin (per 16 m chunk,
 two layers: 'low' casts no shadow, 'tall' does), in the renderer's foliage card layout (toon_foliage
 card mode: CUSTOM0 = anchor + flex, UV2 = corner offset in native px, UV = atlas uv, COLOR = tint +
@@ -47,12 +53,6 @@ PPM = 30.0
 
 # species: (painter, [kwargs per tile variant], layer)
 SPECIES = {
-    "short": (FL.tuft, [dict(W=8, H=6, family="grass", tall=0.9), dict(W=10, H=7, family="grass"), dict(W=12, H=8, family="grass", spread=0.7)], "low"),
-    "mid": (FL.tuft, [dict(W=12, H=10, family="grass"), dict(W=14, H=12, family="grass", spread=0.6), dict(W=16, H=12, family="grass_blue")], "low"),
-    "long": (FL.tuft, [dict(W=16, H=18, family="grass", arch=1.2), dict(W=18, H=22, family="grass_olive", arch=1.3)], "tall"),
-    "blue": (FL.tuft, [dict(W=10, H=8, family="grass_blue"), dict(W=14, H=12, family="grass_blue", spread=0.65)], "low"),
-    "yellow": (FL.tuft, [dict(W=10, H=8, family="grass_yellow"), dict(W=12, H=10, family="grass_yellow", spread=0.7)], "low"),
-    "dry": (FL.tuft, [dict(W=12, H=11, family="grass_olive"), dict(W=16, H=14, family="grass_olive", arch=1.1)], "low"),
     "sedge": (FL.sedge, [dict(W=12, H=14), dict(W=10, H=12, family="grass_blue")], "low"),
     "fern": (FL.fern, [dict(W=16, H=12), dict(W=20, H=14), dict(W=24, H=17, fronds=8)], "tall"),
     "clover": (FL.clover, [dict(W=12, H=6), dict(W=14, H=7, flowers=1), dict(W=10, H=6, flowers=2)], "low"),
@@ -71,26 +71,24 @@ SPECIES = {
 
 # communities: species -> weight
 COMMUNITIES = {
-    "meadow": {"short": 1.0, "mid": 1.2, "long": 0.45, "blue": 0.5, "yellow": 0.35, "clover": 0.35, "plantain": 0.12, "kikyo": 0.09,
-               "ominaeshi": 0.07, "nadeshiko": 0.07, "tanpopo": 0.06, "susuki": 0.08, "hagi": 0.05},
-    "edge": {"mid": 0.8, "long": 0.8, "fern": 0.6, "sasa": 0.35, "hagi": 0.18, "tsuyukusa": 0.15, "susuki": 0.18, "blue": 0.4, "kikyo": 0.05},
-    "shade": {"fern": 1.0, "moss": 0.8, "sasa": 0.45, "blue": 0.35, "tsuyukusa": 0.2, "sedge": 0.2, "short": 0.25},
-    "wet": {"sedge": 1.0, "horsetail": 0.55, "fern": 0.5, "moss": 0.5, "tsuyukusa": 0.3, "blue": 0.35},
-    "trodden": {"plantain": 1.0, "clover": 0.9, "short": 0.8, "tanpopo": 0.2},
-    "sanctum": {"mid": 0.7, "blue": 0.6, "short": 0.5, "clover": 0.4, "moss": 0.5, "fern": 0.5, "kikyo": 0.22, "nadeshiko": 0.18,
-                "tsuyukusa": 0.22, "ominaeshi": 0.08, "hagi": 0.08},
-    "oku": {"moss": 1.2, "fern": 0.9, "sasa": 0.25, "tsuyukusa": 0.25, "blue": 0.3, "sedge": 0.15},
-    "dry": {"dry": 1.0, "susuki": 0.4, "yellow": 0.4, "ominaeshi": 0.12, "hagi": 0.08, "short": 0.3},
+    "meadow": {"clover": 0.12, "plantain": 0.06, "kikyo": 0.05, "ominaeshi": 0.04, "nadeshiko": 0.04, "susuki": 0.06, "hagi": 0.03},
+    "edge": {"fern": 0.6, "sasa": 0.35, "hagi": 0.14, "tsuyukusa": 0.12, "susuki": 0.18, "kikyo": 0.04},
+    "shade": {"fern": 1.0, "moss": 0.8, "sasa": 0.45, "tsuyukusa": 0.2, "sedge": 0.2},
+    "wet": {"sedge": 1.0, "horsetail": 0.55, "fern": 0.5, "moss": 0.5, "tsuyukusa": 0.3},
+    "trodden": {"plantain": 1.0, "clover": 0.9},
+    "sanctum": {"clover": 0.2, "moss": 0.5, "fern": 0.5, "kikyo": 0.12, "nadeshiko": 0.1, "tsuyukusa": 0.14, "ominaeshi": 0.05,
+                "hagi": 0.05},
+    "oku": {"moss": 1.2, "fern": 0.9, "sasa": 0.25, "tsuyukusa": 0.2, "sedge": 0.15},
+    "dry": {"susuki": 0.4, "ominaeshi": 0.12, "hagi": 0.08},
     # the feet of walls, fences and posts in the yard: what survives where nobody treads
-    "wallfoot": {"short": 1.0, "plantain": 0.75, "clover": 0.55, "horsetail": 0.5, "tsuyukusa": 0.5, "mid": 0.4, "fern": 0.25,
-                 "moss": 0.3, "tanpopo": 0.2, "nadeshiko": 0.08},
+    "wallfoot": {"plantain": 1.0, "clover": 0.6, "horsetail": 0.5, "tsuyukusa": 0.5, "fern": 0.25, "moss": 0.3, "nadeshiko": 0.08},
 }
 
 # clump size (radius range, m) per species: big plants make big clumps
-CLUMP_R = {"fern": (0.35, 0.8), "sasa": (0.45, 0.95), "susuki": (0.3, 0.6), "long": (0.3, 0.7), "moss": (0.18, 0.45),
+CLUMP_R = {"fern": (0.35, 0.8), "sasa": (0.45, 0.95), "susuki": (0.3, 0.6), "moss": (0.18, 0.45),
            "clover": (0.2, 0.5), "plantain": (0.15, 0.35), "horsetail": (0.15, 0.35)}
 CLUMP_R_DEFAULT = (0.22, 0.6)
-CARDS_PER_M2 = {"fern": 7.0, "sasa": 8.0, "susuki": 5.0, "long": 9.0, "moss": 12.0}
+CARDS_PER_M2 = {"fern": 7.0, "sasa": 8.0, "susuki": 5.0, "moss": 12.0}
 CARDS_PER_M2_DEFAULT = 13.0
 
 
@@ -208,7 +206,7 @@ def build(L, W, F, Xs, Zs, Hs, cs, h, x0, z0, cell, seed, out_common: Path):
             w = np.zeros(len(CX))
             for cname, ck in comm.items():
                 w = w + ck * COMMUNITIES[cname].get(name, 0.0)
-            sc = 6.0 if name in ("short", "mid", "blue", "clover", "moss") else (4.0 if name in ("fern", "sasa", "long", "sedge") else 3.0)
+            sc = 6.0 if name in ("clover", "moss") else (4.0 if name in ("fern", "sasa", "sedge") else 3.0)
             clump = noise.fbm(CX / sc + k * 13.1, CZ / sc - k * 7.7, 2, seed + 5200 + k)
             score[k] = w * (0.35 + 1.3 * geom.smoothstep(0.38, 0.72, clump)) * R.uniform(0.8, 1.2, len(CX))
         return score
@@ -255,13 +253,12 @@ def build(L, W, F, Xs, Zs, Hs, cs, h, x0, z0, cell, seed, out_common: Path):
     fkind = (noise.fbm(FX / 7.0, FZ / 7.0, 2, seed + 5131) * len(FLOWERS) * 1.6).astype(int) % len(FLOWERS)
     froom = np.clip(ff["grass"] + ff["moss"] * 0.9 + ff["litter"] * 0.45, 0, 1)
     fk = fpatch * (ff["comm"]["meadow"] * 0.7 + ff["comm"]["edge"] * 0.5 + ff["comm"]["sanctum"] * 1.3 + ff["comm"]["dry"] * 0.4) * froom
-    for i in np.nonzero(ff["ground_ok"] & (R.uniform(size=len(FX)) < fk * 0.55))[0]:
+    for i in np.nonzero(ff["ground_ok"] & (R.uniform(size=len(FX)) < fk * 0.16))[0]:
         sp = FLOWERS[fkind[i]]
         if sp == "tsuyukusa" and ff["shade_k"][i] < 0.2 and ff["wet_k"][i] < 0.2 and R.uniform() < 0.6:
             sp = "nadeshiko"
         r = R.uniform(0.14, 0.34)
-        clumps.append((float(FX[i]), float(FZ[i]), names.index(sp), r, int(R.integers(2, 6)), names.index("short") if R.uniform() < 0.5 else -1,
-                       "flower"))
+        clumps.append((float(FX[i]), float(FZ[i]), names.index(sp), r, int(R.integers(2, 5)), -1, "flower"))
 
     # ---- 3. weeds at the feet of walls, fences, posts and troughs (in the yard too)
     lines = edge_lines(L, F, Xs, Zs, cs)
@@ -340,18 +337,11 @@ def build(L, W, F, Xs, Zs, Hs, cs, h, x0, z0, cell, seed, out_common: Path):
             nrm = _normal(h, x0, z0, cell, x, z)
             rx, ry, rw, rh = rects[t]
             mirror = R.uniform() < 0.5
-            # light: the clump bulges, its top catches the light and its rim turns away
-            out = np.array([pts[j, 0], 0.0, pts[j, 1] / 0.8]) / max(r, 1e-6)
-            ln = nrm * 0.55 + up * 0.55 + out * 0.35 + np.array([0.0, 0.0, 0.25])
-            ln /= np.linalg.norm(ln)
-            front = float(np.clip(out[2], 0, 1))
-            if name in FLOWER_SPECIES:
-                tint = np.array([1.0, 1.0, 1.0]) * (1.0 + R.normal(0, 0.025))
-            else:
-                v = val * (1.0 - 0.07 * rr - 0.05 * front) * (1.0 + R.normal(0, 0.015))
-                # rim and front a little bluer (the shade side of the clump), the middle a little warmer
-                tint = np.array([1.0 + 0.03 * hue - 0.03 * rr, 1.0, 1.0 - 0.035 * hue + 0.05 * rr]) * v
-            ao = float(np.clip(1.0 - 0.32 * float(fc["canopy"][j]) - 0.14 * float(fc["shade_k"][j]) - 0.12 * rr, 0.5, 1.0))
+            # lit as the ground it stands on (the sward and the terrain take the same normal): no bulge,
+            # no per-clump tint (round 5: the light and dark blobs were what read as noise)
+            ln = nrm
+            tint = np.array([1.0, 1.0, 1.0])
+            ao = float(np.clip(1.0 - 0.25 * float(fc["canopy"][j]), 0.6, 1.0))
             flex = float(np.clip(0.35 + rh / 30.0 + R.normal(0, 0.08), 0.2, 1.0))
             ck = (int(math.floor(x / CHUNK)), int(math.floor(z / CHUNK)))
             cards[layer].setdefault(ck, []).append((x, y, z, rx, ry, rw, rh, mirror, np.clip(tint, 0, 1.2), ao, flex, ln))

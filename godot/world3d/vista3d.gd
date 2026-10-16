@@ -80,6 +80,10 @@ var kiln_glow: ShaderMaterial
 var rng := RandomNumberGenerator.new()
 var _t := 0.0
 var _vdebug: PackedStringArray = []   # --vdebug=nodrain,nohaze,nocloud (looking into the layers)
+# the 遠化's band beside the new clouds (round 5: variants for the lead, --vband=N): 0 round 3's (a
+# warm paper white with a bright edge), 1 the same without the bright edge, 2 without the edge and
+# its white the clouds' light (one white for the band and the clouds)
+var band_variant := 0
 
 
 func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
@@ -90,6 +94,8 @@ func setup(p: PixelView3D, e: W3Env, t: Terrain3D) -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--vdebug="):
 			_vdebug = a.substr(9).split(",")
+		if a.begins_with("--vband="):
+			band_variant = int(a.substr(8))
 	var f := FileAccess.open(DATA, FileAccess.READ)
 	if f:
 		data = JSON.parse_string(f.get_as_text())
@@ -199,6 +205,7 @@ func _marks_setup(pm: ShaderMaterial) -> void:
 		pm.set_shader_parameter("marks", false)
 	if _vdebug.has("nooutline"):
 		pm.set_shader_parameter("strength", 0.0)
+	pm.set_shader_parameter("band_edge", 1.0 if band_variant == 0 else 0.0)
 
 
 var post_mat: ShaderMaterial
@@ -655,12 +662,14 @@ func _tree(x: float, y: float, z: float, kind: int, h: float, w: float, seed: fl
 ## assets (render3d/dev/impostor_bake.gd -> tools/world3d/vista_impostors.py): the region's own props
 ## (W3Vista.props, handed over by the sample), the woods of the land around (vista.json) and the two
 ## red maples by the path.
-const IMPOSTORS := "res://world3d/vista/impostors.json"
 # round 5 (G5R3-1: "遠眺場景那些樹木植被什麼的數量和形狀狀態都需要和上一個版本保持一致"): the trees as round 3
-# drew them, their stand-ins (round 3's atlas) and their number and places (the region's props as
-# round 3's sample placed them, and its rocks; tools: git show 20e91e6), frozen for the view; the
-# heroes (the great camphor, the hut, the shrine, the graves) as they stand now
-const IMPOSTORS_R3 := "res://world3d/vista/impostors_r3.json"
+# drew them: their stand-ins (round 3's atlas, merged over the current heroes' by
+# tools/world3d/vista_merge_r3.py: impostors_r5) and their number and places (the region's props as
+# round 3's sample placed them, and its rocks: round3_props.json), frozen for the view; the heroes
+# (the great camphor, the hut, the shrine, the graves) as they stand now
+const IMPOSTORS := "res://world3d/vista/impostors_r5.json"
+const ATLAS_A := "res://world3d/vista/impostors_r5_a.png"
+const ATLAS_N := "res://world3d/vista/impostors_r5_n.png"
 const PROPS_R3 := "res://world3d/vista/round3_props.json"
 # the baked stand-in of each catalog species, with its height (m)
 const IMP_KIND := {"sugi": [["sugi_a", 22.0], ["sugi_d", 26.0]], "pine": [["pine_a", 13.0], ["pine_c", 15.0]],
@@ -695,60 +704,16 @@ func _load_impostors() -> void:
 		if not imp_frames[a].has(k):
 			imp_frames[a][k] = []
 		imp_frames[a][k].append(fr)
-	var atlas_a: Image = load("res://world3d/vista/impostors_a.png")
-	var atlas_n: Image = load("res://world3d/vista/impostors_n.png")
-	var f3 := FileAccess.open(IMPOSTORS_R3, FileAccess.READ)
-	if f3:
-		# round 3's trees: its atlas stacked over the current one (whose heroes keep their frames,
-		# moved down by the height of round 3's page)
-		var m3: Dictionary = JSON.parse_string(f3.get_as_text())
-		var a3: Image = load("res://world3d/vista/impostors_r3_a.png")
-		var n3: Image = load("res://world3d/vista/impostors_r3_n.png")
-		var page := int(m3.get("page", 2048))
-		var heroes := {}
-		for a in IMP_HERO:
-			if imp_frames.has(a):
-				heroes[a] = imp_frames[a]
-				for k in heroes[a]:
-					for fr in heroes[a][k]:
-						var rc: Array = fr["rect"]
-						fr["rect"] = [rc[0], int(rc[1]) + page, rc[2], rc[3]]
-		imp_frames = {}
-		for fr in m3["frames"]:
-			var a := String(fr["asset"])
-			if a in IMP_HERO:
-				continue
-			var k := int(fr["index"])
-			if not imp_frames.has(a):
-				imp_frames[a] = {}
-			if not imp_frames[a].has(k):
-				imp_frames[a][k] = []
-			imp_frames[a][k].append(fr)
-		for a in heroes:
-			imp_frames[a] = heroes[a]
-		atlas_a = _stack(a3, atlas_a)
-		atlas_n = _stack(n3, atlas_n)
 	for a in imp_frames:
 		for k in imp_frames[a]:
 			(imp_frames[a][k] as Array).sort_custom(func(x, y): return float(x["ppm"]) > float(y["ppm"]))
 	imp_mat.shader = load("res://render3d/shaders/vista_impostor.gdshader")
-	imp_mat.set_shader_parameter("atlas_a", ImageTexture.create_from_image(atlas_a))
-	imp_mat.set_shader_parameter("atlas_n", ImageTexture.create_from_image(atlas_n))
+	imp_mat.set_shader_parameter("r3_page_h", int(m.get("r3_rows", 0)))
+	imp_mat.set_shader_parameter("atlas_a", ImageTexture.create_from_image(load(ATLAS_A)))
+	imp_mat.set_shader_parameter("atlas_n", ImageTexture.create_from_image(load(ATLAS_N)))
 	_common(imp_mat)
 	if OS.get_cmdline_user_args().has("--debug_quads"):
 		imp_mat.set_shader_parameter("debug_quads", true)
-
-
-## Two atlas pages one over the other (the same width): the first on top.
-static func _stack(top: Image, bottom: Image) -> Image:
-	var t := top.duplicate() as Image
-	var b := bottom.duplicate() as Image
-	t.convert(Image.FORMAT_RGBA8)
-	b.convert(Image.FORMAT_RGBA8)
-	var out := Image.create(maxi(t.get_width(), b.get_width()), t.get_height() + b.get_height(), false, Image.FORMAT_RGBA8)
-	out.blit_rect(t, Rect2i(Vector2i.ZERO, t.get_size()), Vector2i.ZERO)
-	out.blit_rect(b, Rect2i(Vector2i.ZERO, b.get_size()), Vector2i(0, t.get_height()))
-	return out
 
 
 ## Round 3's region props and rocks (PROPS_R3), or an empty dictionary.
@@ -1033,8 +998,10 @@ func _build_landmarks() -> void:
 # their silver-grey and blue tin roofs were the colour of the flooded paddies and the river under the
 # haze). Now the warm greys and browns of old tiles and thatch, a few red-brown tin roofs: a village
 # reads as a cluster of warm dark specks on the green, never pale and blue like water.
-# weathered tile (warm grey), old dark tile, thatch, old thatch, red-brown tin
-const ROOFS := [Color(0.50, 0.46, 0.42), Color(0.38, 0.35, 0.33), Color(0.60, 0.49, 0.34), Color(0.47, 0.40, 0.31), Color(0.50, 0.32, 0.25)]
+# (light ones mostly: a village from afar is a speckle of light, warm pixels on the green, as in
+# round 3, which the user liked; only no longer the pale blue-grey of water)
+# weathered tile (light warm grey), old dark tile, thatch in the sun (straw), old thatch, red-brown tin
+const ROOFS := [Color(0.64, 0.59, 0.53), Color(0.42, 0.38, 0.35), Color(0.74, 0.63, 0.45), Color(0.60, 0.51, 0.38), Color(0.56, 0.34, 0.26)]
 const TOWER_H := 34.0
 var house_mat: ShaderMaterial
 var line_mat: ShaderMaterial
@@ -1819,6 +1786,12 @@ func update(dt: float) -> void:
 	var fw := Color(0.66, 0.635, 0.59).lerp(Color(0.105, 0.11, 0.15), night)
 	if env.hours > 16.5 and env.hours < 19.5:
 		fw = fw.lerp(Color(0.68, 0.6, 0.52), clampf(1.0 - absf(env.hours - 17.8) / 1.3, 0.0, 1.0) * (1.0 - night))
+	if band_variant == 2:
+		# (the clouds' light, a little under it: one white for the band and the clouds; vista_cloud
+		# paints its lit tone x0.84 in sRGB)
+		var cl: Color = k[4]
+		var cw := Color(cl.r * 0.84, cl.g * 0.84, cl.b * 0.84).srgb_to_linear()
+		fw = fw.lerp(cw, 0.8)
 	for m in mats:
 		m.set_shader_parameter("haze_col", hz)
 		m.set_shader_parameter("mist_col", k[3])

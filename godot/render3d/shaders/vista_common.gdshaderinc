@@ -269,7 +269,10 @@ bool v_past(vec3 wp, vec3 cam, vec2 frag) {
 // (the name is old: since round 4 the sun on the vista's land is continuous, a wrapped Lambert, and
 // its shadows soft-edged, like the top-down world's)
 vec3 v_sun_bands(vec3 alb, vec3 n, vec3 l, vec3 light_col, float att, vec3 wp, vec3 cam) {
-	// (about the old bands' levels on average: 0.6 at a third lit, 0.9 at two thirds, 1 facing it)
-	float lvl = smoothstep(-0.25, 0.75, dot(n, l));
+	// round 3's levels (0.52 / 0.78 / 1 above n.l 0.04 / 0.30 / 0.62) as a smooth curve through the
+	// middle of each (round 5, G5R3-1); round 4's at night
+	float ndl = dot(n, l);
+	float r3 = 0.52 * smoothstep(-0.08, 0.16, ndl) + 0.26 * smoothstep(0.20, 0.44, ndl) + 0.22 * smoothstep(0.50, 0.74, ndl);
+	float lvl = mix(r3, smoothstep(-0.25, 0.75, ndl), w3_night);
 	return alb * w3_lit_tint * light_col / W3_PI * lvl * att;
 }

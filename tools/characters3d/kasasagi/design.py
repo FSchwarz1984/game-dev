@@ -26,14 +26,16 @@ VARIANT = os.environ.get('C3D_VARIANT', 'A').upper()
 
 _COMMON = {
     # the face (heights above the chin, metres; 1 native px = 0.0333 m)
-    'eye_h': 0.172,            # eye centre: three rows 0.122..0.222, the bangs end on the top row
+    'eye_h': 0.226,            # eye centre: three rows 0.176..0.276, the bangs end on the top row; the
+                               # face below the eyes is tall enough that the lean (which pulls the
+                               # receding chin up the screen) still leaves three rows of cheek and chin
     'eye_x': 0.083,            # eye centre half spacing: 2 px eyes, 3 px between them
     'face_y': 0.200,           # the face plate's front (distance in front of the head's axis)
-    'face_w': 0.182,           # half width of the face at the cheeks (11 px)
-    'bang_cut': 0.214,         # the hime cut: just over the eyes' top row (the bangs press on it)
-    'mouth_h': 0.062,
-    'cheek_h': 0.105,
-    'cheek_x': 0.128,
+    'face_w': 0.184,           # half width of the face at the cheeks (11 px)
+    'bang_cut': 0.268,         # the hime cut: just over the eyes' top row (the bangs press on it)
+    'mouth_h': 0.096,
+    'cheek_h': 0.158,          # the blush: a row under the eyes, under their outer column (v0.2)
+    'cheek_x': 0.100,
 }
 
 _D = {
@@ -67,11 +69,11 @@ _D = {
     }),
     'B': dict(_COMMON, **{
         'name': 'B (v0.2 sprite)',
-        'chin_z': 1.12,
+        'chin_z': 1.15,
         'head_h': 0.56,
         'cranium_w': 0.245,
         'cranium_back': 0.225,
-        'hat_r': 0.69, 'hat_h': 0.24, 'hat_sink': 0.12,
+        'hat_r': 0.64, 'hat_h': 0.32, 'hat_sink': 0.12,
         'hat_tilt': 22.0, 'hat_tilt_away': 22.0, 'hat_roll': 0.0,
         'hat_band': 'stripe',      # a red stripe from the apex down to the front right of the brim
         'lock_tie_h': -0.05,       # just under the chin, as in the sprite
@@ -82,8 +84,8 @@ _D = {
         'obi_z': (0.74, 0.84), 'hip_z': 0.64, 'knee_z': 0.34, 'ankle_z': 0.10,
         'coat_hem': 0.36,
         'coat_flare': 0.30,
-        'sleeve_hem': 0.52, 'sleeve_w': 0.47,
-        'hand_z': 0.50,            # the hands just show under the bell sleeves' hems
+        'sleeve_hem': 0.56, 'sleeve_w': 0.50,
+        'hand_z': 0.51,            # the hands just show under the sleeves' hems
         'trouser_puff': 0.13,
         'foot_len': 0.19,
         'bow': 'left',

@@ -312,6 +312,11 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     cover_info = CV.write(cover_cards, atlas_size, out_godot)
     cover_info["species"] = cover_counts
     log("cover", sum(cover_counts.values()), "cards", f"{time.time() - t0:.1f}s")
+    # ---------------- the grass field: a continuous sward coloured and lit as its ground (grassfield.py)
+    from . import grassfield as GF
+    m4 = GF.fields(L, mats["W"], F, Xs, Zs, Hs, cs, int(L["seed"]))
+    grass_info = GF.write(m4, Xs, Zs, Hs, out_godot, out_godot.parent / "common", int(L["seed"]))
+    log("grass", grass_info["stats"], f"{time.time() - t0:.1f}s")
 
     # ---------------- stonework: retaining walls along the walled sides of pads (their real edges)
     from skimage import measure
@@ -363,7 +368,7 @@ def build(layout_path: Path, out_godot: Path | None = None, out_tmp: Path | None
     info = export.write(L, out_godot, out_tmp, dict(
         h=h, X=X, Z=Z, x0=x0, z0=z0, cell=cell, nx=nx, nz=nz, walk=walk, water_h=water_h, water_k=water_k,
         flow=flow, mats=mats, cs=cs, Hs=Hs, placements=plc, road=(RP, rprof), paths=path_fields, walls=walls,
-        steps=step_info, pool_surf=pool_surf, stream=(SP, sfloor), slope=slope, road_chunks=road_chunks, road_stats=road_stats, cover=cover_info))
+        steps=step_info, pool_surf=pool_surf, stream=(SP, sfloor), slope=slope, road_chunks=road_chunks, road_stats=road_stats, cover=cover_info, grass=grass_info))
     log("exported", f"{time.time() - t0:.1f}s", info)
     # ---------------- the land around the region, for the view from the lookout
     from . import vista

@@ -107,6 +107,7 @@ def write(L, out: Path, tmp: Path, D):
                      "layout": "gzip of: per chunk: pos f32x3, normal f32x3, colour f32x4 (sRGB + AO), uv2 f32x2 "
                      "(pattern, amount), index u32x3 (offsets into the inflated bytes)", "chunks": chunks, "stats": D.get("road_stats", {})}
     info["cover"] = D.get("cover", {})
+    info["grass"] = D.get("grass", {})
     info["props"] = L.get("props", [])
     info["routes"] = L.get("routes", {})
     info["perches"] = dict(L.get("perches", {}))

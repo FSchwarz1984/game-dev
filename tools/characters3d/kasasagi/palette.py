@@ -21,9 +21,11 @@ TROUSERS_DEEP = H('#1e1c2a')
 BOOTS = H('#332d3b')
 BOOTS_DEEP = H('#22202b')
 SOLE = H('#d5c8c0')
-RED = H('#9b324e')              # the sash, the bow, the collar, the hat's band
-RED_DEEP = H('#75253d')
-RED_HI = H('#ae3754')
+# the reds a step deeper than the sheet's mid-tone: a red albedo in full sun, after the frame's grade,
+# came out hot pink (#fc4e8b measured); these land near the sheet's crimson on screen
+RED = H('#7e2840')              # the sash, the bow, the collar, the hat's band
+RED_DEEP = H('#5e1c30')
+RED_HI = H('#9b324e')
 WHITE = H('#f8efe5')            # obi, hair ties, ankle bands
 WHITE_DEEP = H('#d9d1cd')
 # the carrying frame (shoiko)

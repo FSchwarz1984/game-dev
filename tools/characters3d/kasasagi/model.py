@@ -33,15 +33,15 @@ def _head_table():
     cw, cb, hh = D['cranium_w'], D['cranium_back'], B.HEAD_H
     t = [
         # h      W              F              K
-        (0.000, 0.040,         fy - 0.044,    -0.100),
-        (0.016, 0.092,         fy - 0.020,    -0.040),
-        (0.042, 0.136,         fy - 0.007,     0.020),
-        (0.080, fw - 0.016,    fy,             0.085),
-        (0.130, fw - 0.003,    fy,             0.135),
-        (0.190, fw,            fy,             0.172),
-        (0.250, fw + 0.010,    fy - 0.002,     0.198),
+        (0.000, 0.052,         fy - 0.020,    -0.100),
+        (0.018, 0.108,         fy - 0.008,    -0.040),
+        (0.046, 0.150,         fy - 0.002,     0.020),
+        (0.090, fw - 0.014,    fy,             0.090),
+        (0.150, fw - 0.002,    fy,             0.145),
+        (0.220, fw,            fy,             0.180),
+        (0.280, fw + 0.010,    fy - 0.002,     0.200),
     ]
-    h0 = 0.25
+    h0 = 0.28
     for s, w, f, k in ((0.22, 0.5 * (fw + cw) + 0.014, fy - 0.010, cb - 0.006),
                        (0.46, cw, fy - 0.026, cb),
                        (0.66, cw - 0.006, fy - 0.048, cb - 0.008),
@@ -65,7 +65,7 @@ def head_slice(h):
 
 def _n_front(h):
     # the face plate (flat front, rounded corners) blends into the round cranium
-    return lerp(3.2, 2.15, smooth((h - 0.24) / 0.12))
+    return lerp(3.2, 2.15, smooth((h - 0.27) / 0.12))
 
 
 def head_point(h, t, grow=0.0, grow_front=None):
@@ -220,7 +220,7 @@ def _hairline(t):
     (the bangs hang from there), down over the temples and ears to the jaw, low at the nape."""
     phi = abs(((t - math.pi / 2 + math.pi) % TAU) - math.pi)      # 0 front .. pi back
     h = B.BANG_CUT_H + 0.07
-    h -= (B.BANG_CUT_H + 0.07 - 0.10) * smooth((phi - 0.95) / 0.45)   # the sides: down to the jaw
+    h -= (B.BANG_CUT_H + 0.07 - 0.10) * smooth((phi - 1.28) / 0.32)   # the sides (behind the cheeks): to the jaw
     h -= 0.10 * smooth((phi - 1.9) / 0.6)                              # the back: to the nape
     return h
 
@@ -251,15 +251,15 @@ def bangs():
     top row (G5R3-8: the brows never show); the outer clumps a little longer, rounding the face's top
     corners into the side locks."""
     part = Part('bangs', M_HAIR)
-    n = 11
-    spread = 1.12
+    n = 13
+    spread = 1.30
     for k in range(n):
         f = (k + 0.5) / n * 2 - 1           # -1 her right .. 1 her left
         t = math.pi / 2 - f * spread
         side = abs(f)
-        cut = B.BANG_CUT_H - 0.030 * smooth((side - 0.62) / 0.38)
-        hs = [B.HEAD_H - 0.07, B.HEAD_H - 0.14, 0.36, 0.30, cut + 0.03, cut]
-        grows = [0.030, 0.032, 0.030, 0.026, 0.024, 0.024]
+        cut = B.BANG_CUT_H - 0.045 * smooth((side - 0.58) / 0.42)
+        hs = [B.HEAD_H - 0.07, B.HEAD_H - 0.15, 0.5 * (B.HEAD_H - 0.15 + cut + 0.045), cut + 0.045, cut]
+        grows = [0.030, 0.032, 0.028, 0.024, 0.024]
         pts = [head_point(h, t, grow=g) for h, g in zip(hs, grows)]
         w_tip = 0.050 if side < 0.8 else 0.044
         out = (pts[-2] - HEAD_C).normalized()
@@ -285,12 +285,12 @@ def side_lock_points(side):
     fw = B.FACE_W
     tie_h, end_h = D['lock_tie_h'], D['lock_end_h']
     t = math.pi / 2 - side * 1.28
-    return [head_point(0.34, t, grow=0.024),
-            Vector((side * (fw + 0.032), B.HEAD_YC - 0.118, B.CHIN_Z + 0.20)),
-            Vector((side * (fw + 0.030), B.HEAD_YC - 0.112, B.CHIN_Z + 0.06)),
-            Vector((side * (fw + 0.024), -0.094, B.CHIN_Z + tie_h + 0.05)),
-            Vector((side * (fw + 0.020), -0.090, B.CHIN_Z + tie_h)),
-            Vector((side * (fw + 0.018), -0.086, B.CHIN_Z + end_h))]
+    return [head_point(0.36, t, grow=0.024),
+            Vector((side * (fw + 0.040), B.HEAD_YC - 0.070, B.CHIN_Z + 0.22)),
+            Vector((side * (fw + 0.036), B.HEAD_YC - 0.068, B.CHIN_Z + 0.07)),
+            Vector((side * (fw + 0.028), -0.070, B.CHIN_Z + tie_h + 0.05)),
+            Vector((side * (fw + 0.024), -0.068, B.CHIN_Z + tie_h)),
+            Vector((side * (fw + 0.020), -0.064, B.CHIN_Z + end_h))]
 
 
 def side_locks():
@@ -380,7 +380,7 @@ def sheet_point(u, x, outer=True):
 
 def sheet_bottom_u(x):
     """The end is rounded: the sides finish higher than the middle."""
-    return 1.0 - 0.13 * (abs(x) ** 2.2) * (1.0 if D['back_hair_end'] > 0.5 else 0.6)
+    return 1.0 - 0.07 * (abs(x) ** 3.0) * (1.0 if D['back_hair_end'] > 0.5 else 0.6)
 
 
 def back_hair():
@@ -439,8 +439,8 @@ def hat_top_z(s):
     """Height of the top surface above the brim plane at radius fraction s (0 apex .. 1 rim): a shallow
     cone, the apex rounded, the rim turned down a touch."""
     Hh = B.HAT_H
-    cone = (1.0 - s) ** 0.95
-    apex = -0.10 * Hh * math.exp(-(s / 0.07) ** 2)
+    cone = (1.0 - s) ** 1.0
+    apex = -0.06 * Hh * math.exp(-(s / 0.05) ** 2)
     droop = -0.018 * smooth((s - 0.86) / 0.14)
     return Hh * cone + apex + droop
 
@@ -484,6 +484,11 @@ def hat(tilt_deg=0.0, roll_deg=0.0):
     for i, p in enumerate(part.v):
         if part.aux[i][0] == M_HAT_UNDER and abs((p - seat).to_2d().length - R) < 0.02:
             part.nrm[i] = Vector(((p - seat).x, (p - seat).y, 0.0)).normalized()
+        elif part.aux[i][0] == M_HAT_TOP:
+            # the cone's normals tilted out more than the surface (a 45 deg cone's): the cel tone then
+            # splits the top into a lit side and a shaded side, as the sprite paints it
+            d = Vector(((p - seat).x, (p - seat).y, 0.0))
+            part.nrm[i] = (d.normalized() * 0.95 + Vector((0, 0, 1.0))).normalized() if d.length > 1e-4 else Vector((0, 0, 1))
     # the head ring inside (atama-wa): the hat stands on it
     ring = Part('hat_ring', M_HAT_UNDER)
     path = Path([seat + Vector((0, 0, -0.012)), seat + Vector((0, 0, -0.07))], up=(0, -1, 0))
@@ -535,23 +540,25 @@ def hat_band():
             # across: perpendicular to the radial line, in the surface
             across = Vector((-math.sin(a0), -math.cos(a0), 0.0))
             ww = w * lerp(0.55, 1.0, smooth(s / 0.5))
-            rows.append([part.add(p + across * (ww * (k - 1)), C.RED, (s, k / 2), (M_CLOTH, 0.0),
+            rows.append([part.add(p + across * (ww * (k - 1)), C.RED_DEEP, (s, k / 2), (M_CLOTH, 0.0),
                                   {'seg': 'hat'}) for k in range(3)])
         for i in range(n):
             for k in range(2):
                 part.f.append((rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]))
     else:
-        # the ribbon round the crown (s 0.26..0.36), and a band across the top through the apex
+        # the ribbon round the crown, and a band from it down to the brim on the front left (the
+        # ChatGPT hat sheet's band runs rim to rim through the ring; at native size a ring crossed by a
+        # line read as a sign, so one side)
         n = 48
-        s0, s1 = 0.24, 0.35
+        s0, s1 = 0.26, 0.34
         r0 = [part.add(_on_top(s0, j / n * TAU, lift), C.RED, (0, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
         r1 = [part.add(_on_top(s1, j / n * TAU, lift), C.RED, (1, j / n), (M_CLOTH, 0.0), {'seg': 'hat'}) for j in range(n)]
         for j in range(n):
             j1 = (j + 1) % n
             part.f.append((r0[j], r0[j1], r1[j1], r1[j]))
-        a0 = math.pi / 2 - 0.70
-        w = 0.062
-        for sgn in (1, -1):
+        a0 = math.pi / 2 - 0.62
+        w = 0.058
+        for sgn in (1,):
             a = a0 if sgn > 0 else a0 + math.pi
             rows = []
             m = 12
@@ -559,11 +566,13 @@ def hat_band():
                 s = lerp(0.35, 0.995, i / m)
                 p = _on_top(s, a, lift * 0.8)
                 across = Vector((-math.sin(a), -math.cos(a), 0.0))
-                rows.append([part.add(p + across * (w * (k - 1)), C.RED_DEEP if sgn < 0 else C.RED, (s, k / 2),
+                rows.append([part.add(p + across * (w * (k - 1)), C.RED, (s, k / 2),
                                       (M_CLOTH, 0.0), {'seg': 'hat'}) for k in range(3)])
             for i in range(m):
                 for k in range(2):
                     part.f.append((rows[i][k], rows[i][k + 1], rows[i + 1][k + 1], rows[i + 1][k]))
-    for i in range(len(part.v)):
-        part.nrm[i] = Vector((0, 0, 1))
+    seat = B.HAT_SEAT
+    for i, p in enumerate(part.v):
+        d = Vector(((p - seat).x, (p - seat).y, 0.0))
+        part.nrm[i] = (d.normalized() * 0.95 + Vector((0, 0, 1.0))).normalized() if d.length > 1e-4 else Vector((0, 0, 1))
     return part

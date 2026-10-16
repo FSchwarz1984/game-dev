@@ -252,12 +252,18 @@ def weights_for(p, tag):
     if seg == 'coat':
         return _coat_w(p, tag)
     if seg == 'sleeve':
+        # the panel: its top on the shoulder, the strip round the arm with the arm, the hanging bag on
+        # the sleeve chain (it swings on its spring)
         sx = 'L' if tag.get('side', 1) > 0 else 'R'
         u = tag.get('u', 0.0)
-        w = _blend({'shoulder_' + sx: 1.0}, {'upper_arm_' + sx: 1.0}, smooth(u / 0.18))
-        w = _blend(w, _chain('sleeve_%s_' % sx, 2, max(0.0, (u - 0.40) / 0.60)), smooth((u - 0.30) / 0.30))
-        if u < 0.10:
-            w = _blend(w, {'chest': 1.0}, (0.10 - u) / 0.10 * 0.5)
+        s = tag.get('s', 0.5)
+        w = _blend({'shoulder_' + sx: 1.0}, {'upper_arm_' + sx: 1.0}, smooth(u / 0.2))
+        w = _blend(w, _blend({'upper_arm_' + sx: 1.0}, {'forearm_' + sx: 1.0}, smooth((u - 0.45) / 0.3)),
+                   smooth((u - 0.2) / 0.2))
+        bag = smooth((u - 0.25) / 0.35) * smooth((s - 0.10) / 0.35)
+        w = _blend(w, _chain('sleeve_%s_' % sx, 2, max(0.0, min(1.0, (u - 0.35) / 0.65))), bag)
+        if u < 0.08:
+            w = _blend(w, {'chest': 1.0}, (0.08 - u) / 0.08 * 0.5)
         return w
     if seg == 'arm':
         sx = 'L' if tag.get('side', 1) > 0 else 'R'

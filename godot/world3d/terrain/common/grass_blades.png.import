@@ -1,0 +1,14 @@
+[remap]
+
+importer="image"
+type="Image"
+uid="uid://d2ke1i84x6sm"
+path="res://.godot/imported/grass_blades.png-2c6de9533cedc3e6ef67b36c2734d2c9.image"
+
+[deps]
+
+source_file="res://world3d/terrain/common/grass_blades.png"
+dest_files=["res://.godot/imported/grass_blades.png-2c6de9533cedc3e6ef67b36c2734d2c9.image"]
+
+[params]
+

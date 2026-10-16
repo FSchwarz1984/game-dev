@@ -184,7 +184,7 @@ void fragment() {
 	} else {
 		// (round 5: dark wooden walls on most, white plaster on some: the storehouses, the town's
 		// fronts; a white wall under a dark roof is what reads as a house from afar)
-		vec3 wall = fract(v_cus.w * 3.73) < 0.35 ? w3_srgb_to_linear(vec3(0.86, 0.84, 0.78)) : w3_srgb_to_linear(vec3(0.44, 0.36, 0.28));
+		vec3 wall = fract(v_cus.w * 3.73) < 0.55 ? w3_srgb_to_linear(vec3(0.88, 0.86, 0.80)) : w3_srgb_to_linear(vec3(0.52, 0.42, 0.31));
 		col = wall * (ambient_col + light_col * 0.45 * day);
 	}
 	// windows at night: a scattering of houses lit (round 5, the lead: "夜里村子只有零星的暖灯"; a

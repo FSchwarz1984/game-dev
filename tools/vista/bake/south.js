@@ -24,6 +24,7 @@ import { buildGroundGen, GROUND_MATS, G, TOWN, HEADMAN, HAMLETS, RIVER, SWITCHBA
 import { paintBuildings, roadLanterns } from '../../../src/vista/buildings.js';
 import { paintCanopy, paintCanopyGen, FOLIAGE_MATS } from '../../../src/vista/foliage.js';
 import { Wave } from '../../../src/vista/wave.js';
+import { nearCrown } from './near.js';
 import { buildSkyShoreGen, skyShorePalette } from './skyshore.js';
 import { IdSpace, lutRows, idImage, fixed16, fixedS16, rows, todOfRow, TOD_ROWS, TOD0, TOD_STEP, r2, r3 } from './common.js';
 
@@ -198,12 +199,18 @@ export function bakeSouth(o = {}) {
   const ext = Wc > REF_W;
   const back = run(canopyBack(Wc, ox, oyC, CHc, CT + D0 + 40, RH, RX, ext));
   const frontC = run(canopyFront(Wc, ox, oyC, CHc, ext, RX));
-  // near leaves: laid out on the JS layer's rows (REF_H + 40); the layer itself is taller, so the stems
-  // that carry the sprays down out of it end below the frame for the whole crane on every view up to
-  // ~600 rows tall (VistaSouth puts its top at H + 4 - dy * near_k: at pan 0 its bottom is 150 + pan_d - 4
-  // rows below the view's top on a tall view, 2.4 pan_d - 4 on one up to 270 rows; see nearLeaves)
-  const nearRows = REF_H + 40, nearH = REF_H + 190;
-  const nearL = run(nearLeaves(Wc, ox, nearRows, nearH, RH, RX, ext));
+  // near branches (tools/vista/bake/near.js): the camphor's own boughs in front of the lens, each its own
+  // design (G5R3-10). The layer is taller than any view's share of it, so every limb runs out of the
+  // view's bottom for the whole crane on every view up to ~600 rows tall (VistaSouth puts its top at
+  // H + 4 - dy * near_k: at pan 0 its bottom is 150 + pan_d - 4 rows below the view's top on a tall
+  // view, 2.4 pan_d - 4 on one up to 270 rows). It keeps clear of where she sits over the whole crane
+  // (her sprite's box swept through every view size and pan: canvas columns 555..587, rows above 108).
+  // HEAD's sprays drew from RH and RX; the same number of draws is made here so that everything after
+  // (the stirring sprays) keeps its random values.
+  for (let i = 0; i < 7 * 22; i++) RH();
+  if (ext) for (let i = 0; i < 6 * 22; i++) RX();
+  const nearH = REF_H + 190, sitX = Math.round(ox + REF_W * 0.62);
+  const nearL = run(nearCrown(Wc, ox, nearH, ext, { x0: sitX - 22, x1: sitX + 24, y1: 114 }));
   const stir = [];
   const stirX = [0.05, 0.17, 0.3, 0.88, 0.97];
   const extStir = ext ? stirExtension(ox, Wc) : [];
@@ -471,144 +478,6 @@ function* canopyFront(Wc, ox, oyC, CHc, ext, RX) {
   ];
   if (ext) for (const fx of [-0.12, -0.3, -0.48, 1.14, 1.3, 1.46]) clumps.push(P(fx, CT - 6 - RX() * 10, 22 + RX() * 6, 13 + RX() * 3, 3));
   return { layer: yield* paintCanopyGen(Wc, CHc, { clumps: clumps.map(c => ({ ...c, glint: false })), limbs: [], light: [0.72, -0.42, 0.45] }, 43) };
-}
-
-// Close leaves the camera rises past (parallax 2.4 at 480x270): HEAD's sprays, each a twig with four
-// clumps of dark leaves, in the same places and from the same random draws. In HEAD the twig was all
-// there was: its thick end stopped in mid-air, so while the camera rose these slid down the frame as
-// loose branches with cut ends, some in the open sky (G5R2-4). Each twig now carries on from its base as
-// the stem it grew from: back the way the twig came, bending down and thickening toward the tree, out
-// through the bottom of the layer. The layer (hL rows) reaches below the frame for the whole crane on
-// every view, so no end of a branch is ever in view; the sprays keep the rows of the JS layer (h).
-function* nearLeaves(Wc, ox, h, hL, R, RX, ext) {
-  const W = REF_W, clumps = [], limbs = [], sideLimbs = [], sideClumps = [];
-  const sprays = [[0.08, 0.35], [0.3, 0.75], [0.55, 0.3], [0.8, 0.62], [0.97, 0.2], [0.42, 1.0], [0.7, 0.98]];
-  const extra = ext ? [[-0.12, 0.55], [-0.3, 0.25], [-0.46, 0.8], [1.12, 0.45], [1.28, 0.85], [1.45, 0.3]] : [];
-  for (const [fx, fy] of [...sprays, ...extra]) {
-    const Rr = sprays.some(s => s[0] === fx) ? R : RX;
-    const x0 = ox + W * fx, y0 = h * fy, dir = Rr() < 0.5 ? -1 : 1, len = 40 + Rr() * 40;
-    const pts = [];
-    for (let k = 0; k <= 4; k++) pts.push([x0 + dir * len * k / 4, y0 + h * 0.12 - k * 9 - Math.sin(k) * 4, lerp(3, 1, k / 4)]);
-    limbs.push({ pts, z: 0.2, dark: 1 });
-    for (let k = 1; k <= 4; k++) clumps.push({ x: pts[k][0] + (Rr() - 0.5) * 10, y: pts[k][1] - 4 + (Rr() - 0.5) * 8, rx: 16 + Rr() * 10, ry: 11 + Rr() * 6, z: 0.5 + Rr() * 0.4, ao: 1, glint: false, dark: true });
-  }
-  // the stems: each twig's own, ending under the layer; stems that would end near each other end at the
-  // same place, so they meet below as the forks of one branch
-  const ends = limbs.map(t => stemEnd(t.pts, hL));
-  const order = ends.map((e, i) => i).filter(i => ends[i] != null).sort((a, b) => ends[a] - ends[b]);
-  const trunkX = new Map();
-  for (let i = 0; i < order.length;) {
-    let j = i + 1;
-    while (j < order.length && ends[order[j]] - ends[order[j - 1]] < 70) j++;
-    const xs = order.slice(i, j).map(k => ends[k]), mx = xs.reduce((a, b) => a + b, 0) / xs.length;
-    for (const k of order.slice(i, j)) trunkX.set(k, mx);
-    i = j;
-  }
-  limbs.forEach((t, i) => {
-    const stem = stemBelow(t.pts, hL, trunkX.get(i));
-    t.pts = [...stem, ...t.pts];
-    stemLeaves(stem, t.pts.slice(stem.length), hL, sideLimbs, sideClumps);
-  });
-  // the stems' own twigs and leaves come after HEAD's sprays in the painter's order (higher z), so the
-  // sprays keep their shapes (the painter draws its random lobes item by item)
-  const L = yield* paintCanopyGen(Wc, hL, { clumps: [...clumps, ...sideClumps], limbs: [...limbs, ...sideLimbs], light: [0.72, -0.42, 0.45], cell: 4.6, cellSeed: 5 }, 47);
-  dropSpecks(L.idx, Wc, hL, 6);        // a stray leaf-edge pixel off a spray would hang alone in the air
-  L.spec = { clumps, limbs, sideClumps, sideLimbs };   // the geometry, for checks (not exported)
-  return L;
-}
-
-// Clears every 8-connected piece of a layer smaller than `min` pixels.
-function dropSpecks(idx, w, h, min) {
-  const seen = new Uint8Array(w * h), stack = [], piece = [];
-  for (let i0 = 0; i0 < w * h; i0++) {
-    if (!idx[i0] || seen[i0]) continue;
-    stack.push(i0); seen[i0] = 1; piece.length = 0;
-    while (stack.length) {
-      const i = stack.pop(); piece.push(i);
-      const x = i % w, y = (i - x) / w;
-      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
-        const xx = x + dx, yy = y + dy;
-        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
-        const j = yy * w + xx;
-        if (idx[j] && !seen[j]) { seen[j] = 1; stack.push(j); }
-      }
-    }
-    if (piece.length < min) for (const i of piece) idx[i] = 0;
-  }
-}
-
-// The stem below a twig (pts[0] its thick base, pts[1] the next point up): it leaves the base along the
-// twig's own line (away from its tip, downward) and bends to arrive straight down below the layer
-// (row hL + 14) at x = tx (by default where its own sweep takes it, stemEnd), like a branch leaning out of
-// the crown toward the lens. Nodes every ~14 px, each nudged a little across the stem (a branch is a run
-// of slightly bent pieces, not an arc); its radius grows from the twig's 3 px to ~6.5 px toward the
-// tree. Returned from its lower end up (the limb is drawn from there to the twig's tip). Deterministic
-// from the twig's place (no draws from the bake's random sequences).
-function stemFrame(pts, hL) {
-  const [bx, by] = pts[0], [nx, ny] = pts[1];
-  let ux = bx - nx, uy = by - ny;
-  const ul = Math.hypot(ux, uy) || 1; ux /= ul; uy /= ul;
-  const y3 = hL + 14, D = y3 - by;
-  return { bx, by, ux, uy, y3, D, hx: Math.round(bx), hy: Math.round(by) };
-}
-
-function stemEnd(pts, hL) {
-  const f = stemFrame(pts, hL);
-  if (f.D <= 0) return null;
-  return f.bx + f.ux * f.D * (0.34 + 0.1 * hash2(f.hx, f.hy, 191));
-}
-
-function stemBelow(pts, hL, tx) {
-  const { bx, by, ux, uy, y3, D, hx, hy } = stemFrame(pts, hL), br = pts[0][2];
-  if (D <= 0) return [];
-  const X3 = tx ?? stemEnd(pts, hL);
-  // how far it keeps to the twig's line, and how soon it turns down: a little different for every stem
-  const k1 = 0.22 + 0.18 * hash2(hx, hy, 194), k2 = 0.32 + 0.26 * hash2(hx, hy, 195);
-  const P1 = [bx + ux * D * k1, by + uy * D * k1];
-  const P3 = [X3, y3];
-  const P2 = [X3 + (bx - X3) * 0.12 * hash2(hx, hy, 196), y3 - D * k2];
-  const at = t => { const u = 1 - t; return [u * u * u * bx + 3 * u * u * t * P1[0] + 3 * u * t * t * P2[0] + t * t * t * P3[0], u * u * u * by + 3 * u * u * t * P1[1] + 3 * u * t * t * P2[1] + t * t * t * P3[1]]; };
-  const n = Math.max(3, Math.ceil(D / 14)), out = [];
-  for (let i = 0; i < n; i++) {
-    const t = 1 - i / n;                 // 1 at the lower end ... 1/n next to the base
-    const [x, y] = at(t), [x2, y2] = at(Math.max(0, t - 0.02));
-    let dx = x2 - x, dy = y2 - y; const dl = Math.hypot(dx, dy) || 1; dx /= dl; dy /= dl;
-    const kink = (hash2(hx + i * 17, hy, 193) - 0.5) * 4 * Math.min(1, t * 4);
-    out.push([x - dy * kink, y + dx * kink, br + 3.5 * Math.pow(t, 0.7) * (0.92 + 0.16 * hash2(hx, hy + i * 13, 197))]);
-  }
-  return out;
-}
-
-// Twigs off a stem, every 24-34 px of it below the spray, on alternate sides: each leans up and out
-// from the stem and carries a small clump of the same dark leaves, so the stem reads as a leafy branch
-// coming up through the crown. Deterministic from the twig's place.
-function stemLeaves(stem, pts, hL, limbs, clumps) {
-  if (stem.length < 2) return;
-  const path = [...stem].reverse();               // from the spray's base down
-  path.unshift(pts[0]);
-  const hx = Math.round(pts[0][0]), hy = Math.round(pts[0][1]);
-  let acc = 0, next = 18 + 10 * hash2(hx, hy, 211), side = hash2(hx, hy, 212) < 0.5 ? -1 : 1, n = 0;
-  for (let i = 1; i < path.length; i++) {
-    const [ax, ay, ar] = path[i - 1], [bx, by, br] = path[i];
-    const sl = Math.hypot(bx - ax, by - ay) || 1;
-    while (acc + sl >= next) {
-      const f = (next - acc) / sl, x = ax + (bx - ax) * f, y = ay + (by - ay) * f, r = ar + (br - ar) * f;
-      if (y > hL + 8) return;
-      const tx = (bx - ax) / sl, ty = (by - ay) / sl;           // down the stem
-      // up and out: the stem's upward direction turned 35-55 degrees toward this side
-      const a = (0.6 + 0.35 * hash2(hx + n, hy, 213)) * side;
-      const ux = -tx, uy = -ty, c = Math.cos(a), s2 = Math.sin(a);
-      const dx = ux * c - uy * s2, dy = ux * s2 + uy * c;
-      const tl = 10 + 9 * hash2(hx, hy + n, 214);
-      const ex = x + dx * tl, ey = y + dy * tl;
-      limbs.push({ pts: [[x, y, Math.min(r * 0.5, 2)], [x + dx * tl * 0.55, y + dy * tl * 0.55 - 1, 1.2], [ex, ey, 0.8]], z: 0.96, dark: 1 });
-      const rx = 9 + 6 * hash2(hx + n, hy + n, 215), ry = 6 + 4 * hash2(hx - n, hy + n, 216);
-      clumps.push({ x: ex + dx * 3, y: ey - 3 + dy * 2, rx, ry, z: 0.95 + 0.04 * hash2(hx, hy - n, 217), ao: 1, glint: false, dark: true });
-      side = -side; n++;
-      next += 24 + 10 * hash2(hx + n * 3, hy, 218);
-    }
-    acc += sl;
-  }
 }
 
 function stirExtension(ox, Wc) {
