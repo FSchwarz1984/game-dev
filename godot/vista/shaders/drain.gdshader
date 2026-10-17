@@ -5,7 +5,7 @@
 // own, unlit), and goes up on its own cubic Bezier: straight up off the ground first (its own height),
 // then bent toward the gate, out to one side or the other of the way in its middle (the swarm's belly),
 // gathering only near the gate's mouth, which it enters from below; each its own departure, speed and
-// bend, slow at first and faster and faster (the rising lights take 7-10 s; these 1.6-2.7 s), turning
+// bend, slow at first and faster and faster (the rising lights take 7-10 s; these 1.5-2.6 s), turning
 // the sky shore's pale jade past half its way. A 1 px core (a third with a faint 2 px halo), a tail of
 // 1-2 pixels along its own curve; nothing joins two grains.
 // More instances: the burst at the town (kind 2, variants "drain" and "flash"), a white flash with a
