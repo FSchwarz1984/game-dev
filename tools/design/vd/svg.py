@@ -66,15 +66,20 @@ class Svg:
         self.W, self.H = width, height
         self.title = title
         self.layers = {}
+        self.layer_attrs = {}
         self.order = []
+        self.default_layer_attrs = {}
         self.defs = []
         self.text_by_key = {}
         self.layer("base")
 
-    def layer(self, name):
+    def layer(self, name, **attrs):
         if name not in self.layers:
             self.layers[name] = []
             self.order.append(name)
+            self.layer_attrs[name] = attrs
+        elif attrs:
+            self.layer_attrs[name].update(attrs)
         self.cur = name
         return self
 
@@ -137,7 +142,9 @@ class Svg:
         font_css = fonts.css(self.text_by_key) if fonts else ""
         body = []
         for name in self.order:
-            body.append('<g id="%s">' % esc(name))
+            at = dict(self.default_layer_attrs.get(name, {}))
+            at.update(self.layer_attrs.get(name, {}))
+            body.append('<g id="%s" %s>' % (esc(name), self.attrs(at)))
             body.extend(self.layers[name])
             body.append("</g>")
         return ('<?xml version="1.0" encoding="UTF-8"?>\n'
