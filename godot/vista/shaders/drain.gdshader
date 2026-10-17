@@ -1,16 +1,16 @@
 // The bridge between the gathered lights and the burst (G5R3-61, variant "drain", a proposal): after
 // the 「隔」 tower goes dark the gate draws the town's own colours up out of the ground. Every grain
-// leaves a pixel of the town (bucket <= the drained radius) with that pixel's colour as the evening
-// sun showed it, lifts slowly, is pulled into one of three strands that wind round each other up a
-// common way (out of the town, bending left and up into the gate's mouth from below), faster and
-// faster, and turns the sky shore's pale jade past half its way, as the rising lights do. A 1 px core
+// leaves a pixel of the town (bucket <= the drained radius) in the colour of what that pixel is made
+// of (its material's own, unlit), lifts slowly, is pulled into one of three strands that wind round
+// each other up a common way (out of the town, bending left and up into the gate's mouth from below),
+// faster and faster, and turns the sky shore's pale jade past half its way, as the rising lights do. A 1 px core
 // (a few with a faint 2 px halo), a tail of 1-3 pixels along its own curve; nothing joins two grains.
-// One more instance is the burst at the town (variant "drain" and "flash"): a white flash with a
-// stepped halo, decaying in about half a second.
+// Two more instances: the burst at the town (variants "drain" and "flash"), a white flash with a
+// stepped halo decaying in about half a second, and the gate's flare in the same frame ("flash" only).
 // instance: x0 y0 | o dur | jit lift ; colour: own sRGB (0..1) | flags ; custom: seg nt kind strand
 //   o: departure (s after the drain began), dur: s to the gate, jit: px off its strand, lift: px it
-//   rises before it is drawn in; kind 0 grain, 2 the burst; strand 0..2, 3 loose (a sheath round the
-//   strands), + 4 with a halo
+//   rises before it is drawn in; kind 0 grain, 2 the burst at the town, 3 the gate's flare; strand
+//   0..2, 3 loose (a sheath round the strands), + 4 with a halo
 // Output: sRGB units into the rising lights' buffer (composite.gdshader), cores pushed into HDR.
 shader_type canvas_item;
 render_mode blend_add, skip_vertex_transform;

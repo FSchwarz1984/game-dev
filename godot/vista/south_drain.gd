@@ -6,8 +6,9 @@ extends RefCounted
 ## the right of it. Two ways to join them, both driven from Vista.state:
 ##   "drain" (state.drain = seconds since the drain began): back on the plain the gate draws in its
 ##     breath (its light tightens and brightens), and the town's own colours are drawn up out of the
-##     ground: grains of light, each the colour its pixel of the town had in the evening sun, lift
-##     slowly, are pulled into three strands that wind round each other up one way into the gate, ever
+##     ground: grains of light, each the colour of what its pixel of the town is made of (thatch, tile,
+##     white wall, grove, paddy: the material's own, unlit), lift slowly, are pulled into three strands
+##     that wind round each other up one way into the gate, ever
 ##     faster, turning the sky shore's pale jade past half their way; where they leave, the ground goes
 ##     its silver-grey ghost, from the middle of the town out. Then the town bursts white (the far's
 ##     front starts there) while the last grains go up; the gate takes them in, flashing, and breathes
@@ -79,9 +80,6 @@ func setup(p_s: VistaSouth, quality: String) -> void:
 	# breaths: the stream goes up in knots, not as an even band): the k-th leaves at
 	# DEP.x + span w(k / n)^(1 / 1.6), w(x) = x + 0.025 sin(10 pi x); the first leave from the middle
 	# of the town, the last from its edge
-	var order: Array = []
-	for k in n_grains:
-		order.append(k)
 	var loose := {}
 	while loose.size() < n_loose:
 		loose[rng.randi_range(0, n_grains - 1)] = true
