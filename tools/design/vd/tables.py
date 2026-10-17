@@ -8,16 +8,24 @@ import math
 import numpy as np
 
 from . import registry as reg
-from .p3 import Cam, SHARES, screen_extent, VIEW_W, VIEW_H
+from .p3 import Cam, SHARES, SHARE, screen_extent, VIEW_W, VIEW_H, edge_upright_ppm, card_equiv_height
 
 SCREEN_RULE_M2 = 23.0 * 21.0          # the supervisor's rule of thumb for one P3 screen
 HER_TOP = 1.52                        # her height with the hat (registry scale CH-KSG)
 
 
-def her_scheme_px(scheme, share):
+def her_scheme_px(scheme, share=SHARE):
+    """Her card height (native px) in a scheme: 'now' the game as it is (57 px at PPM 30), A her true
+    height at PPM 30, B 57 px with the world enlarged to match, C 48 px with the world enlarged to match."""
     if scheme == "A":
         return Cam(share=share).upright_px(HER_TOP)
-    return {"B": 57.0, "C": 48.0}[scheme]
+    return {"now": 57.0, "B": 57.0, "C": 48.0}[scheme]
+
+
+def scheme_ppm(scheme, share=SHARE):
+    if scheme in ("now", "A"):
+        return 30.0
+    return ppm_for_her(her_scheme_px(scheme, share), share)
 
 
 def ppm_for_her(px, share):
@@ -31,17 +39,18 @@ def ppm_for_her(px, share):
     return (lo + hi) / 2
 
 
-def scheme_rows():
+def scheme_rows(share=SHARE):
     rows = []
-    base = screen_extent(Cam())
-    for sch in ("A", "B", "C"):
-        for s in SHARES:
-            px = her_scheme_px(sch, s)
-            ppm = 30.0 if sch == "A" else ppm_for_her(px, s)
-            e = screen_extent(Cam(ppm=ppm, share=s))
-            rows.append(dict(scheme=sch, share=s, px=px, ppm=ppm, w=e["w_her"], depth=e["depth"], north=e["north"],
-                             area=e["area"], dw=base["w_her"] - e["w_her"], dd=base["depth"] - e["depth"],
-                             on1080=px * 3))
+    base = screen_extent(Cam(share=share))
+    for sch in ("now", "A", "B", "C"):
+        px = her_scheme_px(sch, share)
+        ppm = scheme_ppm(sch, share)
+        cam = Cam(ppm=ppm, share=share)
+        e = screen_extent(cam)
+        top, feet, bot = card_equiv_height(cam, round(px))
+        rows.append(dict(scheme=sch, share=share, px=px, ppm=ppm, w=e["w_her"], depth=e["depth"], north=e["north"],
+                         area=e["area"], dw=base["w_her"] - e["w_her"], dd=base["depth"] - e["depth"],
+                         on1080=round(px) * 3, m_feet=cam.height_for_px(px), m_top=top, m_bot=bot))
     return rows, base
 
 
@@ -55,62 +64,65 @@ def visible_height_at_feet(cam):
 def scale_table(R):
     rec = R["camera"]["recommended"]
     rec_cam = Cam(ppm=rec["ppm"], share=rec["share"])
+    cam = Cam(share=SHARE)                       # the game's camera now: PPM 30, the settled share
+    refs = [Cam(share=s) for s in SHARES if s != SHARE]
     lines = []
-    lines.append("| 编号 | 东西 | 高（米） | 宽（米） | 份额 0 | 份额 0.3 | 份额 0.5 | 份额 1.0 | 宽（像素，东西向） | 精灵（像素） | 推荐方案 C 下（份额 1.0、每米 32） | 备注 |")
-    lines.append("|---|---|---|---|---|---|---|---|---|---|---|---|")
-    cams = [Cam(share=s) for s in SHARES]
-    xppm = cams[0].ground_ppm()[0]
-    limits = [visible_height_at_feet(c)[0] for c in cams]
+    lines.append("| 编号 | 东西 | 高（米） | 宽（米） | 份额 1.0（已定；每米 30） | 宽（像素，东西向） | 精灵（方案 C） | 方案 C 下（每米 32） | 参考：份额 0 / 0.3 / 0.5 | 备注 |")
+    lines.append("|---|---|---|---|---|---|---|---|---|---|")
+    xppm = cam.ground_ppm()[0]
+    lim = visible_height_at_feet(cam)[0]
+    ref_lims = [visible_height_at_feet(c)[0] for c in refs]
     rec_lim = visible_height_at_feet(rec_cam)[0]
     items = [("ch", c) for c in R["scale"]["characters"]] + [("ref", r) for r in R["scale"]["references"]]
     for kind, it in items:
         h = it.get("h_top", it["h"])
         w = it.get("w", 0.0)
-        cols = []
-        for c, lim in zip(cams, limits):
-            if h > lim:
-                cols.append("超出画面（只露下面 %.1f 米）" % lim)
-            else:
-                cols.append("%.0f" % c.upright_px(h))
+        col = ("超出画面（只露下面 %.1f 米）" % lim) if h > lim else "%.0f" % cam.upright_px(h)
+        ref = " / ".join(("出画" if h > l_ else "%.0f" % c.upright_px(h)) for c, l_ in zip(refs, ref_lims))
         wpx = "%.0f" % (w * xppm) if w else "—"
-        if kind == "ch":
-            sprite = "%.0f" % rec_cam.upright_px(h)
-        else:
-            sprite = "—"
+        sprite = "%.0f" % rec_cam.upright_px(h) if kind == "ch" else "—"
         recv = ("超出画面" if h > rec_lim else "%.0f" % rec_cam.upright_px(h))
         recw = rec_cam.ground_ppm()[0] * w if w else 0
         note = it.get("note", "")
         hh = ("%.2f" % h) if h < 10 else ("%.1f" % h)
         if kind == "ch" and it.get("h_top") != it.get("h"):
             hh = "%.2f（连%s %.2f）" % (it["h"], it["top"], it["h_top"])
-        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
-            it["id"], it["name"], hh, ("%.2f" % w) if w else "—", cols[0], cols[1], cols[2], cols[3], wpx, sprite,
-            recv + ("（宽 %.0f）" % recw if recw else ""), note))
+        lines.append("| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |" % (
+            it["id"], it["name"], hh, ("%.2f" % w) if w else "—", col, wpx, sprite,
+            recv + ("（宽 %.0f）" % recw if recw else ""), ref, note))
+    top, feet, bot = edge_upright_ppm(cam)
+    rtop, rfeet, rbot = edge_upright_ppm(rec_cam)
+    ctop, cfeet, cbot = card_equiv_height(rec_cam, round(rec_cam.upright_px(HER_TOP)))
     head = []
-    head.append("直立物体站在她脚下（焦点的地面）时在屏幕上占几个原生像素：相机 P3（竖直视野 38°、俯角 45°、焦点在她胸口），"
-                "现在的相机每米 30 像素；按渲染器给的'她脚下'一列（份额 0 / 0.3 / 0.5 / 1.0 时每米 %.1f / %.1f / %.1f / %.1f 像素），"
-                "高的东西按透视逐点投影（不是乘一个常数）。东西向的宽：她脚下每米 %.2f 像素（和份额无关）。" % tuple(
-                    [c.upright_ppm_local() for c in cams] + [xppm]))
+    head.append("直立物体站在她脚下（焦点的地面）时在屏幕上占几个原生像素。相机 P3：竖直视野 38°、俯角 45°、焦点在她胸口；"
+                "后倾份额 1.0（渲染器 2026-10-17 定的）。'份额 1.0'一列是现在的相机（每米 30 像素）：直立物体在她脚下每米 %.1f 像素，"
+                "画面上沿 %.1f、下沿 %.1f；高的东西按透视逐点投影（不是乘一个常数）。东西向的宽：她脚下每米 %.2f 像素。"
+                "'参考'一列是没选的三个份额，只作对照。" % (feet, top, bot, xppm))
     head.append("精灵（人物卡片）不随投影缩放，任何深度都是屏幕整像素：'精灵'一列是推荐方案 C 下每个人物该画多少像素"
-                "（份额 1.0、相机每米 32；她连笠 1.52 米 = %.0f 像素）。画面上沿离她脚下 %.0f 像素：份额 0 时站在她脚下的东西"
-                "高过 %.1f 米就出画，份额 1.0 时 %.1f 米。" % (rec_cam.upright_px(HER_TOP), visible_height_at_feet(cams[0])[1],
-                                                       limits[0], limits[3]))
+                "（相机每米 32；她连笠 1.52 米 = %.0f 像素）。同一张卡片在画面不同高度上合的世界高度不同：方案 C 下她的 %.0f 像素"
+                "站在她脚下合 %.2f 米，站在画面上沿合 %.2f 米，站在下沿合 %.2f 米（直立物体每米 %.1f / %.1f / %.1f 像素）——"
+                "同屏的别的人物越往画面上方越显得高大。画面上沿离她脚下 %.0f 像素：站在她脚下的东西高过 %.1f 米就出画"
+                "（方案 C 下 %.1f 米）。" % (rec_cam.upright_px(HER_TOP), round(rec_cam.upright_px(HER_TOP)), cfeet, ctop, cbot,
+                                     rfeet, rtop, rbot, visible_height_at_feet(cam)[1], lim, rec_lim))
     return "\n\n".join(head) + "\n\n" + "\n".join(lines)
 
 
 def schemes_table():
     rows, base = scheme_rows()
     out = []
-    out.append("现在：相机每米 30 像素，她 57 像素（1080p 上 171 像素），她脚下的地面一屏宽 %.1f 米、深 %.1f 米（往南 5.9、往北 %.1f），"
-               "面积 %.0f 平方米（规则里按 23 × 21 = 483 平方米算一屏）。她连笠按 1.52 米。" % (base["w_her"], base["depth"], base["north"], base["area"]))
+    out.append("后倾份额 1.0。现在：相机每米 30 像素，她 57 像素（1080p 上 171 像素），在她脚下合 %.2f 米；她脚下的地面一屏宽 %.1f 米、"
+               "深 %.1f 米（往南 %.1f、往北 %.1f），面积 %.0f 平方米（规则里按 23 × 21 = 483 平方米算一屏）。她连笠按 1.52 米。"
+               "1080p 上的对照：用户喜欢的 0.2 版小鹊 156 像素；G5R2-3 被嫌'太小'的那版 164 像素。" % (
+                   rows[0]["m_feet"], base["w_her"], base["depth"], base["depth"] - base["north"], base["north"], base["area"]))
     out.append("")
-    out.append("| 方案 | 份额 | 她（原生像素） | 1080p 上 | 相机每米像素 | 放大 | 一屏宽 × 深（米） | 比现在少 | 一屏面积 |")
-    out.append("|---|---|---|---|---|---|---|---|---|")
-    names = {"A": "A 缩她（世界不动）", "B": "B 放大世界（她不动）", "C": "C 折中（她 48、世界略放大）"}
+    out.append("| 方案 | 她（原生像素） | 1080p 上 | 在她脚下合（米） | 卡片在画面上沿 / 下沿合（米） | 相机每米像素 | 放大 | 一屏宽 × 深（米） | 比现在少 | 一屏面积 |")
+    out.append("|---|---|---|---|---|---|---|---|---|---|")
+    names = {"now": "现在（参照）", "A": "A 缩她（世界不动）", "B": "B 放大世界（她不动）", "C": "C 折中（她 48、世界略放大）"}
     for r in rows:
-        out.append("| %s | %.1f | %.0f | %.0f | %.1f | ×%.2f | %.1f × %.1f | 宽少 %.1f、深少 %.1f | %.0f 平方米（%.0f%%） |" % (
-            names[r["scheme"]], r["share"], r["px"], r["on1080"], r["ppm"], r["ppm"] / 30.0, r["w"], r["depth"],
-            r["dw"], r["dd"], r["area"], 100 * r["area"] / base["area"]))
+        out.append("| %s | %.0f | %.0f | %.2f | %.2f / %.2f | %.1f | ×%.2f | %.1f × %.1f | %s | %.0f 平方米（%.0f%%） |" % (
+            names[r["scheme"]], r["px"], r["on1080"], r["m_feet"], r["m_top"], r["m_bot"], r["ppm"], r["ppm"] / 30.0,
+            r["w"], r["depth"], ("—" if r["scheme"] in ("now", "A") else "宽少 %.1f、深少 %.1f" % (r["dw"], r["dd"])),
+            r["area"], 100 * r["area"] / base["area"]))
     return "\n".join(out)
 
 
@@ -201,10 +213,10 @@ def spacing_table(R, T, views):
     return "\n".join(out)
 
 
-def view_table(R, T, views):
+def view_table(R, T, views, occ=None):
     """For each key view: which of its must-see elements are inside the 640x360 picture (anchor and a point
     up the element) and not hidden by terrain; which must-hide elements are out."""
-    out = ["| 视点 | 她站在 | 要看见的（在画面里） | 要藏住的（不在画面里） | 画面里的地面（往北 / 往南） |", "|---|---|---|---|---|"]
+    out = ["| 视点 | 她站在 | 要看见的（在画面里） | 要藏住的（不在画面里） | 她被挡住吗 | 画面里的地面（往北 / 往南） |", "|---|---|---|---|---|---|"]
     for vw in views:
         cam = vw["cam"]
         def inside(eid):
@@ -270,16 +282,80 @@ def view_table(R, T, views):
         see = ["%s%s" % (s, "" if inside(s) else "（✗不在）") for s in vw["see"]]
         hide = ["%s%s" % (s, "（✗进了画面）" if inside(s) else "") for s in vw["hide"]]
         e = screen_extent(cam)
-        out.append("| %s %s | (%.1f, %.1f) | %s | %s | %.1f / %.1f 米 |" % (vw["id"], vw["name"], vw["her"][0], vw["her"][1],
-                                                                       "、".join(see), "、".join(hide) or "—", e["north"], e["south"]))
+        hid = her_hidden(T, vw, occ or {})
+        out.append("| %s %s | (%.1f, %.1f) | %s | %s | %s | %.1f / %.1f 米 |" % (
+            vw["id"], vw["name"], vw["her"][0], vw["her"][1], "、".join(see), "、".join(hide) or "—",
+            ("✗被 %s 挡住" % "、".join(hid)) if hid else "没有（✓）", e["north"], e["south"]))
     return "\n".join(out)
 
 
-def all_tables(R, T, W, rc, views):
+def her_hidden(T, vw, occ):
+    """What hides her at a key view: hand-placed things (occlusion_by_elements) and the terrain."""
+    ids = [eid for eid, r in occ.items() if vw["id"] in r["views"]]
+    cam = vw["cam"]
+    C = cam.C
+    x, y, h = cam.her
+    for hb in (0.3, 0.9, 1.4):
+        v = np.array([x, y, h + hb]) - C
+        if any(float((C + v * k)[2]) < float(T.h(*(C + v * k)[:2])) - 0.05 for k in np.linspace(0.03, 0.97, 60)):
+            ids.append("地形")
+            break
+    return ids
+
+
+def terrain_hides_on_roads(R, T, heights=(0.3, 0.9)):
+    """Road samples (1 m) where the terrain cuts the P3 camera's line to her feet (0.3 m) or chest: a bank on
+    the camera's side of a sunken lane, a crest in front of her. Returns {road id: count} and the total."""
+    rec = R["camera"]["recommended"]
+    cam0 = Cam(ppm=rec["ppm"], share=rec["share"])
+    off = cam0.C - cam0.focus
+    kk = np.linspace(0.03, 0.97, 60)
+    bad, total = {}, 0
+    for rd in R["roads"]:
+        P, _ = reg.resample([p[:2] for p in rd["pts"]], 1.0)
+        for x, y in P[:, :2]:
+            total += 1
+            h = float(T.h(x, y))
+            C = np.array([x + off[0], y + off[1], h + 0.9 + off[2]])
+            for hb in heights:
+                Q = C[None, :] + (np.array([x, y, h + hb]) - C)[None, :] * kk[:, None]
+                if (Q[:, 2] < T.h(Q[:, 0], Q[:, 1]) - 0.05).any():
+                    bad[rd["id"]] = bad.get(rd["id"], 0) + 1
+                    break
+    return bad, total
+
+
+def occlusion_table(R, occ, law=None, terr=None):
+    out = ["| 编号 | 东西 | 挡住她的路段（路：米） | 平台上（2 × 2 米的格） | 关键视点 |", "|---|---|---|---|---|"]
+    for eid, r in occ.items():
+        roads = "、".join("%s %s：%d" % (rid, R["_index"][rid].get("name", ""), m) for rid, m in r["road"].items()) or "—"
+        out.append("| %s | %s | %s | %s | %s |" % (eid, r["name"], roads, r["pads"] or "—", "、".join(r["views"]) or "—"))
+    out.append("")
+    txt = ("相机在她南面、份额 1.0 时直立的东西往北斜：她走到这些手放的单株树和建筑背后（北边）时会被挡住，"
+           "渲染器的透视孔在这些地方打开（宪章：角色光照保护；同一个物体的干、枝、叶一起处理）。"
+           "按她的脚、胸、头三条视线和体块（树干、树冠、屋）求的，路按 1 米、平台按 2 米取样。")
+    if law:
+        txt += ("成片种植的树已经按 P3 种植律（P20，带后倾）处理：压低 %d 棵、去掉 %d 棵，剩 %d 棵；它们挡不住站在路上和平台上的她，"
+                "所以不在表里。" % (law["lowered"], law["removed"], law["kept"]))
+    if terr is not None:
+        bad, total = terr
+        if bad:
+            txt += ("地形挡住她的脚或胸口的路段（%d 个 1 米取样里）：%s。" % (
+                total, "、".join("%s %d 处" % (k, v) for k, v in bad.items())))
+        else:
+            txt += "地形：%d 个路上的取样点（1 米一个）里，她的脚（离地 0.3 米）和胸口都没有被地形挡住。" % total
+    out.append(txt)
+    return "\n".join(out)
+
+
+def all_tables(R, T, W, rc, views, law=None):
+    occ = reg.occlusion_by_elements(R, T)
     parts = ["# 新手村 v4：生成的表（tools/design/village_plan.py 写的，不要手改）", "",
              "## 1. 比例表", "", scale_table(R), "",
-             "## 2. 她的身高方案（她连笠 1.52 米）", "", schemes_table(), "",
+             "## 2. 她的身高方案（她连笠 1.52 米，后倾份额 1.0）", "", schemes_table(), "",
              "## 3. 分区面积与屏数", "", zone_table(R, T, W, rc), "",
              "## 4. 主角之间的间距（推荐方案 C 下的 P3 画面，按地形求出的可见地面）", "", spacing_table(R, T, views), "",
-             "## 5. 关键视点检查（推荐方案 C 下）", "", view_table(R, T, views), ""]
+             "## 5. 关键视点检查（推荐方案 C 下）", "", view_table(R, T, views, occ), "",
+             "## 6. 她会走到哪些东西背后（推荐方案 C、份额 1.0 下）", "",
+             occlusion_table(R, occ, law, terrain_hides_on_roads(R, T)), ""]
     return "\n".join(parts)

@@ -373,29 +373,30 @@ def p3_tree_limit(x, y, h, crown_r, g, Kp, hk, kd, limit, ry=None):
 def p3_south_low(trees_by_planting, R, T, near_clear=1.2, ppm=None, share=None, pitch=45.0, fov=38.0):
     """Apply the P3 planting law (p3_law_limit) to the scattered trees: a tree that would break into the
     picture from any key point is lowered to fit, or removed when that leaves less than 1.6 m. Trees north
-    of every key point are untouched. Returns the count of trees lowered or removed."""
+    of every key point are untouched. Returns (lowered, removed)."""
     from scipy.spatial import cKDTree
     limit = p3_law_limit(R, ppm, share, pitch, fov, near_clear)
     Kp = p3_key_points(R)
     kd = cKDTree(Kp)
     hk = T.h(Kp[:, 0], Kp[:, 1])
-    changed = 0
+    lowered = removed = 0
     for pid in list(trees_by_planting.keys()):
         keep = []
         for t in trees_by_planting[pid]:
             g = float(T.h(t["x"], t["y"]))
             lim, _ = p3_tree_limit(t["x"], t["y"], t["h"], t["crown_r"], g, Kp, hk, kd, limit)
             if lim is not None and t["h"] > lim:
-                changed += 1
                 if lim < 1.6:
+                    removed += 1
                     continue
+                lowered += 1
                 t["h"] = lim
                 t["crown_r"] = min(t["crown_r"], 0.42 * t["h"] + 0.3)
                 t["trunk_r"] = min(t["trunk_r"], 0.03 * t["h"] + 0.05)
                 t["low"] = True
             keep.append(t)
         trees_by_planting[pid] = keep
-    return changed
+    return lowered, removed
 
 
 def _element_volumes(R, T, e):

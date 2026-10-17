@@ -64,7 +64,8 @@ class Terrain:
         for c in T.get("carves", []):
             if c["kind"] == "path":
                 P, _ = reg.resample(c["pts"], 0.25)
-                H = self._carve(H, P[:, :2], P[:, 2], c["floor_w"] / 2.0, c["bank"], steep=2.6)
+                H = self._carve(H, P[:, :2], P[:, 2], c["floor_w"] / 2.0, c["bank"], steep=2.6,
+                                south_steep=c.get("south_steep"))
             elif c["kind"] == "stream":
                 w = R["_index"][c["ref"]]
                 P, _ = reg.resample(w["pts"], 0.25)
@@ -106,7 +107,10 @@ class Terrain:
         H[idx] = sub
         return H
 
-    def _carve(self, H, P, hp, half, bank, steep=2.0):
+    def _carve(self, H, P, hp, half, bank, steep=2.0, south_steep=None):
+        """Lower the ground along P to the floor heights hp (half width `half`), with banks rising at
+        `steep` (rise per metre). south_steep: a gentler bank on the camera's side (where the bank faces
+        north toward the path), so the P3 camera in the south still sees her feet on the floor."""
         half = np.broadcast_to(np.asarray(half, dtype=float), (len(P),))
         m, d, i = self._nearest(P, self.X, self.Y, float(half.max()) + bank * 3)
         ok = np.isfinite(d)
@@ -115,7 +119,12 @@ class Terrain:
         ii = np.clip(i, 0, len(hp) - 1)
         tgt = hp[ii]
         hh = half[ii]
-        lim = np.where(d <= hh, tgt, tgt + (d - hh) * steep)
+        rise = steep
+        if south_steep is not None:
+            qx, qy = self.X[idx], self.Y[idx]
+            dd = np.maximum(np.hypot(qx - P[ii, 0], qy - P[ii, 1]), 1e-6)
+            rise = np.where((qy - P[ii, 1]) / dd < -0.5, south_steep, steep)
+        lim = np.where(d <= hh, tgt, tgt + (d - hh) * rise)
         sub = np.where(ok, np.minimum(sub, lim), sub)
         H[idx] = sub
         return H

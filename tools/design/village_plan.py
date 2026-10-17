@@ -73,13 +73,14 @@ def main():
     T = ter.Terrain(R)
     ko = keep_out_factory(R)
     trees = {pl["id"]: reg.scatter_planting(pl, R, ko) for pl in R["plantings"]}
-    n_low = reg.p3_south_low(trees, R, T)
+    lowered, removed = reg.p3_south_low(trees, R, T)
+    law = dict(lowered=lowered, removed=removed, kept=sum(len(v) for v in trees.values()))
     W = wk.Walk(R, T, trees)
     rc = W.realm_check()
     rec = R["camera"]["recommended"]
     views = make_views(R, T, rec["ppm"], rec["share"])
-    print("terrain + walk %.1fs; realm leak cells %d; inside walkable %.0f m2; P3 law lowered %d trees" % (
-        time.time() - t0, rc["leak_cells"], rc["inside_walkable_m2"], n_low))
+    print("terrain + walk %.1fs; realm leak cells %d; inside walkable %.0f m2; P3 law: lowered %d, removed %d, kept %d trees" % (
+        time.time() - t0, rc["leak_cells"], rc["inside_walkable_m2"], lowered, removed, law["kept"]))
 
     def emit(name, svg, w, h):
         p = out / (name + ".svg")
@@ -121,7 +122,7 @@ def main():
         except ImportError:
             TB = None
         if TB:
-            (out / "tables.md").write_text(TB.all_tables(R, T, W, rc, views), encoding="utf-8")
+            (out / "tables.md").write_text(TB.all_tables(R, T, W, rc, views, law), encoding="utf-8")
             print("wrote tables.md")
     print("done %.1fs" % (time.time() - t0))
 
