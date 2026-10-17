@@ -69,6 +69,7 @@ class Svg:
         self.layer_attrs = {}
         self.order = []
         self.default_layer_attrs = {}
+        self.auto_clip = None
         self.defs = []
         self.text_by_key = {}
         self.layer("base")
@@ -77,6 +78,8 @@ class Svg:
         if name not in self.layers:
             self.layers[name] = []
             self.order.append(name)
+            if self.auto_clip and name not in ("base", "furniture") and "clip_path" not in attrs:
+                attrs = dict(attrs, clip_path=self.auto_clip)
             self.layer_attrs[name] = attrs
         elif attrs:
             self.layer_attrs[name].update(attrs)

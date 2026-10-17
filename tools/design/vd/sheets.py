@@ -81,7 +81,7 @@ def sheet_site(R, T, trees, views, fonts):
     svg.rect(0, 0, W, H, fill=S.PAPER)
     svg.rect(fr.u0, fr.v0, fr.w, fr.h, fill="#f7f4ec", stroke=S.INK, stroke_width=1.0)
     svg.defn('<clipPath id="mapclip"><rect x="%s" y="%s" width="%s" height="%s"/></clipPath>' % (f(fr.u0), f(fr.v0), f(fr.w), f(fr.h)))
-    svg.add('<g clip-path="url(#mapclip)">')
+    svg.auto_clip = "url(#mapclip)"
     zone_layer(svg, fr, R, wash=True)
     svg.layer("hill")
     u, v, w, h, uri = PL.hillshade_image(T, fr, alpha=0.42)
@@ -114,7 +114,7 @@ def sheet_site(R, T, trees, views, fonts):
     for b, (x, y) in rd["bends"].items():
         u, v = fr(x, y)
         svg.text(u + (10 if x > 40 else -10), v + 3, b, cls="lab-s", anchor=("start" if x > 40 else "end"), halo=True)
-    svg.add("</g>")
+    svg.auto_clip = None
     # frame furniture
     svg.layer("furniture")
     title_lines = _common_lines(R, "1:%d（屏幕 96 dpi 下）" % round(1000 / (s * 0.2646)))
@@ -183,7 +183,7 @@ def sheet_realm(R, T, trees, views, fonts):
     svg.rect(0, 0, W, H, fill=S.PAPER)
     svg.rect(fr.u0, fr.v0, fr.w, fr.h, fill="#f7f4ec", stroke=S.INK, stroke_width=1.0)
     svg.defn('<clipPath id="mapclipB"><rect x="%s" y="%s" width="%s" height="%s"/></clipPath>' % (f(fr.u0), f(fr.v0), f(fr.w), f(fr.h)))
-    svg.add('<g clip-path="url(#mapclipB)">')
+    svg.auto_clip = "url(#mapclipB)"
     zone_layer(svg, fr, R, wash=True)
     svg.layer("hill")
     u, v, w, h, uri = PL.hillshade_image(T, fr, alpha=0.36)
@@ -218,7 +218,7 @@ def sheet_realm(R, T, trees, views, fonts):
                                                  "ZN-04": (5, 6), "ZN-08": (2, 6.5), "ZN-09": (6, 3), "ZN-03": (2, -6)})
     ids = None
     placed = PL.label_elements(svg, fr, R, ids=ids, cls="lab")
-    svg.add("</g>")
+    svg.auto_clip = None
     svg.layer("furniture")
     PL.title_block(svg, 40, 18, fr.w, "新手村 v4　结界内平面图（元素编号）", "家一带・神社结界・眺望岩：每个元素的编号见 registry.json", [], "图 B")
     px = fr.u0 + fr.w + 30
@@ -299,7 +299,7 @@ def sheet_walk(R, T, trees, W_, fonts, rc):
     svg.rect(0, 0, W, H, fill=S.PAPER)
     svg.rect(fr.u0, fr.v0, fr.w, fr.h, fill="#f7f4ec", stroke=S.INK, stroke_width=1.0)
     svg.defn('<clipPath id="mapclipC"><rect x="%s" y="%s" width="%s" height="%s"/></clipPath>' % (f(fr.u0), f(fr.v0), f(fr.w), f(fr.h)))
-    svg.add('<g clip-path="url(#mapclipC)">')
+    svg.auto_clip = "url(#mapclipC)"
     # raster of causes
     j0 = int((x0 - T.x0) / T.cell)
     j1 = int((x1 - T.x0) / T.cell) + 1
@@ -344,7 +344,7 @@ def sheet_walk(R, T, trees, W_, fonts, rc):
         (ax, ay), (bx, by) = g["between"]
         u, v = fr((ax + bx) / 2, (ay + by) / 2)
         svg.text(u, v - 10, "%s %s" % (g["name"], g["id"]), cls="lab-b", anchor="middle", halo=True, fill=S.VERMILION)
-    svg.add("</g>")
+    svg.auto_clip = None
     svg.layer("furniture")
     PL.title_block(svg, 40, 18, fr.w, "新手村 v4　可走与不可走", "碰撞和画面来自同一份数据：每一块不能走的地方都有看得见的原因", [], "图 C")
     px = fr.u0 + fr.w + 30
