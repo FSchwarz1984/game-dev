@@ -283,19 +283,61 @@ def all_road_distance(R, X, Y, skip=()):
     return d
 
 
-def p3_south_low(trees_by_planting, R, T, near_clear=1.2, ppm=None, pitch=45.0, fov=38.0):
-    """The P3 planting law (registry rules.p3_south_low), from the camera's geometry. The camera stands
-    Dc = D cos(pitch) south of her and Hc = 0.9 + D sin(pitch) above her feet (D = K / PPM). A thing
-    s metres south of a path point is inside the picture when it rises above the lowest ray of the frame
-    there: z(s) = Hc (s - 5.5) / (Dc - 5.5) for s > 5.5 m (nearer than 5.5 m the ground itself is in the
-    picture, so only ground cover <= 1.2 m is allowed). A planted tree whose crown (its north edge) breaks
-    that line for any path point or key place, within the frame's half width, is lowered to fit, or
-    removed when that leaves less than 1.6 m. Trees north of paths are untouched. Returns the count."""
+def p3_law_limit(R, ppm=None, share=None, pitch=45.0, fov=38.0, near_clear=1.2):
+    """The P3 planting law (registry rules.p3_south_low) as a function, from the camera's geometry.
+
+    The camera stands Dc = D cos(pitch) south of her and Hc = 0.9 + D sin(pitch) above her feet
+    (D = K / PPM); the bottom edge of the picture meets her ground s0 metres south of her. The bottom
+    plane of the frame rises southward as a (s - s0), a = Hc / (Dc - s0). An upright whose base is
+    s metres south of her and b metres above her ground leans north by k t at height t (k = tan(pitch / 2)
+    times the share), so it breaks into the picture as soon as b + t > a (s - k t - s0), i.e. when it is
+    taller than (a (s - s0) - b) / (1 + a k). Nearer than s0 the ground itself is in the picture: only
+    ground cover <= near_clear. A trunk that would cross that plane behind the camera passes over the
+    camera's head and stays above the top of the picture (no limit). The frame's half width at the crossing
+    is 320 px times the depth there over K: only things inside it (plus their crown) count.
+
+    Returns limit(s, b, dx, r): the allowed height (m), or None when the thing cannot reach the picture.
+    s: south distance of its north edge from her, b: its base above her ground, dx: its east-west offset
+    from her, r: its crown radius."""
+    from .p3 import Cam, screen_extent, VIEW_W
     ppm = ppm or R["camera"]["recommended"]["ppm"]
-    Kpx = (362.0 / 2.0) / math.tan(math.radians(fov) / 2.0)
-    D = Kpx / ppm
-    Dc = D * math.cos(math.radians(pitch))
-    Hc = 0.9 + D * math.sin(math.radians(pitch))
+    share = R["camera"]["recommended"]["share"] if share is None else share
+    cam = Cam(fov=fov, pitch=pitch, ppm=ppm, share=share)
+    p = math.radians(pitch)
+    Dc = cam.D * math.cos(p)
+    Hc = 0.9 + cam.D * math.sin(p)
+    s0 = float(screen_extent(cam)["south"])
+    a = Hc / (Dc - s0)
+    k = cam.k
+    K = cam.K
+
+    def limit(s, b, dx, r):
+        if s < 0:
+            return None                               # north of her: never in front of the camera
+        if s <= s0:
+            t = 0.0
+            lim = near_clear
+        else:
+            t = (a * (s - s0) - b) / (1.0 + a * k)    # height on the trunk where it meets the bottom plane
+            lim = max(near_clear, t)
+            t = max(t, 0.0)
+        sc = s - k * t                                # where that is, south of her
+        if sc >= Dc:
+            return None                               # over the camera's head
+        zc = b + t                                    # and how high above her ground
+        depth = (Dc - sc) * math.cos(p) - (zc - Hc) * math.sin(p)
+        half = (VIEW_W / 2.0) * depth / K
+        if abs(dx) - r > half + 0.5:
+            return None                               # beside the picture
+        return lim
+
+    limit.info = dict(Dc=Dc, Hc=Hc, s0=s0, a=a, k=k, reach=Dc + k * Hc, slope=a / (1.0 + a * k))
+    return limit
+
+
+def p3_key_points(R):
+    """Where she can stand that the law protects: every road (1 m samples), every pad (2 m grid) and the
+    key views."""
     pts = []
     for rd in R["roads"]:
         P, _ = resample([p[:2] for p in rd["pts"]], 1.0)
@@ -309,36 +351,93 @@ def p3_south_low(trees_by_planting, R, T, near_clear=1.2, ppm=None, pitch=45.0, 
         pts.append(np.stack([gx[m], gy[m]], axis=1))
     for v in R["views"]:
         pts.append(np.array([v["her"]]))
-    K = np.concatenate([p for p in pts if len(p)], axis=0)
+    return np.concatenate([p for p in pts if len(p)], axis=0)
+
+
+def p3_tree_limit(x, y, h, crown_r, g, Kp, hk, kd, limit, ry=None):
+    """Lowest allowed height for a tree (or any upright) at (x, y) on ground g over all key points near it,
+    and the key point that sets it (index), or (None, None). crown_r: its half width east-west; ry: its
+    half depth north-south (default crown_r)."""
+    ry = crown_r if ry is None else ry
+    reach = limit.info["reach"] + 4.0
+    idx = kd.query_ball_point([x, y + reach / 2], r=math.hypot(20.0, reach / 2) + 1.0)
+    best, at = None, None
+    for i in idx:
+        if Kp[i, 1] - y < 0:
+            continue                                  # the tree is north of this point
+        s_ = Kp[i, 1] - y - ry                        # south distance of the crown's north edge
+        lim = limit(max(s_, 0.0), g - hk[i], Kp[i, 0] - x, crown_r)
+        if lim is None:
+            continue
+        if best is None or lim < best:
+            best, at = lim, i
+    return best, at
+
+
+def p3_south_low(trees_by_planting, R, T, near_clear=1.2, ppm=None, share=None, pitch=45.0, fov=38.0):
+    """Apply the P3 planting law (p3_law_limit) to the scattered trees: a tree that would break into the
+    picture from any key point is lowered to fit, or removed when that leaves less than 1.6 m. Trees north
+    of every key point are untouched. Returns the count of trees lowered or removed."""
     from scipy.spatial import cKDTree
-    tree = cKDTree(K)
-    hk = T.h(K[:, 0], K[:, 1])
-    reach = Dc + 4.0
+    limit = p3_law_limit(R, ppm, share, pitch, fov, near_clear)
+    Kp = p3_key_points(R)
+    kd = cKDTree(Kp)
+    hk = T.h(Kp[:, 0], Kp[:, 1])
     changed = 0
     for pid in list(trees_by_planting.keys()):
         keep = []
         for t in trees_by_planting[pid]:
             g = float(T.h(t["x"], t["y"]))
-            idx = tree.query_ball_point([t["x"], t["y"] + reach / 2], r=math.hypot(14.0, reach / 2) + 1.0)
-            limit = None
-            for i in idx:
-                s_ = K[i, 1] - t["y"] - t["crown_r"]          # south distance of the crown's north edge
-                if s_ > Dc or K[i, 1] - t["y"] < 0:
-                    continue
-                dx = abs(K[i, 0] - t["x"]) - t["crown_r"]
-                if dx > 9.0 + 0.45 * max(s_, 0.0):
-                    continue
-                z = near_clear if s_ <= 5.5 else max(near_clear, Hc * (s_ - 5.5) / (Dc - 5.5))
-                lim = z + hk[i] - g
-                limit = lim if limit is None else min(limit, lim)
-            if limit is not None and t["h"] > limit:
+            lim, _ = p3_tree_limit(t["x"], t["y"], t["h"], t["crown_r"], g, Kp, hk, kd, limit)
+            if lim is not None and t["h"] > lim:
                 changed += 1
-                if limit < 1.6:
+                if lim < 1.6:
                     continue
-                t["h"] = limit
+                t["h"] = lim
                 t["crown_r"] = min(t["crown_r"], 0.42 * t["h"] + 0.3)
                 t["trunk_r"] = min(t["trunk_r"], 0.03 * t["h"] + 0.05)
                 t["low"] = True
             keep.append(t)
         trees_by_planting[pid] = keep
     return changed
+
+
+def p3_check_elements(R, T, near_clear=1.2):
+    """The same law for the hand-placed trees and the buildings (they are not lowered automatically):
+    rows (id, name, height, allowed, key point x, y) for each that breaks it somewhere."""
+    from scipy.spatial import cKDTree
+    limit = p3_law_limit(R, near_clear=near_clear)
+    Kp = p3_key_points(R)
+    kd = cKDTree(Kp)
+    hk = T.h(Kp[:, 0], Kp[:, 1])
+    rows = []
+    for e in R["elements"]:
+        if "pos" not in e:
+            continue
+        cat = e["id"].split("-")[0]
+        x, y = e["pos"][:2]
+        if cat == "TR" and e.get("height"):
+            h = float(e["height"])
+            cr = e.get("crown")
+            if isinstance(cr, dict):
+                rx = ry = float(cr.get("r", 2.0))
+            elif isinstance(cr, list):
+                P = np.asarray(cr, dtype=float)
+                rx = float(np.abs(P[:, 0] - x).max())
+                ry = float(np.abs(P[:, 1] - y).max())
+            else:
+                rx = ry = float(e.get("trunk_d", 0.6)) / 2.0
+            g = float(T.h(x, y))
+        elif cat == "BL" and e.get("size"):
+            sx, sy, sz = e["size"][:3]
+            h = float(sz)
+            rx, ry = sx / 2.0, sy / 2.0
+            g = float(e["h"]) if e.get("h") is not None else float(T.h(x, y))
+        else:
+            continue
+        if h <= near_clear:
+            continue
+        lim, at = p3_tree_limit(x, y, h, rx, g, Kp, hk, kd, limit, ry=ry)
+        if lim is not None and h > lim + 0.05:
+            rows.append((e["id"], e.get("name", ""), h, lim, float(Kp[at, 0]), float(Kp[at, 1])))
+    return rows

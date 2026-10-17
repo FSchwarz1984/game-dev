@@ -13,6 +13,12 @@ projected: they are drawn texel for pixel at any depth.
 The numbers agree with the renderer's own script (scratchpad bin/upright_scale.py, 2026-10-17): at
 fov 38, pitch 45, PPM 30 the camera is 17.52 m from the focus, and an upright at her feet covers
 19.75 / 22.39 / 24.14 / 28.53 px per metre at shares 0 / 0.3 / 0.5 / 1.0.
+
+The share is settled at 1.0 (the renderer's conclusion, 2026-10-17, its knowledge/21 section 14): the
+default below. At PPM 30 an upright covers 21.0 px/m at the top edge of the picture, 28.5 at her feet and
+32.2 at the bottom edge (edge_upright_ppm); the cards do not follow, so a card reads larger against the
+world near the top of the picture and smaller near the bottom. The other shares stay computable for
+reference.
 """
 from __future__ import annotations
 
@@ -31,7 +37,7 @@ class Cam:
     fov: float = 38.0              # vertical field of view, degrees
     pitch: float = 45.0            # degrees below the horizon
     ppm: float = 30.0              # native px per metre on the picture plane at the focus
-    share: float = 0.0             # lean-back share (0 .. 1)
+    share: float = 1.0             # lean-back share (0 .. 1); settled at 1.0 (renderer, 2026-10-17)
     her: tuple = (0.0, 0.0, 0.0)   # her feet (x, y, h)
 
     # derived ------------------------------------------------------------------------------------
@@ -185,6 +191,28 @@ def screen_extent(cam: Cam):
 
 
 SHARES = (0.0, 0.3, 0.5, 1.0)
+SHARE = 1.0                        # the settled share
+
+
+def edge_points(cam: Cam):
+    """Ground points (flat, at her feet's height) straight up and down the middle column of the picture:
+    (top edge, her feet, bottom edge) as (x, y)."""
+    fp = cam.flat_footprint()
+    x, y, _ = cam.her
+    return (x, float(fp[2, 1])), (x, y), (x, float(fp[0, 1]))
+
+
+def edge_upright_ppm(cam: Cam):
+    """Upright px per metre (local, at ground level) at the top edge, at her feet and at the bottom edge."""
+    gh = cam.her[2]
+    return tuple(cam.upright_ppm_local(at=pt, base_h=gh) for pt in edge_points(cam))
+
+
+def card_equiv_height(cam: Cam, px):
+    """How tall (m) a world upright must be to match a card `px` screen px high, standing at the top edge,
+    at her feet and at the bottom edge (exact projection with the lean)."""
+    gh = cam.her[2]
+    return tuple(cam.height_for_px(px, at=pt, base_h=gh) for pt in edge_points(cam))
 
 
 def feet_upright_ppm(share, ppm=30.0, fov=38.0, pitch=45.0):
@@ -204,6 +232,11 @@ def ppm_for_feet_upright(target, share, fov=38.0, pitch=45.0):
 
 
 if __name__ == "__main__":
+    for m in (30.0, 32.0):
+        c = Cam(ppm=m)
+        print("share 1.0, PPM %.0f: uprights top / feet / bottom %s px/m; a 57 px card = %s m, 48 px = %s m" % (
+            m, tuple(round(v, 2) for v in edge_upright_ppm(c)), tuple(round(v, 2) for v in card_equiv_height(c, 57)),
+            tuple(round(v, 2) for v in card_equiv_height(c, 48))))
     for s in SHARES:
         c = Cam(share=s)
         print("share %.1f  D %.2f  feet upright %.2f px/m  57 px = %.2f m  ground %s  extent %s" % (
