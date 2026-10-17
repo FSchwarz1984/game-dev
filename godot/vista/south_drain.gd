@@ -5,14 +5,15 @@ extends RefCounted
 ## gone into the gate on the sky shore's point; the far bursts from the town, down on the plain and to
 ## the right of it. Two ways to join them, both driven from Vista.state:
 ##   "drain" (state.drain = seconds since the drain began): back on the plain the gate draws in its
-##     breath (its light tightens and brightens), and the town's own colours are drawn up out of the
-##     ground: grains of light, each the colour of what its pixel of the town is made of (thatch, tile,
-##     white wall, grove, paddy: the material's own, unlit), lift slowly, are pulled into three strands
-##     that wind round each other up one way into the gate, ever
-##     faster, turning the sky shore's pale jade past half their way; where they leave, the ground goes
-##     its silver-grey ghost, from the middle of the town out. Then the town bursts white (the far's
-##     front starts there) while the last grains go up; the gate takes them in, flashing, and breathes
-##     out.
+##     breath (a faint ring closes in on its mouth, its light tightens and brightens), and the town's
+##     own colours are drawn up out of the ground, the last breath of the lights' rising and in their
+##     language: grains of light, each the colour of what its pixel of the town is made of (thatch,
+##     tile, white wall, grove, paddy: the material's own, unlit), float straight up off the whole town,
+##     then each bends toward the gate on its own curve, the swarm loose and wide in the middle of the
+##     way and gathering only at the gate's mouth, faster and faster, turning the sky shore's pale jade
+##     past half its way; where they leave, the ground goes its silver-grey ghost, from the middle of
+##     the town out. Then the town bursts white (the far's front starts there) while the last grains go
+##     up; the gate takes them in, flashing, and breathes out.
 ##   "flash" (no drain): a beat after the cut back to the plain the gate flares and in the same frame
 ##     the town bursts white.
 ## state.flare = seconds since the burst (both). Everything is a function of those two numbers (the
@@ -23,9 +24,8 @@ const DRAIN_PRE := 3.4        # the cut back to the plain .. the burst (s): what
 const FLASH_PRE := 0.8        # "flash": the beat before the gate flares and the town bursts (s)
 const INHALE := Vector2(0.3, 0.9)     # the gate draws its breath (s after the cut)
 const DEP := Vector2(0.45, 3.55)      # the first and the last grain leave the town (s)
-const DUR := Vector2(2.4, 1.9)        # time to the gate of the first and of the last grains (s)
+const DUR := Vector2(2.3, 1.75)       # time to the gate of the first and of the last grains (s, +-15%)
 const B_MAX := 36                     # the drained radius at the burst, in arrival buckets (~ 230 m)
-const STRANDS := 3
 
 var s: VistaSouth
 var points: VistaPoints
@@ -33,7 +33,7 @@ var n_grains := 0
 var town := Vector2.ZERO               # canvas px of the far group: the middle of the town
 var arrivals := PackedFloat32Array()   # when each grain reaches the gate (s after the drain began), sorted
 var t_last := 0.0                      # the last of them
-var grains: Array = []                 # [p0, o, dur, jit, lift, strand, colour] (checks, tests)
+var grains: Array = []                 # [p0, o, dur, f, b, lift, seed, colour] (checks, tests)
 
 
 func setup(p_s: VistaSouth, quality: String) -> void:
@@ -47,8 +47,7 @@ func setup(p_s: VistaSouth, quality: String) -> void:
 	var f := float(m["f"])
 	var zc := float(m["Zc"])
 	town = Vector2(float(m["Cx"]) + f * float(m["Xc"]) / zc, float(m["YL"]) + f * s.lights.floor_dep(zc))
-	var n_strand := 170 if quality == "high" else 100
-	var n_loose := 50 if quality == "high" else 30
+	n_grains = 150 if quality == "high" else 90
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 6113
 	# the town's pixels the grains leave from: the ground the far reaches first, by its arrival
@@ -75,38 +74,35 @@ func setup(p_s: VistaSouth, quality: String) -> void:
 				own = Color(float(albedo[id][0]) / 255.0, float(albedo[id][1]) / 255.0, float(albedo[id][2]) / 255.0)
 			src.append([b + rng.randf() * 10.0, Vector2(x, y), _glow_colour(own)])
 	src.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
-	n_grains = n_strand + n_loose
-	# departures thicken toward the burst (the drain gathers pace) and come in gusts (five, like
-	# breaths: the stream goes up in knots, not as an even band): the k-th leaves at
-	# DEP.x + span w(k / n)^(1 / 1.6), w(x) = x + 0.025 sin(10 pi x); the first leave from the middle
-	# of the town, the last from its edge
-	var loose := {}
-	while loose.size() < n_loose:
-		loose[rng.randi_range(0, n_grains - 1)] = true
+	# departures thicken toward the burst (the drain gathers pace), in a few soft gusts: the k-th
+	# leaves at DEP.x + span w(k / n)^(1 / 1.6), w(x) = x + 0.012 sin(10 pi x); the first leave from
+	# the middle of the town, the last from its edge. Each its own speed (+-15%), height off the ground
+	# before it bends (12-30 px), and bend: its second control point somewhere between a quarter and
+	# a half of the way down from the gate, and 30 px to the right .. 66 px to the left of that way (the
+	# swarm's belly, mostly away from the sky shore's pagoda, which stands right of the way)
 	var inst: Array = []
 	arrivals.clear()
 	grains.clear()
 	for k in n_grains:
 		var x := float(k) / float(n_grains - 1)
-		var o := DEP.x + (DEP.y - DEP.x) * pow(clampf(x + 0.025 * sin(TAU * 5.0 * x), 0.0, 1.0), 1.0 / 1.6)
-		var dur := lerpf(DUR.x, DUR.y, x) * rng.randf_range(0.93, 1.07)
+		var o := DEP.x + (DEP.y - DEP.x) * pow(clampf(x + 0.012 * sin(TAU * 5.0 * x), 0.0, 1.0), 1.0 / 1.6)
+		var dur := lerpf(DUR.x, DUR.y, x) * rng.randf_range(0.85, 1.15)
 		var pick: Array = src[mini(src.size() - 1, int(round(x * (src.size() - 1) * 0.92 + rng.randf() * src.size() * 0.08)))]
 		var p0: Vector2 = pick[1]
 		var col: Color = pick[2]
-		var is_loose := loose.has(k)
-		var strand := 3 if is_loose else k % STRANDS
-		var jit := rng.randf_range(-5.0, 5.0) if is_loose else rng.randf_range(-1.1, 1.1)
-		var lift := rng.randf_range(8.0, 20.0)
-		# (a faint halo on one grain in six, and on the first few: the first sparks off the town)
-		var halo := 4 if ((k % 6 == 0 or k < 10) and not is_loose) else 0
-		var nt := 2 if is_loose else 3
-		for q in nt + 1:
-			inst.append([[p0.x, p0.y, o, dur, jit, lift], Color(col.r, col.g, col.b, 0.0), Color(q, nt, 0, strand + halo)])
+		var fw := rng.randf_range(0.25, 0.5)
+		var bw := lerpf(-30.0, 66.0, (rng.randf() + rng.randf()) * 0.5)
+		var lift := rng.randf_range(12.0, 30.0)
+		var seed := float(k) + (0.25 if k % 3 == 0 else 0.0)   # (+ 0.25: a faint halo, one grain in three)
+		for q in 3:
+			inst.append([[p0.x, p0.y, o, dur, fw, bw], Color(col.r, col.g, col.b, lift), Color(q, 2, 0, seed)])
 		arrivals.append(o + dur)
-		grains.append([p0, o, dur, jit, lift, strand, col])
-	# the burst at the town, and the gate's flare in the same frame (variant "flash": gate_k)
+		grains.append([p0, o, dur, fw, bw, lift, k, col])
+	# the burst at the town; the gate's flare in the same frame (variant "flash": gate_k); the gate's
+	# breath (a ring closing in on its mouth)
 	inst.append([[town.x, town.y, 0, 1, 0, 0], Color(1, 1, 1, 0), Color(0, 0, 2, 0)])
 	inst.append([[town.x, town.y, 0, 1, 0, 0], Color(1, 1, 1, 0), Color(0, 0, 3, 0)])
+	inst.append([[town.x, town.y, 0, 1, 0, 0], Color(1, 1, 1, 0), Color(0, 0, 4, 0)])
 	arrivals.sort()
 	t_last = arrivals[arrivals.size() - 1]
 	points = VistaPoints.new(inst.size(), preload("res://vista/shaders/drain.gdshader"))
@@ -114,26 +110,24 @@ func setup(p_s: VistaSouth, quality: String) -> void:
 	for i in inst.size():
 		points.put(i, inst[i][0], inst[i][1], inst[i][2])
 	points.commit()
+	points.set_param("inhale_t", INHALE)
 	points.visible = false
 
 
-## A material's colour made a small light: its hue, its saturation a little stronger (the albedos are
-## muted: they are lit and hazed in the picture), brought up to a lamp's level.
+## A material's colour made a small light: its own hue and saturation (no dyeing), brought up to a
+## lamp's level.
 static func _glow_colour(c: Color) -> Color:
-	var luma := c.r * 0.3 + c.g * 0.59 + c.b * 0.11
-	var k := Color(luma + (c.r - luma) * 1.6, luma + (c.g - luma) * 1.6, luma + (c.b - luma) * 1.6)
-	k = Color(maxf(k.r, 0.0), maxf(k.g, 0.0), maxf(k.b, 0.0))
-	var mx := maxf(k.r, maxf(k.g, k.b))
+	var mx := maxf(c.r, maxf(c.g, c.b))
 	if mx <= 0.001:
 		return Color(0.85, 0.85, 0.85)
 	var v := 0.92 / mx
-	return Color(k.r * v, k.g * v, k.b * v)
+	return Color(c.r * v, c.g * v, c.b * v)
 
 
 ## This frame: el = seconds since the drain began (< 0: none), fl = seconds since the burst (< 0:
 ## none), gate = the gate's mouth (canvas px); gate_flare: the gate flares with the burst ("flash").
 func update(el: float, fl: float, gate: Vector2, gate_flare: bool = false) -> void:
-	points.visible = (el >= DEP.x - 0.02 and el < t_last + 0.1) or (fl >= 0.0 and fl < 3.0)
+	points.visible = (el >= INHALE.x - 0.02 and el < t_last + 0.1) or (fl >= 0.0 and fl < 3.0)
 	if not points.visible:
 		return
 	points.set_param("el", el)
@@ -159,7 +153,7 @@ func flash(el: float) -> float:
 	var f := 0.0
 	var i := arrivals.bsearch(el, false) - 1
 	while i >= 0 and el - arrivals[i] < 1.5:
-		f += exp(-(el - arrivals[i]) / 0.28) * 0.14
+		f += exp(-(el - arrivals[i]) / 0.28) * 0.2
 		i -= 1
 	if el >= t_last:
 		f += exp(-(el - t_last) / 0.35) * 1.1
@@ -172,7 +166,7 @@ func inflow(el: float) -> float:
 		return 0.0
 	var hi := arrivals.bsearch(el, false)
 	var lo := arrivals.bsearch(el - 1.5, false)
-	return clampf(float(hi - lo) / 60.0, 0.0, 1.0)
+	return clampf(float(hi - lo) / 45.0, 0.0, 1.0)
 
 
 ## The drained radius of the town's ground (arrival buckets; < -5: none): from the middle out, as
@@ -184,26 +178,24 @@ func ground_b(el: float) -> float:
 
 
 ## The grain's place (canvas px) at s along its way: the path of shaders/drain.gdshader.
-func pos_at(g: Array, s_: float, gate: Vector2, amp: float = 5.0, twists: float = 1.4) -> Vector2:
+func pos_at(g: Array, s_: float, gate: Vector2) -> Vector2:
 	var p0: Vector2 = g[0]
-	var jit := float(g[3])
-	var lift := float(g[4])
-	var strand := float(g[5])
-	var h := town.y - gate.y
-	var a := town + Vector2(0.0, -4.0)
-	var b := town + Vector2(-2.0, -0.42 * h)
-	var c := gate + Vector2(0.2 * (town.x - gate.x), 0.36 * h)
-	var d := gate + Vector2(0.0, 1.0)
+	var fw := float(g[3])
+	var bw := float(g[4])
+	var lift := float(g[5])
+	var k := int(g[6])
+	var way := town - gate
+	var across := Vector2(-way.y, way.x).normalized()
+	var p1 := p0 + Vector2((_hash2(k, 1, 71) - 0.5) * 6.0, -lift)
+	var p2 := gate + way * fw + across * bw
+	var p3 := gate + Vector2((_hash2(k, 2, 71) - 0.5) * 3.0, 1.0 + (_hash2(k, 3, 71) - 0.5) * 2.0)
 	var u := 1.0 - s_
-	var sp := u * u * u * a + 3.0 * u * u * s_ * b + 3.0 * u * s_ * s_ * c + s_ * s_ * s_ * d
-	var dv := 3.0 * u * u * (b - a) + 6.0 * u * s_ * (c - b) + 3.0 * s_ * s_ * (d - c)
-	var n := (Vector2(-dv.y, dv.x) + Vector2(1e-5, 0.0)).normalized()
-	var off := 0.0
-	if strand < 2.5:
-		var env := VistaEnv.smoothj(0.2, 0.42, s_) * (1.0 - VistaEnv.smoothj(0.74, 0.985, s_))
-		off = amp * env * sin(TAU * twists * s_ + strand * TAU / 3.0) + jit * (1.0 - VistaEnv.smoothj(0.8, 1.0, s_))
-	else:
-		off = jit * (1.0 - VistaEnv.smoothj(0.45, 0.95, s_))
-	var r := sp + n * off
-	var q := p0 + Vector2(0.0, -lift * VistaEnv.smoothj(0.0, 0.3, s_))
-	return Vector2(lerpf(q.x, r.x, VistaEnv.smoothj(0.1, 0.46, s_)), lerpf(q.y, r.y, VistaEnv.smoothj(0.04, 0.36, s_)))
+	return u * u * u * p0 + 3.0 * u * u * s_ * p1 + 3.0 * u * s_ * s_ * p2 + s_ * s_ * s_ * p3
+
+
+## vista.gdshaderinc's hash2 (uint arithmetic), for pos_at.
+static func _hash2(x: int, y: int, sd: int) -> float:
+	var h := (x * 374761393 + y * 668265263 + sd * 1442695041) & 0xFFFFFFFF
+	h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+	h ^= h >> 16
+	return float(h >> 8) / 16777216.0

@@ -98,9 +98,9 @@ void fragment() {
 		c += C_CORE * 0.35 * a * min(flash, 2.0) * glow_w(d, 5.0);
 		if (inhale > 0.0) {
 			// drawing in its breath: the outer halo pulls in toward its heart, the heart brightens
-			c -= C_JADE * 0.5 * a * (0.35 + 0.65 * inflow) * pulse * inhale * 0.6 * (glow_w(d, 9.0) - glow_w(d, 6.0));
-			c += C_CORE * 0.8 * a * inhale * 0.7 * glow_w(d, 3.0);
-			if (at0) hdr *= 1.0 + 1.2 * inhale;
+			c -= C_JADE * 0.5 * a * (0.35 + 0.65 * inflow) * pulse * inhale * 0.85 * (glow_w(d, 9.0) - glow_w(d, 5.0));
+			c += C_CORE * 0.8 * a * inhale * glow_w(d, 3.0);
+			if (at0) hdr *= 1.0 + 1.6 * inhale;
 		}
 	}
 	COLOR = vec4(min(c, vec3(255.0)) / 255.0 + hdr, 1.0);

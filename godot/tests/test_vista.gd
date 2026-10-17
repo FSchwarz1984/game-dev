@@ -396,7 +396,7 @@ func test_the_drain_rises_from_the_town_into_the_gate() -> void:
 	near(float(r["at"]["burst"]) - float(r["at"]["back_to_plain"]), VistaSouthDrain.DRAIN_PRE, 0.05, "the burst after the drain")
 	near(float(r["at"]["far_spreads"]), float(r["at"]["burst"]), 1e-6, "the far starts with the burst")
 	near(float(r["end"]), 65.6 + VistaSouthDrain.DRAIN_PRE, 0.5, "it adds the drain's length, nothing else")
-	check(dr.n_grains >= 150, "a stream of grains (%d)" % dr.n_grains)
+	check(dr.n_grains >= 120, "a swarm of grains (%d)" % dr.n_grains)
 	var gate := south.gate()
 	var gimg: Image = south.data.images["ground"]
 	var from_town := 0
@@ -406,10 +406,31 @@ func test_the_drain_rises_from_the_town_into_the_gate() -> void:
 		var px := gimg.get_pixelv(Vector2i(p0))
 		if px.a > 0.5 and roundi(px.b * 255.0) <= VistaSouthDrain.B_MAX and p0.distance_to(dr.town) < 80.0:
 			from_town += 1
-		if dr.pos_at(g, 0.0, gate).distance_to(p0) < 0.01 and dr.pos_at(g, 1.0, gate).distance_to(gate + Vector2(0, 1)) < 0.01:
+		if dr.pos_at(g, 0.0, gate).distance_to(p0) < 0.01 and dr.pos_at(g, 1.0, gate).distance_to(gate + Vector2(0, 1)) < 2.0:
 			into_gate += 1
 	eq(from_town, dr.grains.size(), "every grain leaves a pixel of the town")
 	eq(into_gate, dr.grains.size(), "every grain's way starts on its pixel and ends in the gate's mouth")
+	# a loose swarm, not a beam: each rises straight off the ground first; across the way the grains
+	# are spread wide in its middle and gather only near the gate's mouth
+	var way := (dr.town - gate).normalized()
+	var across := Vector2(-way.y, way.x)
+	var straight := 0
+	var mid := PackedFloat32Array()
+	var end := PackedFloat32Array()
+	for g in dr.grains:
+		var p0: Vector2 = g[0]
+		var q := dr.pos_at(g, 0.06, gate)
+		if q.y < p0.y - 1.0 and absf(q.x - p0.x) < 0.5 * (p0.y - q.y):
+			straight += 1
+		mid.append((dr.pos_at(g, 0.5, gate) - gate).dot(across))
+		end.append((dr.pos_at(g, 0.97, gate) - gate).dot(across))
+	mid.sort()
+	end.sort()
+	var spread_mid := mid[int(mid.size() * 0.9)] - mid[int(mid.size() * 0.1)]
+	var spread_end := end[int(end.size() * 0.9)] - end[int(end.size() * 0.1)]
+	eq(straight, dr.grains.size(), "every grain floats straight up off the town first")
+	check(spread_mid > 30.0, "the swarm is wide in the middle of the way (%.1f px across, 10-90%%)" % spread_mid)
+	check(spread_end < 6.0, "and gathers at the gate's mouth (%.1f px)" % spread_end)
 	# ground zero: the far's first pixels are where the town is
 	var b0 := Vector2.ZERO
 	var nb := 0
@@ -437,7 +458,7 @@ func test_the_drain_rises_from_the_town_into_the_gate() -> void:
 			flash_in = maxf(flash_in, float(f["flash"]))
 		if el <= VistaSouthDrain.DRAIN_PRE:
 			drain_b = maxf(drain_b, float(f["drain_b"]))
-		if el < VistaSouthDrain.DEP.x - 0.05 and bool(f["drawn"]):
+		if el < VistaSouthDrain.INHALE.x - 0.05 and bool(f["drawn"]):
 			drawn_before = true
 		if el > dr.t_last + 0.2 and float(f["fl"]) > 3.0 and bool(f["drawn"]):
 			drawn_after = true
