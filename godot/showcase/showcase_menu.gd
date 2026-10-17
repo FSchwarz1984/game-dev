@@ -3,7 +3,8 @@ extends Control
 ## The art sample's menu over the title backdrop (vista "title": night under the great camphor, the
 ## plain's lamps below). Title and entries in the pixel font on whole native pixels.
 ## Keys: up/down (W/S, arrows, d-pad, left stick) choose, Enter/Space/gamepad A confirm; the mouse
-## points and clicks.
+## points and clicks anywhere on an entry's row (G5R3-56: only the letters were clickable before, so
+## a click between the lines or beside a short word did nothing).
 
 signal chosen(id: String, index: int)
 
@@ -23,6 +24,7 @@ var items: Array[Label] = []
 var mark: PixelMark
 var _stick_t := 0.0
 var _ids: Array[String] = []
+var _rows := Rect2()           # the entries' rows (native px): x, top, width, LINE per entry
 
 
 func _init() -> void:
@@ -41,15 +43,7 @@ func _ready() -> void:
 	hint_label = _label("↑↓ 选择　Enter 确定　F11 全屏", 12, HINT)
 	for e in _entries():
 		_ids.append(String(e[0]))
-		var l := _label(String(e[1]), 12, DIM)
-		l.mouse_filter = Control.MOUSE_FILTER_STOP
-		var i := items.size()
-		l.mouse_entered.connect(func() -> void: _select(i))
-		l.gui_input.connect(func(ev: InputEvent) -> void:
-			if ev is InputEventMouseButton and ev.pressed and (ev as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
-				_select(i)
-				_confirm())
-		items.append(l)
+		items.append(_label(String(e[1]), 12, DIM))
 	mark = PixelMark.new()
 	mark.colour = MARK
 	add_child(mark)
@@ -98,8 +92,12 @@ func _layout() -> void:
 	title_label.position = p
 	sub_label.position = (p + Vector2(2, 30)).round()
 	var y := p.y + 58.0
+	var w := 0.0
 	for i in items.size():
 		items[i].position = Vector2(p.x + 12.0, y + i * LINE).round()
+		w = maxf(w, items[i].get_minimum_size().x)
+	# each row runs from the mark to well past the longest entry, LINE high, centred on its words
+	_rows = Rect2(roundf(p.x - 4.0), roundf(y - 2.0), roundf(w + 40.0), LINE * items.size())
 	mark.position = Vector2(p.x + 2.0, y + index * LINE + 4.0).round()
 	hint_label.position = Vector2(size.x - 8.0 - hint_label.get_minimum_size().x, size.y - 20.0).round()
 
@@ -124,6 +122,28 @@ func _select(i: int) -> void:
 
 func _confirm() -> void:
 	chosen.emit(_ids[index], index)
+
+
+## The entry under a point (native px), or -1.
+func _row_at(at: Vector2) -> int:
+	if not _rows.has_point(at):
+		return -1
+	return clampi(floori((at.y - _rows.position.y) / LINE), 0, items.size() - 1)
+
+
+func _input(e: InputEvent) -> void:
+	if not (e is InputEventMouseMotion or e is InputEventMouseButton):
+		return
+	var row := _row_at(get_local_mouse_position())
+	if row < 0:
+		return
+	if e is InputEventMouseMotion:
+		if row != index:
+			_select(row)
+	elif (e as InputEventMouseButton).pressed and (e as InputEventMouseButton).button_index == MOUSE_BUTTON_LEFT:
+		_select(row)
+		_confirm()
+		get_viewport().set_input_as_handled()
 
 
 func _unhandled_input(e: InputEvent) -> void:

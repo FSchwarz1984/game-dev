@@ -9,8 +9,8 @@ extends Node
 ##   font_theme      "pixel" (Fusion Pixel 12px) or "vector" (Noto Serif SC), pending.
 ##   body_profile    a BodyRules profile: "draft" (pending) or "legacy" (the JS segment 1 body).
 ##   touch_ui        "auto" (on for phones and after a real touch), "on", "off".
-##   reduce_motion   减少晃动 (docs/design/dialogue-staging.md D6): no shaking, hopping or flashing in dialogue; off
-##                    by default.
+##   reduce_motion   减少晃动 (docs/design/dialogue-staging.md D6): no shaking, hopping or flashing in dialogue, and
+##                    calmer sway in the world (G5R3-41); on by default (G5R3-40, the user keeps it on).
 ## Settings persist through Save ("settings" slot); flags are part of the game save.
 
 signal settings_changed(key: String, value)
@@ -21,7 +21,7 @@ const DEFAULT_SETTINGS := {
 	"font_theme": "pixel",
 	"body_profile": "draft",
 	"touch_ui": "auto",
-	"reduce_motion": false,
+	"reduce_motion": true,   # G5R3-40: the user keeps it on
 	"long_press_s": 0.34,
 	"swipe_px": 14.0,
 	"vol_master": 1.0,

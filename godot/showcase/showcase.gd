@@ -47,6 +47,30 @@ func _ready() -> void:
 	open(String(args.get("mode", "menu")))
 
 
+## G5R3-56: on the user's 2560x1440 screen the game drew at x3 in the middle (2016x1134) with a
+## black frame in fullscreen. Reproduced here: shrink the window, then enlarge it, and Godot's
+## internal sizes are right (window, content_scale_size, the final transform) but the picture stays
+## where the stretch put it for the old content size (here 1008x567 -> 1920x1080 shows 504x283 x3,
+## centred); any further resize puts it right. So the window's size is checked every frame, and two
+## frames after it changed the content scale is set again, which makes the window recompute the
+## stretch and the picture's place from the sizes it has now (re-sending size_changed first, so the
+## 2D canvas, PixelView3D.fit and PixelStage.fit all agree on them).
+var _fitted_size := Vector2i.ZERO
+var _refit_in := 0
+
+
+func _process(_dt: float) -> void:
+	var win := get_window()
+	if win.size != _fitted_size:
+		_fitted_size = win.size
+		_refit_in = 2
+	elif _refit_in > 0:
+		_refit_in -= 1
+		if _refit_in == 0:
+			win.size_changed.emit()
+			win.content_scale_size = win.content_scale_size   # (the setter recomputes even when equal)
+
+
 ## The 2D canvas rule outside the 3D sample (which sets it itself, PixelView3D.fit): s = round(h /
 ## 360), the canvas is the window divided by s, so every native pixel is s x s window pixels.
 func _fit_canvas() -> void:

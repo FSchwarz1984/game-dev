@@ -250,6 +250,9 @@ func test_every_face_has_its_pieces_and_every_mark_its_frames() -> void:
 
 
 func test_story_ui_stages_lines_on_the_real_box_and_the_card_never_reaches_the_words() -> void:
+	# (the staging is checked with movement on; 减少晃动 is a saved setting, and on by default since
+	# G5R3-40, so it is overridden for this run only)
+	GameState.overrides["reduce_motion"] = false
 	var root := (Engine.get_main_loop() as SceneTree).root
 	var ui := StoryUI.new()
 	root.add_child(ui)
@@ -276,6 +279,7 @@ func test_story_ui_stages_lines_on_the_real_box_and_the_card_never_reaches_the_w
 	check(not ui.dialogue_open, "closed after the last line")
 	eq(ui.dlg.card_offset, Vector2.ZERO)
 	ui.free()          # now, not at the end of a frame the runner may never reach
+	GameState.overrides.erase("reduce_motion")
 
 
 func test_a_click_wait_stops_the_line_until_the_player_presses_on() -> void:
@@ -367,6 +371,7 @@ func test_a_track_moves_one_step_every_frame_at_30_fps() -> void:
 
 
 func test_a_long_frame_slows_the_line_instead_of_skipping_its_beats() -> void:
+	GameState.overrides["reduce_motion"] = false   # (see above: the jolt is what is checked)
 	var root := (Engine.get_main_loop() as SceneTree).root
 	var ui := StoryUI.new()
 	root.add_child(ui)
@@ -380,3 +385,4 @@ func test_a_long_frame_slows_the_line_instead_of_skipping_its_beats() -> void:
 	check(not ui.stg.typed_out, "and the line has not raced to its end")
 	ui.close()
 	ui.free()
+	GameState.overrides.erase("reduce_motion")

@@ -105,7 +105,16 @@ func duck(amount: float, dur: float = 0.3) -> void:
 
 # ------------------------------------------------------------------ ambience
 
+## G5R3-53 (2026-10-17): no field recordings unless one is truly needed and known to sound right
+## (the user: a crow recording carried human speech, and the loops were plain to hear). Until the
+## sound round brings synthesised ambience and music, ambience() and spot() play nothing; the
+## synthesised feedback below stays.
+const FIELD_RECORDINGS := false
+
+
 func ambience(names: Array, fade: float = 2.0) -> void:
+	if not FIELD_RECORDINGS:
+		names = []
 	if names == _amb_names:
 		return
 	_amb_names = names.duplicate()
@@ -129,6 +138,8 @@ func ambience(names: Array, fade: float = 2.0) -> void:
 
 
 func spot(name: String, volume_db: float = -4.0) -> void:
+	if not FIELD_RECORDINGS:
+		return
 	var s := load("res://audio/spots/%s.ogg" % name) as AudioStream
 	if s != null:
 		_play(s, "Ambience", volume_db, 1.0, name)
