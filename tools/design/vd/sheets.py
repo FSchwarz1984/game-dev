@@ -184,7 +184,7 @@ def sheet_realm(R, T, trees, views, fonts):
     svg.rect(fr.u0, fr.v0, fr.w, fr.h, fill="#f7f4ec", stroke=S.INK, stroke_width=1.0)
     svg.defn('<clipPath id="mapclipB"><rect x="%s" y="%s" width="%s" height="%s"/></clipPath>' % (f(fr.u0), f(fr.v0), f(fr.w), f(fr.h)))
     svg.auto_clip = "url(#mapclipB)"
-    zone_layer(svg, fr, R, wash=True)
+    zone_layer(svg, fr, R, wash=False)
     svg.layer("hill")
     u, v, w, h, uri = PL.hillshade_image(T, fr, alpha=0.36)
     svg.image(u, v, w, h, uri, preserveAspectRatio="none", opacity=0.9)

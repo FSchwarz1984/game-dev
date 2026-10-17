@@ -202,8 +202,9 @@ def draw_roads(svg: Svg, fr: Frame, R, detail=True):
             fill, stroke, dash = ("url(#gyo)" if detail else S.PATH_GYO), S.INK2, None
         else:
             fill, stroke, dash = S.PATH_SO, S.INK3, "2.2,1.6"
-        svg.path(smooth_path(pts, closed=True, tension=0.0), fill=fill, stroke=stroke, stroke_width=0.6,
-                 stroke_dasharray=dash, opacity=0.95)
+        svg.path(smooth_path(pts, closed=True, tension=0.0), fill=fill, stroke=stroke,
+                 stroke_width=(0.45 if rd["grade"] == "草" else 0.6), stroke_dasharray=dash,
+                 opacity=(0.8 if rd["grade"] == "草" else 0.95))
         if rd["kind"] == "DAN" and rd.get("steps"):
             st = rd["steps"]
             (x0, y0), (x1, y1) = rd["pts"][0][:2], rd["pts"][-1][:2]
@@ -285,32 +286,43 @@ def draw_cliffs(svg: Svg, fr: Frame, R, T):
             svg.line(a[0], a[1], b[0], b[1], stroke=S.ROCK_EDGE, stroke_width=0.7)
 
 
-def tree_symbol(svg: Svg, u, v, r, kind, trunk=None, opacity=0.9):
+def tree_symbol(svg: Svg, u, v, r, kind, trunk=None, opacity=0.9, shadow=True):
+    """Plan tree: a soft shadow to the south-east, the canopy (scalloped for broadleaf, a fine star for
+    conifers), a light on the north-west, the trunk dot."""
     col = TREE_FILL.get(kind, S.BROAD)
-    if kind in ("SUG", "AKM"):
-        n = 12
+    if shadow and r > 3:
+        svg.circle(u + r * 0.22, v + r * 0.26, r * 0.98, fill="#3b3a2a", fill_opacity=0.10, stroke="none")
+    if kind in ("SUG", "AKM", "HIN"):
+        n = 16
         pts = []
         for k in range(n * 2):
             a = math.pi * k / n
-            rr = r if k % 2 == 0 else r * 0.78
+            rr = r if k % 2 == 0 else r * 0.86
             pts.append((u + rr * math.cos(a), v + rr * math.sin(a)))
-        svg.poly(pts, fill=col, stroke="#4c5f45", stroke_width=0.45, opacity=opacity)
+        svg.poly(pts, fill=col, fill_opacity=opacity, stroke="#46583f", stroke_width=0.45)
+        if r > 6:
+            for k in range(0, n, 2):
+                a = 2 * math.pi * k / n
+                svg.line(u + r * 0.18 * math.cos(a), v + r * 0.18 * math.sin(a), u + r * 0.7 * math.cos(a),
+                         v + r * 0.7 * math.sin(a), stroke="#46583f", stroke_width=0.35, opacity=0.6)
     else:
-        n = 9
+        n = 11
         d = []
         for k in range(n):
             a0 = 2 * math.pi * k / n
             a1 = 2 * math.pi * (k + 1) / n
-            p0 = (u + r * math.cos(a0), v + r * math.sin(a0))
-            p1 = (u + r * math.cos(a1), v + r * math.sin(a1))
+            p0 = (u + r * 0.96 * math.cos(a0), v + r * 0.96 * math.sin(a0))
+            p1 = (u + r * 0.96 * math.cos(a1), v + r * 0.96 * math.sin(a1))
             am = (a0 + a1) / 2
-            c = (u + r * 1.18 * math.cos(am), v + r * 1.18 * math.sin(am))
+            c = (u + r * 1.1 * math.cos(am), v + r * 1.1 * math.sin(am))
             if k == 0:
                 d.append("M%s,%s" % (f(p0[0]), f(p0[1])))
             d.append("Q%s,%s %s,%s" % (f(c[0]), f(c[1]), f(p1[0]), f(p1[1])))
-        svg.path(" ".join(d) + " Z", fill=col, stroke="#5a6a4a", stroke_width=0.45, opacity=opacity)
+        svg.path(" ".join(d) + " Z", fill=col, fill_opacity=opacity, stroke="#5a6a4a", stroke_width=0.45)
+    if r > 4:
+        svg.circle(u - r * 0.28, v - r * 0.3, r * 0.5, fill="#ffffff", fill_opacity=0.13, stroke="none")
     if trunk:
-        svg.circle(u, v, max(trunk, 0.8), fill="#5b4a3a", stroke="none")
+        svg.circle(u, v, max(min(trunk, r * 0.3), 0.7), fill="#5b4a3a", stroke="none")
 
 
 def draw_plantings(svg: Svg, fr: Frame, R, trees):
@@ -364,12 +376,17 @@ def draw_camphor(svg: Svg, fr: Frame, R, crown=True):
             svg.path(smooth_path(fr.pts(Q[:, :2])), fill="none", stroke="#b8d18a", stroke_width=max(0.35 * fr.s, 1.2),
                      stroke_linecap="round", opacity=0.95)
     fp = e["footprint"]["poly"]
-    svg.path(smooth_path(fr.pts(fp), closed=True, tension=0.4), fill="#6a5340", stroke="#3b2d22", stroke_width=0.9)
+    # buttress roots: a light hatched halo, then the trunk
+    svg.path(smooth_path(fr.pts(fp), closed=True, tension=0.25), fill="#a08a6e", fill_opacity=0.55, stroke="#5a4634",
+             stroke_width=0.6)
     u, v = fr(0, 0)
-    svg.circle(u, v, 3.6 * fr.s, fill="#7a6048", stroke="#3b2d22", stroke_width=1.0)
+    svg.circle(u + 3.6 * fr.s * 0.18, v + 3.6 * fr.s * 0.2, 3.6 * fr.s, fill="#2e2a20", fill_opacity=0.18, stroke="none")
+    svg.circle(u, v, 3.6 * fr.s, fill="#6d5642", stroke="#3b2d22", stroke_width=1.0)
+    for k in range(3):
+        svg.circle(u, v, 3.6 * fr.s * (0.3 + 0.2 * k), fill="none", stroke="#5a4634", stroke_width=0.4, opacity=0.6)
     # the shimenawa round the trunk
-    svg.circle(u, v, 3.75 * fr.s, fill="none", stroke="#e6ddc6", stroke_width=1.4)
-    svg.circle(u, v, 3.75 * fr.s, fill="none", stroke=S.INK, stroke_width=0.5, stroke_dasharray="1.2,1.6")
+    svg.circle(u, v, 3.8 * fr.s, fill="none", stroke="#efe6cf", stroke_width=1.8)
+    svg.circle(u, v, 3.8 * fr.s, fill="none", stroke=S.INK, stroke_width=0.5, stroke_dasharray="1.2,1.8")
 
 
 def draw_elements(svg: Svg, fr: Frame, R, detail=True):
@@ -425,7 +442,7 @@ def draw_elements(svg: Svg, fr: Frame, R, detail=True):
             continue
         if cat == "ST" and kind == "GAK":
             if e.get("pts") and kind == "GAK" and e["id"] != "ST-GAK-02":
-                draw_wall(svg, fr, e["pts"], e["size"][2])
+                draw_wall(svg, fr, e["pts"], e["size"][2], e.get("low", "S"))
             elif e["id"] == "ST-GAK-02":
                 (x0, y0) = (e["pos"][0] - e["size"][0] / 2, e["pos"][1] - e["size"][1] / 2)
                 pts = [(x0, y0), (x0 + e["size"][0], y0), (x0 + e["size"][0], y0 + e["size"][1]), (x0, y0 + e["size"][1])]
@@ -536,15 +553,15 @@ def draw_elements(svg: Svg, fr: Frame, R, detail=True):
             continue
 
 
-def draw_wall(svg: Svg, fr: Frame, pts, height):
-    """Retaining wall: a heavy line with short ticks on the low (south) side."""
+def draw_wall(svg: Svg, fr: Frame, pts, height, low="S"):
+    """Retaining wall: a heavy line with short ticks on the low side."""
     P = np.asarray(pts, dtype=float)
     a = fr.pts(P)
     svg.path(smooth_path(a, tension=0.0), fill="none", stroke=S.INK, stroke_width=1.5)
     Q, _ = reg.resample(P, 0.8)
     N = reg.offset_polyline(Q, 1.0) - Q[:, :2]
-    # ticks toward the south side
-    if np.mean(N[:, 1]) > 0:
+    want = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[low]
+    if np.mean(N[:, 0] * want[0] + N[:, 1] * want[1]) < 0:
         N = -N
     for k in range(len(Q)):
         p0 = fr(Q[k][0], Q[k][1])
@@ -662,68 +679,96 @@ def draw_frustum(svg: Svg, fr: Frame, T, cam, label, color=S.SKY, fill_op=0.08, 
         svg.text(u + 5, v - 4, label, cls="lab-b", halo=True, fill=color)
 
 
-def label_elements(svg: Svg, fr: Frame, R, ids=None, avoid=None, cls="lab", minscale=6.0):
-    """Greedy label placement around anchors."""
+SERIES = {"SG-HAK": "SG-HAK-01…09（墓）", "SG-TOU": "SG-TOU-01…09（灯杆）", "AN-NIW": "AN-NIW-01…04（鸡）",
+          "SG-JIZ": "SG-JIZ-01…06（地藏）"}
+
+
+def label_elements(svg: Svg, fr: Frame, R, ids=None, avoid=None, cls="lab", skip=()):
+    """Label every element with its ID. Series are labelled once ("SG-HAK-01…09"). Each label tries
+    rings of positions around its anchor (with a leader when it moves away) and avoids labels already
+    placed and the given keep-clear boxes."""
     svg.layer("labels")
     placed = list(avoid or [])
     items = []
+    seen_series = set()
     for e in R["elements"]:
         if ids is not None and e["id"] not in ids:
             continue
-        if e["id"].startswith("SG-TOU") or e["id"].startswith("AN-NIW-0") and e["id"] != "AN-NIW-01":
+        if e["id"] in skip:
             continue
         pos = e.get("pos")
         if not pos or not fr.contains(pos[0], pos[1], -1):
             continue
-        items.append((e["id"], pos))
+        ser = e["id"][:6]
+        if ser in SERIES:
+            if ser in seen_series:
+                continue
+            seen_series.add(ser)
+            members = [x for x in R["elements"] if x["id"].startswith(ser)]
+            P = np.array([x["pos"] for x in members])
+            items.append((SERIES[ser], P.mean(axis=0), 2))
+            continue
+        items.append((e["id"], pos, 1))
     for rd in R["roads"]:
         if ids is not None and rd["id"] not in ids:
             continue
         P, s = reg.resample([p[:2] for p in rd["pts"]], 0.5)
         inside = [p for p in P if fr.contains(p[0], p[1], -2)]
         if inside:
-            items.append((rd["id"], inside[len(inside) // 2]))
+            items.append((rd["id"], inside[len(inside) // 2], 1))
     for w in R["water"]:
         if ids is not None and w["id"] not in ids:
             continue
         if w.get("pos"):
-            items.append((w["id"], w["pos"]))
+            items.append((w["id"], w["pos"], 1))
         elif w.get("pts"):
             P = w["pts"]
             k = len(P) // 2
             if fr.contains(P[k][0], P[k][1]):
-                items.append((w["id"], P[k][:2]))
+                items.append((w["id"], P[k][:2], 1))
     for pl in R["plantings"]:
         if ids is not None and pl["id"] not in ids:
             continue
         if pl.get("poly"):
             c = reg.poly_centroid(pl["poly"])
             if fr.contains(c[0], c[1], -2):
-                items.append((pl["id"], c))
-    cw = 4.8   # approx width per char at 8.5px
-    for tid, pos in items:
+                items.append((pl["id"], c, 1))
+    cw = 4.75
+    out = []
+    for tid, pos, kind in items:
         u, v = fr(pos[0], pos[1])
-        w = len(tid) * cw + 2
-        h = 9
+        w = sum(cw * (2.0 if ord(ch) > 0x2E80 else 1.0) for ch in tid) + 2
+        h = 9.5
         best = None
-        for du, dv in ((6, -5), (6, 9), (-6 - w, -5), (-6 - w, 9), (-w / 2, -9), (-w / 2, 16), (10, 2), (-10 - w, 2),
-                       (12, -14), (-12 - w, -14), (12, 18), (-12 - w, 18)):
-            box = (u + du, v + dv - h + 2, u + du + w, v + dv + 2)
-            if all(box[2] < b[0] or box[0] > b[2] or box[3] < b[1] or box[1] > b[3] for b in placed):
-                best = (du, dv, box)
+        for rad in (7, 14, 24, 36, 50, 66):
+            for k in range(16):
+                a = 2 * math.pi * k / 16 - math.pi / 4
+                cx, cy = u + rad * math.cos(a), v + rad * math.sin(a)
+                # anchor the box on the side facing the point
+                bx = cx if math.cos(a) >= -0.2 else cx - w
+                by = cy + (h / 2 if abs(math.sin(a)) < 0.5 else (h if math.sin(a) > 0 else 0))
+                box = (bx - 1, by - h, bx + w + 1, by + 1.5)
+                if not (fr.u0 < box[0] and box[2] < fr.u0 + fr.w and fr.v0 < box[1] and box[3] < fr.v0 + fr.h):
+                    continue
+                if all(box[2] < b[0] or box[0] > b[2] or box[3] < b[1] or box[1] > b[3] for b in placed):
+                    best = (bx, by, box, rad)
+                    break
+            if best:
                 break
         if best is None:
-            du, dv = 6, -5
-            box = (u + du, v + dv - h + 2, u + du + w, v + dv + 2)
-            best = (du, dv, box)
-        du, dv, box = best
+            bx, by = u + 6, v - 4
+            best = (bx, by, (bx, by - h, bx + w, by + 1.5), 7)
+        bx, by, box, rad = best
         placed.append(box)
-        tx, ty = u + du, v + dv
-        ax = min(max(u, box[0]), box[2])
-        ay = min(max(v, box[1]), box[3])
-        if math.hypot(ax - u, ay - v) > 4:
+        out.append((tid, u, v, bx, by, box, rad))
+    for tid, u, v, bx, by, box, rad in out:
+        if rad > 7:
+            ax = min(max(u, box[0]), box[2])
+            ay = min(max(v, box[1]), box[3])
             svg.line(u, v, ax, ay, stroke=S.INK3, stroke_width=0.45)
-        svg.text(tx, ty, tid, cls=cls, halo=True)
+            svg.circle(u, v, 0.9, fill=S.INK2)
+    for tid, u, v, bx, by, box, rad in out:
+        svg.text(bx, by - 1.5, tid, cls=cls, halo=True)
     return placed
 
 

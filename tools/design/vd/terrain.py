@@ -146,24 +146,51 @@ class Terrain:
         return H * (1 - w) + hv * w
 
     def _cliff(self, H, c):
+        """A cliff along a polyline. The low side drops by `drop` at the face (width `w`) and fades back to
+        the natural ground over `fade` metres (so no trench is left behind); `raise` lifts the high side
+        at the face (for rock bands, where both sides are natural ground)."""
         P, _ = reg.resample(c["pts"], 0.25)
+        w = c["w"]
+        fade = c.get("fade", 2.5)
+        rise = c.get("raise", 0.0)
         side, d = reg.signed_side(self.X, self.Y, P[:, :2])
-        # "side": compass side that drops; decide which signed side that is from the line's direction
         mid = len(P) // 2
-        tx, ty = P[min(mid + 1, len(P) - 1), 0] - P[mid - 1, 0], P[min(mid + 1, len(P) - 1), 1] - P[mid - 1, 1]
+        j0, j1 = max(mid - 1, 0), min(mid + 1, len(P) - 1)
+        tx, ty = P[j1, 0] - P[j0, 0], P[j1, 1] - P[j0, 1]
         nx, ny = -ty, tx                                            # left normal
         want = {"S": (0, -1), "N": (0, 1), "E": (1, 0), "W": (-1, 0)}[c.get("side", "S")]
         low = 1 if (nx * want[0] + ny * want[1]) > 0 else -1
-        zone = (side == low) & (d < c["w"] * 3 + 4)
-        # the top height along the line
+        reach = w + fade + 0.5
         top = self.sample(H, P[:, 0], P[:, 1])
-        m, dd, i = self._nearest(P[:, :2], self.X, self.Y, c["w"] * 3 + 4)
+        m, dd, i = self._nearest(P[:, :2], self.X, self.Y, reach)
         idx = np.where(m)
-        z = zone[idx]
-        topv = top[np.clip(i, 0, len(top) - 1)]
-        lim = topv - c["drop"] * smoothstep(dd / c["w"])
+        ok = np.isfinite(dd)
+        ii = np.clip(i, 0, len(top) - 1)
+        topv = top[ii]
         sub = H[idx]
-        sub = np.where(z & np.isfinite(dd), np.minimum(sub, lim), sub)
+        sd = side[idx]
+        # taper past the two ends of the line (a cliff stops; it does not reach round its own end)
+        qx, qy = self.X[idx], self.Y[idx]
+        t0 = P[1, :2] - P[0, :2]
+        t0 = t0 / max(np.hypot(*t0), 1e-9)
+        tn = P[-1, :2] - P[-2, :2]
+        tn = tn / max(np.hypot(*tn), 1e-9)
+        b0 = np.maximum(0.0, -((qx - P[0, 0]) * t0[0] + (qy - P[0, 1]) * t0[1]))
+        bn = np.maximum(0.0, (qx - P[-1, 0]) * tn[0] + (qy - P[-1, 1]) * tn[1])
+        endw = 1.0 - smoothstep(np.maximum(b0, bn) / 1.5)
+        dd = np.where(endw <= 0, np.inf, dd)
+        ok = ok & (endw > 0)
+        # low side
+        lim = topv - c["drop"] * smoothstep(dd / w) * endw
+        back = smoothstep((dd - w) / max(fade, 1e-6))
+        lim = lim + (sub - lim) * back
+        lo = ok & (sd == low)
+        sub = np.where(lo, np.minimum(sub, lim), sub)
+        if rise > 0:
+            up = topv + rise * smoothstep(dd / w) * endw
+            up = up + (sub - up) * back
+            hi = ok & (sd != low)
+            sub = np.where(hi, np.maximum(sub, up), sub)
         H[idx] = sub
         return H
 
