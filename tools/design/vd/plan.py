@@ -196,6 +196,15 @@ def draw_roads(svg: Svg, fr: Frame, R, detail=True):
                 u, v = fr(q[0], q[1])
                 svg.circle(u, v, max(0.32 * fr.s, 1.2), fill=S.PATH_GYO, stroke=S.INK2, stroke_width=0.5)
             continue
+        if rd["kind"] == "NEM" and rd["id"] != "RD-NEM-01":
+            Q, _ = reg.resample([p[:2] for p in rd["pts"]], 0.4)
+            for side in (1, -1):
+                E = reg.offset_polyline(Q, side * rd["w"] / 2)
+                svg.path(smooth_path(fr.pts(E)), fill="none", stroke=S.INK3, stroke_width=0.45, stroke_dasharray="1.6,2.4",
+                         opacity=0.8)
+            svg.path(smooth_path(fr.pts(Q)), fill="none", stroke="#b39f7b", stroke_width=max(0.35 * fr.s, 1.0),
+                     stroke_dasharray="0.6,%s" % f(max(0.6 * fr.s, 2.0)), stroke_linecap="round", opacity=0.9)
+            continue
         if rd["grade"] == "真":
             fill, stroke, dash = "url(#shin)", S.INK, None
         elif rd["grade"] == "行":
@@ -431,6 +440,17 @@ def draw_elements(svg: Svg, fr: Frame, R, detail=True):
         if cat == "RK":
             shapes = reg.footprint_shapes(e)
             for sh in shapes:
+                if sh[0] == "line":
+                    Q, _ = reg.resample(sh[1], 0.9)
+                    rng = np.random.default_rng(7)
+                    for q in Q:
+                        u, v = fr(q[0] + rng.uniform(-0.5, 0.5), q[1] + rng.uniform(-0.6, 0.6))
+                        svg.circle(u, v, (sh[2] * 0.32 + rng.uniform(-0.15, 0.2)) * fr.s, fill="url(#rockh)", stroke=S.ROCK_EDGE,
+                                   stroke_width=0.6)
+                    a, b = fr(*Q[0][:2]), fr(*Q[-1][:2])
+                    svg.line(a[0], a[1], b[0], b[1], stroke="#6b5440", stroke_width=max(0.5 * fr.s, 1.5), stroke_linecap="round",
+                             opacity=0.8)
+                    continue
                 if sh[0] == "poly":
                     svg.path(smooth_path(fr.pts(sh[1]), closed=True, tension=0.35), fill="url(#rockh)", stroke=S.ROCK_EDGE,
                              stroke_width=0.9)

@@ -71,9 +71,9 @@ def sequence_markers(svg, fr, R, size=8.5):
 
 def sheet_site(R, T, trees, views, fonts):
     """A 总平面图: the whole registry extent."""
-    x0, y0, x1, y1 = R["coords"]["extent"]
+    x0, y0, x1, y1 = -62.0, -156.0, 70.0, 46.0
     s = 5.0
-    W, H = 1480, 1210
+    W, H = 1560, 1180
     fr = Frame(x0, y0, x1, y1, s, 46, 96)
     svg = Svg(W, H, "新手村 v4 总平面图")
     PL.defs(svg)
@@ -100,12 +100,12 @@ def sheet_site(R, T, trees, views, fonts):
             PL.draw_frustum(svg, fr, T, vw["cam"], vw["id"], fill_op=0.10)
     sequence_markers(svg, fr, R, size=7)
     zone_labels(svg, fr, R, cls="zone-s", offsets={"ZN-10": (-22, 10), "ZN-01": (14, -20), "ZN-07": (0, 4),
-                                                   "ZN-04": (6, 4), "ZN-05": (-8, -3), "ZN-02": (3, 6), "ZN-03": (9, -1)})
+                                                   "ZN-04": (6, 4), "ZN-05": (-8, -3), "ZN-02": (12, -8), "ZN-03": (-6, 9)})
     # landmark labels
     svg.layer("labels")
     for tid, (x, y), lab, dx, dy in [("TR-CAM-01", (0, 0), "大楠", 0, 30), ("BL-MIN-01", (-26, -3.8), "茅屋", 0, -22),
-                                     ("RK-CHO-01", (-36.4, -41), "眺望岩", -10, 20), ("SG-MCK-01", (24.4, -42.5), "东门", 30, 4),
-                                     ("SG-DOS-01", (36, -46.8), "道祖神", 26, -6), ("WA-FAL-01", (10.1, -45.6), "瀑布", -24, 12),
+                                     ("RK-CHO-01", (-36.4, -41), "眺望岩", -10, 20), ("SG-MCK-01", (24.4, -42.5), "东门", 34, -10),
+                                     ("SG-DOS-01", (36, -46.8), "道祖神", 34, 14), ("WA-FAL-01", (10.1, -45.6), "瀑布", -24, 12),
                                      ("ST-HAS-02", (20.4, -147.6), "石桥", 0, -14), ("SG-MCK-02", (-9, 21.1), "北门", 0, -12),
                                      ("SG-MCK-03", (-48.6, -28), "西南门", -6, -12)]:
         u, v = fr(x, y)
@@ -162,6 +162,7 @@ def sheet_site(R, T, trees, views, fonts):
     for ln in notes:
         svg.text(px, y, ln, cls="note-s")
         y += 14
+    approach_profile(svg, T, px + 26, y + 70, W - px - 70, 230)
     PL.north_arrow(svg, px + 30, H - 120, 26)
     PL.scale_bar(svg, px + 80, H - 140, s, (0, 10, 20, 40, 60))
     yy = H - 82
@@ -379,6 +380,165 @@ def sheet_walk(R, T, trees, W_, fonts, rc):
             y += 14
     PL.north_arrow(svg, px + 30, H - 110, 24)
     PL.scale_bar(svg, px + 80, H - 128, s, (0, 5, 10, 20))
+    yy = H - 74
+    for ln in _common_lines(R, "1:%d" % round(1000 / (s * 0.2646))):
+        svg.text(px, yy, ln, cls="note-s")
+        yy += 13
+    return svg, W, H
+
+
+APPROACH = [(38.6, -48.6), (34.0, -47.6), (29.6, -46.8), (26.2, -46.0), (24.4, -45.2), (24.4, -42.6), (24.2, -39.6),
+            (23.0, -36.8), (20.6, -34.6), (17.4, -33.2), (14.4, -32.6), (11.4, -32.2), (10.4, -31.9), (10.4, -28.4),
+            (10.4, -24.6), (10.4, -21.4), (8.0, -20.8), (5.6, -20.8), (3.6, -20.8), (3.6, -13.5), (3.6, -12.4)]
+STEPS = [((10.4, -31.9), (10.4, -28.4), -1.0, 0.44), ((10.4, -24.6), (10.4, -21.4), 0.44, 1.88),
+         ((3.6, -13.5), (3.6, -12.5), 2.37, 2.85)]
+
+
+def approach_profile(svg, T, u0, v0, w, h):
+    """The approach unrolled: distance from the fork at the pass along the path, ground height (x3
+    vertical), the stations (numbered as on the plan), widths and light (P2 thresholds, P4)."""
+    P, s = reg.resample(APPROACH, 0.25)
+    H = T.h(P[:, 0], P[:, 1]).astype(float)
+    def seg_mask(a, b, tol=0.35):
+        a, b = np.array(a), np.array(b)
+        L = np.linalg.norm(b - a)
+        t = ((P[:, :2] - a) @ (b - a)) / (L * L)
+        d = np.abs((P[:, 0] - a[0]) * (b - a)[1] - (P[:, 1] - a[1]) * (b - a)[0]) / L
+        return (t >= -0.02) & (t <= 1.02) & (d < tol), np.clip(t, 0, 1)
+    # the slab bridge and the short step from it to the foot of the stair
+    m, t = seg_mask((14.4, -32.6), (11.4, -32.2))
+    H[m] = -1.1 + 0.1 * t[m]
+    m, t = seg_mask((11.4, -32.2), (10.4, -31.9))
+    H[m] = -1.0
+    for (a, b, h0, h1) in STEPS:
+        m, t = seg_mask(a, b, 0.3)
+        n = 9 if np.linalg.norm(np.subtract(b, a)) > 2 else 3
+        H[m] = h0 + (h1 - h0) * np.floor(t[m] * n + 1e-6) / n
+    smax = s[-1]
+    hmin, hmax = -2.0, 4.0
+    sx = w / smax
+    sy = sx * 3.0
+    hgt = (hmax - hmin) * sy
+    v_base = v0 + hgt
+    def U(si):
+        return u0 + si * sx
+    def Vv(hi):
+        return v_base - (hi - hmin) * sy
+    svg.text(u0, v0 - 44, "参道纵断面：从峠顶的分岔到祠，沿路展开（高度放大 3 倍）", cls="note-b")
+    svg.text(u0, v0 - 30, "先下、过水、再上（P2 下・渡・上）；窄而暗的切通之后是开阔的苔庭（P4 压缩—释放）。", cls="note-s")
+    svg.rect(u0, v0, w, hgt, fill="#f7f4ec", stroke=S.INK3, stroke_width=0.6)
+    for hh in range(-2, 5):
+        if hmin <= hh <= hmax:
+            svg.line(u0, Vv(hh), u0 + w, Vv(hh), stroke="#d8cfbf", stroke_width=0.5)
+            svg.text(u0 - 4, Vv(hh) + 3, "%+d" % hh if hh else "±0", cls="num", anchor="end")
+    pts = [(U(si), Vv(hi)) for si, hi in zip(s, H)]
+    svg.poly(pts + [(U(smax), v_base), (U(0), v_base)], fill="#d9cdb2", stroke="none")
+    svg.poly(pts, closed=False, fill="none", stroke=S.INK, stroke_width=1.3)
+    def dist_of(pt):
+        d = np.hypot(P[:, 0] - pt[0], P[:, 1] - pt[1])
+        return float(s[int(np.argmin(d))])
+    marks = [((38.6, -48.6), "2", "峠顶", "村道 2.2–2.8 米，明"), ((24.4, -42.6), "3", "东门", "道切り绳・雾"),
+             ((24.2, -39.6), "4", "切通", "1.2–1.6 米，暗，往下"), ((12.9, -32.4), "5", "过溪", "石板桥"),
+             ((10.4, -31.9), "6", "石段", "九级，往上"), ((10.4, -26.5), "7", "墓台", "踊り場"),
+             ((10.4, -24.6), "8", "石段", "九级"), ((3.6, -20.8), "9", "真路", "苔庭开阔、亮"),
+             ((3.6, -12.4), "", "祠", "")]
+    for k, (pt, num, name, note) in enumerate(marks):
+        si = dist_of(pt)
+        x = U(si)
+        hh = float(np.interp(si, s, H))
+        row = (k % 2) * 26
+        svg.line(x, Vv(hh) - 3, x, v0 + 8 + row, stroke=S.VERMILION, stroke_width=0.6, stroke_dasharray="2,2")
+        svg.text(x + 3, v0 + 14 + row, ("%s %s" % (num, name)).strip(), cls="red")
+        if note:
+            svg.text(x + 3, v0 + 25 + row, note, cls="lab-s")
+    svg.text(u0, v_base + 14, "0", cls="num")
+    svg.text(u0 + w, v_base + 14, "%.0f 米" % smax, cls="num", anchor="end")
+
+
+def sheet_screens(R, T, trees, views, fonts):
+    """D 屏数与主角间距: zones washed, the four protagonists, their key-view frames, distances, and the
+    rule-of-thumb screen."""
+    from .tables import PROTAGONISTS, protagonist_shape, SCREEN_RULE_M2
+    x0, y0, x1, y1 = -54.0, -52.0, 32.0, 26.0
+    s = 10.0
+    fr = Frame(x0, y0, x1, y1, s, 40, 100)
+    W, H = int(fr.u0 + fr.w + 500), int(fr.v0 + fr.h + 40)
+    svg = Svg(W, H, "新手村 v4 屏数与主角间距")
+    PL.defs(svg)
+    svg.layer("base")
+    svg.rect(0, 0, W, H, fill=S.PAPER)
+    svg.rect(fr.u0, fr.v0, fr.w, fr.h, fill="#f7f4ec", stroke=S.INK, stroke_width=1.0)
+    svg.defn('<clipPath id="mapclipD"><rect x="%s" y="%s" width="%s" height="%s"/></clipPath>' % (f(fr.u0), f(fr.v0), f(fr.w), f(fr.h)))
+    svg.auto_clip = "url(#mapclipD)"
+    zone_layer(svg, fr, R, wash=True)
+    PL.draw_contours(svg, fr, T, interval=1.0, major=5.0, labels=False, minor_w=0.25, major_w=0.55)
+    PL.draw_water(svg, fr, R, T)
+    PL.draw_boundary(svg, fr, R, width=2.0)
+    PL.draw_camphor(svg, fr, R)
+    svg.layer("frames")
+    vmap = {v["id"]: v for v in views}
+    cols = {"TR-CAM-01": "#3f6a2a", "BL-MIN-01": "#8a5a2b", "SG-MCK-01": S.VERMILION, "RK-CHO-01": "#4f5f7a"}
+    for pid, name, vid in PROTAGONISTS:
+        cam = vmap[vid]["cam"]
+        pts = PL.frustum_ground(T, cam, step=6)
+        svg.poly(fr.pts(pts), fill=cols[pid], fill_opacity=0.12, stroke=cols[pid], stroke_width=1.4)
+        shp = protagonist_shape(R, pid)
+        svg.poly(fr.pts(shp), fill=cols[pid], fill_opacity=0.65, stroke=S.INK, stroke_width=0.8)
+        c = shp.mean(axis=0)
+        u, v = fr(c[0], c[1])
+        svg.text(u, v - 10, "%s %s" % (name, pid), cls="lab-b", anchor="middle", halo=True, fill=cols[pid])
+        hu, hv = fr(*vmap[vid]["her"])
+        svg.circle(hu, hv, 3.2, fill=cols[pid], stroke=S.PAPER, stroke_width=1.0)
+        svg.text(hu + 5, hv + 12, vid, cls="lab-s", halo=True)
+    # distances between protagonist centres
+    cs = {pid: protagonist_shape(R, pid).mean(axis=0) for pid, _, _ in PROTAGONISTS}
+    for i in range(len(PROTAGONISTS)):
+        for j in range(i + 1, len(PROTAGONISTS)):
+            a, b = cs[PROTAGONISTS[i][0]], cs[PROTAGONISTS[j][0]]
+            ua, va = fr(*a)
+            ub, vb = fr(*b)
+            svg.line(ua, va, ub, vb, stroke=S.INK2, stroke_width=0.7, stroke_dasharray="4,3")
+            svg.text((ua + ub) / 2, (va + vb) / 2 - 3, "%.0f 米" % np.hypot(*(a - b)), cls="num", anchor="middle", halo=True)
+    zone_labels(svg, fr, R, cls="zone-s", offsets={"ZN-10": (-30, 14), "ZN-07": (-6, 5), "ZN-04": (5, 6), "ZN-03": (2, -6)})
+    # the rule-of-thumb screen, to scale, in a corner
+    svg.layer("rule")
+    u, v = fr(-52.0, 24.0)
+    svg.rect(u, v, 23 * s, 21 * s, fill="none", stroke=S.INK, stroke_width=1.0, stroke_dasharray="6,3")
+    svg.text(u + 6, v + 16, "一屏 ≈ 23 × 21 米（规则）", cls="lab-b")
+    svg.auto_clip = None
+    svg.layer("furniture")
+    PL.title_block(svg, 40, 18, fr.w, "新手村 v4　屏数与主角间距", "四个主角各占一屏、彼此不同屏；面积按 P3 一屏折算（表见 tables.md）", [], "图 D")
+    px = fr.u0 + fr.w + 30
+    py = 110
+    svg.text(px, py, "分区面积（平方米 / 屏）", cls="head")
+    py += 20
+    for z in R["zones"]:
+        a = reg.poly_area(z["poly"])
+        svg.text(px, py, "%s %s" % (z["id"], z["name"]), cls="note-s")
+        svg.text(px + 300, py, "%.0f / %.1f" % (a, a / SCREEN_RULE_M2), cls="note-s", anchor="end")
+        py += 15
+    realm = reg.poly_area(R["boundary"]["poly"])
+    py += 6
+    svg.text(px, py, "结界 BD-01：%.0f 平方米 ≈ %.1f 屏" % (realm, realm / SCREEN_RULE_M2), cls="note-b")
+    py += 26
+    svg.text(px, py, "主角之间（中心距）", cls="head")
+    py += 20
+    for i in range(len(PROTAGONISTS)):
+        for j in range(i + 1, len(PROTAGONISTS)):
+            a, b = PROTAGONISTS[i], PROTAGONISTS[j]
+            d = np.hypot(*(cs[a[0]] - cs[b[0]]))
+            svg.text(px, py, "%s — %s：%.0f 米" % (a[1], b[1], d), cls="note-s")
+            py += 15
+    py += 10
+    for ln in ["彩色梯形 = 站在关键视点（VW-01…04）时 P3 画面里的地面",
+               "（推荐方案 C：份额 1.0、相机每米 32，按地形求出）。",
+               "每个梯形里只有一个主角：表 4 用同一个画面逐对检查过。",
+               "大楠的冠（虚线）罩到茅屋东头，两个主角的中心却隔 27 米，",
+               "超过一屏的宽（20.7 米）和深（19.4 米）。"]:
+        svg.text(px, py, ln, cls="note-s")
+        py += 15
+    PL.north_arrow(svg, px + 30, H - 110, 24)
+    PL.scale_bar(svg, px + 80, H - 128, s, (0, 5, 10, 20, 30))
     yy = H - 74
     for ln in _common_lines(R, "1:%d" % round(1000 / (s * 0.2646))):
         svg.text(px, yy, ln, cls="note-s")

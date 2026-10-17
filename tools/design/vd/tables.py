@@ -115,24 +115,41 @@ def schemes_table():
 
 
 def zone_table(R, T, W, rc):
+    """Zone areas. Inside the realm the zones are made into a partition on the 0.5 m grid (a cell goes to
+    the first zone that holds it; realm cells in no zone go to ZN-10), so the realm's zones add up."""
     rec = R["camera"]["recommended"]
     e_rec = screen_extent(Cam(ppm=rec["ppm"], share=rec["share"]))
+    cell2 = T.cell * T.cell
+    inside = reg.points_in_poly(T.X, T.Y, R["boundary"]["poly"])
+    taken = np.zeros(T.X.shape, dtype=bool)
+    masks = {}
+    order = [z for z in R["zones"] if z["id"] != "ZN-10"] + [z for z in R["zones"] if z["id"] == "ZN-10"]
+    for z in order:
+        m = reg.points_in_poly(T.X, T.Y, z["poly"])
+        if z["id"] == "ZN-10":
+            m = (m | inside) & ~taken
+        elif z["id"] in ("ZN-01", "ZN-02"):
+            m = m & ~inside
+        else:
+            m = m & ~taken & inside
+        taken |= m & inside
+        masks[z["id"]] = m
     out = ["| 分区 | 名称 | 面积（平方米） | 其中可走 | 折成屏数（按 483） | 推荐方案下的屏数（按 %.0f） | 主角 |" % e_rec["area"],
            "|---|---|---|---|---|---|---|"]
-    tot = 0.0
     for z in R["zones"]:
-        a = reg.poly_area(z["poly"])
-        m = reg.points_in_poly(T.X, T.Y, z["poly"])
-        walk = float((m & W.ok).sum() * T.cell * T.cell)
-        tot += a if z["id"] != "ZN-01" and z["id"] != "ZN-02" else 0
+        m = masks[z["id"]]
+        a = float(m.sum() * cell2)
+        walk = float((m & W.ok).sum() * cell2)
         out.append("| %s | %s | %.0f | %.0f | %.1f | %.1f | %s |" % (z["id"], z["name"], a, walk, a / SCREEN_RULE_M2,
                                                                      a / e_rec["area"], z.get("protagonist") or "—"))
-    realm = reg.poly_area(R["boundary"]["poly"])
+    realm = float(inside.sum() * cell2)
     B = np.array(R["boundary"]["poly"])
+    in_zones = sum(float((masks[z["id"]] & inside).sum() * cell2) for z in R["zones"])
     out.append("")
-    out.append("结界（BD-01）面积 %.0f 平方米，外接框东西 %.0f 米 × 南北 %.0f 米；可走并连成一片的 %.0f 平方米。按 483 折 %.1f 屏，"
-               "推荐方案下 %.1f 屏。" % (realm, B[:, 0].max() - B[:, 0].min(), B[:, 1].max() - B[:, 1].min(),
-                                     rc["inside_walkable_m2"], realm / SCREEN_RULE_M2, realm / e_rec["area"]))
+    out.append("结界（BD-01）面积 %.0f 平方米（结界里各分区加起来 %.0f），外接框东西 %.0f 米 × 南北 %.0f 米；可走并连成一片的 %.0f 平方米。"
+               "按 483 折 %.1f 屏，推荐方案下 %.1f 屏。ZN-01、ZN-02 在结界外；ZN-03 东门只算门内的一小条（门前的平地在结界外）。" % (
+                   realm, in_zones, B[:, 0].max() - B[:, 0].min(), B[:, 1].max() - B[:, 1].min(), rc["inside_walkable_m2"],
+                   realm / SCREEN_RULE_M2, realm / e_rec["area"]))
     return "\n".join(out)
 
 

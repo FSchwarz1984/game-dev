@@ -37,7 +37,8 @@ KIND_COL = {"SUG": "cedar", "AKM": "pine", "MOM": "maple", "KAT": "kat", "KON": 
 
 class Mesh:
     def __init__(self):
-        self.tris = []          # (3x3 array, rgb, obj id, lean base or None)
+        self.tris = []          # (3x3 array, rgb or 3 vertex colours, obj id, lean base or None)
+        self.fog = []           # translucent: (3x3 array, rgb, alpha)
 
     def add(self, P, rgb, oid, base=None):
         self.tris.append((np.asarray(P, dtype=float), rgb, oid, base))
@@ -213,8 +214,9 @@ def build_scene(R, T, trees, cam, margin=6.0):
             b = (X[i, j + 1], Y[i, j + 1], H[i, j + 1])
             c = (X[i + 1, j + 1], Y[i + 1, j + 1], H[i + 1, j + 1])
             d = (X[i + 1, j], Y[i + 1, j], H[i + 1, j])
-            rgb = tuple(C[i, j])
-            m.quad(a, b, c, d, rgb, 0, None)
+            ca, cb, cc, cd = C[i, j], C[i, j + 1], C[i + 1, j + 1], C[i + 1, j]
+            m.add([a, b, c], np.array([ca, cb, cc]), 0, None)
+            m.add([a, c, d], np.array([ca, cc, cd]), 0, None)
     win = (x0 - 8, y0 - 8, x1 + 8, y1 + 30)
 
     def inwin(x, y, pad=0.0):
@@ -377,10 +379,14 @@ def build_scene(R, T, trees, cam, margin=6.0):
             box(m, pos[0], pos[1], g0 + 1.9, 0.75, 0.15, 1.6, (201, 178, 122), k, base=g0)
             continue
         if cat == "FX" and kind == "FOG":
-            k = nid(e["id"])
             P = np.array(e["poly"])
             gz = float(np.mean([T.h(p[0], p[1]) for p in P]))
-            prism(m, P, gz, gz + 3.4, COL["fog"], k, base=gz)
+            hh = e.get("h", 3.4)
+            alpha = 0.55 * e.get("density", 1.0) + 0.25
+            tmp = Mesh()
+            prism(tmp, P, gz - 0.5, gz + hh, COL["fog"], 0, base=None)
+            for Q, rgb, _, _ in tmp.tris:
+                m.fog.append((Q, rgb, alpha))
             continue
         if kind in ("HAK",):
             k = nid(e["id"])
@@ -502,7 +508,7 @@ def render(m, cam, ss=SS):
         if n[2] < 0:
             n = -n
         lam = 0.58 + 0.42 * max(0.0, float(n @ LIGHT))
-        col = np.array(rgb) * lam
+        vcol = np.asarray(rgb, dtype=float)
         xs = np.arange(xmin, xmax + 1) + 0.5
         ys = np.arange(ymin, ymax + 1) + 0.5
         GX, GY = np.meshgrid(xs, ys)
@@ -520,8 +526,37 @@ def render(m, cam, ss=SS):
         sub = zbuf[ymin:ymax + 1, xmin:xmax + 1]
         upd = inside & (z < sub)
         sub[upd] = z[upd]
+        if vcol.ndim == 2:
+            col = (w0[upd, None] * vcol[0] + w1[upd, None] * vcol[1] + w2[upd, None] * vcol[2]) * lam
+        else:
+            col = vcol * lam
         img[ymin:ymax + 1, xmin:xmax + 1][upd] = col
         ibuf[ymin:ymax + 1, xmin:xmax + 1][upd] = oid
+    # translucent fog in front of what is drawn
+    for P, rgb, alpha in m.fog:
+        sx, sy, d = cam.project(P)
+        if np.any(d <= 0.5):
+            continue
+        px = (VIEW_W / 2.0 + sx) * ss
+        py = (VIEW_H / 2.0 - sy) * ss
+        xmin, xmax = max(int(math.floor(px.min())), 0), min(int(math.ceil(px.max())), Wd - 1)
+        ymin, ymax = max(int(math.floor(py.min())), 0), min(int(math.ceil(py.max())), Ht - 1)
+        if xmax < xmin or ymax < ymin:
+            continue
+        GX, GY = np.meshgrid(np.arange(xmin, xmax + 1) + 0.5, np.arange(ymin, ymax + 1) + 0.5)
+        x0_, y0_, x1_, y1_, x2_, y2_ = px[0], py[0], px[1], py[1], px[2], py[2]
+        den = (y1_ - y2_) * (x0_ - x2_) + (x2_ - x1_) * (y0_ - y2_)
+        if abs(den) < 1e-9:
+            continue
+        w0 = ((y1_ - y2_) * (GX - x2_) + (x2_ - x1_) * (GY - y2_)) / den
+        w1 = ((y2_ - y0_) * (GX - x2_) + (x0_ - x2_) * (GY - y2_)) / den
+        w2 = 1 - w0 - w1
+        inside = (w0 >= 0) & (w1 >= 0) & (w2 >= 0)
+        z = w0 * d[0] + w1 * d[1] + w2 * d[2]
+        sub = zbuf[ymin:ymax + 1, xmin:xmax + 1]
+        hit = inside & (z < sub)
+        blk = img[ymin:ymax + 1, xmin:xmax + 1]
+        blk[hit] = blk[hit] * (1 - alpha * 0.5) + np.array(rgb) * alpha * 0.5
     # outlines where the object changes and depth jumps
     edge = np.zeros(ibuf.shape, dtype=bool)
     for dy, dx in ((0, 1), (1, 0)):

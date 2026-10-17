@@ -73,12 +73,13 @@ def main():
     T = ter.Terrain(R)
     ko = keep_out_factory(R)
     trees = {pl["id"]: reg.scatter_planting(pl, R, ko) for pl in R["plantings"]}
+    n_low = reg.p3_south_low(trees, R, T)
     W = wk.Walk(R, T, trees)
     rc = W.realm_check()
     rec = R["camera"]["recommended"]
     views = make_views(R, T, rec["ppm"], rec["share"])
-    print("terrain + walk %.1fs; realm leak cells %d; inside walkable %.0f m2" % (time.time() - t0, rc["leak_cells"],
-                                                                                 rc["inside_walkable_m2"]))
+    print("terrain + walk %.1fs; realm leak cells %d; inside walkable %.0f m2; P3 law lowered %d trees" % (
+        time.time() - t0, rc["leak_cells"], rc["inside_walkable_m2"], n_low))
 
     def emit(name, svg, w, h):
         p = out / (name + ".svg")

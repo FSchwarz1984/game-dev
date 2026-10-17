@@ -238,22 +238,32 @@ def scatter_planting(pl, R, keep_out=None):
         off = road["w"] / 2.0 + can.get("offset", 3.0)
         pts = []
         step = can.get("spacing", 7.0)
+        Lft = offset_polyline(P, off)
+        Rgt = offset_polyline(P, -off)
         for side, phase in ((1, 0.0), (-1, 0.5)):
-            O = offset_polyline(P, side * off)
+            O = Lft if side > 0 else Rgt
             t = a0 * L + phase * step
             while t < a1 * L:
                 i = int(np.searchsorted(s, t))
                 i = min(i, len(O) - 1)
+                if pl.get("side") == "uphill":
+                    # keep only the side that lies north of the road here (the uphill side on the south face)
+                    other = Rgt[i] if side > 0 else Lft[i]
+                    if O[i][1] < other[1] + 1.0:
+                        t += step * rng.uniform(0.85, 1.2)
+                        continue
                 pts.append(O[i])
                 t += step * rng.uniform(0.85, 1.2)
-        pts = np.array(pts)
+        pts = np.array(pts) if pts else np.zeros((0, 2))
     else:
         pts = _poisson(pl["poly"], can.get("spacing", 6.0), rng)
     trees = []
     for p in pts:
         k = kinds[rng.choice(len(kinds), p=probs)]
-        trees.append({"x": float(p[0]), "y": float(p[1]), "kind": k, "h": float(rng.uniform(hlo, hhi)),
-                      "crown_r": CROWN_R.get(k, 3.0) * float(rng.uniform(0.85, 1.15)), "trunk_r": TRUNK_R.get(k, 0.3)})
+        h = float(rng.uniform(hlo, hhi))
+        cr = min(CROWN_R.get(k, 3.0), 0.42 * h + 0.3) * float(rng.uniform(0.85, 1.15))
+        trees.append({"x": float(p[0]), "y": float(p[1]), "kind": k, "h": h, "crown_r": cr,
+                      "trunk_r": min(TRUNK_R.get(k, 0.3), 0.03 * h + 0.05)})
     if keep_out is not None and trees:
         X = np.array([t["x"] for t in trees])
         Y = np.array([t["y"] for t in trees])
@@ -271,3 +281,64 @@ def all_road_distance(R, X, Y, skip=()):
         dd = dist_to_polyline(X, Y, rd["pts"]) - rd["w"] / 2.0
         d = np.minimum(d, dd)
     return d
+
+
+def p3_south_low(trees_by_planting, R, T, near_clear=1.2, ppm=None, pitch=45.0, fov=38.0):
+    """The P3 planting law (registry rules.p3_south_low), from the camera's geometry. The camera stands
+    Dc = D cos(pitch) south of her and Hc = 0.9 + D sin(pitch) above her feet (D = K / PPM). A thing
+    s metres south of a path point is inside the picture when it rises above the lowest ray of the frame
+    there: z(s) = Hc (s - 5.5) / (Dc - 5.5) for s > 5.5 m (nearer than 5.5 m the ground itself is in the
+    picture, so only ground cover <= 1.2 m is allowed). A planted tree whose crown (its north edge) breaks
+    that line for any path point or key place, within the frame's half width, is lowered to fit, or
+    removed when that leaves less than 1.6 m. Trees north of paths are untouched. Returns the count."""
+    ppm = ppm or R["camera"]["recommended"]["ppm"]
+    Kpx = (362.0 / 2.0) / math.tan(math.radians(fov) / 2.0)
+    D = Kpx / ppm
+    Dc = D * math.cos(math.radians(pitch))
+    Hc = 0.9 + D * math.sin(math.radians(pitch))
+    pts = []
+    for rd in R["roads"]:
+        P, _ = resample([p[:2] for p in rd["pts"]], 1.0)
+        pts.append(P[:, :2])
+    for pad in R["terrain"]["pads"]:
+        poly = np.asarray(pad["poly"])
+        x0, y0 = poly.min(axis=0)
+        x1, y1 = poly.max(axis=0)
+        gx, gy = np.meshgrid(np.arange(x0, x1, 2.0), np.arange(y0, y1, 2.0))
+        m = points_in_poly(gx, gy, poly)
+        pts.append(np.stack([gx[m], gy[m]], axis=1))
+    for v in R["views"]:
+        pts.append(np.array([v["her"]]))
+    K = np.concatenate([p for p in pts if len(p)], axis=0)
+    from scipy.spatial import cKDTree
+    tree = cKDTree(K)
+    hk = T.h(K[:, 0], K[:, 1])
+    reach = Dc + 4.0
+    changed = 0
+    for pid in list(trees_by_planting.keys()):
+        keep = []
+        for t in trees_by_planting[pid]:
+            g = float(T.h(t["x"], t["y"]))
+            idx = tree.query_ball_point([t["x"], t["y"] + reach / 2], r=math.hypot(14.0, reach / 2) + 1.0)
+            limit = None
+            for i in idx:
+                s_ = K[i, 1] - t["y"] - t["crown_r"]          # south distance of the crown's north edge
+                if s_ > Dc or K[i, 1] - t["y"] < 0:
+                    continue
+                dx = abs(K[i, 0] - t["x"]) - t["crown_r"]
+                if dx > 9.0 + 0.45 * max(s_, 0.0):
+                    continue
+                z = near_clear if s_ <= 5.5 else max(near_clear, Hc * (s_ - 5.5) / (Dc - 5.5))
+                lim = z + hk[i] - g
+                limit = lim if limit is None else min(limit, lim)
+            if limit is not None and t["h"] > limit:
+                changed += 1
+                if limit < 1.6:
+                    continue
+                t["h"] = limit
+                t["crown_r"] = min(t["crown_r"], 0.42 * t["h"] + 0.3)
+                t["trunk_r"] = min(t["trunk_r"], 0.03 * t["h"] + 0.05)
+                t["low"] = True
+            keep.append(t)
+        trees_by_planting[pid] = keep
+    return changed
