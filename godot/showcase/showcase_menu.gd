@@ -50,8 +50,9 @@ func _ready() -> void:
 	index = clampi(index, 0, items.size() - 1)
 	resized.connect(_layout)
 	_layout()
-	_select(index)
+	_select(index, true)
 	Audio.ambience(["night"])
+	Audio.music("title", {"fade": 3.0})
 
 
 func _entries() -> Array:
@@ -113,14 +114,18 @@ func _process(dt: float) -> void:
 		_stick_t = 0.0
 
 
-func _select(i: int) -> void:
+func _select(i: int, quiet: bool = false) -> void:
+	var was := index
 	index = wrapi(i, 0, items.size())
+	if not quiet and index != was:
+		Audio.play("ui_move")
 	for k in items.size():
 		items[k].add_theme_color_override("font_color", TEXT if k == index else DIM)
 	_layout()
 
 
 func _confirm() -> void:
+	Audio.play("ui_ok")
 	chosen.emit(_ids[index], index)
 
 

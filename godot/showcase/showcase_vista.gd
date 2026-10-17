@@ -36,7 +36,42 @@ func _ready() -> void:
 	hint.visible = false
 	add_child(hint)
 	Audio.ambience(["night", "wind"])
+	vista.beat.connect(_on_beat)
 	_play()
+
+
+## The sound on the prologue's beats (v0.1 and the JS segment 1, src/story/seg1.js, on the same beats): the
+## prologue's piece at dusk; as the first lamp leaves, the 遠囃子 comes from nearby and the piece goes; it thins
+## to wind while the lamps leave, comes back clear when the sky shore opens ("the hayashi was theirs"); the
+## tower's last pulse; the far's wave with the tension piece; her shout; the white cuts everything (v0.1's far
+## wave), and what the far has left is heard from far away.
+func _on_beat(name: String) -> void:
+	match name:
+		"begin":
+			Audio.far(0.0)
+			Audio.music("prologue", {"fade": 2.0, "restart": true})
+			Audio.festival(0.0, 0.0, 0.5)
+		"first_light":
+			Audio.music("none", {"fade": 3.0})
+			Audio.festival(0.25, 0.6, 1.5)
+		"lights_leave":
+			Audio.festival(0.1, 0.3, 2.0)
+		"sky_opens":
+			Audio.festival(0.0, 0.0, 1.2)
+		"pause_sky_shore":
+			Audio.festival(0.55, 1.0, 1.5)
+		"tower_dark":
+			Audio.play("far_pulse", {"bus": "Music"})
+		"far_spreads":
+			Audio.music("tension", {"fade": 1.0})
+			Audio.play("far_wave", {"bus": "Music"})
+		"pose_shout":
+			Audio.blip("tsuzumi", 1)
+		"end":
+			Audio.music("none", {"fade": 0.1})
+			Audio.festival(0.0, 0.0, 0.1)
+			Audio.hush(2.4, 1.1)
+			Audio.far(0.85)
 
 
 func _play() -> void:
