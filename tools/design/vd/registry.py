@@ -291,8 +291,8 @@ def p3_law_limit(R, ppm=None, share=None, pitch=45.0, fov=38.0, near_clear=1.2):
     plane of the frame rises southward as a (s - s0), a = Hc / (Dc - s0). An upright whose base is
     s metres south of her and b metres above her ground leans north by k t at height t (k = tan(pitch / 2)
     times the share), so it breaks into the picture as soon as b + t > a (s - k t - s0), i.e. when it is
-    taller than (a (s - s0) - b) / (1 + a k). Nearer than s0 the ground itself is in the picture: only
-    ground cover <= near_clear. A trunk that would cross that plane behind the camera passes over the
+    taller than (a (s - s0) - b) / (1 + a k). Where its foot is on ground the picture shows (nearer than
+    s0 on level ground) that is <= 0: only ground cover <= near_clear. A trunk that would cross that plane behind the camera passes over the
     camera's head and stays above the top of the picture (no limit). The frame's half width at the crossing
     is 320 px times the depth there over K: only things inside it (plus their crown) count.
 
@@ -314,13 +314,9 @@ def p3_law_limit(R, ppm=None, share=None, pitch=45.0, fov=38.0, near_clear=1.2):
     def limit(s, b, dx, r):
         if s < 0:
             return None                               # north of her: never in front of the camera
-        if s <= s0:
-            t = 0.0
-            lim = near_clear
-        else:
-            t = (a * (s - s0) - b) / (1.0 + a * k)    # height on the trunk where it meets the bottom plane
-            lim = max(near_clear, t)
-            t = max(t, 0.0)
+        t = (a * (s - s0) - b) / (1.0 + a * k)        # height on the trunk where it meets the bottom plane
+        lim = max(near_clear, t)                      # (<= 0 when its foot is on ground the picture shows)
+        t = max(t, 0.0)
         sc = s - k * t                                # where that is, south of her
         if sc >= Dc:
             return None                               # over the camera's head
@@ -402,42 +398,113 @@ def p3_south_low(trees_by_planting, R, T, near_clear=1.2, ppm=None, share=None, 
     return changed
 
 
-def p3_check_elements(R, T, near_clear=1.2):
-    """The same law for the hand-placed trees and the buildings (they are not lowered automatically):
-    rows (id, name, height, allowed, key point x, y) for each that breaks it somewhere."""
-    from scipy.spatial import cKDTree
-    limit = p3_law_limit(R, near_clear=near_clear)
-    Kp = p3_key_points(R)
-    kd = cKDTree(Kp)
-    hk = T.h(Kp[:, 0], Kp[:, 1])
-    rows = []
+def _element_volumes(R, T, e):
+    """Simple volumes for the occlusion test, before the lean (x, y, z absolute): ('cyl', x, y, r, z0, z1),
+    ('ell', x, y, z, rx, ry, rz) or ('box', x0, x1, y0, y1, z0, z1); and the base height the lean is
+    measured from. Same proportions as the key-view renderer (vd/views.py)."""
+    cat = e["id"].split("-")[0]
+    x, y = e["pos"][:2]
+    if e["id"] == "TR-CAM-01":
+        g = float(T.h(0, 0))
+        return [("cyl", 0.0, 0.0, 3.6, g, g + 12.5), ("ell", -2.0, -4.0, g + 20.0, 19.0, 19.0, 9.0)], g
+    if cat == "TR" and e.get("height") and not e.get("pts"):
+        g = float(T.h(x, y))
+        h = float(e["height"])
+        cr = e["crown"] if isinstance(e.get("crown"), dict) else {}
+        r = cr.get("r", 3.0)
+        cb = cr.get("base")
+        tr = float(e.get("trunk_d", 0.4)) / 2.0
+        top_trunk = (cb + 0.3 * (h - cb)) if cb else h * 0.6
+        vol = [("cyl", x, y, tr, g, g + top_trunk)]
+        if cb:
+            vol.append(("ell", x, y, g + (cb + h) / 2.0, r * (0.8 if e.get("kind") == "SUG" else 1.0),
+                        r * (0.8 if e.get("kind") == "SUG" else 1.0), (h - cb) / 2.0))
+        elif e.get("kind") == "SUG":
+            vol.append(("ell", x, y, g + h * 0.675, r * 0.8, r * 0.8, h * 0.325))
+        else:
+            vol.append(("ell", x, y, g + h * 0.66, r, r, h * 0.3))
+        return vol, g
+    if cat == "BL" and e.get("size"):
+        sx, sy, sz = e["size"][:3]
+        g = float(e["h"]) if e.get("h") is not None else float(T.h(x, y))
+        return [("box", x - sx / 2, x + sx / 2, y - sy / 2, y + sy / 2, g, g + sz)], g
+    return None, None
+
+
+def occlusion_by_elements(R, T, heights=(0.3, 0.9, 1.4), n=160):
+    """Where a hand-placed tall thing stands between the P3 camera and her (with the lean): for each such
+    element, the roads (1 m samples), pads (2 m grid) and key views where any of her feet, chest or head
+    is hidden. These are the places the renderer's see-through (charter: character light protection)
+    opens. Returns {element id: {"name", "road": {road id: metres}, "pads": n, "views": [ids]}}."""
+    from .p3 import Cam
+    rec = R["camera"]["recommended"]
+    cam0 = Cam(ppm=rec["ppm"], share=rec["share"])
+    k = cam0.k
+    off = cam0.C - cam0.focus                     # camera relative to her chest
+    # her positions, labelled
+    pts, labels = [], []
+    for rd in R["roads"]:
+        P, _ = resample([p[:2] for p in rd["pts"]], 1.0)
+        for q in P[:, :2]:
+            pts.append(q)
+            labels.append(("road", rd["id"]))
+    for pad in R["terrain"]["pads"]:
+        poly = np.asarray(pad["poly"])
+        x0, y0 = poly.min(axis=0)
+        x1, y1 = poly.max(axis=0)
+        gx, gy = np.meshgrid(np.arange(x0, x1, 2.0), np.arange(y0, y1, 2.0))
+        m = points_in_poly(gx, gy, poly)
+        for q in np.stack([gx[m], gy[m]], axis=1):
+            pts.append(q)
+            labels.append(("pad", pad["id"]))
+    for v in R["views"]:
+        pts.append(np.asarray(v["her"], dtype=float))
+        labels.append(("view", v["id"]))
+    P = np.asarray(pts, dtype=float)
+    H = T.h(P[:, 0], P[:, 1])
+    out = {}
+    tt = np.linspace(0.0, 1.0, n)
     for e in R["elements"]:
         if "pos" not in e:
             continue
-        cat = e["id"].split("-")[0]
-        x, y = e["pos"][:2]
-        if cat == "TR" and e.get("height"):
-            h = float(e["height"])
-            cr = e.get("crown")
-            if isinstance(cr, dict):
-                rx = ry = float(cr.get("r", 2.0))
-            elif isinstance(cr, list):
-                P = np.asarray(cr, dtype=float)
-                rx = float(np.abs(P[:, 0] - x).max())
-                ry = float(np.abs(P[:, 1] - y).max())
+        vol, g = _element_volumes(R, T, e)
+        if not vol:
+            continue
+        ex, ey = e["pos"][:2]
+        near = np.where((P[:, 1] >= ey - 25.0) & (P[:, 1] <= ey + 45.0) & (np.abs(P[:, 0] - ex) <= 30.0))[0]
+        if not len(near):
+            continue
+        hidden = np.zeros(len(near), dtype=bool)
+        for hb in heights:
+            her = np.stack([P[near, 0], P[near, 1], H[near] + hb], axis=1)
+            cam = np.stack([P[near, 0] + off[0], P[near, 1] + off[1], H[near] + 0.9 + off[2]], axis=1)
+            S = cam[:, None, :] + (her - cam)[:, None, :] * tt[None, :, None]     # (m, n, 3)
+            # undo the lean of this element (its points t above its base moved north by k t)
+            X = S[..., 0]
+            Y = S[..., 1] - k * np.maximum(S[..., 2] - g, 0.0)
+            Z = S[..., 2]
+            inside = np.zeros(X.shape, dtype=bool)
+            for v in vol:
+                if v[0] == "cyl":
+                    _, cx, cy, r, z0, z1 = v
+                    inside |= ((X - cx) ** 2 + (Y - cy) ** 2 <= r * r) & (Z >= z0) & (Z <= z1)
+                elif v[0] == "ell":
+                    _, cx, cy, cz, rx, ry, rz = v
+                    inside |= ((X - cx) / rx) ** 2 + ((Y - cy) / ry) ** 2 + ((Z - cz) / rz) ** 2 <= 1.0
+                else:
+                    _, x0, x1, y0, y1, z0, z1 = v
+                    inside |= (X >= x0) & (X <= x1) & (Y >= y0) & (Y <= y1) & (Z >= z0) & (Z <= z1)
+            hidden |= inside[:, 2:-2].any(axis=1)
+        if not hidden.any():
+            continue
+        rec_ = {"name": e.get("name", ""), "road": {}, "pads": 0, "views": []}
+        for i in near[hidden]:
+            kind, lid = labels[i]
+            if kind == "road":
+                rec_["road"][lid] = rec_["road"].get(lid, 0) + 1
+            elif kind == "pad":
+                rec_["pads"] += 1
             else:
-                rx = ry = float(e.get("trunk_d", 0.6)) / 2.0
-            g = float(T.h(x, y))
-        elif cat == "BL" and e.get("size"):
-            sx, sy, sz = e["size"][:3]
-            h = float(sz)
-            rx, ry = sx / 2.0, sy / 2.0
-            g = float(e["h"]) if e.get("h") is not None else float(T.h(x, y))
-        else:
-            continue
-        if h <= near_clear:
-            continue
-        lim, at = p3_tree_limit(x, y, h, rx, g, Kp, hk, kd, limit, ry=ry)
-        if lim is not None and h > lim + 0.05:
-            rows.append((e["id"], e.get("name", ""), h, lim, float(Kp[at, 0]), float(Kp[at, 1])))
-    return rows
+                rec_["views"].append(lid)
+        out[e["id"]] = rec_
+    return out

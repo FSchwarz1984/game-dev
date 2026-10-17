@@ -280,12 +280,17 @@ def build_scene(R, T, trees, cam, margin=6.0):
                 P = e["pts"]
                 tube(m, [(P[0][0], P[0][1], g + 0.6), (P[1][0], P[1][1], g + 0.6)], [0.6, 0.45], COL["trunk"], k, n=6, base=g)
                 continue
-            r = e.get("crown", {}).get("r", 3.0) if isinstance(e.get("crown"), dict) else 3.0
+            cr = e.get("crown") if isinstance(e.get("crown"), dict) else {}
+            r = cr.get("r", 3.0)
+            cb = cr.get("base")                       # the crown's lower edge above the ground, if given
             tr = e.get("trunk_d", 0.4) / 2
             col = COL[KIND_COL.get(kind, "broad")]
-            cylinder(m, pos[0], pos[1], g - 0.2, g + h * 0.6, tr, COL["trunk"], k, n=7, base=g, top=False)
+            top_trunk = (cb + 0.3 * (h - cb)) if cb else h * 0.6
+            cylinder(m, pos[0], pos[1], g - 0.2, g + top_trunk, tr, COL["trunk"], k, n=7, base=g, top=False)
             if kind == "SUG":
-                cone(m, pos[0], pos[1], g + h * 0.35, g + h, r, col, k, n=10, base=g)
+                cone(m, pos[0], pos[1], g + (cb if cb else h * 0.35), g + h, r, col, k, n=10, base=g)
+            elif cb:
+                ellipsoid(m, pos[0], pos[1], g + (cb + h) / 2.0, r, r, (h - cb) / 2.0, col, k, n=10, k_=5, base=g)
             else:
                 ellipsoid(m, pos[0], pos[1], g + h * 0.66, r, r, h * 0.3, col, k, n=10, k_=5, base=g)
                 if kind == "SAR":
