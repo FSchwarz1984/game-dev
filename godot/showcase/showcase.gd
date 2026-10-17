@@ -99,6 +99,9 @@ func open(m: String) -> void:
 		screen.queue_free()
 		screen = null
 	Audio.ambience([])
+	Audio.reset_scene()
+	if m != "menu" and m != "vista":
+		Audio.music("none", {"fade": 1.0})
 	mode = m
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -144,6 +147,11 @@ func _open_sample(m: String) -> void:
 			a[k] = args[k]
 	screen = inst
 	add_child(inst)
+	# the sound of the sample (synthesized, G5R3-63/65): her hearing, steps, the air, creatures, music
+	var snd := ShowcaseSound.new()
+	snd.name = "Sound"
+	inst.add_child(snd)
+	snd.attach(inst, m == "lookout")
 	hud = ShowcaseHud.new()
 	hud.sample = inst
 	hud.lookout = m == "lookout"

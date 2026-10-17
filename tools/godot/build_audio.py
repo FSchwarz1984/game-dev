@@ -24,6 +24,9 @@ def ffmpeg(src, dst, start, dur):
 
 
 def main():
+    # G5R3-53 (2026-10-17): no recordings in the game. This would put them back (and overwrite the synthesized
+    # sounds' SOURCES.json); the game's sounds are built by tools/audio/build_sounds.py now.
+    raise SystemExit("build_audio.py is retired (G5R3-53: no recordings); use tools/audio/build_sounds.py")
     with open(os.path.join(SRC, "manifest.json"), encoding="utf-8") as f:
         man = json.load(f)
     os.makedirs(os.path.join(OUT, "ambience"), exist_ok=True)
