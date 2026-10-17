@@ -49,8 +49,8 @@ def sequence_markers(svg, fr, R, size=8.5):
     svg.layer("sequence")
     seq = [("1", (44.0, -96.0), "九十九折"), ("2", (40.0, -50.0), "峠顶・道祖神"), ("3", (24.4, -44.4), "东门（道切り绳・雾）"),
            ("4", (21.6, -35.6), "切通：往下、窄、暗"), ("5", (13.0, -32.4), "过溪（石板桥）"), ("6", (10.4, -30.0), "石段下段"),
-           ("7", (4.0, -26.6), "踊り場：无缘墓"), ("8", (10.4, -23.0), "石段上段 → 释放"), ("9", (4.5, -17.6), "真路 → 祠"),
-           ("10", (5.6, -6.4), "磐座（禁足）")]
+           ("7", (4.0, -26.6), "踊り場：无缘墓"), ("8", (10.4, -23.0), "石段上段 → 释放"), ("9", (3.6, -17.6), "真路 → 祠"),
+           ("10", (6.6, -7.0), "磐座（禁足）")]
     prev = None
     for n, (x, y), lab in seq:
         if not fr.contains(x, y):
@@ -198,7 +198,7 @@ def sheet_realm(R, T, trees, views, fonts):
     PL.draw_boundary(svg, fr, R, width=2.4)
     svg.layer("axes")
     # the one straight axis
-    a, b = fr(4.5, -22.0), fr(4.5, -3.0)
+    a, b = fr(3.6, -22.0), fr(3.6, -9.8)
     svg.line(a[0], a[1], b[0], b[1], stroke=S.VERMILION, stroke_width=0.8, stroke_dasharray="12,3,2,3")
     svg.text(b[0] + 4, b[1] - 2, "轴（SL-04）", cls="red")
     # sightlines
@@ -227,7 +227,6 @@ def sheet_realm(R, T, trees, views, fonts):
     items = [("line", "大楠冠的投影（树高 30 米，冠约 41 × 41 米）", {"stroke": "#3f5a33", "sw": 1.2, "dash": "7,3,1.5,3"}),
              ("fill", "冠的缺口'天窗'：正午光落在祠前", {"fill": S.PAPER, "stroke": "#3f5a33", "dash": "2,2"}),
              ("fill", "G 枝（可爬：顶面亮苔）", {"fill": "#8a6f55", "stroke": "#4f3d2c"}),
-             ("fill", "南枝（头顶上方，不挡路）", {"fill": "#8a6f55", "op": 0.55, "stroke": "#4f3d2c", "dash": "2,1.5"}),
              ("line", "注连绳（白圈）", {"stroke": "#e6ddc6", "sw": 2.0}),
              ("line", "瑞垣（只围磐座）", {"stroke": "#6c4f3a", "sw": 2.0}),
              ("line", "道切り绳（门）", {"stroke": "#c9b27a", "sw": 2.2}),

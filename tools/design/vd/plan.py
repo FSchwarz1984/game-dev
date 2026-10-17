@@ -360,7 +360,9 @@ def draw_camphor(svg: Svg, fr: Frame, R, crown=True):
         svg.circle(u, v, hole["r"] * fr.s, fill=S.PAPER, fill_opacity=0.55, stroke="#3f5a33", stroke_width=0.7,
                    stroke_dasharray="2,2")
     for lid in ("TR-CAM-01G", "TR-CAM-01S"):
-        L = R["_index"][lid]
+        L = R["_index"].get(lid)
+        if L is None:
+            continue
         P = np.array([[p[0], p[1]] for p in L["pts"]])
         D = np.array(L["diam"])
         Q, s = reg.resample(np.concatenate([P, D[:, None]], axis=1), 0.3)
