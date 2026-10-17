@@ -13,6 +13,9 @@ extends Node
 const PIECES := {"title": "mus_title", "home": "mus_home", "prologue": "mus_prologue", "wonder": "mus_wonder",
 	"tension": "mus_tension"}
 const MODES := ["morning", "noon", "dusk", "night"]
+# The calibration (in-game recordings): v0.1's title piece made the menu -18 LUFS against a -25 walk; 4 dB down
+# puts it about 2 LU above the field.
+const LEVEL_DB := {"title": -4.0}
 const FEST := [[0.4, 0.8, "fest_40_080"], [0.25, 0.6, "fest_25_060"], [0.1, 0.3, "fest_10_030"],
 	[0.55, 1.0, "fest_55_100"], [0.35, 0.5, "fest_35_050"]]
 
@@ -85,7 +88,7 @@ func play(name: String, fade: float = 1.5, restart: bool = false) -> void:
 	var st := Audio.stream_of(String(e["files"][0]))
 	if st is AudioStreamOggVorbis:
 		(st as AudioStreamOggVorbis).loop = bool(e.get("loop", false))
-	_start(st, 0.0, maxf(0.05, fade * 0.6) if previous != "none" else 0.05)
+	_start(st, float(LEVEL_DB.get(name, 0.0)), maxf(0.05, fade * 0.6) if previous != "none" else 0.05)
 
 
 func _swap_out(fade: float) -> void:

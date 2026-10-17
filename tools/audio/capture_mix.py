@@ -1,46 +1,49 @@
 #!/usr/bin/env python3
-"""Records what the game really sounds like (decision 7, category 4): the showcase runs in a real X11 window on
-Xvfb (Mesa software Vulkan) under Godot's Movie Maker (fixed 30 fps: picture and sound frame-exact), and keys go
-in through xdotool (XTEST: the X server delivers them like a keyboard; nothing calls game functions). The
-recording's sound is then measured by tools/audio/check_mix.py.
+"""Records what the game really sounds like (decision 7, category 4) for tools/audio/check_mix.py.
 
-  python3 -I tools/audio/capture_mix.py --project godot --out DIR --plan menu|home|brook|gallery|vista|lookout
-                                        [--display :141] [--frames N]
-Plans (game time; software rendering runs the game far slower than the clock, so keys are held by frames:
-the movie's own frame count is watched, see hold()):
-  menu     the title: 10 s, then three presses of Down (the menu's sound; key-to-sound latency), 8 s more
-  home     the home area at 9:30: stand 8 s, walk round the yard and the camphor (W/D/S/A), stand
-  brook    by the brook in rain and wind (--at near the stream, --rain): stand, walk along it, stand
-  gallery  the portraits, then the staged dialogue (Space): the ducking under a dialogue
-  vista    the prologue's treetop vista, whole (65.6 s and the hold)
-  lookout  she walks onto the lookout rock and looks out (the wonder piece)
-Writes DIR/<plan>.avi (MJPEG + PCM), DIR/<plan>.wav, DIR/<plan>_keys.json (frame of each key event), DIR/log.txt.
+  python3 -I tools/audio/capture_mix.py --project godot --out DIR --plan PLAN [--display :141]
+
+Two ways, by what the plan has to prove:
+  movie   the menu: the showcase in a real X11 window on Xvfb (Mesa software Vulkan) under Godot's Movie Maker
+          (fixed 30 fps: picture and sound frame-exact), keys through xdotool (XTEST: the X server delivers them
+          like a keyboard). For the time from a key to its sound. (The 3D sample renders at a few frames a second
+          or less in software, too slow for long recordings this way.)
+  record  the sample and the screens over minutes, in real time: the game records its own master bus
+          (Audio: -- --audio-record=FILE --audio-record-secs=N) with the dummy audio driver. "headless" plans need
+          no keys (the sample's own route driver walks her: it holds W/A/S/D for her exactly as keys would, through
+          the same code); "xvfb" plans press real keys (xdotool) in a real window.
+Plans:
+  menu      movie: the title, three Downs and an Up (key to sound)
+  home      record, headless: the home area at 9:30, her walk round the yard, the shrine and the camphor (--route=walk)
+  brook     record, headless: standing by the brook at noon in a strong wind (the brook-and-wind check, G5R3-65 2.3)
+  brook_rain  the same in heavy rain (rain 0.85; the rain makes it windier too): the weather's loudness
+  vista     record, headless: the prologue's treetop vista, whole
+  lookout   record, headless: she walks onto the lookout and looks out (--route=lookout)
+  approach  record, headless: in through the east gate's fog to the hut (--route=approach; the barrier, 5c)
+  gallery   record, xvfb: the portraits for 20 s, then the staged dialogue (Space presses): the ducking under it
+Writes DIR/<plan>.wav, DIR/<plan>_plays.jsonl (every sound chosen), DIR/<plan>_keys.json, DIR/<plan>_log.txt.
 """
 import argparse
 import json
 import os
-import re
 import subprocess
-import sys
 import time
 
 GODOT = os.environ.get("GODOT_BIN", "/home/user/godotengine/editor/Godot_v4.7.2-stable_linux.x86_64")
 FPS = 30
 
 PLANS = {
-    "menu": {"args": ["--mode=menu"], "frames": 30 * 22,
+    "menu": {"how": "movie", "args": ["--mode=menu"], "secs": 22,
              "keys": [(10.0, "Down"), (11.5, "Down"), (13.0, "Down"), (14.5, "Up")]},
-    "home": {"args": ["--mode=home"], "frames": 30 * 75,
-             "keys": [(8.0, "+w"), (14.0, "-w"), (14.0, "+d"), (19.0, "-d"), (19.0, "+s"), (25.0, "-s"), (25.0, "+a"),
-                      (31.0, "-a"), (40.0, "+w"), (44.0, "-w")]},
-    "brook": {"args": ["--mode=home", "--at=-9.0,-38.6", "--rain=0.85", "--hours=12.5"], "frames": 30 * 60,
-              "keys": [(20.0, "+d"), (26.0, "-d"), (26.0, "+a"), (32.0, "-a")]},
-    "gallery": {"args": ["--mode=gallery"], "frames": 30 * 40,
-                "keys": [(6.0, "space"), (13.0, "space"), (17.0, "space"), (21.0, "space"), (25.0, "space"),
-                         (29.0, "space"), (33.0, "space")]},
-    "vista": {"args": ["--mode=vista"], "frames": 30 * 80, "keys": []},
-    "lookout": {"args": ["--mode=lookout"], "frames": 30 * 50,
-                "keys": [(4.0, "+s"), (7.0, "-s")]},
+    "home": {"how": "headless", "args": ["--mode=home", "--route=walk"], "secs": 90},
+    "brook": {"how": "headless", "args": ["--mode=home", "--at=-9.0,-38.6", "--hours=12.5", "--audio-wind=0.9"], "secs": 70},
+    "brook_rain": {"how": "headless", "args": ["--mode=home", "--at=-9.0,-38.6", "--rain=0.85", "--hours=12.5"], "secs": 70},
+    "vista": {"how": "headless", "args": ["--mode=vista"], "secs": 85},
+    "lookout": {"how": "headless", "args": ["--mode=lookout", "--route=lookout"], "secs": 70},
+    "approach": {"how": "headless", "args": ["--mode=home", "--route=approach", "--hours=17.0"], "secs": 70},
+    "gallery": {"how": "xvfb", "args": ["--mode=gallery"], "secs": 52,
+                "keys": [(20.0, "space"), (24.0, "space"), (28.0, "space"), (32.0, "space"), (36.0, "space"),
+                         (40.0, "space"), (44.0, "space")]},
 }
 
 
@@ -53,28 +56,16 @@ class Run:
         self.events = []
         self._pos, self._count, self._tail = 0, 0, b""
 
-    def start(self, plan):
-        # -ardelay / -arinterval: no key auto-repeat to speak of. The game runs far slower than the clock here, so a
-        # key held for two of its frames is held for most of a second of the clock, and the server would send
-        # repeats a player's quick press never makes
-        self.xvfb = subprocess.Popen(["Xvfb", self.a.display, "-screen", "0", "1280x720x24", "-nolisten", "tcp",
-                                      "-ardelay", "30000", "-arinterval", "30000"],
-                                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    def xvfb(self):
+        # -ardelay / -arinterval: no key auto-repeat to speak of (in the movie, the game runs far slower than the
+        # clock, so a key held for two of its frames is held for most of a second)
+        self.xv = subprocess.Popen(["Xvfb", self.a.display, "-screen", "0", "1280x720x24", "-nolisten", "tcp",
+                                    "-ardelay", "30000", "-arinterval", "30000"],
+                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         for _ in range(50):
             if subprocess.run(["xdpyinfo"], env=self.env, capture_output=True).returncode == 0:
                 break
             time.sleep(0.1)
-        P = PLANS[plan]
-        frames = self.a.frames or P["frames"]
-        self.movie = os.path.join(self.out, plan + ".avi")
-        cmd = [GODOT, "--path", os.path.abspath(self.a.project), "--rendering-method", "forward_plus",
-               "--resolution", "640x360", "--fixed-fps", str(FPS), "--write-movie", self.movie,
-               "--quit-after", str(frames), "res://showcase/showcase.tscn", "--",
-               "--windowed", "--audio-log=" + os.path.join(self.out, plan + "_plays.jsonl")] + P["args"] + self.a.game_args.split()
-        self.log = open(os.path.join(self.out, plan + "_log.txt"), "w")
-        self.game = subprocess.Popen(cmd, env=self.env, stdout=self.log, stderr=subprocess.STDOUT)
-        self.frames = frames
-        self.plan = P
 
     def frame_now(self):
         # Movie Maker prints nothing per frame; the AVI grows by one audio chunk a frame: count the 01wb chunks
@@ -95,40 +86,81 @@ class Run:
         ids = r.stdout.split()
         return ids[-1] if ids else None
 
-    def key(self, k):
+    def key(self, k, movie):
         w = self.window()
         if w:
             subprocess.run(["xdotool", "windowactivate", "--sync", w], env=self.env, capture_output=True)
-        if k.startswith("+"):
-            subprocess.run(["xdotool", "keydown", k[1:]], env=self.env)
-        elif k.startswith("-"):
-            subprocess.run(["xdotool", "keyup", k[1:]], env=self.env)
-        else:
-            subprocess.run(["xdotool", "keydown", k], env=self.env)
-            # held until the game has drawn two more frames (it reads the key in between)
+        subprocess.run(["xdotool", "keydown", k], env=self.env)
+        if movie:
             f0 = self.frame_now()
             t0 = time.time()
             while self.frame_now() < f0 + 2 and time.time() - t0 < 60:
                 time.sleep(0.02)
-            subprocess.run(["xdotool", "keyup", k], env=self.env)
+        else:
+            time.sleep(0.08)
+        subprocess.run(["xdotool", "keyup", k], env=self.env)
 
     def run(self, plan):
-        self.start(plan)
-        for at, k in self.plan["keys"]:
-            target = int(at * FPS)
-            while self.game.poll() is None and self.frame_now() < target:
-                time.sleep(0.1)
-            if self.game.poll() is not None:
-                break
-            f = self.frame_now()
-            self.key(k)
-            self.events.append({"frame": f, "time": round(f / FPS, 3), "key": k})
-        self.game.wait()
-        self.xvfb.terminate()
+        P = dict(PLANS[plan])
+        if self.a.secs > 0:
+            P["secs"] = self.a.secs
+        logp = os.path.join(self.out, plan + "_log.txt")
+        log = open(logp, "w")
+        plays = os.path.join(self.out, plan + "_plays.jsonl")
         wav = os.path.join(self.out, plan + ".wav")
-        subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", self.movie, "-vn", "-acodec", "pcm_s16le", wav], check=True)
-        json.dump({"plan": plan, "fps": FPS, "frames": self.frames, "events": self.events,
-                   "args": self.plan["args"] + self.a.game_args.split()},
+        user = ["--windowed", "--audio-log=" + plays] + P["args"] + self.a.game_args.split()
+        how = P["how"]
+        if how == "movie":
+            self.xvfb()
+            self.movie = os.path.join(self.out, plan + ".avi")
+            cmd = [GODOT, "--path", os.path.abspath(self.a.project), "--rendering-method", "forward_plus",
+                   "--fixed-fps", str(FPS), "--write-movie", self.movie, "--quit-after", str(P["secs"] * FPS),
+                   "res://showcase/showcase.tscn", "--"] + user
+            game = subprocess.Popen(cmd, env=self.env, stdout=log, stderr=subprocess.STDOUT)
+            for at, k in P.get("keys", []):
+                while game.poll() is None and self.frame_now() < int(at * FPS):
+                    time.sleep(0.1)
+                if game.poll() is not None:
+                    break
+                f = self.frame_now()
+                self.key(k, True)
+                self.events.append({"frame": f, "time": round(f / FPS, 3), "key": k})
+            game.wait()
+            self.xv.terminate()
+            subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", self.movie, "-vn", "-acodec", "pcm_s16le", wav], check=True)
+            os.remove(self.movie)
+        else:
+            user += ["--audio-record=" + wav, "--audio-record-secs=%g" % P["secs"]]
+            head = ["--headless"] if how == "headless" else ["--rendering-method", "forward_plus"]
+            if how == "xvfb":
+                self.xvfb()
+            cmd = [GODOT] + head + ["--path", os.path.abspath(self.a.project), "--max-fps", "60",
+                                    "res://showcase/showcase.tscn", "--"] + user
+            t0 = time.time()
+            game = subprocess.Popen(cmd, env=self.env, stdout=log, stderr=subprocess.STDOUT)
+            # key times are counted from the moment the game starts recording (its own "AUDIO recording" line)
+            started = None
+            for at, k in P.get("keys", []):
+                while game.poll() is None:
+                    if started is None:
+                        try:
+                            if "AUDIO recording the master bus" in open(logp).read():
+                                started = time.time()
+                        except OSError:
+                            pass
+                    if started is not None and time.time() - started >= at:
+                        break
+                    time.sleep(0.05)
+                if game.poll() is not None:
+                    break
+                tk = time.time() - started
+                self.key(k, False)
+                self.events.append({"time": round(tk, 3), "key": k})
+            game.wait()
+            if how == "xvfb":
+                self.xv.terminate()
+            print("ran %.1f s" % (time.time() - t0))
+        json.dump({"plan": plan, "fps": FPS, "how": how, "events": self.events, "args": user},
                   open(os.path.join(self.out, plan + "_keys.json"), "w"), indent=1)
         print("wrote", wav)
 
@@ -139,8 +171,8 @@ def main():
     ap.add_argument("--out", required=True)
     ap.add_argument("--plan", required=True, choices=sorted(PLANS))
     ap.add_argument("--display", default=":141")
-    ap.add_argument("--frames", type=int, default=0)
     ap.add_argument("--game-args", default="")
+    ap.add_argument("--secs", type=float, default=0.0, help="record this long instead of the plan's own length")
     a = ap.parse_args()
     Run(a).run(a.plan)
 

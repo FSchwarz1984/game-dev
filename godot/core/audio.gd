@@ -62,6 +62,12 @@ var _here_target := 0.0
 var _far_logged := -1.0
 var _far_fx: AudioEffectLowPassFilter
 var _rng := RandomNumberGenerator.new()
+# checks (tools/audio/check_mix.py): -- --audio-record=PATH.wav records the master bus (what the player hears) and
+# writes it when the game quits, or after --audio-record-secs=N seconds (then quits)
+var _rec_path := ""
+var _rec_secs := 0.0
+var _rec: AudioEffectRecord
+var _rec_t := 0.0
 
 
 ## A sound's variants, never the same one twice running: a shuffled bag (each variant once per round), and the
@@ -131,12 +137,42 @@ func _ready() -> void:
 	for a in OS.get_cmdline_user_args():
 		if a.begins_with("--audio-log="):
 			_log = FileAccess.open(a.substr(12), FileAccess.WRITE)
+		elif a.begins_with("--audio-record="):
+			_rec_path = a.substr(15)
+		elif a.begins_with("--audio-record-secs="):
+			_rec_secs = float(a.substr(20))
+	if _rec_path != "":
+		_start_recording()
+
+
+func _start_recording() -> void:
+	_rec = AudioEffectRecord.new()
+	_rec.format = AudioStreamWAV.FORMAT_16_BITS
+	AudioServer.add_bus_effect(0, _rec)
+	_rec.set_recording_active(true)
+	print("AUDIO recording the master bus to %s" % _rec_path)
+	if _log != null:
+		# the plays log's clock (ms since the engine started) at the recording's first sample (checks align on it)
+		_log.store_line(JSON.stringify([Time.get_ticks_msec(), "_rec", 0]))
+
+
+func _save_recording() -> void:
+	if _rec == null or not _rec.is_recording_active():
+		return
+	var w := _rec.get_recording()
+	_rec.set_recording_active(false)
+	if w != null:
+		w.save_to_wav(_rec_path)
+		print("AUDIO recording saved: %s (%.1f s)" % [_rec_path, w.get_length()])
+	if _log != null:
+		_log.flush()
 
 
 ## Quitting (the window closed, or the tree torn down): every player stopped and every stream let go, so no
 ## playback is left in the audio server when the engine shuts down (knowledge/16 §12: late callbacks at exit).
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_WM_CLOSE_REQUEST or what == NOTIFICATION_EXIT_TREE or what == NOTIFICATION_PREDELETE:
+		_save_recording()
 		stop_all()
 
 
@@ -160,18 +196,22 @@ func stop_all() -> void:
 	_streams.clear()
 
 
-## The master bus: v0.1's glue compressor (threshold -15 dB, ratio 3, 6 ms / 280 ms; it sat on the whole mix
-## there too) and a hard limiter at -1 dBTP so nothing ever clips. The ambience's 遠化 low-pass.
+## v0.1's glue compressor (threshold -15 dB, ratio 3, 6 ms / 280 ms) on the music only: on the whole mix, as in
+## v0.1, it pulled the brook down whenever the wind swelled (the brook-and-wind check, G5R3-65 2.3: -0.67 dB a gust
+## at wind 0.9 in the game; v0.1 itself swung 0.7-1.0 dB). Wind, water, rain and her steps are separate sources and
+## share no dynamics; the master has only a hard limiter at -1 dBTP so nothing ever clips. The ambience's 遠化
+## low-pass.
 func _setup_effects() -> void:
 	var m := 0
-	if not _has_effect(m, "AudioEffectCompressor"):
+	var mi := AudioServer.get_bus_index("Music")
+	if mi >= 0 and not _has_effect(mi, "AudioEffectCompressor"):
 		var c := AudioEffectCompressor.new()
 		c.threshold = -15.0
 		c.ratio = 3.0
 		c.attack_us = 6000.0
 		c.release_ms = 280.0
 		c.gain = 0.0
-		AudioServer.add_bus_effect(m, c)
+		AudioServer.add_bus_effect(mi, c)
 	if not _has_effect(m, "AudioEffectHardLimiter"):
 		var l := AudioEffectHardLimiter.new()
 		l.ceiling_db = -1.0
@@ -214,12 +254,20 @@ func _apply_bus(b: String) -> void:
 	var db := linear_to_db(maxf(v, 0.0001))
 	if b == "Music":
 		db += duck_db("Music")
+		if amb != null and not amb.solo.is_empty() and not amb.solo.has("music"):
+			db = -80.0
 	elif b == "Ambience":
 		db += duck_db("Ambience") + FAR_DB * _far
 	AudioServer.set_bus_volume_db(i, db)
 
 
 func _process(dt: float) -> void:
+	if _rec != null and _rec_secs > 0.0:
+		_rec_t += dt
+		if _rec_t >= _rec_secs:
+			_rec_secs = 0.0
+			_save_recording()
+			get_tree().quit()
 	_duck = move_toward(_duck, _duck_target, _duck_speed * dt)
 	_far = move_toward(_far, _far_target, dt / 1.2)
 	_here = move_toward(_here, _here_target, dt / 2.0)
@@ -257,6 +305,8 @@ func duck_db(bus: String) -> float:
 func duck(amount: float, dur: float = 0.3) -> void:
 	_duck_target = clampf(amount, 0.0, 0.95)
 	_duck_speed = absf(_duck_target - _duck) / maxf(0.01, dur)
+	if _log != null:
+		_log.store_line(JSON.stringify([Time.get_ticks_msec(), "_duck", _duck_target]))
 
 
 ## The 遠化 fills k (0..1) of what she looks at (world3d/vista3d.gd): the ambience recedes, quieter and muffled,

@@ -6,7 +6,11 @@
   menu         from each key press to the first sound it makes (<= 0.1 s, CLAUDE.md §3)
   gallery      the air's level before the dialogue and under it (the ducking: -4 dB)
   brook        the brook-and-wind check (G5R3-65 2.3): no repetition in the mix (self-correlation < 0.15 at every
-               lag from 0.25 s to 20 s), and whether the brook's level follows the wind's (pumping)
+               lag from 0.25 s to 20 s), and no pumping: the water's highs (6-10 kHz, the brook and the rain) must not
+               dip when the wind (100-400 Hz) swells -- the dip per gust (slope of the fast level changes times two
+               standard deviations of the wind's) must stay above -0.5 dB
+  every plan   the 3D sample loads for about ten seconds (the GI bake) before its sound starts: the measures run on
+               the steady part, from 2 s after the first second within 6 dB of the recording's median level
   any          with the plays log (--audio-log): no variant twice running, no variant above 2/n of its sound's plays
   python3 -I tools/audio/check_mix.py DIR [plan ...]     (exit 1 if a check fails)
 """
@@ -58,6 +62,19 @@ def self_corr(m, sr, lags):
     return out
 
 
+def steady_start(m, sr):
+    n = sr
+    k = len(m) // n
+    lv = 20 * np.log10(np.sqrt(np.mean(m[: k * n].reshape(k, n) ** 2, axis=1)) + 1e-12)
+    med = np.median(lv[lv > -100]) if np.any(lv > -100) else -100
+    return float(int(np.argmax(lv > med - 6)) + 2)
+
+
+def fast(e, n=31):
+    from scipy import ndimage
+    return e - ndimage.median_filter(e, n)
+
+
 def main():
     d = Path(sys.argv[1])
     plans = sys.argv[2:] or sorted(p.stem for p in d.glob("*.wav"))
@@ -69,16 +86,21 @@ def main():
         sr, x = AL.read(w)
         keys = json.loads((d / f"{plan}_keys.json").read_text()) if (d / f"{plan}_keys.json").exists() else {"events": []}
         m = AL.mono(x)
+        t0 = steady_start(m, sr) if plan not in ("menu", "gallery") else 0.0
+        x, m = x[int(t0 * sr):], m[int(t0 * sr):]
         L = AL.loudness(x, sr)
         tp = AL.true_peak_db(x)
         st = L["short_term"]
         jumps = [[i + 1, round(st[i + 1] - st[i], 1)] for i in range(len(st) - 1) if st[i] > -60 and abs(st[i + 1] - st[i]) > 6.0]
-        r = {"seconds": round(len(x) / sr, 1), "lufs": round(L["integrated"], 1), "true_peak_db": round(tp, 2),
+        r = {"steady_from_s": t0, "seconds": round(len(x) / sr, 1), "lufs": round(L["integrated"], 1), "true_peak_db": round(tp, 2),
              "short_term_max": round(L["max_short_term"], 1), "jumps_over_6lu": jumps}
         if tp > -1.0:
             fails.append(f"{plan}: true peak {tp:.2f} dBTP")
-        if plan in ("home", "brook", "vista", "lookout") and not (-26.0 <= L["integrated"] <= -22.0):
+        if plan in ("home", "brook", "vista", "lookout", "approach", "night") and not (-26.0 <= L["integrated"] <= -22.0):
             fails.append(f"{plan}: integrated {L['integrated']:.1f} LUFS outside -24 +-2")
+        if plan in ("brook_rain", "rain") and not (-26.0 <= L["integrated"] <= -20.0):
+            # weather may sit up to 4 LU above the reference, never more (the voices and her steps stay on top)
+            fails.append(f"{plan}: integrated {L['integrated']:.1f} LUFS outside -26..-20 (weather)")
         if plan == "menu":
             lat = []
             for ev in keys["events"]:
@@ -89,27 +111,45 @@ def main():
             for v in lat:
                 if v is None or v > 0.1:
                     fails.append(f"menu: key to sound {v} s")
-        if plan == "gallery" and keys["events"]:
-            t1 = keys["events"][0]["frame"] / keys.get("fps", 30)
+        marks = {}
+        plays = d / f"{plan}_plays.jsonl"
+        if plays.exists():
+            for l in plays.read_text().splitlines():
+                if l.strip():
+                    ms, sid, v = json.loads(l)
+                    if str(sid).startswith("_"):
+                        marks.setdefault(sid, []).append((ms, v))
+        if plan == "gallery" and "_rec" in marks and "_duck" in marks:
+            # the dialogue's own duck calls (StoryUI.say / _finish, logged by Audio.duck) on the recording's clock;
+            # the air (the wind, 80-300 Hz) averaged in power over everything before and everything under it (its
+            # gusts swing it +-3 dB over a few seconds: short windows cannot see a 4 dB duck)
+            r0 = marks["_rec"][0][0]
+            on = [(ms - r0) / 1000.0 for ms, v in marks["_duck"] if v > 0]
+            off = [(ms - r0) / 1000.0 for ms, v in marks["_duck"] if v == 0 and on and (ms - r0) / 1000.0 > on[0]]
+            t1, t2 = on[0], (off[0] if off else len(m) / sr)
             low = band(m, sr, 80, 300)
-            e = env_db(low, sr, 0.1)
-            before = np.percentile(e[int(2 / 0.1): int(t1 / 0.1)], 30)
-            during = np.percentile(e[int((t1 + 1.0) / 0.1): int((t1 + 9.0) / 0.1)], 30)
-            r["air_before_db"], r["air_under_dialogue_db"], r["duck_db"] = round(before, 1), round(during, 1), round(during - before, 1)
-            if not (-6.0 <= during - before <= -2.0):
-                fails.append(f"gallery: the air ducked {during - before:.1f} dB under the dialogue (want about -4)")
-        if plan == "brook":
-            sc = self_corr(m[int(3 * sr):], sr, [0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20])
+            pw = lambda a, b: 10 * np.log10(np.mean(low[int(a * sr): int(b * sr)] ** 2) + 1e-20)
+            before, during = pw(2.0, t1 - 0.2), pw(t1 + 0.6, t2 - 0.2)
+            r["dialogue_s"], r["air_before_db"], r["air_under_dialogue_db"] = [round(t1, 2), round(t2, 2)], round(before, 1), round(during, 1)
+            r["duck_db"] = round(during - before, 1)
+            if not (-6.5 <= during - before <= -1.5):
+                fails.append(f"{plan}: the air ducked {during - before:.1f} dB under the dialogue (want about -4)")
+        if plan.startswith("brook"):
+            sc = self_corr(m, sr, [0.25, 0.5, 1, 1.5, 2, 3, 4, 5, 6, 8, 10, 12, 15, 20])
             worst = max(sc, key=lambda v: v[1])
             r["self_corr"] = [[a, round(b, 3)] for a, b in sc]
             if worst[1] > 0.15:
                 fails.append(f"brook: the mix repeats (self-correlation {worst[1]:.2f} at {worst[0]} s)")
-            wind = env_db(band(m, sr, 100, 400), sr, 0.1)
-            brook = env_db(band(m, sr, 2000, 4000), sr, 0.1)
-            r["corr_brook_vs_wind_level"] = round(float(np.corrcoef(wind, brook)[0, 1]), 3)
-        plays = d / f"{plan}_plays.jsonl"
+            wind = fast(env_db(band(m, sr, 100, 400), sr, 0.1))
+            water = fast(env_db(band(m, sr, 6000, 10000), sr, 0.1))
+            c = float(np.corrcoef(wind, water)[0, 1])
+            dip = 2.0 * c * float(np.std(water))   # the slope (c sd_water / sd_wind) times two sd of the wind
+            r["water_vs_wind_fast_corr"], r["water_dip_per_gust_db"] = round(c, 3), round(dip, 2)
+            if dip < -0.5:
+                fails.append(f"{plan}: the water dips {dip:.2f} dB when the wind swells (pumping)")
         if plays.exists():
             rows = [json.loads(l) for l in plays.read_text().splitlines() if l.strip()]
+            rows = [q for q in rows if not str(q[1]).startswith("_")]
             by = {}
             for _, sid, vi in rows:
                 by.setdefault(sid, []).append(vi)

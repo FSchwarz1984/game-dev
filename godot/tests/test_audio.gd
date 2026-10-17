@@ -54,6 +54,10 @@ func test_dialogue_ducking_is_9_db_for_music_and_4_for_the_air() -> void:
 	var mi := AudioServer.get_bus_index("Music")
 	var base := linear_to_db(maxf(float(GameState.setting("vol_music")), 0.0001))
 	near(AudioServer.get_bus_volume_db(mi), base - 9.0, 0.05, "the Music bus is down 9 dB")
+	# the wind has its own bus (its filters) that must go through Ambience, or the duck and the 遠化 miss it
+	var wi := AudioServer.get_bus_index(AudioAmbience.WIND_BUS)
+	if check(wi >= 0, "the wind's bus exists"):
+		eq(String(AudioServer.get_bus_send(wi)), "Ambience", "the wind goes through the Ambience bus")
 	Audio.duck(0.0, 0.01)
 	for i in 10:
 		Audio._process(0.05)

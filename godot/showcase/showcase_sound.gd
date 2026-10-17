@@ -32,10 +32,14 @@ var _music := ""
 var _wonder_t := -1e9
 var _clock := 0.0
 var _looking := false
+var _wind_set := -1.0             # -- --audio-wind=0..1: the air's wind held there (recordings: the brook-and-wind check)
 
 
 func _ready() -> void:
 	rng.seed = Time.get_ticks_usec() ^ 0x1b873593
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--audio-wind="):
+			_wind_set = clampf(float(a.substr(13)), 0.0, 1.0)
 
 
 ## Called by the showcase once the sample is in the tree (its _ready has built the world).
@@ -203,6 +207,8 @@ func _air(her: W3Walker, env: W3Env) -> Dictionary:
 	var t := env.clock
 	var drift := 0.25 + 0.2 * sin(t * 0.13) + 0.15 * sin(t * 0.41)
 	var wind := clampf(drift * env.wind + env.rain * 0.3, 0.0, 1.0)
+	if _wind_set >= 0.0:
+		wind = _wind_set
 	var p := her.pos
 	var n := 0
 	for tr in trees:
@@ -315,9 +321,9 @@ func _crows(her: W3Walker) -> void:
 		var prev: Array = _crow_state.get(c, ["", ""])
 		var pose := String(c.pose)
 		var st := String(c.state)
-		if pose == "caw" and prev[0] != "caw":
+		if pose == "caw" and prev[0] != "caw" and Audio.amb.heard("events") > 0.0:
 			Audio.play_at("caw", c.pos + Vector3(0, 0.3, 0), {"unit": 10.0, "max": 70.0, "bus": "Ambience"})
-		if st == "fly" and prev[1] != "fly" and prev[1] != "":
+		if st == "fly" and prev[1] != "fly" and prev[1] != "" and Audio.amb.heard("events") > 0.0:
 			Audio.play_at("wings", c.pos, {"unit": 6.0, "max": 35.0, "bus": "Ambience"})
 		_crow_state[c] = [pose, st]
 

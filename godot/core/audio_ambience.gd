@@ -26,6 +26,15 @@ const RAIN := [[0.3, "bed_rain_30"], [0.6, "bed_rain_60"], [0.95, "bed_rain_95"]
 const STREAM := ["bed_stream_a", "bed_stream_b", "bed_stream_c"]
 const STREAM_STEP := 5.0          # metres between the brook's emitters
 const STREAM_REACH := 34.0        # emitters farther than this from her are stopped
+# The mix's calibration (decision 7, in-game recordings, tools/audio/check_mix.py): v0.1's beds keep their own
+# levels against each other, but its rain and brook were 6-8 LU louder than a calm walk (heavy rain by the brook
+# -16 LUFS against -25). Heavy rain may stand about 3 LU above the reference (-24 LUFS), the brook beside her about
+# at it; the voices and her steps stay on top.
+const BED_TRIM_DB := {"bed_rain_30": -1.0, "bed_rain_60": -3.0, "bed_rain_95": -5.5}
+const STREAM_DB := -10.5          # each brook emitter (they overlap every five metres): about -25.5 LUFS beside it
+# v0.1's wind grew with the wind (0.1 + 0.6 w, and brighter): alone it was -20.4 LUFS at wind 0.9 by the brook,
+# the loudest thing there (the "大風聲" over the brook, G5R3-65 2.3). Above 0.35 it now gives up to 5 dB of that.
+const WIND_TOP_DB := -5.0
 
 var state := {"tod": 12.0, "rain": 0.0, "wind": 0.3, "near": 1.0, "forest": 0.0, "bamboo": 0.0, "meadow": 0.0,
 	"shrine": 0.0, "stream": 0.0, "indoor": false, "cinematic": false, "paused": false}
@@ -39,6 +48,9 @@ var events_on := true
 var rng := RandomNumberGenerator.new()
 var log_events := false
 var events_log: Array = []        # [msec, kind, pos] (checks)
+# -- --audio-solo=wind,beds,stream,events: only these parts of the air sound (calibration recordings; the
+# showcase's crows count as events, the music is muted unless "music" is listed). Empty: everything.
+var solo := {}
 
 var _wind: AudioStreamPlayer
 var _wind_lp: AudioEffectLowPassFilter
@@ -55,6 +67,10 @@ var _preset := ""
 
 func _ready() -> void:
 	rng.seed = Time.get_ticks_usec() ^ 0x5bd1e995
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--audio-solo="):
+			for k in a.substr(13).split(","):
+				solo[k] = true
 	_make_wind_bus()
 	_wind = AudioStreamPlayer.new()
 	_wind.bus = WIND_BUS
@@ -223,7 +239,8 @@ func _process(dt: float) -> void:
 	gust = _g_target + (gust - _g_target) * exp(-dt / maxf(0.05, _g_tc))
 	var g := gust * (1.0 + 0.45 * gust_front)
 	var wv := (0.1 + 0.6 * wind) * open * 0.55
-	_wind.volume_db = linear_to_db(maxf(1e-5, WIND_CAL * wv * g * near_g))
+	var top := WIND_TOP_DB * clampf((wind - 0.35) / 0.55, 0.0, 1.0)
+	_wind.volume_db = linear_to_db(maxf(1e-5, WIND_CAL * wv * g * near_g * heard("wind"))) + top
 	if _wind_lp:
 		var cut := lerpf(300.0, 1200.0, wind) * (1.0 + 0.25 * meadow) * pow(2.0, (g - 0.62) * 1100.0 / 1200.0)
 		_wind_lp.cutoff_hz = clampf(cut, 60.0, 18000.0)
@@ -244,11 +261,16 @@ func _process(dt: float) -> void:
 		_events(dt)
 
 
+## 1 if this part of the air is heard (no --audio-solo, or it is listed), else 0.
+func heard(part: String) -> float:
+	return 1.0 if solo.is_empty() or solo.has(part) else 0.0
+
+
 func _bed(id: String, lin: float, dt: float) -> void:
 	var p: AudioStreamPlayer = _beds.get(id)
 	if p == null:
 		return
-	var target := linear_to_db(maxf(lin, 1e-5))
+	var target := linear_to_db(maxf(lin * heard("beds"), 1e-5)) + float(BED_TRIM_DB.get(id, 0.0))
 	# v0.1 eased its bed levels (setTargetAtTime ~0.5 s)
 	p.volume_db = lerpf(p.volume_db, target, clampf(dt / 0.5, 0.0, 1.0)) if target > -79.0 or p.volume_db > -79.0 else -80.0
 
@@ -286,8 +308,8 @@ func _update_stream(near_g: float) -> void:
 		if d < STREAM_REACH:
 			if not p.playing:
 				p.play(rng.randf() * 70.0)
-			# five-metre spacing: neighbours overlap; -4 dB keeps the bank near v0.1's level (water 1 -> 0.75)
-			p.volume_db = linear_to_db(maxf(1e-5, near_g)) - 4.0
+			# five-metre spacing: neighbours overlap (STREAM_DB: the calibration above)
+			p.volume_db = linear_to_db(maxf(1e-5, near_g * heard("stream"))) + STREAM_DB
 		elif p.playing:
 			p.stop()
 
@@ -301,7 +323,7 @@ func _events(dt: float) -> void:
 			var cb: Callable = _pending[i][1]
 			_pending.remove_at(i)
 			cb.call()
-	if act < 0.02:
+	if act < 0.02 or heard("events") == 0.0:
 		return
 	var h := float(state["tod"])
 	var rain := float(state["rain"])
