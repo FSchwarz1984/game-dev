@@ -126,6 +126,9 @@ bash tools/godot/export-game.sh [out] [release|debug]   # Windows、Android、Li
 6. **测试里打出的引擎错误不会让测试失败**：GDScript 没有异常，要用 4.5+ 的 `Logger`（`OS.add_logger`）收集。预期的失败路径要避免打错误：`JSON.parse_string` 失败会打错误，用 `JSON.new().parse()`；`make_dir_recursive_absolute` 失败会打错误，先检查路径上有没有同名文件。
 7. **`-s` 模式会加载自动加载，但运行器脚本在它们注册之前编译**：运行器直接引用的类里如果写了自动加载的名字，会编译失败，然后运行器挂住不退出。所以 `UiTheme` 不依赖 `GameState`，运行器按路径加载、先安排退出再清理。
 8. 安卓的返回键默认直接退出游戏（`quit_on_go_back`），已关掉。
+9. **导出版不检查方法 Callable 的对象还在不在**（2026-10-17，第二版 Windows 验证时发现）：`core/variant/callable.cpp` 的 `Callable::callp` 只在 `DEBUG_ENABLED` 下检查对象是否已释放，导出的发布版直接调用，对象没了就是段错误。编辑器和编辑器跑的场景都是调试版，看不出来，也不打错误。第二版的灯遮挡（`render3d/lamp_occlusion.gd`）用 `buffer_get_data_async(…, _on_read)` 异步读回，离开家一带时效果对象先释放、读回晚一两帧才到，回菜单就崩（Linux 导出版 2/2 复现，退出码 139）。规矩：
+   - 会晚到的回调（`buffer_get_data_async`、`texture_get_data_async`、`call_on_render_thread`，以及别的跨帧、跨线程的回调）不要用指向可能被释放的对象的方法 Callable。用只碰捕获变量、不碰 `self` 的 lambda（编译成 `GDScriptLambdaCallable`，不绑对象），结果写进被 lambda 捕获的 RefCounted（按值捕获，引用会留住它）。
+   - 验证必须跑导出的发布版，而且要走场景切换（进出家一带、回菜单）：只用编辑器二进制跑的验证会漏掉这类问题。
 
 ## 13. 桩、没做的和没验证的
 

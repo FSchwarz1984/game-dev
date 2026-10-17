@@ -8,6 +8,12 @@ extends CompositorEffect
 ## covers back to the CPU without stalling (RenderingDevice.buffer_get_data_async); W3Lamps scales
 ## each lamp's fog energy by it (eased), so a hidden lamp's glow goes with it. The orthographic
 ## camera does not use it (its picture stays exactly the old one).
+## Nothing asynchronous may call back into this object: it is freed when she leaves the home area,
+## and a read-back can land a frame or two later. An exported game does not check that a method
+## Callable's object is still alive (core/variant/callable.cpp checks only under DEBUG_ENABLED, so the
+## editor shows nothing), and such a call crashed the game on going back to the menu. The read-back
+## goes to a lambda that holds the _Sink below (a RefCounted outliving this object), and the shader
+## and buffers are made lazily in the first render callback instead of through call_on_render_thread.
 
 const MAX := 64
 const TOLERANCE := 0.3        # m: what lies less than this in front of the lamp's point (its own lantern) does not hide it
@@ -56,6 +62,24 @@ void main() {
 }
 """
 
+## where the read-back lands (see the top): the lambda handed to buffer_get_data_async holds it
+class _Sink extends RefCounted:
+	var mutex := Mutex.new()
+	var vis := PackedFloat32Array()
+	var pending := false
+
+	func take(bytes: PackedByteArray) -> void:
+		mutex.lock()
+		vis = bytes.to_float32_array()
+		pending = false
+		mutex.unlock()
+
+	func is_pending() -> bool:
+		mutex.lock()
+		var p := pending
+		mutex.unlock()
+		return p
+
 var rd: RenderingDevice
 var _shader := RID()
 var _pipeline := RID()
@@ -66,8 +90,9 @@ var _mutex := Mutex.new()
 var _data := PackedFloat32Array()
 var _params := PackedFloat32Array()
 var _count := 0
-var _vis := PackedFloat32Array()
+var _sink := _Sink.new()
 var _waiting := 0             # frames since a read-back was asked for (0: none outstanding)
+var _set_up := false
 var failed := false
 
 
@@ -76,11 +101,11 @@ func _init() -> void:
 	rd = RenderingServer.get_rendering_device()
 	if rd == null:
 		failed = true
-		return
-	RenderingServer.call_on_render_thread(_setup)
 
 
+## Render thread, the first render callback (see the top: no call_on_render_thread with this object)
 func _setup() -> void:
+	_set_up = true
 	var src := RDShaderSource.new()
 	src.language = RenderingDevice.SHADER_LANGUAGE_GLSL
 	src.source_compute = SOURCE
@@ -123,20 +148,25 @@ func set_lamps(data: PackedFloat32Array, count: int, size: Vector2, ortho: bool,
 
 ## Main thread: the latest shares (one per lamp, in the order given; empty until the first read-back).
 func visibility() -> PackedFloat32Array:
-	_mutex.lock()
-	var v := _vis
-	_mutex.unlock()
+	_sink.mutex.lock()
+	var v := _sink.vis
+	_sink.mutex.unlock()
 	return v
 
 
 func _render_callback(callback_type: int, render_data: RenderData) -> void:
-	if failed or callback_type != EFFECT_CALLBACK_TYPE_POST_OPAQUE or not _pipeline.is_valid():
+	if failed or callback_type != EFFECT_CALLBACK_TYPE_POST_OPAQUE:
 		return
-	if _waiting > 0:
-		_waiting += 1
-		if _waiting < 30:
+	if not _set_up:
+		_setup()
+		if failed:
 			return
-		_waiting = 0       # (a read-back that never came: ask again)
+	if _waiting > 0:
+		if _sink.is_pending():
+			_waiting += 1
+			if _waiting < 30:
+				return
+		_waiting = 0       # (it came, or a read-back that never came: ask again)
 	_mutex.lock()
 	var data := _data
 	var count := _count
@@ -173,12 +203,12 @@ func _render_callback(callback_type: int, render_data: RenderData) -> void:
 	rd.compute_list_set_push_constant(cl, pc, pc.size())
 	rd.compute_list_dispatch(cl, 1, 1, 1)
 	rd.compute_list_end()
-	if rd.buffer_get_data_async(_out_buf, _on_read, 0, count * 4) == OK:
+	var sink := _sink
+	sink.mutex.lock()
+	sink.pending = true
+	sink.mutex.unlock()
+	# (a lambda that touches only its capture is not bound to this object, see the top)
+	if rd.buffer_get_data_async(_out_buf, func(bytes: PackedByteArray) -> void: sink.take(bytes), 0, count * 4) == OK:
 		_waiting = 1
-
-
-func _on_read(bytes: PackedByteArray) -> void:
-	_mutex.lock()
-	_vis = bytes.to_float32_array()
-	_mutex.unlock()
-	_waiting = 0
+	else:
+		sink.take(PackedByteArray())
