@@ -17,7 +17,7 @@
 | 2026-10-15 | 立绘与 3D 人物模型的素材清单（给用户用 ChatGPT 生成；含可复制的提示词；第二版按立绘第四版重排） | <https://claude.ai/artifact/1oFkdMqddgN7Y3CmxSAGvX> | 用户已生成两版素材，放在 Google Drive（G5R3）；"露出眉"的要求作废（G5R3-8） |
 | 2026-10-15 | G5 第三轮评审：美术样章第四轮、小鹊的 3D 模型（含刘海、屏幕上的大小）、立绘第四版、序章远景三个 bug、结界与爬树（四个决定）、剧本第四版 | <https://claude.ai/artifact/UCWS16k9yeLRXytTAbotr8> | 已答复（decision-log G5R3-0…12）：色彩退回第三轮，草、构图、道路重做；3D 模型彻底重做；刘海照原画；3 倍不变；立绘通过；结界与爬树全选 A；剧本要更出彩；这一轮后交 Windows 版 |
 | 2026-10-16（第二版 2026-10-17） | G5 第五轮评审：**第二版 Windows：相机**（第 1 节：V 切 P2 / P1 / P3 / 正交、B 切景深，对照图、代价、验证；附件发在对话里，提交 4c14698）；第一版 Windows（提交 0ab7a0a）、色彩退回第三轮、构图与道路、眺望（第三轮取景、以町为原爆点的遠化：白天去雾高调、夜里银灰）、序章远景与标题中景、立绘与对话演出、人物第六版被否之后、剧本第五版 | <https://claude.ai/artifact/J62j7W8ZuHBKhqAWmQZGUe> | 待答复：相机选组选档、剧本六件事、对话演出九条、人物攻关做法、上手意见（G5R3-39：等用户的问题清单） |
-| 2026-10-17 | G5 第六轮评审：**立绘的最终补充清单**（GP-01…20：三个女孩 16 项必做、婆婆 4 项看 1.3 的答复；参考图和提示词在附件 Tengan_PortraitRefs.zip，SHA-256 8260a561…）；**声音与音乐的提案**（八个决定）；序章衔接的方案做好后加在同一页 | <https://claude.ai/artifact/WREJUqjU3pAJxk3Ac7cPW1> |
+| 2026-10-17 | G5 第六轮评审：**立绘的最终补充清单**（GP-01…20：三个女孩 16 项必做、婆婆 4 项看 1.3 的答复；参考图和提示词在附件 Tengan_PortraitRefs.zip，SHA-256 8260a561…）；**声音与音乐的提案**（八个决定）；第三版加了**序章衔接的方案**（第 3 节，A 抽色推荐，实机分镜；`prologue-bridge-draft.md`）；立绘清单改成单独给 ChatGPT 的说明（`portrait-gpt-brief.md`） | <https://claude.ai/artifact/WREJUqjU3pAJxk3Ac7cPW1> |
 
 ## 文档
 
@@ -42,3 +42,4 @@
 | [script-04-draft.md](script-04-draft.md) | 开场剧本第四版：七十岁的婆婆、乌鸦和收音机、团子与饭团两条线、乌鸦回窝引她上树 | 方向认可但"不夠出彩"（G5R3-12），要写第五版 |
 | [realm-and-climb-draft.md](realm-and-climb-draft.md) | 结界只认盂兰盆的灯、里面的光走得慢（烂柯）、乌鸦叼团子回树顶的窝 | 已批准（G5R3-11，全部 A） |
 | [audio-music-draft.md](audio-music-draft.md) | 声音与音乐（G5R3-53，工作队列第 5 项）：声音的风格和边界、音效的做法（离线渲染多份变奏）、清单与修怪声、野外放多少音乐、音乐系统（主题、层、安静、过渡）、音乐怎么做出来（代理写谱 / 改编 / 真人作曲 / 合成 / AI）、两次听的关口、几件小事 | 草案，待审（2026-10-17） |
+| [prologue-bridge-draft.md](prologue-bridge-draft.md) | 序章：天门的聚光和町的爆点之间的衔接（G5R3-61）：A 抽色（推荐）、A′、B、C、D、不加；信号塔镜头的枝叶（G5R3-50）已修。代码在 `bridge-g5r3-61` 工作树分支，未合并 | 草案，待审（2026-10-17） |
