@@ -15,6 +15,9 @@ mkdir -p "$OUT"
 CW="$OUT/closewin"
 gcc -O2 -o "$CW" "$HERE/quit_check/closewin.c" -lX11 || { echo "cannot build closewin (gcc, libx11-dev)"; exit 1; }
 WINE=/usr/lib/wine/wine64
+# the same prefix and overrides as showcase_check.py (dinput8 off: wine 9.0 crashes in Godot's joypad
+# init, knowledge/10 section 5.2)
+export WINEPREFIX=/home/user/godotengine/wine-prefix WINEDEBUG=-all WINEDLLOVERRIDES="mscoree,mshtml=;dinput8=d;winedbg.exe=d"
 fails=0
 one() {   # one <case> <run>
 	local kind="$1" n="$2" dir="$OUT/$1_$2"
@@ -25,7 +28,7 @@ one() {   # one <case> <run>
 	sleep 2
 	"$CW" 0          # the close atoms must exist before the game starts (no window manager here)
 	if [[ "$BIN" == *.exe ]]; then
-		WINEDEBUG=-all "$WINE" "$BIN" > "$dir/log.txt" 2>&1 &
+		"$WINE" "$BIN" > "$dir/log.txt" 2>&1 &
 	else
 		"$BIN" > "$dir/log.txt" 2>&1 &
 	fi
@@ -33,7 +36,7 @@ one() {   # one <case> <run>
 	sleep 20
 	local w
 	w=$(xdotool search --onlyvisible --pid $gp 2>/dev/null | tail -1)
-	[ -z "$w" ] && w=$(xdotool search --onlyvisible --name . 2>/dev/null | tail -1)
+	[ -z "$w" ] && w=$(xdotool search --onlyvisible --name "天岸" 2>/dev/null | tail -1)   # (wine: another process)
 	xdotool windowactivate --sync "$w" >/dev/null 2>&1; xdotool windowfocus "$w" >/dev/null 2>&1
 	xdotool key Return
 	sleep 45
@@ -54,6 +57,8 @@ one() {   # one <case> <run>
 			sleep 1
 		done
 	fi
+	# (the case only counts when the home area had loaded: its GI bake is in the log)
+	grep -q "GI baked" "$dir/log.txt" || verdict="FAIL: the home area never loaded ($verdict)"
 	kill $gp 2>/dev/null; [[ "$BIN" == *.exe ]] && /usr/lib/wine/wineserver64 -k >/dev/null 2>&1
 	kill $xp 2>/dev/null
 	echo "$kind $n: $verdict"
