@@ -8,12 +8,16 @@ extends CompositorEffect
 ## covers back to the CPU without stalling (RenderingDevice.buffer_get_data_async); W3Lamps scales
 ## each lamp's fog energy by it (eased), so a hidden lamp's glow goes with it. The orthographic
 ## camera does not use it (its picture stays exactly the old one).
-## Nothing asynchronous may call back into this object: it is freed when she leaves the home area,
-## and a read-back can land a frame or two later. An exported game does not check that a method
-## Callable's object is still alive (core/variant/callable.cpp checks only under DEBUG_ENABLED, so the
-## editor shows nothing), and such a call crashed the game on going back to the menu. The read-back
-## goes to a lambda that holds the _Sink below (a RefCounted outliving this object), and the shader
-## and buffers are made lazily in the first render callback instead of through call_on_render_thread.
+## The read-back must not call into this script, or into any script (knowledge/16 section 12, 9):
+## - this object is freed when she leaves the home area and a read-back lands a frame or two later;
+##   an exported game does not check that a method Callable's object is still alive (callable.cpp
+##   checks only under DEBUG_ENABLED, so the editor shows nothing): going back to the menu crashed;
+## - one still in flight when the game quits is delivered while the rendering server shuts down,
+##   after the script languages are gone: a GDScript lambda there aborted the process.
+## So the bytes go straight into a StreamPeerBuffer (engine code, no script) through a Callable that
+## holds the buffer itself (unbind(1).bind(peer): custom callables are checked even in exported
+## games, and the bound peer lives as long as the request); the render callback picks them up. The
+## shader and buffers are made in the first render callback, not through call_on_render_thread.
 
 const MAX := 64
 const TOLERANCE := 0.3        # m: what lies less than this in front of the lamp's point (its own lantern) does not hide it
@@ -62,24 +66,6 @@ void main() {
 }
 """
 
-## where the read-back lands (see the top): the lambda handed to buffer_get_data_async holds it
-class _Sink extends RefCounted:
-	var mutex := Mutex.new()
-	var vis := PackedFloat32Array()
-	var pending := false
-
-	func take(bytes: PackedByteArray) -> void:
-		mutex.lock()
-		vis = bytes.to_float32_array()
-		pending = false
-		mutex.unlock()
-
-	func is_pending() -> bool:
-		mutex.lock()
-		var p := pending
-		mutex.unlock()
-		return p
-
 var rd: RenderingDevice
 var _shader := RID()
 var _pipeline := RID()
@@ -90,7 +76,8 @@ var _mutex := Mutex.new()
 var _data := PackedFloat32Array()
 var _params := PackedFloat32Array()
 var _count := 0
-var _sink := _Sink.new()
+var _vis := PackedFloat32Array()
+var _peer := StreamPeerBuffer.new()   # where the read-back lands (see the top); render thread only
 var _waiting := 0             # frames since a read-back was asked for (0: none outstanding)
 var _set_up := false
 var failed := false
@@ -148,9 +135,9 @@ func set_lamps(data: PackedFloat32Array, count: int, size: Vector2, ortho: bool,
 
 ## Main thread: the latest shares (one per lamp, in the order given; empty until the first read-back).
 func visibility() -> PackedFloat32Array:
-	_sink.mutex.lock()
-	var v := _sink.vis
-	_sink.mutex.unlock()
+	_mutex.lock()
+	var v := _vis
+	_mutex.unlock()
 	return v
 
 
@@ -162,7 +149,12 @@ func _render_callback(callback_type: int, render_data: RenderData) -> void:
 		if failed:
 			return
 	if _waiting > 0:
-		if _sink.is_pending():
+		if _peer.get_size() > 0:
+			var v := _peer.data_array.to_float32_array()
+			_mutex.lock()
+			_vis = v
+			_mutex.unlock()
+		else:
 			_waiting += 1
 			if _waiting < 30:
 				return
@@ -203,12 +195,8 @@ func _render_callback(callback_type: int, render_data: RenderData) -> void:
 	rd.compute_list_set_push_constant(cl, pc, pc.size())
 	rd.compute_list_dispatch(cl, 1, 1, 1)
 	rd.compute_list_end()
-	var sink := _sink
-	sink.mutex.lock()
-	sink.pending = true
-	sink.mutex.unlock()
-	# (a lambda that touches only its capture is not bound to this object, see the top)
-	if rd.buffer_get_data_async(_out_buf, func(bytes: PackedByteArray) -> void: sink.take(bytes), 0, count * 4) == OK:
+	_peer.clear()
+	# engine code only, and it keeps the peer alive until it is called (see the top)
+	var land := Callable(_peer, "set_data_array").unbind(1).bind(_peer)
+	if rd.buffer_get_data_async(_out_buf, land, 0, count * 4) == OK:
 		_waiting = 1
-	else:
-		sink.take(PackedByteArray())
