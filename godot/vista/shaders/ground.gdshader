@@ -22,6 +22,10 @@ uniform float wave = -1.0;
 uniform float settled = 0.0;
 uniform float t = 0.0;                 // the vista clock (the shimmer)
 uniform float mirage_amp = 1.15;      // the lookout's: a pixel at most, where k^1.5 n > 0.43
+// (Vista.bridge "drain", G5R3-61) before the far bursts, the town's colours drawn up into the gate:
+// the ground the far reaches first (its arrival bucket within drain_b, a soft edge of 8 buckets)
+// already its ghost. < -5: none
+uniform float drain_b = -10.0;
 
 varying vec2 px;
 
@@ -59,12 +63,22 @@ void fragment() {
 	}
 	int id = int(tex.r * 255.0 + 0.5) + int(tex.g * 255.0 + 0.5) * 256;
 	vec3 c = lin255(lut_rgb(lut, id, tod_row));
+	bool far_done = false;
 	if (far_on) {
 		if (gone(tex, b)) {
 			float g = texelFetch(ghost_map, p, 0).r;
 			c = mix(c, lin255(texelFetch(lut_far, ivec2(id, 1), 0).rgb * 255.0), g);
+			far_done = true;
 		} else if (wave >= 0.0 && floor(tex.b * 255.0 + 0.5) <= b) {
 			c = lin255(texelFetch(lut_far, ivec2(id, 0), 0).rgb * 255.0);
+			far_done = true;
+		}
+	}
+	if (!far_done && drain_b > -5.0) {
+		float dm = clamp((drain_b - floor(tex.b * 255.0 + 0.5)) / 8.0, 0.0, 1.0);
+		if (dm > 0.0) {
+			float g = texelFetch(ghost_map, p, 0).r;
+			c = mix(c, lin255(texelFetch(lut_far, ivec2(id, 1), 0).rgb * 255.0), g * dm);
 		}
 	}
 	COLOR = vec4(c, 1.0);

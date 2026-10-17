@@ -347,6 +347,9 @@ export function bakeSouth(o = {}) {
     }),
     stir: stir.map(sp => ({ x: sp.x, y: sp.y, ph: r3(sp.ph), w: 26, h: 20 })),
     moteBuckets: Array.from(buckets),
+    // each ground id's material colour (its albedo, 0..255, unlit): what the town's colours are when
+    // the bridge "drain" draws them up into the gate (G5R3-61, godot/vista/south_drain.gd)
+    groundAlbedo: gSpace.values.map(v => (v ? (GROUND_MATS[v >> 8] || {}).albedo || [0, 0, 0] : [0, 0, 0]).map(c => Math.round(c * 255))),
     images: {
       ground: idImage(groundIds, Wc, GH, arrival),
       groundGhost: { w: Wc, h: GH, data: ghostMap, fmt: 'rgba8' },

@@ -149,19 +149,52 @@ export function bakeTower(o = {}) {
   for (let k = 0; k < 7; k++) clumpsBL.push({ x: W * (-0.04 - RX() * 0.5), y: H * (0.7 + RX() * 0.38), rx: 18 + RX() * 10, ry: 13 + RX() * 5, z: RX() });
   for (let k = 0; k < 5; k++) clumpsBR.push({ x: W * (1.04 + RX() * 0.45), y: H * (0.84 + RX() * 0.22), rx: 16 + RX() * 8, ry: 12 + RX() * 4, z: RX() });
   for (let k = 0; k < 4; k++) clumpsTL.push({ x: -W * (0.06 + RX() * 0.4), y: H * (RX() * 0.25), rx: 16 + RX() * 8, ry: 12 + RX() * 4, z: 0.9 + RX() * 0.3 });
+  // G5R3-50: the leaves in the corners hung in the air (the user: "切到信號塔那裡的時候左下角枝幹的樹葉
+  // 像是懸在空中沒有連接"): HEAD's clumps lie about the corners with nothing holding them, and in the
+  // bottom left two of them float free over the dark ridge (more of them, in every corner, on wide
+  // views). Each corner gets the camphor's lower bough the clumps rest on, reaching in from outside the
+  // frame (from the left for the two left corners, from the right for the bottom right), behind every
+  // clump (it shows only between them); the clumps themselves are painted exactly as before. Its
+  // points are in the reference frame's coordinates, drawn [x, y, radius], root first.
+  const boughs = {
+    // under the clumps of the bottom left: in from the far left, sagging a little, its tip in the
+    // clump that hangs over the ridge right of the corner (the two that floated rest on it)
+    BL: [{ pts: [[-282, 254, 5.6], [-210, 243, 5], [-140, 238, 4.4], [-70, 236, 3.8], [-10, 232, 3.3], [40, 229, 2.8], [72, 231, 2.3], [94, 237, 1.7], [106, 242, 1.2]], z: -0.5, dark: 1 }],
+    // the bottom right (on wide views): in from the far right, through its clumps to the corner's mass
+    BR: [{ pts: [[762, 254, 5.6], [700, 247, 4.6], [640, 247, 3.9], [584, 249, 3.2], [532, 254, 2.5], [486, 262, 1.7], [462, 268, 1.2]], z: -0.5, dark: 1 }],
+    // the top left (on wide views): in from the far left, rising to the clumps under the old limb
+    TL: [{ pts: [[-284, 60, 5.2], [-236, 41, 4.5], [-196, 27, 3.8], [-166, 32, 3.2], [-122, 36, 2.6], [-80, 40, 2.1], [-46, 44, 1.6]], z: -0.5, dark: 1 }],
+  };
   const light = [0.6, -0.4, -0.5];
   const fpal = palette(FOLIAGE_MATS, { ...env, sun: [0.2, 0.32, 0.32] });
-  // each corner painted on its own canvas (same coordinates as the reference frame plus a margin)
-  const corner = (clumps, limbs, x0, y0, w, h, cellSeed) => {
+  // each corner painted on its own canvas (same coordinates as the reference frame plus a margin);
+  // `out`: where the layer runs out of every view (sides of the layer, and rows / columns of the
+  // reference frame past its edges): every piece of it must reach there (hang())
+  const corner = (clumps, limbs, x0, y0, w, h, cellSeed, bough, out) => {
     const shifted = clumps.map(c => ({ ...c, x: c.x - x0, y: c.y - y0 }));
     const ls = limbs.map(l => ({ ...l, pts: l.pts.map(([x, y, r]) => [x - x0, y - y0, r]) }));
-    const layer = run(paintCanopyGen(w, h, { clumps: shifted, limbs: ls, light, cell: 3.4, cellSeed, rimBelow: { x: W * 0.6 - x0, y: H * 0.4 - y0, r: W } }, 91));
-    return { img: layerImage(layer, fpal), x0, y0 };
+    const rim = { x: W * 0.6 - x0, y: H * 0.4 - y0, r: W };
+    const layer = run(paintCanopyGen(w, h, { clumps: shifted, limbs: ls, light, cell: 3.4, cellSeed, rimBelow: rim }, 91));
+    if (bough) {
+      // the bough on its own (its own draws: the clumps keep theirs), then laid behind the leaves
+      const bs = bough.map(l => ({ ...l, pts: l.pts.map(([x, y, r]) => [x - x0, y - y0, r]) }));
+      const B = run(paintCanopyGen(w, h, { clumps: [], limbs: bs, light, cell: 3.4, cellSeed, rimBelow: rim }, 92));
+      for (let i = 0; i < w * h; i++) if (B.idx[i] && (!layer.idx[i] || B.depth[i] > layer.depth[i])) layer.idx[i] = B.idx[i];
+    }
+    const dropped = hang(layer, out(x0, y0, w, h));
+    return { img: layerImage(layer, fpal), x0, y0, dropped };
   };
   const mX = ox, mY = Hc - H;      // how far the canvas reaches past the frame on each side
-  const BL = corner(clumpsBL, [], -mX, Math.round(H * 0.55), mX + Math.round(W * 0.45), Math.round(H * 0.45) + 60, 13);
-  const BR = corner(clumpsBR, [], Math.round(W * 0.8), Math.round(H * 0.7), Math.round(W * 0.2) + mX, Math.round(H * 0.3) + 60, 13);
-  const TL = corner(clumpsTL, limbTL, -mX, -mY, mX + Math.round(W * 0.3), mY + Math.round(H * 0.42), 13);
+  // where each corner runs out of the frame on every view the canvas serves: below the frame's bottom
+  // row (the corners keep their place above the view's bottom), the layer's outer side (off the
+  // widest view's edge), above the frame's top row (the top left hangs from the view's top)
+  const below = (x0, y0, w, h) => (x, y) => y + y0 >= H;
+  const BL = corner(clumpsBL, [], -mX, Math.round(H * 0.55), mX + Math.round(W * 0.45), Math.round(H * 0.45) + 60, 13, boughs.BL,
+    (x0, y0, w, h) => (x, y) => x === 0 || below(x0, y0, w, h)(x, y));
+  const BR = corner(clumpsBR, [], Math.round(W * 0.8), Math.round(H * 0.7), Math.round(W * 0.2) + mX, Math.round(H * 0.3) + 60, 13, boughs.BR,
+    (x0, y0, w, h) => (x, y) => x === w - 1 || below(x0, y0, w, h)(x, y));
+  const TL = corner(clumpsTL, limbTL, -mX, -mY, mX + Math.round(W * 0.3), mY + Math.round(H * 0.42), 13, boughs.TL,
+    (x0, y0) => (x, y) => x === 0 || y + y0 <= 0);
 
   // the land, coloured (tower.js pal)
   const glowCol = [96, 150, 150];
@@ -187,7 +220,7 @@ export function bakeTower(o = {}) {
 
   return {
     meta: { shot: 'tower', seed, refW: W, refH: H, Wc, Hc, ox, oy, lamp, shaft: { x: vx, y: vy - vh }, yh,
-      corners: { BL: { x: BL.x0, y: BL.y0, w: BL.img.w, h: BL.img.h }, BR: { x: BR.x0, y: BR.y0, w: BR.img.w, h: BR.img.h }, TL: { x: TL.x0, y: TL.y0, w: TL.img.w, h: TL.img.h } },
+      corners: { BL: { x: BL.x0, y: BL.y0, w: BL.img.w, h: BL.img.h, dropped: BL.dropped }, BR: { x: BR.x0, y: BR.y0, w: BR.img.w, h: BR.img.h, dropped: BR.dropped }, TL: { x: TL.x0, y: TL.y0, w: TL.img.w, h: TL.img.h, dropped: TL.dropped } },
       vignette: { cx: 0.55, cy: 0.45, r0: 0.3, r1: 0.6, a: 0.5 } },
     stars: stars.filter(s => s.tw).map(s => [s.x, s.y, s.mag, s.col[0], s.col[1], s.col[2], +s.ph.toFixed(3), +s.sp.toFixed(3), 1]),
     images: {
@@ -202,6 +235,47 @@ export function bakeTower(o = {}) {
 function canvasImage(c) {
   const d = ctx2d(c).getImageData(0, 0, c.width, c.height).data;
   return { w: c.width, h: c.height, data: new Uint8Array(d.buffer.slice(0)) };
+}
+
+// Keeps what hangs (8-connected) from where the layer runs out of the frame (isOut(x, y)); clears the
+// rest. Only stray specks may be left over once the boughs are in (a whole clump would be a design
+// error: it throws). Returns how many pixels it cleared.
+function hang(L, isOut) {
+  const { w, h, idx } = L, seen = new Uint8Array(w * h), stack = [];
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    if (idx[i] && isOut(x, y)) { seen[i] = 1; stack.push(i); }
+  }
+  while (stack.length) {
+    const i = stack.pop(), x = i % w, y = (i - x) / w;
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const xx = x + dx, yy = y + dy;
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      const j = yy * w + xx;
+      if (idx[j] && !seen[j]) { seen[j] = 1; stack.push(j); }
+    }
+  }
+  // the pieces left over, by size
+  let n = 0;
+  const lone = new Uint8Array(w * h);
+  for (let i = 0; i < w * h; i++) if (idx[i] && !seen[i]) lone[i] = 1;
+  for (let i = 0; i < w * h; i++) {
+    if (!lone[i]) continue;
+    const st = [i]; lone[i] = 0; let size = 0;
+    while (st.length) {
+      const k = st.pop(), x = k % w, y = (k - x) / w; size++; idx[k] = 0;
+      for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+        const xx = x + dx, yy = y + dy;
+        if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+        const j = yy * w + xx;
+        if (lone[j]) { lone[j] = 0; st.push(j); }
+      }
+    }
+    if (size > 40) throw new Error(`tower: a piece of ${size} px of the corner leaves hangs from nothing at (${i % w}, ${(i / w) | 0})`);
+    n += size;
+  }
+  L.used = null;
+  return n;
 }
 
 function layerImage(L, pal) {

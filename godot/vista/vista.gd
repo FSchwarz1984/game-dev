@@ -40,6 +40,13 @@ var legacy := true
 var shown_scale := 1.0        # one vista pixel in the Control's (the stage's logical) pixels
 var shown_origin := Vector2.ZERO
 var quality := "auto"         # "high" | "low" | "auto" (low on phones): rising-light count, motes
+## The bridge between the lights gathered in the gate and the far bursting from the town (G5R3-61, a
+## proposal: the user keeps the prologue as it was for comparison, "none", the default):
+##   "drain"  back on the plain the gate draws the town's colours up into it, then the town bursts
+##            (+3.4 s, VistaSouthDrain)
+##   "flash"  a beat after the cut back to the plain the gate flares as the town bursts (+0.8 s)
+## A command line argument --vista-bridge=NAME overrides it.
+var bridge := "none"
 var data_dir := VistaData.DEFAULT_DIR
 
 var vp: SubViewport
@@ -208,6 +215,8 @@ func _make(name: String) -> Node2D:
 			return null
 	node.exact = exact
 	node.quality = _quality()
+	if name == "south":
+		node.bridge = bridge_mode()
 	if exact:
 		node.js_lamps = true
 	node.setup(d)
@@ -249,6 +258,14 @@ func _finish() -> void:
 		mat.set_shader_parameter("wash_a", 0.0)
 	elif _wash_hold >= 0.0:
 		mat.set_shader_parameter("wash_a", _wash_hold)
+
+
+## The bridge in play: the property, or --vista-bridge=NAME on the command line.
+func bridge_mode() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--vista-bridge="):
+			return a.substr(15)
+	return bridge
 
 
 ## "high" on desktops, "low" on phones (unless set): companion sparks and the motes' count.
@@ -325,11 +342,33 @@ func tower_goes_dark(d: Director, before: float = 2.0, after: float = 1.8) -> vo
 	beat.emit("back_to_plain")
 
 
-## The far: a pale ring spreads from under the sky shore over the plain to the mountain's foot
-## (wave 0 -> 0.55, linear).
+## The far: a pale ring spreads from the town (ground zero, G5R3-22) over the plain to the mountain's
+## foot (wave 0 -> 0.55, linear). With a bridge (G5R3-61) the burst's clock (state.flare) starts here,
+## and the drain's (state.drain) runs on under it while its last grains go up.
 func far_spreads(d: Director, dur: float = 5.5, to: float = 0.55) -> void:
 	beat.emit("far_spreads")
-	await d.tween(dur, func(k: float) -> void: state["wave"] = to * k, false)
+	var el0 := float(state.get("drain", -1.0))
+	await d.tween(dur, func(k: float) -> void:
+		state["wave"] = to * k
+		if state.has("flare"):
+			state["flare"] = dur * k
+		if el0 >= 0.0:
+			state["drain"] = el0 + dur * k, false)
+
+
+## (bridge "drain", G5R3-61) Back on the plain the gate draws in its breath and the town's colours
+## are drawn up out of the ground into it, more and more, the ground there left its ghost; ends at the
+## moment the town bursts (VistaSouthDrain.DRAIN_PRE s). state.drain = seconds since it began.
+func drain_town(d: Director, dur: float = VistaSouthDrain.DRAIN_PRE) -> void:
+	beat.emit("drain")
+	state["drain"] = 0.0
+	await d.tween(dur, func(k: float) -> void: state["drain"] = dur * k, false)
+
+
+## (bridge "flash", G5R3-61) A beat on the plain; then the gate flares in the frame the town bursts.
+func gate_flash(d: Director, before: float = VistaSouthDrain.FLASH_PRE) -> void:
+	beat.emit("gate_flash")
+	await d.wait(before)
 
 
 ## ... and up the mountain, over the crown, the whole frame washing white (wave -> 1, linear).
@@ -345,7 +384,8 @@ func set_pose(p: String) -> void:
 	beat.emit("pose_" + p)
 
 
-## All the beats with the pauses of the JS segment 1 (65.6 s). At each pause `between` (if given) is
+## All the beats with the pauses of the JS segment 1 (65.6 s; with a bridge, G5R3-61, its beat comes
+## between the plain's return and the far: "drain" adds 3.4 s, "flash" 0.8 s). At each pause `between` (if given) is
 ## awaited as between.call(name, seconds) and must take about that long (its lines go there):
 ##   "plain" 5.7 s (after the crane)  "first_light" 1.5 s  "sky_shore" 4.5 s  "far" 3.0 s (she has
 ##   stood up; 0.4 s later she shouts: the pose changes are made here, the line is the host's)
@@ -359,6 +399,16 @@ func play_prologue(d: Director, between: Callable = Callable()) -> void:
 	await sky_opens(d)
 	await _pause(d, between, "sky_shore", 4.5)
 	await tower_goes_dark(d)
+	var bm := bridge_mode()
+	if shots.has("south"):
+		shots["south"].bridge = bm
+	if bm == "drain":
+		await drain_town(d)
+	elif bm == "flash":
+		await gate_flash(d)
+	if bm == "drain" or bm == "flash":
+		state["flare"] = 0.0
+		beat.emit("burst")
 	await far_spreads(d)
 	set_pose("stand")
 	await d.wait(0.4)

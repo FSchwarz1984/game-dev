@@ -6,6 +6,7 @@
 //   node tools/vista/bake.mjs --canon DIR     the 480x270 canonical variant (JS rows exactly) into DIR,
 //                                             to check the Godot renderer against the JS one
 //   options: --shots=south,title,tower  --preview DIR (PNG previews of the static layers)  --no-pack
+//            --out DIR (pack into DIR instead of godot/vista/data: a trial bake for record.gd --data=DIR)
 //
 // Needs: node (esbuild from the repo), Playwright's Chromium (/opt/node22/lib/node_modules/playwright
 // or $PLAYWRIGHT), and the Godot editor for packing ($GODOT_BIN or tools/godot/common.sh's default).
@@ -25,7 +26,8 @@ const opt = (k, d) => { const i = args.findIndex(a => a === '--' + k || a.starts
 const canonDir = opt('canon', null);
 const previewDir = opt('preview', null);
 const shots = String(opt('shots', 'south,title,tower')).split(',');
-const OUT = canonDir ? path.resolve(canonDir) : path.join(ROOT, 'godot/vista/data');
+const outDir = opt('out', null);
+const OUT = canonDir ? path.resolve(canonDir) : outDir ? path.resolve(outDir) : path.join(ROOT, 'godot/vista/data');
 const RAW = path.join(ROOT, 'tools/vista/out', canonDir ? 'canon' : 'ship');
 const { chromium } = await import(process.env.PLAYWRIGHT || '/opt/node22/lib/node_modules/playwright/index.mjs');
 
