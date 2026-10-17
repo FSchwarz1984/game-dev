@@ -106,8 +106,9 @@ func setup(p_s: VistaSouth, quality: String) -> void:
 			inst.append([[p0.x, p0.y, o, dur, jit, lift], Color(col.r, col.g, col.b, 0.0), Color(q, nt, 0, strand + halo)])
 		arrivals.append(o + dur)
 		grains.append([p0, o, dur, jit, lift, strand, col])
-	# the burst at the town
+	# the burst at the town, and the gate's flare in the same frame (variant "flash": gate_k)
 	inst.append([[town.x, town.y, 0, 1, 0, 0], Color(1, 1, 1, 0), Color(0, 0, 2, 0)])
+	inst.append([[town.x, town.y, 0, 1, 0, 0], Color(1, 1, 1, 0), Color(0, 0, 3, 0)])
 	arrivals.sort()
 	t_last = arrivals[arrivals.size() - 1]
 	points = VistaPoints.new(inst.size(), preload("res://vista/shaders/drain.gdshader"))
@@ -132,8 +133,8 @@ static func _glow_colour(c: Color) -> Color:
 
 
 ## This frame: el = seconds since the drain began (< 0: none), fl = seconds since the burst (< 0:
-## none), gate = the gate's mouth (canvas px).
-func update(el: float, fl: float, gate: Vector2) -> void:
+## none), gate = the gate's mouth (canvas px); gate_flare: the gate flares with the burst ("flash").
+func update(el: float, fl: float, gate: Vector2, gate_flare: bool = false) -> void:
 	points.visible = (el >= DEP.x - 0.02 and el < t_last + 0.1) or (fl >= 0.0 and fl < 3.0)
 	if not points.visible:
 		return
@@ -141,6 +142,7 @@ func update(el: float, fl: float, gate: Vector2) -> void:
 	points.set_param("fl", fl)
 	points.set_param("town", town)
 	points.set_param("gate", gate)
+	points.set_param("gate_k", 1.0 if gate_flare else 0.0)
 
 
 ## How far the gate has drawn its breath (0..1): in before the grains leave, held while they come,

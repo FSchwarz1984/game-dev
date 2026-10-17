@@ -323,7 +323,7 @@ func update(st: Dictionary, t: float) -> void:
 	# the bridge (G5R3-61): seconds since the drain began / since the burst, -1 when not in play
 	var el := float(st.get("drain", -1.0))
 	var fl := float(st.get("flare", -1.0))
-	drain.update(el, fl, gate())
+	drain.update(el, fl, gate(), bridge == "flash")
 	var gate_flash := drain.flash(el)
 	if bridge == "flash" and fl >= 0.0:
 		gate_flash += 2.2 * exp(-fl / 0.4)

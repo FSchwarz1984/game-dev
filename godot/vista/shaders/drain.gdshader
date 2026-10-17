@@ -23,6 +23,7 @@ uniform vec2 gate;             // canvas px: the gate's mouth
 uniform float amp = 5.0;       // half width of the braid (px)
 uniform float twists = 1.4;    // turns of the braid along the way
 uniform float bloom = 0.35;
+uniform float gate_k = 0.0;    // the gate's flare in the burst's frame (variant "flash"): 1, else 0
 
 varying flat vec4 v_core;      // core x, y, size, alpha
 varying flat vec4 v_glow;      // glow centre x, y, radius, alpha
@@ -87,12 +88,19 @@ void vertex() {
 	v_rc = own;
 	VERTEX = vec2(-100000.0);
 	if (kind > 1.5) {
-		// the burst at the town: a white flash and its halo (and a wider, softer one), half a second
+		// the burst at the town (kind 2): a white flash and its halo, half a second; kind 3, in the same
+		// frame, the gate's flare (variant "flash" only)
+		bool at_gate = kind > 2.5;
 		float k = fl >= 0.0 ? exp(-fl / 0.2) : 0.0;
 		float k2 = fl >= 0.0 ? exp(-fl / 0.5) : 0.0;
+		if (at_gate) {
+			k *= gate_k;
+			k2 *= gate_k;
+		}
 		if (k2 > 0.01) {
-			vec2 c = vec2(roundj(town.x), roundj(town.y)) - vec2(1.0, 1.0);
-			v_rc = C_BURST;
+			vec2 at = at_gate ? gate : town;
+			vec2 c = vec2(roundj(at.x), roundj(at.y)) - vec2(1.0, 1.0);
+			v_rc = at_gate ? mix(C_BURST, C_JADE, 0.35) : C_BURST;
 			v_core = vec4(c, 2.0, min(1.0, k * 1.2));
 			v_glow = vec4(c, 11.0, 0.7 * k2);
 			vec2 lo = c - 12.0, hi = c + 14.0;
