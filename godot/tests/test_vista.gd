@@ -320,3 +320,222 @@ func test_the_sky_shore_rivers_run_from_the_gate_out_to_its_far_ranges() -> void
 	var src := FileAccess.get_file_as_string("res://vista/shaders/shorelights.gdshader")
 	check(src.contains("sin(pa * 0.9 + t * 1.6 + pb * 2.1)"), "the glints' crests move toward u = 0 (down that land's rivers)")
 	v.queue_free()
+
+
+# ------------------------------------------------------------------ the bridge (G5R3-61, a proposal)
+
+const BEATS_TO_TOWER := ["begin", "crane_up", "pause_plain", "first_light", "pause_first_light", "lights_leave", "sky_opens",
+	"pause_sky_shore", "tower", "tower_dark", "back_to_plain"]
+const BEATS_FROM_FAR := ["far_spreads", "pose_stand", "pose_shout", "pause_far", "far_arrives", "end"]
+
+
+## Runs the prologue with a bridge; per frame on the plain after the tower: the gate's breath and
+## flash, the drained ground, whether the bridge's layer is drawn, and the beats' times.
+func _run_bridge(v: Vista) -> Dictionary:
+	var d := Director.new()
+	var out := {"beats": [], "at": {}, "frames": [], "keys": false, "end": 0.0}
+	v.beat.connect(func(n: String) -> void:
+		out["beats"].append(n)
+		out["at"][n] = d.t)
+	d.scene(func(dd: Director) -> void: await v.play_prologue(dd))
+	for i in 3000:
+		if not d.busy:
+			break
+		d.tick(DT)
+		v.advance(DT)
+		if v.state.has("drain") or v.state.has("flare"):
+			out["keys"] = true
+		if v.shots.has("south"):
+			var south: VistaSouth = v.shots["south"]
+			var shore := south.lights.shore.material as ShaderMaterial
+			var ground := south.ground.material as ShaderMaterial
+			out["frames"].append({"t": d.t, "shot": v.shot, "drawn": south.drain.points.visible,
+				"inhale": float(shore.get_shader_parameter("inhale")), "flash": float(shore.get_shader_parameter("flash")),
+				"drain_b": float(ground.get_shader_parameter("drain_b")), "el": float(v.state.get("drain", -1.0)),
+				"fl": float(v.state.get("flare", -1.0))})
+	out["end"] = d.t
+	return out
+
+
+## The prologue as it was ("none", the default) stays the user's: it never starts the bridge (no drain
+## or burst clock in its state, the bridge's layer never drawn, the gate never drawing its breath, no
+## ground drained ahead of the far) and keeps its beats and length (65.6 s).
+func test_the_bridge_none_is_the_prologue_as_it_was() -> void:
+	var v := _vista()
+	eq(v.bridge, "none", "the default is the prologue as it was")
+	var r := _run_bridge(v)
+	eq(r["beats"], BEATS_TO_TOWER + BEATS_FROM_FAR, "the beats as before")
+	near(float(r["end"]), 65.6, 0.5, "the length as before")
+	near(float(r["at"]["far_spreads"]) - float(r["at"]["back_to_plain"]), 0.0, 1e-6, "the far bursts as the plain comes back")
+	check(not r["keys"], "no drain or burst clock in the state")
+	var drawn := false
+	var inhale := 0.0
+	var drain_b := -10.0
+	for f in r["frames"]:
+		drawn = drawn or bool(f["drawn"])
+		inhale = maxf(inhale, float(f["inhale"]))
+		drain_b = maxf(drain_b, float(f["drain_b"]))
+	check(not drawn, "the bridge's layer is never drawn")
+	eq(inhale, 0.0, "the gate never draws its breath")
+	eq(drain_b, -10.0, "no ground drained ahead of the far")
+	v.queue_free()
+
+
+## "drain": back on the plain the gate draws in its breath and the town's colours go up into it as
+## grains of light, then the far bursts from the town. Every grain leaves a pixel of the town (ground
+## the far reaches within the drained radius) and its way ends in the gate's mouth; the first come in
+## before the burst, the last after it, the gate's breath held in between and its flashes as they come;
+## the drained ground grows from the town out to its radius by the burst; it adds DRAIN_PRE seconds.
+func test_the_drain_rises_from_the_town_into_the_gate() -> void:
+	var v := _vista()
+	v.bridge = "drain"
+	var r := _run_bridge(v)
+	var south: VistaSouth = v.shots["south"]
+	var dr := south.drain
+	eq(r["beats"], BEATS_TO_TOWER + ["drain", "burst"] + BEATS_FROM_FAR, "the drain and the burst between the plain's return and the far")
+	near(float(r["at"]["burst"]) - float(r["at"]["back_to_plain"]), VistaSouthDrain.DRAIN_PRE, 0.05, "the burst after the drain")
+	near(float(r["at"]["far_spreads"]), float(r["at"]["burst"]), 1e-6, "the far starts with the burst")
+	near(float(r["end"]), 65.6 + VistaSouthDrain.DRAIN_PRE, 0.5, "it adds the drain's length, nothing else")
+	check(dr.n_grains >= 150, "a stream of grains (%d)" % dr.n_grains)
+	var gate := south.gate()
+	var gimg: Image = south.data.images["ground"]
+	var from_town := 0
+	var into_gate := 0
+	for g in dr.grains:
+		var p0: Vector2 = g[0]
+		var px := gimg.get_pixelv(Vector2i(p0))
+		if px.a > 0.5 and roundi(px.b * 255.0) <= VistaSouthDrain.B_MAX and p0.distance_to(dr.town) < 80.0:
+			from_town += 1
+		if dr.pos_at(g, 0.0, gate).distance_to(p0) < 0.01 and dr.pos_at(g, 1.0, gate).distance_to(gate + Vector2(0, 1)) < 0.01:
+			into_gate += 1
+	eq(from_town, dr.grains.size(), "every grain leaves a pixel of the town")
+	eq(into_gate, dr.grains.size(), "every grain's way starts on its pixel and ends in the gate's mouth")
+	# ground zero: the far's first pixels are where the town is
+	var b0 := Vector2.ZERO
+	var nb := 0
+	for y in range(int(dr.town.y) - 20, int(dr.town.y) + 20):
+		for x in range(int(dr.town.x) - 80, int(dr.town.x) + 80):
+			var px := gimg.get_pixel(x, y)
+			if px.a > 0.5 and roundi(px.b * 255.0) <= 3:
+				b0 += Vector2(x, y)
+				nb += 1
+	check(nb > 0 and (b0 / nb).distance_to(dr.town) < 6.0, "the stream starts where the far bursts (%s vs %s)" % [b0 / maxf(1, nb), dr.town])
+	check(dr.arrivals[0] < VistaSouthDrain.DRAIN_PRE - 0.3, "the first grains reach the gate before the burst (%.2f s)" % dr.arrivals[0])
+	check(dr.t_last > VistaSouthDrain.DRAIN_PRE + 0.8, "the last go up after it (%.2f s)" % dr.t_last)
+	var held := 1.0
+	var flash_in := 0.0
+	var drain_b := -10.0
+	var drawn_before := false
+	var drawn_after := false
+	for f in r["frames"]:
+		var el := float(f["el"])
+		if f["shot"] != "south" or el < 0.0:
+			continue
+		if el > VistaSouthDrain.INHALE.y + 0.05 and el < dr.t_last:
+			held = minf(held, float(f["inhale"]))
+		if el > dr.arrivals[0] and el < VistaSouthDrain.DRAIN_PRE:
+			flash_in = maxf(flash_in, float(f["flash"]))
+		if el <= VistaSouthDrain.DRAIN_PRE:
+			drain_b = maxf(drain_b, float(f["drain_b"]))
+		if el < VistaSouthDrain.DEP.x - 0.05 and bool(f["drawn"]):
+			drawn_before = true
+		if el > dr.t_last + 0.2 and float(f["fl"]) > 3.0 and bool(f["drawn"]):
+			drawn_after = true
+	check(held > 0.95, "the gate holds its breath while the grains come (%.2f)" % held)
+	check(flash_in > 0.3, "the gate flashes as they come in (%.2f)" % flash_in)
+	near(drain_b, float(VistaSouthDrain.B_MAX), 0.5, "the drained ground reaches its radius by the burst")
+	check(not drawn_before and not drawn_after, "the stream is drawn only while it runs")
+	eq(float((south.lights.shore.material as ShaderMaterial).get_shader_parameter("inhale")), 0.0, "and the gate breathes out")
+	v.queue_free()
+
+
+## "flash": a beat on the plain, then the gate flares in the frame the town bursts; it adds FLASH_PRE.
+func test_the_flash_bridge_flares_the_gate_as_the_town_bursts() -> void:
+	var v := _vista()
+	v.bridge = "flash"
+	var r := _run_bridge(v)
+	eq(r["beats"], BEATS_TO_TOWER + ["gate_flash", "burst"] + BEATS_FROM_FAR, "a beat, then the burst")
+	near(float(r["at"]["burst"]) - float(r["at"]["back_to_plain"]), VistaSouthDrain.FLASH_PRE, 0.05, "the beat's length")
+	near(float(r["end"]), 65.6 + VistaSouthDrain.FLASH_PRE, 0.5, "it adds the beat, nothing else")
+	var before := 0.0
+	var at_burst := 0.0
+	var burst_drawn := false
+	var back := float(r["at"]["back_to_plain"])
+	for f in r["frames"]:
+		if f["shot"] != "south" or float(f["t"]) < back:
+			continue
+		var fl := float(f["fl"])
+		if fl < 0.0:
+			before = maxf(before, float(f["flash"]))
+		elif fl < 0.05:
+			at_burst = maxf(at_burst, float(f["flash"]))
+			burst_drawn = burst_drawn or bool(f["drawn"])
+	check(before < 0.5, "the gate is quiet before (%.2f)" % before)
+	check(at_burst > 2.0, "it flares in the burst's frame (%.2f)" % at_burst)
+	check(burst_drawn, "the town's burst is drawn in that frame")
+	v.queue_free()
+
+
+## G5R3-50: the leaves framing the 「隔」 tower insert hang from boughs that run out of the frame. In
+## every view the canvas serves, every leaf pixel in view joins (8-connected, through pixels in view)
+## the frame's edge on its corner's sides: the bottom or left edge for the bottom left, the bottom or
+## right for the bottom right, the top or left for the top left (before, two clumps floated over the
+## dark ridge at the bottom left on every view, more in every corner on wide ones).
+func test_the_tower_leaves_hang_from_boughs_out_of_the_frame() -> void:
+	var v := _vista()
+	v.show_shot("tower")
+	var tower: VistaTower = v.shots["tower"]
+	var sides := {"BL": ["left", "bottom"], "BR": ["right", "bottom"], "TL": ["top", "left"]}
+	for size in [Vector2i(426, 240), Vector2i(480, 270), Vector2i(455, 256), Vector2i(512, 288), Vector2i(480, 300), Vector2i(533, 300),
+			Vector2i(640, 270), Vector2i(688, 288), Vector2i(800, 360), Vector2i(960, 270), Vector2i(1024, 560)]:
+		tower.layout(size)
+		tower.update({"tower": 1.0}, 1.0)
+		for k in ["BL", "BR", "TL"]:
+			var spr: Sprite2D = tower.leaves[k]
+			var img: Image = spr.texture.get_image()
+			var lw := img.get_width()
+			var lh := img.get_height()
+			var o := Vector2i(spr.position.round())
+			var data := img.get_data()
+			# the layer's pixels in view, by screen position
+			var w: int = size.x
+			var h: int = size.y
+			var vis := PackedByteArray()
+			vis.resize(w * h)
+			var n_vis := 0
+			for y in range(maxi(0, o.y), mini(h, o.y + lh)):
+				for x in range(maxi(0, o.x), mini(w, o.x + lw)):
+					if data[((y - o.y) * lw + (x - o.x)) * 4 + 3] > 127:
+						vis[y * w + x] = 1
+						n_vis += 1
+			var stack := PackedInt32Array()
+			for i in w * h:
+				if vis[i] == 0:
+					continue
+				var x := i % w
+				var y := i / w
+				var edge := false
+				for sd in sides[k]:
+					edge = edge or (sd == "left" and x == 0) or (sd == "right" and x == w - 1) or (sd == "top" and y == 0) or (sd == "bottom" and y == h - 1)
+				if edge:
+					vis[i] = 2
+					stack.append(i)
+			var reached := stack.size()
+			while not stack.is_empty():
+				var i := stack[stack.size() - 1]
+				stack.resize(stack.size() - 1)
+				var x := i % w
+				var y := i / w
+				for dy in [-1, 0, 1]:
+					for dx in [-1, 0, 1]:
+						var xx: int = x + dx
+						var yy: int = y + dy
+						if xx < 0 or yy < 0 or xx >= w or yy >= h:
+							continue
+						var j := yy * w + xx
+						if vis[j] == 1:
+							vis[j] = 2
+							reached += 1
+							stack.append(j)
+			eq(reached, n_vis, "every leaf of the %s corner in view hangs from the frame's edge at %s (%d of %d px)" % [k, size, reached, n_vis])
+	v.queue_free()

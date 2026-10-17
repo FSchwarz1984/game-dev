@@ -17,6 +17,7 @@ uniform vec3 star_groups = vec3(1.0);
 uniform float bloom_fire = 0.35;
 uniform float bloom_lamp = 0.08;
 uniform float js_off = 0.0;     // 1: go out at once like the JS (checks)
+uniform float drain_w = -1.0;   // (Vista.bridge "drain") the drained radius as the far's progress: embers within go out
 
 varying flat vec4 v_a;          // kind, level (0..), flicker, ember level
 varying flat vec4 v_b;          // flags, phase, light x, light y
@@ -47,6 +48,7 @@ void vertex() {
 		// fires: an ember once the light has gone (8196ebf: 0.5 a until the wave)
 		float e = smoothj(0.0, 0.08, el) * (wave >= 0.0 ? 1.0 - smoothj(arr, arr + 0.02, wave) : 1.0);
 		ember = el >= 0.0 ? 0.5 * smoothj(on, on + 0.25, tod) * e : 0.0;
+		if (drain_w >= 0.0) ember *= 1.0 - smoothj(arr, arr + 0.02, drain_w);
 	}
 	if (el >= 0.0) {
 		float lift = 1.0 + 0.7 * smoothj(0.0, 0.07, el) * (1.0 - smoothj(0.07, 0.3, el));

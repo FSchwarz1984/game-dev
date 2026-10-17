@@ -14,6 +14,7 @@ uniform float inflow;
 uniform float flash;            // sum of the recent arrivals' flashes (0..)
 uniform float haze_edge;
 uniform float bloom_gate = 0.6;
+uniform float inhale = 0.0;     // the gate drawing in its breath (Vista.bridge "drain", G5R3-61): 0 none
 
 varying flat vec4 v_d;          // type, a, b, c
 varying flat vec2 v_pos;
@@ -95,6 +96,12 @@ void fragment() {
 			hdr = C_CORE / 255.0 * a * bloom_gate * (0.4 + 0.6 * inflow + flash);
 		}
 		c += C_CORE * 0.35 * a * min(flash, 2.0) * glow_w(d, 5.0);
+		if (inhale > 0.0) {
+			// drawing in its breath: the outer halo pulls in toward its heart, the heart brightens
+			c -= C_JADE * 0.5 * a * (0.35 + 0.65 * inflow) * pulse * inhale * 0.6 * (glow_w(d, 9.0) - glow_w(d, 6.0));
+			c += C_CORE * 0.8 * a * inhale * 0.7 * glow_w(d, 3.0);
+			if (at0) hdr *= 1.0 + 1.2 * inhale;
+		}
 	}
 	COLOR = vec4(min(c, vec3(255.0)) / 255.0 + hdr, 1.0);
 }

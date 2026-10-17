@@ -71,6 +71,11 @@ var excess_main := 0.06
 var excess_rise := 0.45
 var wave_fx: VistaSouthWave
 var pose := "sit"
+## The bridge between the gathered lights and the burst (G5R3-61): "none" (the prologue as it was),
+## "drain", "flash" (Vista.bridge; VistaSouthDrain). Driven by state.drain / state.flare, which only
+## those variants set.
+var bridge := "none"
+var drain: VistaSouthDrain
 
 
 func setup(p_data: VistaData) -> void:
@@ -123,6 +128,9 @@ func setup(p_data: VistaData) -> void:
 	add_main_root.add_child(wave_fx.ghost_motes)
 	comp_main = _composite("PlainLight", add_main)
 	add_rise_root.add_child(lights.layer("rise"))
+	drain = VistaSouthDrain.new()
+	drain.setup(self, quality)
+	add_rise_root.add_child(drain.points)
 	comp_rise = _composite("RisingLight", add_rise)
 
 	canopy = Node2D.new()
@@ -312,8 +320,18 @@ func update(st: Dictionary, t: float) -> void:
 	lights.shore.visible = reveal > 0.0
 	lights.shore.set_param("t", t)
 	lights.shore.set_param("reveal", reveal)
-	lights.shore.set_param("inflow", lights.inflow)
-	lights.shore.set_param("flash", lights.flash)
+	# the bridge (G5R3-61): seconds since the drain began / since the burst, -1 when not in play
+	var el := float(st.get("drain", -1.0))
+	var fl := float(st.get("flare", -1.0))
+	drain.update(el, fl, gate())
+	var gate_flash := drain.flash(el)
+	if bridge == "flash" and fl >= 0.0:
+		gate_flash += 2.2 * exp(-fl / 0.4)
+	lights.shore.set_param("inflow", minf(1.0, lights.inflow + drain.inflow(el)))
+	lights.shore.set_param("flash", lights.flash + gate_flash)
+	lights.shore.set_param("inhale", drain.inhale(el))
+	ground.set_param("drain_b", drain.ground_b(el))
+	lights.lamps.set_param("drain_w", drain.ground_b(el) / 250.0 if el >= 0.0 else -1.0)
 	lights.update_river(t, tod, rise_k, lamp_wave)
 	lights.river.set_param("tod", tod)
 	lights.river.set_param("wave", -1.0)
