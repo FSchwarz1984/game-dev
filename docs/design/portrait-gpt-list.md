@@ -2,18 +2,21 @@
 
 > 状态：**最终版**（2026-10-17）。回应 G5R3-51 和 G5R3-60："要補的素材，你最好能夠最終確定到底有哪些，給我一個最終的版本"。这份清单交出去以后不再出第二版：某一张不合格，只重做那一张，清单本身不变（第 9 节）。
 >
-> - **一共 20 项**：GP-01…GP-16 是三个女孩的，一定要做；GP-17…GP-20 是婆婆的，**只在你同意给婆婆立绘时才做**（`portrait-faces-seg1.md` C.1）。
+> - **给 ChatGPT 的正式说明（G5R3-64）**：`docs/design/portrait-gpt-brief.md`，导出为 `Tengan_Portraits_GPT_Brief.pdf`（英文正文，第一页中文给用户）。条目、参考图、做法和这份清单一样；**提示词和补救句以 brief 为准**：每条提示词补了一段"Sizes"（五官改多少），补救句多了三条。下面的提示词已和 brief 逐字同步；这份中文清单留作内部记录。
+> - **一共 20 项**：GP-01…GP-16 是三个女孩的，一定要做；GP-17…GP-20 是婆婆的，**已定要做**（G5R3-65，C.1 选 A）：GP-17 先单独交回，用户看过、满意了再做 GP-18…20。新增的五张（GP-02…05、GP-11）已定（G5R3-66）。
 > - 每一项为什么要做、用在剧本的哪几句，来自逐句排表情的 `docs/design/portrait-faces-seg1.md`（下文"A 表"）。
 > - 参考图在 `portrait_refs/` 文件夹里，文件名以编号开头（主管会把这个文件夹发给你）。
 
 ## 0. 怎么用（先看这一段）
+
+> G5R3-64 以后，用户按 brief 第一页的办法做：在 ChatGPT 里上传 PDF 和这一项的参考图，说"按这份文档做 GP-xx"，不再复制提示词。下面是原来的操作说明，留作记录。
 
 1. **一项一个新对话。** 每一项在 ChatGPT 里新开一个对话，不要在上一张的结果上接着改：一路改下去会越改越偏。
 2. **上传这一项的参考图**：`GP-xx_ref_a.png`；GP-17 要两张，`ref_a` 和 `ref_b`。参考图就是你原来那 12 包里的原画，原始分辨率，没有改过。
 3. **复制这一项的提示词**（英文，第 6、7 节每项下面的整段），粘贴发送。提示词也单独存成了 `GP-xx_prompt.txt`，打开就能复制。如果你的 ChatGPT 有"选择区域再编辑"的笔刷，可以先把她整张脸涂上（从刘海下沿到下巴，连两颊），再发提示词；没有就直接发。
 4. **检查**：先用第 4 节的通用条目，再看这一项自己的条目。最要紧的是"翻页检查"（G4）和"缩小检查"（G10）。
 5. **不合格就在同一个对话里补救**：第 5 节有现成的英文句子。最多改三次；三次都不行，新开对话从头再来一次；还不行就跳过，交回时注明哪一项、哪里不行。
-6. **顺序**：先做 GP-01…GP-16。婆婆那一节等你回复 C.1 以后再做：选 A 全做，选 C 只做 GP-17，选 B 跳过。GP-17 建议先单独交回，我们转成游戏里的像素立绘给你看过，你满意了再做 GP-18…20（第 7 节）。
+6. **顺序**：先做 GP-01…GP-16。婆婆已定要做（G5R3-65 选 A）：先做 GP-17、单独交回，我们转成游戏里的像素立绘给你看过，你满意了再做 GP-18…20（第 7 节）。
 7. **交回**：文件名和方式见第 8 节。
 
 ## 1. 总表
@@ -36,10 +39,10 @@
 | GP-14 | しをね | 开怀 grin | 重做（你点名） | 同上 | `GP-14_ref_a.png` = B_02 |
 | GP-15 | しをね | 认真 serious | 重做（你点名） | 同上 | `GP-15_ref_a.png` = B_25 |
 | GP-16 | しをね | 茫然 blank | 重做（你点名） | 同上 | `GP-16_ref_a.png` = B_35 |
-| GP-17 | 婆婆 | 设定，兼平常脸 neutral | 新增（只在 C.1 选 A 或 C 时做） | 选 A：10 句；选 C：21 句 | `GP-17_ref_a.png` = B_01、`GP-17_ref_b.png` = C_01（只作画风参考） |
-| GP-18 | 婆婆 | 笑 smile | 新增（只在选 A 时做） | 2 句 | 你通过的 GP-17 |
-| GP-19 | 婆婆 | 怀念 wistful | 新增（只在选 A 时做） | 4 句 | 你通过的 GP-17 |
-| GP-20 | 婆婆 | 板脸 stern | 新增（只在选 A 时做） | 5 句 | 你通过的 GP-17 |
+| GP-17 | 婆婆 | 设定，兼平常脸 neutral | 新增（G5R3-65 已定） | 10 句 | `GP-17_ref_a.png` = B_01、`GP-17_ref_b.png` = C_01（只作画风参考） |
+| GP-18 | 婆婆 | 笑 smile | 新增（G5R3-65 已定） | 2 句 | 你通过的 GP-17 |
+| GP-19 | 婆婆 | 怀念 wistful | 新增（G5R3-65 已定） | 4 句 | 你通过的 GP-17 |
+| GP-20 | 婆婆 | 板脸 stern | 新增（G5R3-65 已定） | 5 句 | 你通过的 GP-17 |
 
 "A_35"等是你原来 12 包里的编号（A＝小鹊，B＝しをね，C＝さぢ）。`portrait_refs/_overview_*.png` 把每一项的原画（游戏裁的那一块）和现在的第四版并排放在一起；`portrait_refs/_now/` 是要重做的那几张现在的样子（×3）。这两样只给你看，不用发给 ChatGPT。
 
@@ -107,7 +110,7 @@
 - **G9 比例不变**，对照 4.3。编辑出来的图，翻页检查（G4）过了，这一条就过了。
 - **G10 缩小检查。**
   - 在"画图"里把新图和参考图都缩小：调整大小 → 百分比，小鹊 45，しをね和さぢ 40（婆婆 45）。
-  - 这时两眼相距约 26–29 像素、脸约 60 像素宽，和游戏里 128×128 的立绘框里一样大。游戏还要再转成像素，所以这一步看着刚刚读得出的，到游戏里会更弱：要一眼就看得出。
+  - 这时两眼相距约 25–32 像素（随头转的角度变）、脸约 60 像素宽，和游戏里 128×128 的立绘框里一样大。游戏还要再转成像素，所以这一步看着刚刚读得出的，到游戏里会更弱：要一眼就看得出。
   - 并排看：这张的表情一眼看得出，和参考图明显不同。
   - 小鹊的 GP-01…05 还要彼此分得开（4.2 末尾的表）。
   - 看不出来就是太轻。
@@ -189,11 +192,12 @@
 - **编辑的 19 项（GP-01…16、18…20）**：和参考图一样，全身、1024×1536、人在画布里的位置和大小不变。不要你裁成胸像，也不要 ChatGPT 裁：游戏这边按第四版的取景，从全身图上以两眼为准裁出 128×128 的胸像，每个人所有表情的取景都一样（knowledge/13 §10.2）。
 - **GP-17**：全身、1024×1536、四分之三侧身朝画面右边，头的大小和三个女孩的原画差不多（两眼相距约 60–75 像素）。
 
-## 5. 补救用的句子（复制到同一个对话里）
+## 5. 补救用的句子（复制到同一个对话里；以 brief 的 A7 为准）
 
 | 毛病 | 发这一句 |
 |---|---|
 | 表情太轻（G10 没过） | `The expression is too weak. Make it about twice as strong. Keep everything except the face exactly the same.` |
+| 某一处改得不够（眼睑、眼珠、嘴、脸颊） | `Make the change to the [eyelids / irises / mouth / cheek] bigger: [the size from the item's Target]. Keep everything else exactly the same.` |
 | 动了脸以外的地方（G4 没过） | `You changed other parts (the hat / hair / clothes / hands / size or position). Start again from the original image I attached and change only the face.` |
 | 嘴像贴上去的（G5 没过） | `The mouth looks pasted on. Redraw the whole face — eyes, eyelids, cheeks, mouth and jaw — as one expression that follows the tilt of her head.` |
 | 画了符号、腮红斜线、泪或水光（G6、G7 没过） | `Remove the sweat drop / blush lines / tears / wet shine / symbol. Change nothing else.` |
@@ -201,6 +205,8 @@
 | 两次都不透明，改用绿底 | `Give me the same image again, but fill the whole background with one flat pure green colour, #00FF00 (RGB 0, 255, 0): no gradient, no ground shadow, no green light reflected on her, and a clean edge around her hair. Change nothing else.` |
 | 小鹊露出了眉毛 | `Her eyebrows must stay hidden under her bangs, as in the original. Keep the bangs exactly as in the original.` |
 | しをね的红痕跑了位置 | `The two short red marks must stay under her right eye — the eye on the left side of the image — exactly as in the original.` |
+| 眼睛空了、灰了或发光 | `Keep her normal iris colour and the white highlights in her eyes. The eyes must look alive.` |
+| 脸变老、变长或脸型变了（G9 没过） | `Keep her face shape and proportions exactly as in the original: the same head size, eye size and distance from the eyes to the chin.` |
 | 风格变了（G11 没过） | `Keep the drawing style of the original exactly: the same clean anime line art and soft cel shading, the same line weight and colours.` |
 
 ## 6. 三个女孩：GP-01…GP-16（一定要做）
@@ -225,6 +231,8 @@ Keep exactly as in the original: the angle and tilt of her head, the wide straw 
 Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face. Her eyebrows are hidden under her bangs: keep them hidden and show the expression with the eyes, eyelids and mouth.
 
 New expression — focused and serious, the look of a craftswoman sizing up a load: upper eyelids lowered a little and drawn straight and flat across the top of the irises, lower eyelids raised slightly, so the eyes are clearly narrower than in the original but still open, with the irises and their highlights visible; a steady gaze straight ahead toward the right. Mouth closed in a firm, straight line, a little longer than now. Not angry, not sleepy, not sad; no smile, no blush.
+
+Sizes, compared with the original: each eye about 70% as tall as now, the upper eyelid covering roughly the top quarter of the iris; the mouth line about one and a half times as long as now, perfectly straight and clearly dark.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -256,6 +264,8 @@ Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE 
 
 New expression — avoiding someone's eyes while keeping a perfectly straight face (she is denying something, or making an excuse): both irises moved to the far LEFT side of her eyes, clearly looking away from the person on the right, with white showing on the right side of each iris; eyelids slightly lowered; mouth closed, small and pressed tight, the corners neither up nor down. The rest of the face stays calm: she is not shy, not sad and not scared. No blush.
 
+Sizes, compared with the original: each iris pushed all the way into the left corner of its eye, with a clear strip of white on its right side about a third as wide as the iris; the upper eyelids covering a little of the top of the irises; the mouth a little shorter than now.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -285,6 +295,8 @@ Keep exactly as in the original: the angle and tilt of her head, the wide straw 
 Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face. Her eyebrows are hidden under her bangs: keep them hidden and show the expression with the eyes, eyelids and mouth.
 
 New expression — quiet sadness she keeps to herself: upper eyelids lowered heavily so the eyes are half closed, looking down toward the lower right; the irises partly hidden under the lids, the lashes forming a soft downward curve; mouth small and closed, the corners turned slightly down. Calm, not crying: no tears, no wet shine, no blush.
+
+Sizes, compared with the original: each eye about half as tall as now, the upper eyelid covering about half of the iris, the lower edge of the iris resting on the lower eyelid; keep a small white highlight in each iris so the eyes still look alive; the corners of the mouth just visibly lower than its middle.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -316,6 +328,8 @@ Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE 
 
 New expression — stunned, not yet understanding what has happened: eyes opened wider than in the original, with a little white visible around the irises; the irises slightly smaller, looking straight ahead without focus, as if seeing through things; lips slightly parted with a small gap (not a round open mouth); the face otherwise slack. Keep her normal eye colour and the highlights: the eyes must still look alive, not empty, not grey, not glowing. No tears, no sweat.
 
+Sizes, compared with the original: each eye about a fifth taller than now, with a thin line of white showing above or below the iris; the irises about 10 to 15 percent smaller; the lips parted by a thin dark gap that stays clearly visible when the picture is small.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -345,6 +359,8 @@ Keep exactly as in the original: the angle and tilt of her head, the wide straw 
 Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face. Her eyebrows are hidden under her bangs: keep them hidden and show the expression with the eyes, eyelids and mouth.
 
 New expression — a tiny, quiet, pleased-with-herself look (she has just said something clever with a perfectly straight face): eyelids half lowered and the lower eyelids pushed up a little, so the eyes look like a calm, knowing half-smile, glancing toward the right; the corner of her mouth on the right side of the image raised slightly in a small, closed-mouth smirk. Subtle and dry: not a big smile, no wink, no teeth, no blush.
+
+Sizes, compared with the original: the upper eyelids covering about a third of each iris and the lower eyelids pushed up into a slight upward curve, so the eyes are a little more than half as tall as now; the mouth line about a third longer than now, with only its end on the right side of the image lifted.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -378,6 +394,8 @@ Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE 
 
 New expression — calling out with all her voice to someone far away below the mountain; desperate and alarmed, not angry: mouth opened very wide, the jaw dropped so the face becomes a little longer, the upper teeth and the tongue visible, the inside of the mouth dark; eyes wide open with smaller irises; the inner ends of the upper eyelids lifted with worry; the whole face tense. Draw it as one shouting face, so the open mouth follows the angle and tilt of her head.
 
+Sizes, compared with the original: the open mouth more than twice as tall as now and about a third wider; the chin lowered by about half the height of her iris, so the face becomes visibly longer; the irises about 15 percent smaller. The original has a faint little sweat drop on her cheek: leave it out.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -410,6 +428,8 @@ Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE 
 
 New expression — sulking: both cheeks puffed full of air, so the outline of her far cheek (the right side of her face in the image) clearly bulges outward and the near cheek looks round; lips pushed together into a small, pursed pout; eyes looking sideways with the upper eyelids lowered a little, grumpy; a soft pink blush on the cheeks (colour only). No puff of air and no symbol near the mouth.
 
+Sizes, compared with the original: the outline of her far cheek pushed out by about a third of an iris width; the pursed mouth smaller than now (about two thirds of its width); the upper eyelids covering about a quarter of each iris; the irises glancing toward the left side of the image.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -438,6 +458,8 @@ Keep exactly as in the original: the angle and tilt of her head, the wide straw 
 Redraw the whole face — eyes, eyelids, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face. Her eyebrows are hidden under her bangs: keep them hidden and show the expression with the eyes, eyelids and mouth.
 
 New expression — thinking hard about something: irises turned up and to the left, as if trying to recall something; the eye nearer to us slightly narrowed; mouth closed and pulled a little to one side, lips pressed into a slightly crooked line, a puzzled "hmm". No thought bubble, no question mark.
+
+Sizes, compared with the original: the irises raised so that about a third of each is hidden under the upper eyelid, with white showing below them; the near eye (on the left side of the image) a little narrower than the far one; the mouth line about as long as now, moved slightly toward the left side of the image and tilted.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -472,6 +494,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw �
 
 New expression — a childish sulk: cheeks puffed out hard like a hamster's, so the outline of her face visibly bulges on both sides; lips pushed into a small round pout; eyebrows angled down toward her nose; eyes glaring sideways; a pink blush on the cheeks (colour only). Cross and stubborn, not crying. No puff of air and no symbol near the mouth.
 
+Sizes, compared with the original: the outline of her face pushed out on the far side by about a third of an iris width, and the near cheek rounder; the pout a small round shape about a third as wide as an iris; the eyebrows angled down more steeply than now; the irises toward the right corners of her eyes, glaring at the person on the right.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -502,6 +526,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw �
 
 New expression — yelling as loudly as she can, a desperate and upset little girl calling after someone who is leaving: mouth wide open, the jaw dropped, the upper teeth and the tongue visible; eyebrows raised and pulled together; eyes wide; the face flushed. Not crying: no tears. Draw it as one shouting face, so the open mouth follows the angle of her head.
 
+Sizes, compared with the original: the open mouth about one and a half times as wide and twice as tall as now, roughly as tall as it is wide; the chin lowered by about half the height of her iris; the eyebrows raised higher than now; the irises about 10 percent smaller. The original has a faint little sweat drop on her cheek: leave it out.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -530,6 +556,8 @@ Keep exactly as in the original: the angle and tilt of her head, her messy red b
 Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face.
 
 New expression — proud and bossy, a little landlady announcing that this is HER house: eyes half closed with a superior, satisfied look; eyebrows raised; a big, self-satisfied, closed-mouth grin; cheeks a little flushed with pride. No wink, no fang, not angry.
+
+Sizes, compared with the original: the upper eyelids covering a third to a half of each iris, drawn flat; the eyebrows raised in a relaxed curve; the closed-mouth grin about three times as wide as the original mouth, curving up at both ends.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -561,6 +589,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw �
 
 New expression — a gentle, ladylike sulk (she is a calm, very polite girl): cheeks softly puffed, so the outline of her far cheek (the right side of her face in the image) bulges a little; lips pressed into a small pout; eyes looking away to the side with the upper eyelids slightly lowered; a faint pink blush (colour only). Mildly miffed, not angry. No puff of air and no symbol near the mouth.
 
+Sizes, compared with the original: the outline of her far cheek pushed out by about a quarter of an iris width; the pout about half as wide as the original wavy mouth; the upper eyelids covering about a fifth of each iris; the irises glancing toward the left side of the image.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -590,6 +620,8 @@ Keep exactly as in the original: the angle and tilt of her head, her silver-lave
 Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face.
 
 New expression — calling out urgently to warn someone (she rarely raises her voice): mouth open wide, the jaw dropped, the upper teeth visible; eyebrows raised and drawn together with worry; eyes wide. Urgent, not angry, not crying. Draw it as one shouting face, so the open mouth follows the angle of her head.
+
+Sizes, compared with the original: the open mouth about a third wider and more than twice as tall as now; the chin lowered by about a third of the height of her iris; the eyebrows raised and drawn together; the irises slightly smaller.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -621,6 +653,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw �
 
 New expression — a warm, happy, open smile, like laughing with a friend: eyes curved into gentle crescents (still a little open, highlights visible), the lower eyelids pushed up by the cheeks; cheeks lifted with a soft blush; mouth open in a soft, wide smile with the corners clearly turned up and a little of the upper teeth showing. Natural and gentle: not a thin, sharp line of a mouth, and not a round shouting mouth.
 
+Sizes, compared with the original: each eye about half as tall as now and curved like an upturned crescent, with part of the iris and its highlight still showing; the open mouth about as wide as now but only about two thirds as tall, with a flat upper edge showing a band of upper teeth and the corners clearly turned up. The original has faint pink hatching lines on her far cheek: leave them out and keep the blush as soft colour only.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -650,6 +684,8 @@ Keep exactly as in the original: the angle and tilt of her head, her silver-lave
 Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face.
 
 New expression — calm and serious, gently firm, as if asking someone to stop and listen: eyes steady and looking straight at the listener on the right, upper eyelids slightly lowered and straight; eyebrows level (they show through her thin bangs); mouth closed in a straight line. Not angry, not sad, not cold.
+
+Sizes, compared with the original: the upper eyelids covering about a quarter of each iris, drawn straight; the lower eyelids slightly raised; the mouth line about as long as now, perfectly straight.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -681,6 +717,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, gaze, mouth, cheeks and jaw �
 
 New expression — a natural, absent look, as if a faint memory has just surfaced and she has lost herself in it for a moment: eyes open normally or slightly wider, the gaze unfocused, drifting past the viewer into the distance; eyebrows raised a little in the middle; lips slightly parted. Keep her normal red iris colour and the eye highlights. Do NOT make the eyes empty, pale, grey, glowing or hollow. Nothing eerie.
 
+Sizes, compared with the original: the eyes the same height as now or up to a tenth taller; the irises shifted very slightly upward, both looking the same way, into the distance; the inner ends of the eyebrows slightly raised; the lips parted by a thin dark gap. The original has a few short pink-red strokes on her far cheek (below the eye on the right side of the image): leave them out. Her only markings are the two red marks under the eye on the left side of the image.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -690,9 +728,9 @@ Output rules:
 - Same drawing style as the original: clean anime line art and soft cel shading. Not painterly, not realistic, not 3D, not pixel art.
 ```
 
-## 7. 婆婆：GP-17…GP-20（只在你同意给婆婆立绘时才做）
+## 7. 婆婆：GP-17…GP-20（已定要做，G5R3-65）
 
-- 你在 `portrait-faces-seg1.md` 的 C.1 回复：选 A，四项都做；选 C，只做 GP-17；选 B，这一节整个跳过。
+- 用户答 C.1 选 A（G5R3-65，`portrait-faces-seg1.md` C.1）：四项都做；外观的四项默认值先照画，用户看了再说。
 - **顺序**：先做 GP-17。建议你先只把它交回：我们转成游戏里 128 像素的立绘、放进对话框给你看，你对设定和像素效果都满意了，再做 GP-18…20。三张表情都是在 GP-17 上编辑的，GP-17 不对，后面三张都要重来。
 - **剧本里写了的**（第 0 场事实表和台词）：
   - 七十上下；庄屋当家的母亲。
@@ -703,7 +741,7 @@ Output rules:
   - 眼镜一早被屋里的小的藏了，看什么都眯着眼。
   - 用袖口擦鼓槌：穿的是有袖子的和服。
   - 从台词读得出的性格：先喂吃的，请求只说一半，拿膝盖和年纪自嘲，好意不上脸（script-04 的人物表；第五版 1.2 节）。提示词里写成"gruff, practical and dry-humoured, warm underneath"。
-- **剧本里没写、提示词里先填了默认值的**（要改，就在发送前改提示词里"Appearance"那一句）：
+- **剧本里没写、提示词里先填了默认值的**（G5R3-65：先按默认画；以后要改，就改提示词里"Appearance"那一句）：
   1. 发型：白发在脑后挽一个小髻。
   2. 衣服：洗旧了的藍染木棉单衣，小花纹，袖子是普通的。
   3. 一条深色的前挂け（围裙）。
@@ -712,9 +750,9 @@ Output rules:
   - 眼镜：第 0 场被藏了，以后要戴眼镜的立绘是以后的内容。
   - 某一地的乡土服饰：剧本 7.3 节说村子的地域还没定，等那件事定了再说。
 
-### GP-17　婆婆 · 设定，兼平常脸（neutral）　新画（只在选 A 或 C 时做）
+### GP-17　婆婆 · 设定，兼平常脸（neutral）　新画
 
-- **用在**：选 A，平常的 10 句（0-01、0-03、0-05、0-11、0-13、0-20、0-22、0-29、0-31、0-32）；选 C，她的全部 21 句。
+- **用在**：平常的 10 句（0-01、0-03、0-05、0-11、0-13、0-20、0-22、0-29、0-31、0-32）。
 - **参考图**：
   - `GP-17_ref_a.png`（B_01，しをね）和 `GP-17_ref_b.png`（C_01，さぢ），只作画风参考：线条、上色、细节的密度、人在画布里的大小。
   - 用两个不同的人，是为了让 ChatGPT 明白这是"画风"，不是要照着画某一个人。
@@ -748,6 +786,8 @@ Appearance: white hair pulled back into a small bun; a plain, faded indigo cotto
 
 Pose and framing: one figure, full body, standing, in a three-quarter view facing the RIGHT side of the image like the girls in the attached images, her head turned toward the right, arms relaxed and hands empty, nothing in front of her face. Expression: her ordinary look, the squint and the mouth set in a slightly grumpy line. She must read as elderly at a glance: white hair, wrinkles, a slight stoop.
 
+Proportions and colours: her head about the same size as the girls' heads, and the same kind of anime face as theirs, only old (not realistic); the squint drawn as narrowed, curved eyelids with a little of the dark iris still showing, so that other expressions can be made from this picture later; the kimono a soft, greyish faded indigo, clearly lighter and greyer than deep navy; the apron dark charcoal; the hair white with cool grey shading.
+
 Canvas: 1024 x 1536 (portrait). Draw her at the same scale as the girls in the attached images, so that her head is about the same size on the canvas (the distance between her eyes about 60 to 75 pixels).
 
 Output rules:
@@ -756,7 +796,7 @@ Output rules:
 - No manga symbols: no sweat drops, anger marks, exclamation or question marks, blush lines or sparkles.
 ```
 
-### GP-18　婆婆 · 笑（smile）　编辑 GP-17（只在选 A 时做）
+### GP-18　婆婆 · 笑（smile）　编辑 GP-17
 
 - **用在**（2 句）：0-06 "孙子们早就高过你这道了。"、0-08 "我啊，越缩越矮。早晚跟你一般高。"。
 - **参考图**：你通过的 GP-17（就是你交回的那张）。
@@ -775,6 +815,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, mouth, cheeks, jaw and the wr
 
 New expression — a dry, teasing grandmother's grin (she has just made a joke at someone else's expense, and at her own): eyes squeezed into curved slits with deep laugh lines at the corners; cheeks pushed up; mouth in a crooked, closed-mouth grin, or slightly open. Warm and a little mischievous. No blush.
 
+Sizes, compared with the original: the eyes almost closed into curved slits; the laugh lines at the corners of the eyes clearly drawn; the corners of the mouth turned up enough to see when the picture is small.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -784,7 +826,7 @@ Output rules:
 - Same drawing style as the original.
 ```
 
-### GP-19　婆婆 · 怀念（wistful）　编辑 GP-17（只在选 A 时做）
+### GP-19　婆婆 · 怀念（wistful）　编辑 GP-17
 
 - **用在**（4 句）：0-09 "刻这道那年，我头发还是黑的。"、0-10 "可惜了那面鼓。"、0-12 "顶上还差一个人。"、0-19 "我知道一个。"。
 - **参考图**：你通过的 GP-17。
@@ -804,6 +846,8 @@ Redraw the whole face — eyes, eyelids, eyebrows, mouth, cheeks, jaw and the wr
 
 New expression — quiet, private nostalgia: eyelids lowered, looking down at something close in front of her (an old mark carved into a wooden post); the squint softened; the mouth relaxed, with the faintest sad smile. No tears, no wet shine.
 
+Sizes, compared with the original: the upper eyelids lowered further, so that she is clearly looking down; the mouth softer and relaxed, the faint smile small but visible.
+
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
 - Transparent background: a real alpha channel, not a painted checkerboard.
@@ -813,7 +857,7 @@ Output rules:
 - Same drawing style as the original.
 ```
 
-### GP-20　婆婆 · 板脸（stern）　编辑 GP-17（只在选 A 时做）
+### GP-20　婆婆 · 板脸（stern）　编辑 GP-17
 
 - **用在**（5 句）：0-15 "十。小笠，这盏别算进去。"、0-16 "这是回来用的……"、0-18 "说这话的先摔。"、0-24 "把眼镜还我。"、0-26 "变？它敢。"。
 - **参考图**：你通过的 GP-17。
@@ -832,6 +876,8 @@ Keep exactly as in the original: the angle and tilt of her head, her hair, her c
 Redraw the whole face — eyes, eyelids, eyebrows, mouth, cheeks, jaw and the wrinkles — as ONE expression that fits the angle of her head. Do not paste new eyes or a new mouth onto the old face.
 
 New expression — gruff and scolding: eyebrows drawn together and down; eyes narrowed into a hard squint; mouth pressed into a frown with the corners turned down, as if snapping a short order at a naughty child. Stern but fond: not truly angry, not hateful.
+
+Sizes, compared with the original: the eyebrows clearly lowered and pulled together; the eyes narrowed to a hard squint; the corners of the mouth turned down clearly enough to see when the picture is small.
 
 Output rules:
 - One PNG, the same canvas size and shape as the original (1024 x 1536, portrait).
@@ -880,7 +926,7 @@ Output rules:
 ### 8.2 怎么交
 
 - 全部打成一个 zip，在 Claude 的对话里直接上传；或者放进上次那个 Google Drive 文件夹，告诉我们文件名。
-- 可以分批：先交 GP-01…GP-16；婆婆那几张等你回复 C.1 以后再交。GP-17 建议单独先交（第 7 节）。
+- 可以分批：先交 GP-01…GP-16；婆婆的 GP-17 单独先交，你看过、满意了再做、再交 GP-18…20（第 7 节）。
 
 ## 9. 我们收到以后怎么验收
 
@@ -912,7 +958,7 @@ Output rules:
 3. **剧本要的**：第五版 121 句逐句排了表情（`portrait-faces-seg1.md` A 表）。小鹊、さぢ用到的每一个表情，不是现有的留用图，就是这份清单里的一项（B.1）。
    - 新增的五张：GP-02…05、GP-11。
    - 中文稿接下来重写（G5R3-55），场次、事件、情绪走向不变；重写只能用这里定下的表情，所以重写不会产生新的需求。
-4. **婆婆**：三种答复（A、B、C）都已经写进清单，答哪一种清单都不用改。
+4. **婆婆**：C.1 已定 A（G5R3-65），GP-17…20 都做。
 5. **行商、乌鸦、收音机**：推荐不出立绘（C.2）。
 6. **しをね**：这一段她不说话，只有点名的五张。
 
@@ -937,7 +983,7 @@ Output rules:
   - 原画的 SHA-256 和原包 manifest 里记的一致（抽查了 A_35、A_12、A_04、A_34）。
 - [x] 用户点名的十张都在（第 10 节第 1 条）。
 - [x] 盲测的问题都处理了：同脸三张、喊读成惊讶；生气不重做，写了理由。
-- [x] 婆婆三种答复下清单都不用改。
+- [x] 婆婆：C.1 已定 A（G5R3-65），清单不用改。
 - [x] 上次不合格的四个原因，各有对应的条目：
   - 比例偏成熟：编辑代替新画，加上 G4、G9、4.3；
   - 半透明的泪：G7；
