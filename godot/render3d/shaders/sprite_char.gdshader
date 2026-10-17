@@ -34,6 +34,8 @@ varying vec3 v_wp;
 varying vec3 v_wu;      // the card's upright place (lamps light her where she stands)
 varying vec3 v_alb;
 varying vec2 v_tex;
+varying vec4 v_uvd;     // UV x depth, depth (pixel_toon w3_card_uv: texel for pixel with a perspective camera)
+varying vec3 v_wl;      // where the orthographic camera drew this point of the card: the light's place
 
 void vertex() {
 	vec3 anchor = MODEL_MATRIX[3].xyz;
@@ -44,10 +46,16 @@ void vertex() {
 		r.y = 0.0;
 		r = length(r) > 0.001 ? normalize(r) : vec3(1.0, 0.0, 0.0);
 		wp = anchor + r * (off.x / w3_view.x) + vec3(0.0, off.y / w3_view.x, 0.0);
+		v_uvd = vec4(UV, 1.0, 0.0);
+		v_wl = wp;
 	} else {
 		vec3 a = anchor + w3_snap(anchor);
-		// leaned card: x right, y up 20 px per metre on screen
-		wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
+		// a card facing the camera, leaned back; with a perspective camera (G5R3-27) laid out in whole
+		// screen pixels, upright on the screen and texel for pixel wherever she stands (w3_card)
+		float d;
+		wp = w3_card(a, off, d);
+		v_uvd = vec4(UV * d, d, 0.0);
+		v_wl = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -W3_LEAN_REF * off.y / w3_view.x);
 	}
 	VERTEX = wp;
 	v_wp = wp;
@@ -56,13 +64,16 @@ void vertex() {
 
 void fragment() {
 	vec2 sheet_size = vec2(textureSize(sheet, 0));
-	vec2 uv = UV;
+	vec2 uv = w3_card_uv(v_uvd);
 	if (flip_h) uv.x = 1.0 - uv.x;
 	vec2 tp = frame_rect.xy + vec2(uv.x, 1.0 - uv.y) * frame_rect.zw;
 	ivec2 ti = ivec2(clamp(floor(tp), frame_rect.xy, frame_rect.xy + frame_rect.zw - 1.0));
 	vec4 c = texelFetch(sheet, ti, 0);
 	if (c.a < 0.5) {
 		discard;
+	}
+	if (w3_cam.w > 0.0 && !IN_SHADOW_PASS) {
+		LIGHT_VERTEX = (VIEW_MATRIX * vec4(v_wl, 1.0)).xyz;
 	}
 	vec3 nm = texelFetch(sheet_n, ti, 0).rgb * 2.0 - 1.0;
 	if (flip_h) nm.x = -nm.x;

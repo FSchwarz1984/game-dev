@@ -13,7 +13,8 @@
 // Declared in godot/project.godot [shader_globals]; the time-of-day controller
 // (render3d/world_env.gd) writes them every frame.
 
-global uniform vec4 w3_view;        // x: native px per metre (30), y: sin(pitch), z: cos(pitch), w: lean k = tan(pitch/2)
+global uniform vec4 w3_view;        // x: native px per metre (30) at the focus, y: sin(pitch), z: cos(pitch), w: lean k = tan(pitch/2) x the preset's lean
+global uniform vec4 w3_cam;         // xyz: the camera (world); w: its distance to the focus plane along the view, 0 = orthographic (PixelView3D presets, G5R3-27)
 global uniform float w3_time;       // world clock, seconds (animation; deterministic in captures)
 global uniform vec3 w3_sun_dir;     // unit vector toward the sun (or moon at night), world space
 global uniform vec3 w3_sun;         // sun colour * intensity (linear), for effects outside light()
@@ -33,6 +34,9 @@ global uniform sampler2D w3_lamps;  // lamps (render3d/lamps.gd): row 0 xyz + re
 global uniform float w3_lamp_n;     // how many lamps are lit (texels in use)
 global uniform float w3_bake;       // 0 the game; impostor bake (render3d/dev/impostor_bake.gd):
                                     // 1 albedo, 2 normal, 3 AO + class; no wind, no lean
+global uniform vec4 w3_dof;         // depth of field (G5R3-28, PixelView3D.DOF_LEVELS): x the largest blur radius
+                                    // (native px, 0 off), y the sharp band either side of the focus (m), z the
+                                    // ramp to the full radius (m), w the focus depth (m from the camera)
 
 const float W3_PI = 3.14159265;
 
@@ -60,27 +64,91 @@ float w3_fbm(vec2 p) {
 
 // ------------------------------------------------------------------------------------------------
 // the screen-texel lattice
-// Native pixel coordinates of a (rendered, i.e. already leaned) world point: x to the east, y up the
-// screen. The camera is snapped so that pixel centres sit at k + 0.5, hence floor() is the texel cell.
-vec2 w3_screen(vec3 wp) {
+// The world's pixel lattice: native pixel coordinates of a (rendered, i.e. already leaned) world point
+// on the focus plane's scale, x to the east, y up the screen. With the orthographic camera this is the
+// screen itself; with a perspective one (G5R3-27) it is the lattice glued to the world that the focus
+// plane (her feet) shows texel for pixel (nearer things show it larger, farther smaller): procedural
+// detail and dithering are keyed to it, so they move with the world and never swim. The camera is
+// snapped so that pixel centres sit at k + 0.5 there, hence floor() is the texel cell.
+vec2 w3_screen_o(vec3 wp) {
 	return vec2(wp.x, wp.y * w3_view.z - wp.z * w3_view.y) * w3_view.x;
 }
 vec2 w3_ptex(vec3 wp) {
-	return floor(w3_screen(wp));
+	return floor(w3_screen_o(wp));
 }
 // camera axes in world space
 vec3 w3_cam_right() { return vec3(1.0, 0.0, 0.0); }
 vec3 w3_cam_up() { return vec3(0.0, w3_view.z, -w3_view.y); }
-vec3 w3_cam_back() { return vec3(0.0, w3_view.y, w3_view.z); }   // from the scene toward the camera
+vec3 w3_cam_back() { return vec3(0.0, w3_view.y, w3_view.z); }   // from the scene toward the camera (the view axis)
+// where a world point really lands on the screen (native px, the same frame as w3_screen_o): with a
+// perspective camera nearer things spread out from the view axis, farther ones gather toward it
+vec2 w3_screen(vec3 wp) {
+	vec2 s = w3_screen_o(wp);
+	if (w3_cam.w <= 0.0) return s;
+	vec2 c = w3_screen_o(w3_cam.xyz);
+	float depth = dot(w3_cam.xyz - wp, w3_cam_back());
+	return c + (s - c) * w3_cam.w / max(depth, 0.05);
+}
+// the depth of field's blur radius (native px) at a view depth (post_body, pixel_particles)
+float w3_coc(float depth) {
+	return w3_dof.x * smoothstep(w3_dof.y, w3_dof.y + w3_dof.z, abs(depth - w3_dof.w));
+}
+// from a point toward the camera
+vec3 w3_to_cam(vec3 wp) {
+	return w3_cam.w > 0.0 ? normalize(w3_cam.xyz - wp) : w3_cam_back();
+}
+// how far a point is from the camera along the view (perspective; meaningless for the orthographic one)
+float w3_depth(vec3 wp) {
+	return dot(w3_cam.xyz - wp, w3_cam_back());
+}
+// focus-plane px per screen px at a point: depth / D (1 with the orthographic camera). Something
+// meant to move or measure in whole screen pixels (a sway, a mote's size) is scaled by it.
+float w3_px_scale(vec3 wp) {
+	return w3_cam.w > 0.0 ? max(w3_depth(wp), 0.05) / w3_cam.w : 1.0;
+}
+// the world point that shows at screen position q (native px, w3_screen's frame) at this depth
+vec3 w3_unproject(vec2 q, float depth) {
+	vec2 m = (q - w3_screen_o(w3_cam.xyz)) * depth / (w3_view.x * w3_cam.w);
+	return w3_cam.xyz - w3_cam_back() * depth + w3_cam_right() * m.x + w3_cam_up() * m.y;
+}
 // world displacement that moves a point by (dx, dy) native px on screen (y up), without changing depth
 vec3 w3_px_to_world(vec2 d) {
 	return w3_cam_right() * (d.x / w3_view.x) + w3_cam_up() * (d.y / w3_view.x);
 }
-// displacement that moves an anchor onto the texel corner lattice (integer ptex): cards and painted
-// details then map texel-for-pixel
+// displacement that moves an anchor onto a pixel corner of the screen: cards and painted details
+// then map texel-for-pixel (with a perspective camera only on the focus plane; nearer cards show a
+// little larger, farther ones smaller, but their corner sits on a pixel corner, so they move by
+// whole pixels and never shimmer). Orthographic: the lattice (integer ptex) is the screen.
 vec3 w3_snap(vec3 anchor_wp) {
-	vec2 s = w3_screen(anchor_wp);
-	return w3_px_to_world(round(s) - s);
+	if (w3_cam.w <= 0.0) {
+		vec2 s = w3_screen_o(anchor_wp);
+		return w3_px_to_world(round(s) - s);
+	}
+	// where it really lands; one pixel there is depth / D focus-plane pixels (same depth)
+	vec2 p = w3_screen(anchor_wp);
+	float depth = max(dot(w3_cam.xyz - anchor_wp, w3_cam_back()), 0.05);
+	return w3_px_to_world((round(p) - p) * depth / w3_cam.w);
+}
+
+// A card laid out in whole screen pixels (sprites, grass tufts): its corner `off` px (x right, y up)
+// from the snapped anchor `a` shows exactly `off` px from it, texel for pixel at any depth and upright
+// on the screen, and keeps the depth of the upright card leaned back as usual (so what stands behind
+// it or in front of it still hides the right part). d_out: its depth, for w3_card_uv (1 for the
+// orthographic camera, where this is the leaned card itself).
+vec3 w3_card(vec3 a, vec2 off, out float d_out) {
+	vec3 wl = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
+	if (w3_cam.w <= 0.0) {
+		d_out = 1.0;
+		return wl;
+	}
+	d_out = max(w3_depth(wl), 0.05);
+	return w3_unproject(w3_screen(a) + off, d_out);
+}
+// pass vec4(UV * d, d, 0) from the vertex (d from w3_card) and read UV back with this in the fragment:
+// the texels then step evenly across the screen (a perspective-correct UV would bunch toward the
+// nearer end of a slanted card)
+vec2 w3_card_uv(vec4 v) {
+	return v.xy / v.z;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -91,6 +159,21 @@ vec3 w3_snap(vec3 anchor_wp) {
 vec3 w3_lean(vec3 wp, float base_y, float amount) {
 	wp.z -= w3_view.w * (wp.y - base_y) * amount;
 	return wp;
+}
+// Light falls where the old orthographic camera drew a thing (G5R3-27): the camera presets lean
+// upright things back by different amounts (w3_view.w), and the sun's shadow and the lamps are
+// looked up where a point is drawn, so the same bough was lit in one preset and shaded in another.
+// Lit materials set LIGHT_VERTEX to the point leaned by that camera's tan(55 deg / 2) instead
+// (w3_light_vertex); the orthographic preset itself leaves it alone and stays exactly the old picture.
+const float W3_LEAN_REF = 0.520567;
+// the shift north (m) from where this camera draws a point h above its lean base (lean amount a) to
+// where the orthographic camera drew it
+float w3_light_shift(float h, float a) {
+	return (W3_LEAN_REF - w3_view.w) * h * a;
+}
+// LIGHT_VERTEX (view space) for a drawn world point shifted so (perspective cameras only)
+vec3 w3_light_vertex(mat4 view_matrix, vec3 wp_drawn, float shift) {
+	return (view_matrix * vec4(wp_drawn - vec3(0.0, 0.0, shift), 1.0)).xyz;
 }
 
 // ------------------------------------------------------------------------------------------------
@@ -115,7 +198,7 @@ vec2 w3_wind_px(vec3 anchor, float flex, float amp_px) {
 bool w3_cutaway_k(vec3 wp, vec2 cell, float scale, float keep_px) {
 	if (w3_player.w == 0.0) return false;
 	vec3 d = wp - w3_player.xyz;
-	float toward = dot(d, w3_cam_back());           // > 0: this surface is between her and the camera
+	float toward = dot(d, w3_to_cam(w3_player.xyz));   // > 0: this surface is between her and the camera
 	if (toward < 0.3) return false;
 	vec2 ds = w3_screen(wp) - w3_screen(w3_player.xyz);
 	float r = length(ds * vec2(1.0, 0.8));
@@ -335,6 +418,12 @@ vec3 w3_direct(vec3 n, vec3 l, vec3 light_col, float atten, float wrap) {
 }
 // light through thin things (leaves, paper, petals) seen against the light: what reaches the back of
 // the surface, tinted by the material (call in light(); color = how much and what colour gets through)
+// The view direction lighting uses (light()'s view space): the old orthographic camera's axis (55
+// degrees down, looking north), whatever the camera. Light on a surface must not change with the
+// camera preset or with where on the screen the surface is (a perspective VIEW does both).
+vec3 w3_view_ref(mat4 view_matrix) {
+	return normalize((view_matrix * vec4(0.0, 0.819152, 0.573576, 0.0)).xyz);
+}
 vec3 w3_transmit(vec3 n, vec3 l, vec3 v, vec3 light_col, float atten, vec3 color) {
 	float back = clamp(-dot(n, l) * 0.6 + 0.4, 0.0, 1.0);
 	// strongest when the light is behind the leaf as seen from the camera (sun low, ahead of us)

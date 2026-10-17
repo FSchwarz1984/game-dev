@@ -26,6 +26,10 @@ uniform float cutaway_keep_px = 0.0;                    // > 0: what lies this f
 // one object seen through as a whole (the cut-away mode "fade", round 4 item 4: trunk, limbs and
 // leaves of one tree go together): the share of its pixels let through, set per instance
 instance uniform float obj_fade = 0.0;
+// a hung thing (a lantern under the eave): the height (m) of its origin above the ground it leans
+// from; the assembly leans the whole thing back by it, so its light is looked up that much further
+// back too (w3_light_shift, G5R3-27)
+instance uniform float w3_hang = 0.0;
 // big masses of light and shade (G5R2 review, "大块明暗 + 局部细节"): the shade shows this share less
 // of the surface's painted detail (texture grain, the pattern's specks, cracks and boards); the
 // sun puts it back where it falls
@@ -40,6 +44,7 @@ varying vec3 v_detail;      // detailed albedo / the shade's flattened albedo (l
 varying flat float v_base_y;
 varying float v_sun_open;   // under a dense crown, near the ground: 0 (the sun only as flecks), else 1
 varying float v_fleck_s;    // the ground's soft sun flecks (pixel_toon w3_fleck) on what stands low under a crown
+varying float v_lshift;     // to where the orthographic camera drew it (w3_light_shift): the light's place
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
@@ -50,8 +55,9 @@ void vertex() {
 	}
 	VERTEX = wp;
 	v_wp = wp;
+	v_lshift = w3_light_shift(v_wu.y - origin.y, lean) + w3_light_shift(w3_hang, 1.0);
 	v_wn = NORMAL;
-	v_origin_px = w3_screen(origin);
+	v_origin_px = w3_screen_o(origin);
 	v_base_y = origin.y;
 }
 
@@ -63,6 +69,9 @@ void fragment() {
 	}
 	if (obj_fade > 0.0 && !IN_SHADOW_PASS && w3_stipple(cell) < obj_fade) {
 		discard;
+	}
+	if (w3_cam.w > 0.0 && !IN_SHADOW_PASS) {
+		LIGHT_VERTEX = w3_light_vertex(VIEW_MATRIX, v_wp, v_lshift);
 	}
 	// (round 5, the lead: on the steps and stones under the great camphor the shadow map's gaps read as
 	// hard-edged yellow patches. What stands low under a dense crown (the steps, stones, the feet of

@@ -17,7 +17,7 @@ void vertex() {
 }
 
 void fragment() {
-	vec2 c = w3_ptex(v_wp) + 0.5 - round(w3_screen(v_origin));
+	vec2 c = w3_ptex(v_wp) + 0.5 - round(w3_screen_o(v_origin));
 	vec2 e = c / radius_px;
 	float r = dot(e, e);
 	if (r > 1.0) {

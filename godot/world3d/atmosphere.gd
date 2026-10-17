@@ -179,6 +179,16 @@ func _step(p: Array, dt: float) -> void:
 	p[4] = c
 
 
+## The height at which a falling thing at latitude z is just above the view's top edge (26 px over
+## it: particles do not lean), from the camera of this frame (PixelView3D.height_at_row). The
+## orthographic camera keeps the numbers it always had (cos and sin of 55 degrees, the focus 0.47 m
+## north of her feet, the edge 6.9 m up), so its picture stays exactly the old one.
+func _above_view(z: float, at: Vector3) -> float:
+	if not env.view.is_perspective():
+		return at.y + 0.9 + (6.9 + 0.819 * (z - at.z + 0.47)) / 0.574
+	return env.view.height_at_row(z, -26.0)
+
+
 func update(dt: float, at: Vector3) -> void:
 	focus = at
 	var night := clampf(1.0 - absf(env.hours - 12.0) / 7.0, 0.0, 1.0)
@@ -208,13 +218,11 @@ func update(dt: float, at: Vector3) -> void:
 			var pp := at + Vector3(rng.randf_range(-12.0, 12.0), 0, rng.randf_range(-6.0, 5.0))
 			if realm_mask.sample(pp.x, pp.z).r < 0.5:
 				continue
-			var dz2 := pp.z - at.z
-			pp.y = at.y + 0.9 + (6.9 + 0.819 * (dz2 + 0.47)) / 0.574 + rng.randf_range(0.0, 1.0)
+			pp.y = _above_view(pp.z, at) + rng.randf_range(0.0, 1.0)
 			particles.spawn(pp, Vector3.ZERO, 40.0, Color(0.8, 0.5, 0.7, 1.0), Vector2(2, 1), 0.0, 8, rng.randf())
 	# old leaves coming down under the great camphor (by day). Each starts just above the top of the
-	# view, so it drifts in from the crown overhead and never appears out of nothing: a point's height
-	# on screen is 0.574 m per metre of height (particles do not lean) less 0.819 m per metre south
-	# of the camera's focus (her chest, 0.47 m north of her feet), and the top edge is 6.75 m up
+	# view, so it drifts in from the crown overhead and never appears out of nothing (_above_view:
+	# whatever the camera preset)
 	_leaf_light = clampf(1.0 - maxf(absf(env.hours - 12.0) - 5.0, 0.0) / 2.5, 0.45, 1.0) * (1.0 - 0.3 * env.rain)
 	if camphor != Vector3.INF and not is_night:
 		var dc := Vector2(at.x - camphor.x, at.z - camphor.z).length()
@@ -225,8 +233,7 @@ func update(dt: float, at: Vector3) -> void:
 				var lp := at + Vector3(rng.randf_range(-12.0, 12.0), 0, rng.randf_range(-5.0, 4.0))
 				if Vector2(lp.x - camphor.x, lp.z - camphor.z).length() > CAMPHOR_REACH:
 					continue
-				var dz := lp.z - at.z
-				lp.y = at.y + 0.9 + (6.9 + 0.819 * (dz + 0.47)) / 0.574 + rng.randf_range(0.0, 1.5)
+				lp.y = _above_view(lp.z, at) + rng.randf_range(0.0, 1.5)
 				if lp.y < terrain.height_at(lp.x, lp.z) + 4.0:
 					continue
 				particles.spawn(lp, Vector3.ZERO, 45.0, Color(0.6, 0.3, 0.15, 1.0), Vector2(2, 1), 0.0, 7, rng.randf())

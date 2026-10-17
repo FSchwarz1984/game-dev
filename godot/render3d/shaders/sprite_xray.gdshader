@@ -24,12 +24,16 @@ uniform sampler2D depth_tex : hint_depth_texture, filter_nearest;
 
 varying vec3 v_wp;
 varying float v_up;
+varying vec4 v_uvd;
 
 void vertex() {
 	vec3 anchor = MODEL_MATRIX[3].xyz;
 	vec3 a = anchor + w3_snap(anchor);
 	vec2 off = UV2;
-	vec3 wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
+	// (the same card as sprite_char)
+	float d;
+	vec3 wp = w3_card(a, off, d);
+	v_uvd = vec4(UV * d, d, 0.0);
 	VERTEX = wp;
 	v_wp = wp;
 	v_up = off.y;
@@ -43,7 +47,7 @@ float alpha_at(ivec2 t) {
 }
 
 void fragment() {
-	vec2 uv = UV;
+	vec2 uv = w3_card_uv(v_uvd);
 	if (flip_h) uv.x = 1.0 - uv.x;
 	vec2 tp = frame_rect.xy + vec2(uv.x, 1.0 - uv.y) * frame_rect.zw;
 	ivec2 ti = ivec2(clamp(floor(tp), frame_rect.xy, frame_rect.xy + frame_rect.zw - 1.0));

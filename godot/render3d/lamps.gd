@@ -16,6 +16,12 @@ var lamps: Array = []          # {pos, reach, col (Color, linear, times energy),
 ## the engine lights: energy and range for a lamp of (reach, energy) as dressing gives them
 var light_gain := 1.6
 var light_range := 1.35
+const FOG_ENERGY := 1.4         # each lamp's glow in the air (its share of the volumetric fog)
+## (G5R3-27) with a perspective camera a lamp the camera cannot see (a lantern under an eave, behind a
+## crown) loses its glow in the air with it: W3LampOcclusion, set up when `view` is given
+var view: PixelView3D
+var ground: Callable            # ground height at (x, z): where hung lamps lean from
+var occlusion: W3LampOcclusion
 var _img := Image.create(MAX, 2, false, Image.FORMAT_RGBAF)
 var _tex: ImageTexture
 var _t := 0.0
@@ -75,7 +81,7 @@ func _make_light(l: Dictionary) -> OmniLight3D:
 	# a soft, long falloff: a warm pool that fades into the dark with no edge
 	o.omni_attenuation = 1.6
 	o.light_specular = 0.0
-	o.light_volumetric_fog_energy = 1.4
+	o.light_volumetric_fog_energy = FOG_ENERGY
 	o.shadow_enabled = false
 	o.position = l["pos"]
 	o.visible = false
@@ -86,6 +92,7 @@ func _make_light(l: Dictionary) -> OmniLight3D:
 func update(dt: float) -> void:
 	_t += dt
 	var n := 0
+	_update_occlusion(dt)
 	if not enabled:
 		RenderingServer.global_shader_parameter_set("w3_lamp_n", 0.0)
 		for l in lamps:
@@ -110,6 +117,7 @@ func update(dt: float) -> void:
 			o.visible = on > 0.001
 			o.position = l["pos"]
 			o.light_energy = float(o.get_meta("energy")) * light_gain * on * fl
+			o.light_volumetric_fog_energy = FOG_ENERGY * float(l.get("vis", 1.0))
 		if on <= 0.001 or n >= MAX:
 			continue
 		var p: Vector3 = l["pos"]
@@ -120,3 +128,48 @@ func update(dt: float) -> void:
 		n += 1
 	_tex.update(_img)
 	RenderingServer.global_shader_parameter_set("w3_lamp_n", float(n))
+
+
+## How much of each lamp the camera sees, eased (W3LampOcclusion reads it from the depth buffer a
+## frame or two late; a glow fades out over a quarter of a second when its lamp goes behind something).
+## The orthographic camera keeps every glow as it always was.
+func _update_occlusion(dt: float) -> void:
+	if view == null or not view.is_perspective() or lamps.is_empty():
+		for l in lamps:
+			l["vis"] = 1.0
+		if occlusion:
+			occlusion.set_lamps(PackedFloat32Array(), 0, Vector2.ONE, false, 1.0, 2.0)
+		return
+	if occlusion == null:
+		occlusion = W3LampOcclusion.new()
+		var comp := Compositor.new()
+		comp.compositor_effects = [occlusion]
+		view.cam.compositor = comp
+	var cam := view.cam
+	var size := Vector2(view.vp.size)
+	var back := view.cam_back()
+	var k := view.lean_k()
+	var data := PackedFloat32Array()
+	data.resize(mini(lamps.size(), W3LampOcclusion.MAX) * 4)
+	for i in mini(lamps.size(), W3LampOcclusion.MAX):
+		var l: Dictionary = lamps[i]
+		if float(l["on"]) <= 0.001:
+			continue
+		# (the lamp where the lantern is drawn: hung things lean back with what they hang from)
+		var p: Vector3 = l["pos"]
+		if ground.is_valid():
+			p.z -= k * maxf(p.y - float(ground.call(p.x, p.z)), 0.0)
+		if cam.is_position_behind(p):
+			continue
+		var s := cam.unproject_position(p)
+		if s.x < 0.0 or s.y < 0.0 or s.x >= size.x or s.y >= size.y:
+			continue
+		data[i * 4] = s.x
+		data[i * 4 + 1] = s.y
+		data[i * 4 + 2] = (cam.position - p).dot(back)
+		data[i * 4 + 3] = 1.0
+	occlusion.set_lamps(data, mini(lamps.size(), W3LampOcclusion.MAX), size, false, cam.near, cam.far)
+	var vis := occlusion.visibility()
+	for i in lamps.size():
+		var want := vis[i] if i < vis.size() and i < W3LampOcclusion.MAX else 1.0
+		lamps[i]["vis"] = move_toward(float(lamps[i].get("vis", 1.0)), want, dt * 4.0)

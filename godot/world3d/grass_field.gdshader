@@ -62,6 +62,8 @@ varying flat float v_root_fleck;   // (scene, round 5) the sun fleck at the tuft
 varying flat float v_root_open;    // (renderer, round 5) the canopy's openness at the root (pixel_toon w3_canopy_open)
                                    // or not, as the ground under it (per pixel, the blades lit in streaks)
 varying vec3 v_detail;        // albedo / the shade's flattened albedo (light() restores the detail)
+varying vec4 v_uvd;           // (renderer, G5R3-27) UV x depth, depth: texel for pixel under a perspective camera (w3_card_uv)
+varying vec3 v_wl;            // (renderer, G5R3-27) where the orthographic camera drew it: the light's place
 
 vec3 pal(float row, float tone) {
 	vec3 c = texelFetch(palette, ivec2(int(clamp(floor(tone + 0.5), 0.0, 7.0)), int(row)), 0).rgb;
@@ -75,6 +77,8 @@ float ground_h(vec2 xz) {
 void vertex() {
 	v_root_fleck = 0.0;
 	v_root_open = 1.0;
+	v_uvd = vec4(UV, 1.0, 0.0);
+	v_wl = MODEL_MATRIX[3].xyz;
 	vec3 corner = MODEL_MATRIX[3].xyz;
 	int i = INSTANCE_ID % lattice;
 	int j = INSTANCE_ID / lattice;
@@ -141,7 +145,12 @@ void vertex() {
 		sway.x += push.x * push_px;
 		float squash = 1.0 - 0.55 * pressed;
 		vec2 off = vec2(UV2.x + floor(sway.x * top + 0.5), floor(UV2.y * squash + sway.y * top + 0.5));
-		vec3 wp = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -w3_view.w * off.y / w3_view.x);
+		// (renderer, G5R3-27: with a perspective camera the tuft is laid out in whole screen pixels,
+		// texel for pixel at any depth; pixel_toon w3_card)
+		float dv;
+		vec3 wp = w3_card(a, off, dv);
+		v_uvd = vec4(UV * dv, dv, 0.0);
+		v_wl = a + vec3(off.x / w3_view.x, off.y / w3_view.x, -W3_LEAN_REF * off.y / w3_view.x);
 		VERTEX = wp;
 		v_wp = wp;
 		NORMAL = n;
@@ -165,10 +174,14 @@ void vertex() {
 void fragment() {
 	int ci = int(v_cellk + 0.5);
 	ivec2 base = ivec2((ci % cols) * 16, (ci / cols) * 16);
-	ivec2 tp = base + ivec2(int(clamp(floor(UV.x * 16.0), 0.0, 15.0)), int(clamp(15.0 - floor(UV.y * 16.0), 0.0, 15.0)));
+	vec2 uv = w3_card_uv(v_uvd);
+	ivec2 tp = base + ivec2(int(clamp(floor(uv.x * 16.0), 0.0, 15.0)), int(clamp(15.0 - floor(uv.y * 16.0), 0.0, 15.0)));
 	vec4 t = texelFetch(blades, tp, 0);
 	if (t.a < 0.5) {
 		discard;
+	}
+	if (w3_cam.w > 0.0 && !IN_SHADOW_PASS) {
+		LIGHT_VERTEX = (VIEW_MATRIX * vec4(v_wl, 1.0)).xyz;
 	}
 	// cards are double-sided and may face either way: keep the ground normal they were given
 	if (!FRONT_FACING) {

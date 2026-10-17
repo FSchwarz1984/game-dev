@@ -121,6 +121,23 @@ func setup(v: PixelView3D) -> void:
 	sun.shadow_blur = 0.0
 	sun.light_specular = 0.0
 	view.vp.add_child(sun)
+	fit_to_view()
+
+
+## The camera preset changed (PixelView3D.set_preset): the sun's shadow map and the air reach as
+## deep as the view does. (A perspective camera fits the shadow map to its frustum up to the max
+## distance; the orthographic one ignores it, see above.)
+func fit_to_view() -> void:
+	sun.directional_shadow_max_distance = view.shadow_distance()
+	if environment.volumetric_fog_enabled:
+		environment.volumetric_fog_length = FOG_LENGTH
+
+
+## How deep the air's froxels reach from the camera: the orthographic camera's (120 m back + 45) in
+## every preset (G5R3-27), so the slices are as thick everywhere and the morning mist and the lamps'
+## glow come out alike whatever the camera (a nearer camera with a shorter reach drew the glow of a
+## lamp three times as sharp and bright).
+const FOG_LENGTH := 165.0
 
 
 ## Volumetric fog (Forward+): the air near the ground, one FogVolume over the terrain
@@ -145,7 +162,7 @@ func use_volumetric_fog(strength: float, t: Terrain3D) -> void:
 	environment.volumetric_fog_anisotropy = 0.5           # light scatters forward: shafts toward the sun
 	# (only as deep as the farthest ground the view can see, about 37 m past the focus: the froxel
 	# slices are then about 1.2 m deep, fine enough for a mist that lies a metre over the ground)
-	environment.volumetric_fog_length = view.cam_distance + 45.0
+	environment.volumetric_fog_length = FOG_LENGTH
 	environment.volumetric_fog_detail_spread = 1.0
 	environment.volumetric_fog_gi_inject = 0.5
 	environment.volumetric_fog_ambient_inject = 0.14

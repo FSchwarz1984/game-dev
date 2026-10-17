@@ -18,13 +18,17 @@ extends Node
 ##   --novista          she does not look out from the lookout (the view from the lookout, W3Vista, is on
 ##                      by default: standing still on the rock for a moment she looks out)
 ##   --vshots=dir:yaw,h[,rain];...   views from the lookout (W3Vista), yaw in degrees (N 0, E 90)
-##   --pitch=deg        camera pitch (evidence renders)
+##   --camera=P2|P1|P3|ortho   the camera preset (G5R3-27; default P2, the perspective one; V cycles
+##                      them while running, PixelView3D.PRESETS)
+##   --dof=off|light|strong   the depth of field (G5R3-28; default light; B cycles it while running)
+##   --pitch=deg        camera pitch (evidence renders; after the preset's)
 ##   --route_quit, --route_log, --log_pos[=every n frames], --perf, --quit_after=n, --ambience=wind,night
 ##   (recordings: the ambience loops), and debugging switches
 ##   (--hide, --hide_props, --nowater, --nohaze, --noshadow, --sbias, --sblur, --pancake,
 ##   --camrange, --nolamps, --noxray, --noline, --camphor_cut, --timelapse, --seed=n): docs/knowledge/21 §12
 ## Keys: WASD / arrows walk (she walks with her load; Shift is the 2D core's "give" modifier, so it
-## does not run here). On the lookout, looking out, A/D turn her head and W/S come back.
+## does not run here). On the lookout, looking out, A/D turn her head and W/S come back. V: the next
+## camera preset. B: the depth of field (off / light / strong).
 
 const CHARS_JSON := "res://world3d/sprites/characters.json"
 const CATALOG := "res://world3d/assets/catalog.json"
@@ -64,6 +68,8 @@ var realm_mask: W3RealmMask       # the barrier: where she stands sets the frame
 var hut_smoke := Vector3.INF      # the home's smoke hole (catalog anchors.smoke)
 var _realm_k := -1.0
 var _swell_k := 0.0
+var _hung: Array = []             # [node, upright place, ground height]: hung things, leaned by hand (_relean)
+var _lean_now := 0.0              # the lean those were placed with
 
 
 func _ready() -> void:
@@ -78,6 +84,15 @@ func _ready() -> void:
 	if args.has("seed"):
 		seed(int(args["seed"]))      # comparisons: the global random numbers (the model's idle, the motes) alike run to run
 	pv = PixelView3D.new()
+	var cam_i := pv.preset_key(String(args.get("camera", "P2")))
+	pv.select_preset(cam_i if cam_i >= 0 else 0)
+	if args.has("fov") and pv.is_perspective():
+		pv.fov_deg = float(args["fov"])                # tuning
+	var dof_i := pv.dof_key(String(args.get("dof", "light")))
+	pv.dof_level = dof_i if dof_i >= 0 else 1
+	if args.has("dof_params"):
+		var dp := String(args["dof_params"]).split(",")    # tuning: r (px), band (m), ramp (m)
+		pv.dof_custom = Vector3(float(dp[0]), float(dp[1]), float(dp[2]))
 	if args.has("pitch"):
 		pv.pitch_deg = float(args["pitch"])
 	if args.has("scale"):
@@ -131,12 +146,15 @@ func _ready() -> void:
 	lamps = W3Lamps.new()
 	lamps.name = "Lamps"
 	lamps.world = pv.world_root
+	lamps.view = pv
+	lamps.ground = terrain.height_at
 	add_child(lamps)
 	dressing = W3Dressing.new()
 	dressing.name = "Dressing"
 	pv.world_root.add_child(dressing)
 	dressing.lamps = lamps
 	dressing.lean_k = pv_lean()
+	_lean_now = pv_lean()
 	dressing.build(terrain, catalog)
 	_place_marker_props()
 	_round3_leaf_palette(pv.world_root)
@@ -160,6 +178,7 @@ func _ready() -> void:
 	add_child(vista)
 	vista.setup(pv, env, terrain)
 	_spawn_characters()
+	_lean_walkers()
 	focus = her.pos
 	if args.has("at"):
 		var p := String(args["at"]).split(",")
@@ -253,7 +272,93 @@ func _cam_target() -> Vector3:
 
 
 func pv_lean() -> float:
-	return tan(deg_to_rad(pv.pitch_deg) * 0.5)
+	return pv.lean_k()
+
+
+## V: the next camera preset (G5R3-27). The view's numbers change at once; the sun's shadow reach,
+## the air's depth and what was leaned by hand follow.
+func cycle_camera() -> void:
+	set_camera(pv.preset + 1)
+
+
+func set_camera(i: int) -> void:
+	pv.set_preset(i)
+	_camera_changed()
+	pv.follow(_cam_target, {"cut": true})
+	print("CAMERA %s %s fov=%.0f pitch=%.0f lean=%.2f dist=%.1f" % [String(PixelView3D.PRESETS[pv.preset]["key"]),
+		pv.preset_name(), pv.fov_deg, pv.pitch_deg, pv.lean, pv.cam_distance])
+
+
+func camera_name() -> String:
+	return pv.preset_name()
+
+
+## B: the depth of field off / light / strong (G5R3-28)
+func cycle_dof() -> void:
+	pv.set_dof(pv.dof_level + 1)
+	print("DOF %s %s" % [String(PixelView3D.DOF_LEVELS[pv.dof_level]["key"]), pv.dof_name()])
+
+
+func dof_name() -> String:
+	return pv.dof_name()
+
+
+func _camera_changed() -> void:
+	env.fit_to_view()
+	_relean(pv_lean())
+
+
+## Put what hangs in the air (and the glints, the creatures above the ground) where the new lean
+## draws the things they hang from.
+func _relean(k: float) -> void:
+	if is_equal_approx(k, _lean_now):
+		return
+	for h in _hung:
+		var node: Node3D = h[0]
+		if is_instance_valid(node):
+			var p: Vector3 = h[1]
+			node.position = Vector3(p.x, p.y, p.z - k * maxf(p.y - float(h[2]), 0.0))
+	if dressing:
+		for g in dressing.glints:
+			var gp: Vector3 = g[0]
+			gp.z += (_lean_now - k) * maxf(gp.y - terrain.height_at(gp.x, gp.z), 0.0)
+			g[0] = gp
+		dressing.lean_k = k
+		if dressing.life:
+			dressing.life.lean_k = k
+			for c in dressing.life.critters:
+				dressing.life._place(c)
+	_lean_now = k
+	_lean_walkers()
+
+
+## A hung thing's height above the ground, for its materials (w3_hang): its light is looked up where
+## the orthographic camera drew it, whatever this camera leans it by (G5R3-27).
+func _set_hang(n: Node, h: float) -> void:
+	if n is GeometryInstance3D:
+		(n as GeometryInstance3D).set_instance_shader_parameter("w3_hang", h)
+	for c in n.get_children():
+		_set_hang(c, h)
+
+
+func _lean_walkers() -> void:
+	# (the orthographic camera keeps the 0.5 m it always had: the old picture stays exactly the old one)
+	var k := pv_lean() if pv.is_perspective() else 0.5
+	for w in [her, saji]:
+		if w != null:
+			(w as W3Walker).lean_k = k
+
+
+func _unhandled_input(e: InputEvent) -> void:
+	if e is InputEventKey and e.pressed and not e.echo and (e as InputEventKey).physical_keycode == KEY_V:
+		# (not while she looks out: the far view has its own projection; the HUD hides the name then)
+		if vista == null or not (vista.active or vista.amount > 0.0):
+			cycle_camera()
+		get_viewport().set_input_as_handled()
+	elif e is InputEventKey and e.pressed and not e.echo and (e as InputEventKey).physical_keycode == KEY_B:
+		if vista == null or not (vista.active or vista.amount > 0.0):
+			cycle_dof()
+		get_viewport().set_input_as_handled()
 
 
 # ------------------------------------------------------------------------------------------------
@@ -426,6 +531,7 @@ func _place_marker_props() -> void:
 		var a: Dictionary = catalog[nm]
 		var p: Vector3 = sl[1]
 		var gy := t.height_at(p.x, p.z)
+		var upright := p
 		if not sl[3]:
 			p.y = gy
 		else:
@@ -435,6 +541,9 @@ func _place_marker_props() -> void:
 		if base == null:
 			continue
 		base.position = p
+		if sl[3]:
+			_hung.append([base, upright, gy])
+			_set_hang(base, maxf(upright.y - gy, 0.0))
 		base.rotation.y = float(sl[2])
 		props_root.add_child(base)
 		if nm in ["hut", "shrine", "graves"]:
@@ -459,6 +568,9 @@ func _place_marker_props() -> void:
 				lit.rotation.y = float(sl[2])
 				lit.visible = false
 				props_root.add_child(lit)
+				if sl[3]:
+					_hung.append([lit, upright, gy])
+					_set_hang(lit, maxf(upright.y - gy, 0.0))
 				_lit_pairs.append([base, lit])
 		for fp in a.get("footprint", []):
 			var off := Vector3(fp[0], 0, fp[1]).rotated(Vector3.UP, float(sl[2]))
@@ -991,6 +1103,81 @@ func _update_realm(dt: float) -> void:
 	env.set_band_swell(_swell_k)
 
 
+## --crawl=dir:x,z,h;... (G5R3-27, verification): how much of the picture changes when the camera
+## steps one pixel. For each view: settle with time running, freeze the world (Engine.time_scale 0),
+## put the camera on whole focus-plane pixels and shoot `a`; the depth map `d` (post_body w3_dbg:
+## view depth in cm in R*256+G, the outline class * 40 in B, white where no post drew); then the
+## camera alone one focus-plane pixel east (`e`) and one up the screen (`n`). On the focus plane `e`
+## is `a` moved one pixel left exactly; what differs elsewhere is the crawl.
+var _crawl_i := 0
+var _crawl_t := 0
+var _crawl_focus := Vector3.ZERO
+var _crawl_glow := true
+
+
+func _crawl_tick() -> void:
+	if _shot_list.is_empty():
+		var spec := String(args["crawl"]).split(":", true, 1)
+		for v in spec[1].split(";"):
+			var p := v.split(",")
+			_shot_list.append([float(p[0]), float(p[1]), float(p[2]) if p.size() > 2 else 10.0])
+		_set_view(0)
+		_crawl_t = 0
+	var outdir := String(args["crawl"]).split(":", true, 1)[0]
+	var settle := int(args.get("settle", "40"))
+	_crawl_t += 1
+	var v: Array = _shot_list[_crawl_i]
+	var base := "%s/c%02d_%d_%d_%sh" % [outdir, _crawl_i, int(v[0]), int(v[1]), String.num(v[2], 1)]
+	if _crawl_t == settle:
+		Engine.time_scale = 0.0
+		var f := _cam_target()
+		var t := pv.screen_of(f)
+		_crawl_focus = f + pv.px_to_world(t.round() - t)
+		pv.point_at(_crawl_focus, {"cut": true})
+	elif _crawl_t == settle + 3:
+		_save_shot(base + "_a")
+		RenderingServer.global_shader_parameter_set("w3_dbg", 1.0)
+		# (no bloom over the coded depth: it would spill into the marker)
+		_crawl_glow = env.environment.glow_enabled
+		env.environment.glow_enabled = false
+	elif _crawl_t == settle + 6:
+		_save_depth(base + "_d.png")
+		RenderingServer.global_shader_parameter_set("w3_dbg", 0.0)
+		env.environment.glow_enabled = _crawl_glow
+		pv.point_at(_crawl_focus + pv.px_to_world(Vector2(1, 0)), {"cut": true})
+	elif _crawl_t == settle + 9:
+		_save_shot(base + "_e")
+		pv.point_at(_crawl_focus + pv.px_to_world(Vector2(0, 1)), {"cut": true})
+	elif _crawl_t == settle + 12:
+		_save_shot(base + "_n")
+		Engine.time_scale = 1.0
+		_crawl_i += 1
+		if _crawl_i >= _shot_list.size():
+			get_tree().quit()
+			return
+		_set_view(_crawl_i)
+		_crawl_t = 0
+
+
+func _save_depth(path: String) -> void:
+	var img := pv.vp.get_texture().get_image()
+	var w := img.get_width() - 2
+	var h := img.get_height() - 2
+	var out := Image.create(w, h, false, Image.FORMAT_RGB8)
+	var coded := 0
+	for y in h:
+		for x in w:
+			var c := img.get_pixel(x + 1, y + 1)
+			if absf(c.b - 0.777) > 0.02:
+				out.set_pixel(x, y, Color8(255, 255, 255))
+				continue
+			coded += 1
+			var cm := clampi(int(roundf(c.r * 100000.0)), 0, 65535)
+			out.set_pixel(x, y, Color8(cm >> 8, cm & 255, clampi(int(roundf(c.g * 10.0)), 0, 6) * 40))
+	out.save_png(path)
+	print("DEPTH ", path, " format=", img.get_format(), " coded=", coded, "/", w * h, " D=", pv.cam_distance)
+
+
 func _set_view(i: int) -> void:
 	var v: Array = _shot_list[i]
 	her.place(Vector3(v[0], 0.0, v[1]))
@@ -1123,6 +1310,14 @@ func _process(dt: float) -> void:
 			_lit_wait.remove_at(i)
 	if lamps:
 		lamps.update(dt)
+		if args.has("log_lamps") and frame % 20 == 0:
+			# (verification: how much of each lit lamp the camera sees, W3LampOcclusion)
+			var vs := []
+			for i in lamps.lamps.size():
+				var l: Dictionary = lamps.lamps[i]
+				if float(l["on"]) > 0.001:
+					vs.append("%d:%.2f" % [i, float(l.get("vis", 1.0))])
+			print("LAMPS f=%d raw=%s eased=%s" % [frame, str(lamps.occlusion.visibility() if lamps.occlusion else PackedFloat32Array()), " ".join(vs)])
 	if not route.is_empty():
 		_drive_route()
 	var dir := _input_dir()
@@ -1213,6 +1408,9 @@ func _process(dt: float) -> void:
 				get_tree().quit()
 				return
 			_set_vview(_shot_i)
+		return
+	if args.has("crawl"):
+		_crawl_tick()
 		return
 	if args.has("shot") and frame == int(args.get("frames", "30")):
 		var path: String = args["shot"]

@@ -16,6 +16,11 @@
 #       rendering makes game time run ten or more times slower than the clock; see plan_long).
 # lookout (with --game-args "--mode=lookout --log_pos=1"): real keys walk her onto the lookout,
 #       steered by the position the game prints; the far view must come on, turn and go off.
+# camera (with --game-args "--log_pos=1"; the main view's camera, G5R3-27/28): V cycles the presets
+#       and B the depth of field in the home area (the HUD names both under the hour, the game logs
+#       CAMERA / DOF), she walks in each; the night; on the lookout's map V and B work while she walks
+#       and do nothing while she looks out. With the worktree's showcase (no export): --binary
+#       scratchpad/bin/wt_showcase.sh.
 # Writes DIR/NN_name.png (X screen), DIR/log.txt (engine output), DIR/steps.txt; exit code 1 when
 # the engine died, printed a script error, or a step that must change the screen did not.
 import argparse
@@ -239,6 +244,11 @@ class Check:
     def log_has(self, text):
         return text in open(os.path.join(self.out, "log.txt"), encoding="utf-8", errors="replace").read()
 
+    def log_lines(self, prefix):
+        self.log.flush()
+        return [ln.rstrip() for ln in open(os.path.join(self.out, "log.txt"), encoding="utf-8", errors="replace")
+                if ln.startswith(prefix)]
+
     def plan_lookout(self):
         """run with --game-args "--mode=lookout --log_pos=1": walk her onto the lookout marker with
         real keys, steering by the position the game prints, stand still, wait for the far view"""
@@ -275,6 +285,99 @@ class Check:
         self.note("back to the top-down view: %s" % self.log_has("VISTA off"))
         time.sleep(20)
         self.shot("lookout_back", must_change=True)
+
+    def plan_camera(self):
+        """the main view's camera (G5R3-27/28): V cycles P2 -> P1 -> P3 -> orthographic -> P2, B the
+        depth of field light -> strong -> off -> light; every press must change the picture and log a
+        CAMERA / DOF line, and the HUD names both under the hour; she walks in each preset with real
+        keys; at the lookout, looking out, V and B must do nothing (the far view has its own
+        projection). Software rendering gives about a frame a second at 1920x1080 here, so the waits
+        are long."""
+        self.wait_loaded("menu", timeout=240)
+        self.focus()
+        self.menu_to(0)
+        self.wait_loaded("home_P2_light", timeout=300)
+        for name in ("P1", "P3", "ortho", "P2"):
+            before = len(self.log_lines("CAMERA "))
+            self.key("v")
+            time.sleep(12)
+            self.shot("home_" + name, must_change=True)
+            lines = self.log_lines("CAMERA ")
+            self.note("log: %s" % (lines[-1] if len(lines) > before else "no CAMERA line"))
+            if len(lines) <= before:
+                self.failed.append("V to %s: no CAMERA line in the log" % name)
+            self.hold("d", 8.0)
+            time.sleep(4)
+            self.shot("home_%s_walked_right" % name, must_change=True)
+            self.hold("a", 8.0)
+            time.sleep(4)
+        for name in ("strong", "off", "light"):
+            before = len(self.log_lines("DOF "))
+            self.key("b")
+            time.sleep(12)
+            self.shot("home_P2_dof_" + name, must_change=True)
+            lines = self.log_lines("DOF ")
+            self.note("log: %s" % (lines[-1] if len(lines) > before else "no DOF line"))
+            if len(lines) <= before:
+                self.failed.append("B to %s: no DOF line in the log" % name)
+        self.key("b")            # strong, walking
+        time.sleep(8)
+        self.hold("s", 8.0)
+        time.sleep(4)
+        self.shot("home_P2_dof_strong_walked", must_change=True)
+        self.key("b")
+        self.key("b")            # back to light
+        self.key("4")
+        time.sleep(15)
+        self.shot("home_P2_light_night", must_change=True)
+        self.key("Escape")
+        self.wait_loaded("menu_from_home", timeout=120)
+        # the lookout's map: V and B work while she walks there (a new sample: P2, light again) ...
+        self.menu_to(1)
+        self.wait_loaded("lookout", timeout=300)
+        for k, prefix, name in (("v", "CAMERA ", "lookout_walking_P1"), ("b", "DOF ", "lookout_walking_P1_strong")):
+            before = len(self.log_lines(prefix))
+            self.key(k)
+            time.sleep(10)
+            self.shot(name, must_change=True)
+            lines = self.log_lines(prefix)
+            self.note("log: %s" % (lines[-1] if len(lines) > before else "no %sline" % prefix))
+            if len(lines) <= before:
+                self.failed.append("%s on the lookout's map: no %sline" % (k.upper(), prefix))
+        # ... but not while she looks out: real keys walk her onto the rock, steered by the position
+        # the game prints (run with --game-args "--log_pos=1")
+        for step in range(30):
+            p = self.her_pos()
+            if p is None:
+                self.hold("s", 3.0)
+                time.sleep(2.0)
+                continue
+            dx, dz = self.LOOKOUT[0] - p[0], self.LOOKOUT[1] - p[1]
+            self.note("her at (%.2f, %.2f), %.2f m from the lookout" % (p[0], p[1], (dx * dx + dz * dz) ** 0.5))
+            if (dx * dx + dz * dz) ** 0.5 < 1.0:
+                break
+            k = ("s" if dz > 0 else "w") if abs(dz) >= abs(dx) else ("d" if dx > 0 else "a")
+            self.hold(k, 3.0)
+            time.sleep(2.0)
+        t = time.time()
+        while time.time() - t < 150 and not self.log_has("VISTA on"):
+            time.sleep(3)
+        self.note("far view: %s" % ("on" if self.log_has("VISTA on") else "never came"))
+        if self.log_has("VISTA on"):
+            time.sleep(10)
+            self.shot("lookout_far_view", must_change=True)
+            n_cam, n_dof = len(self.log_lines("CAMERA ")), len(self.log_lines("DOF "))
+            self.key("v")
+            self.key("b")
+            time.sleep(8)
+            self.shot("lookout_after_v_b")
+            if len(self.log_lines("CAMERA ")) != n_cam or len(self.log_lines("DOF ")) != n_dof:
+                self.failed.append("V or B changed the camera while she looked out")
+            self.hold("w", 6.0)
+            time.sleep(20)
+            self.shot("lookout_back", must_change=True)
+        self.key("Escape")
+        self.wait_loaded("menu_end", timeout=120)
 
     def plan_full(self):
         self.wait_loaded("menu", timeout=240)
@@ -396,7 +499,7 @@ def main():
     p.add_argument("--binary", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--display", default=":94")
-    p.add_argument("--plan", default="full", choices=["full", "smoke", "long", "lookout"])
+    p.add_argument("--plan", default="full", choices=["full", "smoke", "long", "lookout", "camera"])
     p.add_argument("--game-args", default="", help="extra game arguments after --, e.g. \"--mode=lookout --log_pos=1\"")
     a = p.parse_args()
     c = Check(a)

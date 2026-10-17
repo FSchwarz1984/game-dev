@@ -36,6 +36,9 @@ var model: Node3D
 ## the sprite even where a 3D model exists (the sample's `sprites` option, or --sprites on the command
 ## line; G5R3-24: this build shows the round-3 figure while her model is redone)
 var use_sprites := false
+## the camera's lean-back per metre of height (PixelView3D.lean_k(); the sample sets it): where her
+## chest is drawn (her sprite is a card leaned back by it)
+var lean_k := 0.5
 
 
 func setup(t: Terrain3D, id: String, sheet_key: String, chars: Dictionary) -> void:
@@ -208,4 +211,4 @@ func set_xray_colour(c: Color) -> void:
 func chest() -> Vector3:
 	if model:
 		return model.call("chest")
-	return pos + Vector3(0, 1.0, -0.5)
+	return pos + Vector3(0, 1.0, -lean_k)

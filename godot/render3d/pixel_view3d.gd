@@ -5,11 +5,14 @@ extends Control
 ## The world renders into a low-res SubViewport at the native size (640x360: 720p x2, 1080p x3, 1440p
 ## x4, 4K x6; the canvas follows the window like the 2D core's PixelStage, see fit()) plus a 1-pixel
 ## border. 1 m = 30 native px (PPM) on the camera's picture plane.
-## An orthographic camera with fixed yaw (north up) and a fixed pitch looks at it; the camera is
-## snapped to whole native texels in view space and the sub-pixel remainder shifts the upscaled
-## image (in whole window pixels), so following is smooth while every texel stays on the world's
-## pixel lattice (no shimmer). Outlines and fog are a screen post per
-## outline class (stencil-gated quads, see shaders/post_*.gdshader); grading is the composite.
+## A camera with fixed yaw (north up) and a fixed pitch looks at it: perspective since round 5
+## (G5R3-27, the user: "把正交視角改為透視視角"; PRESETS, V cycles them in the sample), the old
+## orthographic one as the last preset. The camera is snapped to whole native texels of the focus
+## plane (the layer at her feet) and the sub-pixel remainder shifts the upscaled image (in whole
+## window pixels), so following is smooth while the focus plane stays on the world's pixel lattice
+## (no shimmer there; nearer and farther layers move by fractions of a pixel: parallax). Outlines and
+## fog are a screen post per outline class (stencil-gated quads, see shaders/post_*.gdshader);
+## grading is the composite.
 ##
 ## Camera space here is "screen px": native pixels, x east, y up the screen (w3_screen() in the
 ## shaders), independent of where the camera is.
@@ -20,6 +23,40 @@ const BASE := Vector2(640, 360)
 const PPM := 30.0
 
 @export var pitch_deg := 55.0
+
+## The camera presets (G5R3-27). fov: the vertical field of view in degrees (0: orthographic, the
+## old camera); pitch: down from the horizon; lean: the share of the orthographic lean-back
+## (tan(pitch / 2), w3_lean) that upright things keep (it made up for the orthographic view's squashed
+## verticals; a perspective view shows height by itself, and a full lean would tip near things
+## back). At the focus 1 m is PPM px in every preset: the camera stands (half the view's height in
+## metres) / tan(fov / 2) away (P2 about 28 m, P1 57 m, P3 17.5 m). The first is the default.
+const PRESETS := [
+	{"key": "P2", "name": "P2 中焦 24°", "fov": 24.0, "pitch": 50.0, "lean": 0.3},
+	{"key": "P1", "name": "P1 近正交 12°", "fov": 12.0, "pitch": 55.0, "lean": 0.6},
+	{"key": "P3", "name": "P3 广角 38°", "fov": 38.0, "pitch": 45.0, "lean": 0.0},
+	{"key": "ORTHO", "name": "正交（旧）", "fov": 0.0, "pitch": 55.0, "lean": 1.0},
+]
+signal preset_changed(index: int, name: String)
+## The class's own default is the old orthographic camera (the tools: asset previews, the
+## character lab); the sample (the game) selects P2 (sample.gd --camera=).
+const ORTHO := 3
+var preset := ORTHO
+var fov_deg := 0.0                 # 0: orthographic
+var lean := 1.0
+## Depth of field (G5R3-28): a tilt-shift blur by depth, gathered in the post at the native
+## resolution (shaders/post_body.gdshaderinc w3_dof_gather); the characters and the target never
+## blur. r: the largest radius (native px), band: sharp either side of the focus (m), ramp: to the
+## full radius (m). The sample starts at 轻 (B cycles them); the class default (the tools) is off.
+const DOF_LEVELS := [
+	{"key": "off", "name": "关", "r": 0.0, "band": 0.0, "ramp": 1.0},
+	# (the first 轻 was r 2, band 2.5, ramp 6: hardly apart from 关, it took a tenth off the big jumps
+	# of the crawl; this one takes a third, the focus stays sharp 2 m either side; knowledge/21 §14)
+	{"key": "light", "name": "轻", "r": 2.5, "band": 2.0, "ramp": 3.5},
+	{"key": "strong", "name": "强", "r": 3.5, "band": 1.5, "ramp": 4.5},
+]
+var dof_level := 0
+## tuning only (sample --dof_params=r,band,ramp): these numbers instead of the level's, when not off
+var dof_custom := Vector3.ZERO
 ## Dev previews only (asset checks of tall trees): a fixed integer scale instead of the rule.
 var force_scale := 0
 
@@ -55,6 +92,94 @@ func set_camera_distance(d: float) -> void:
 	cam_distance = d
 	cam.near = maxf(d - 60.0, 0.5)
 	cam.far = d + 70.0
+
+
+## Choose a camera preset before the view is in the tree (index into PRESETS, wraps): only the
+## numbers; _ready() fits the camera to them.
+func select_preset(i: int) -> void:
+	preset = posmod(i, PRESETS.size())
+	var p: Dictionary = PRESETS[preset]
+	pitch_deg = float(p["pitch"])
+	lean = float(p["lean"])
+	fov_deg = float(p["fov"])
+
+
+## Switch to a camera preset while running (V in the sample). Keeps the focus where it is.
+func set_preset(i: int) -> void:
+	select_preset(i)
+	_fit_camera()
+	apply_view_globals()
+	if is_inside_tree():
+		apply_camera()
+	preset_changed.emit(preset, preset_name())
+
+
+func set_dof(i: int) -> void:
+	dof_level = posmod(i, DOF_LEVELS.size())
+	_apply_dof()
+
+
+func dof_key(key: String) -> int:
+	for i in DOF_LEVELS.size():
+		if String(DOF_LEVELS[i]["key"]) == key.to_lower():
+			return i
+	return -1
+
+
+func dof_name() -> String:
+	return String(DOF_LEVELS[dof_level]["name"])
+
+
+## The focus is the plane the camera stands cam_distance in front of (both cameras).
+func _apply_dof() -> void:
+	var d: Dictionary = DOF_LEVELS[dof_level]
+	var v := Vector3(float(d["r"]), float(d["band"]), float(d["ramp"]))
+	if dof_custom != Vector3.ZERO and dof_level > 0:
+		v = dof_custom
+	RenderingServer.global_shader_parameter_set("w3_dof", Vector4(v.x, v.y, v.z, cam_distance))
+
+
+func preset_key(key: String) -> int:
+	for i in PRESETS.size():
+		if String(PRESETS[i]["key"]).to_lower() == key.to_lower():
+			return i
+	return -1
+
+
+func preset_name() -> String:
+	return String(PRESETS[preset]["name"])
+
+
+func is_perspective() -> bool:
+	return fov_deg > 0.0
+
+
+## The lean-back of upright things per metre of height (w3_view.w): tan(pitch / 2) x the preset's
+## share. Whatever places things by hand where the shaders lean them (hung lanterns, glints, the
+## crows on the limbs) uses this.
+func lean_k() -> float:
+	return tan(deg_to_rad(pitch_deg) * 0.5) * lean
+
+
+## How far the sun's shadow map has to reach from the camera to cover what the view shows.
+func shadow_distance() -> float:
+	return cam_distance + 45.0 if is_perspective() else 48.0
+
+
+func _fit_camera() -> void:
+	if is_perspective():
+		cam.projection = Camera3D.PROJECTION_PERSPECTIVE
+		cam.fov = fov_deg
+		cam_distance = (float(vp.size.y) * 0.5 / PPM) / tan(deg_to_rad(fov_deg) * 0.5)
+		cam.near = 0.5
+		cam.far = cam_distance + 150.0
+	else:
+		cam.projection = Camera3D.PROJECTION_ORTHOGONAL
+		cam.size = float(vp.size.y) / PPM
+		cam_distance = 120.0
+		cam.near = 60.0
+		cam.far = 190.0
+	_apply_dof()
 
 
 func _init() -> void:
@@ -154,7 +279,7 @@ const CHAR_POST := "res://characters/shaders/char_post.gdshader"
 
 func apply_view_globals() -> void:
 	var p := deg_to_rad(pitch_deg)
-	RenderingServer.global_shader_parameter_set("w3_view", Vector4(PPM, sin(p), cos(p), tan(p * 0.5)))
+	RenderingServer.global_shader_parameter_set("w3_view", Vector4(PPM, sin(p), cos(p), lean_k()))
 	cam.rotation = Vector3(-p, 0.0, 0.0)
 	# the 3D characters stamp their faces with the same numbers (a global shader parameter cannot be
 	# read back at run time)
@@ -182,7 +307,7 @@ func fit() -> void:
 	margin = ((size - logical * s) * 0.5).round()
 	vp.size = cs + Vector2i(2, 2)
 	view.size = Vector2(vp.size)
-	cam.size = float(vp.size.y) / PPM
+	_fit_camera()
 	composite.set_shader_parameter("view_size", logical)
 	logical_resized.emit(logical)
 
@@ -205,8 +330,7 @@ func screen_of(wp: Vector3) -> Vector2:
 
 ## Screen px of a point on an upright object at height h above its base b (the lean applied).
 func screen_of_upright(base: Vector3, h: float) -> Vector2:
-	var k := tan(deg_to_rad(pitch_deg) * 0.5)
-	return screen_of(base + Vector3(0, h, -k * h))
+	return screen_of(base + Vector3(0, h, -lean_k() * h))
 
 
 func cam_up() -> Vector3:
@@ -223,8 +347,29 @@ func px_to_world(d: Vector2) -> Vector3:
 
 ## Logical canvas px (y down, origin top-left: where the HUD draws) of a world point this frame.
 func world_to_canvas(wp: Vector3) -> Vector2:
+	if is_perspective():
+		# the viewport's pixel, less its 1-px border and the sub-pixel shift of the image
+		return cam.unproject_position(wp) + view.position
 	var s := screen_of(wp) - cam_px
 	return Vector2(s.x, -s.y) + (logical * 0.5)
+
+
+## The height at which the upright line through a point of latitude z (any x) crosses the canvas
+## row `row` (logical px from the top) this frame: for things that must come in from just outside
+## the view (the camphor's falling leaves start a little above its top edge). Screen rows depend on
+## y and z only (the camera never turns about its view axis or sideways).
+func height_at_row(z: float, row: float) -> float:
+	var sp := sin_p()
+	var cp := cos_p()
+	var up_px := logical.y * 0.5 - row          # px above the view's centre
+	var c := cam.position
+	if not is_perspective():
+		# (y cos p - z sin p) * PPM - render_px.y = up_px
+		return ((up_px + render_px.y) / PPM + z * sp) / cp
+	# offset u (focus-plane px) at depth d shows at u * D / d
+	var dd := cam_distance
+	var num := PPM * dd * (c.y * cp + (z - c.z) * sp) + up_px * (c.y * sp + (c.z - z) * cp)
+	return num / (PPM * dd * cp + up_px * sp)
 
 
 ## Window px (what a real finger or xdotool clicks) of a world point this frame.
@@ -294,6 +439,9 @@ func apply_camera() -> void:
 	# a world point on the view axis whose screen position is si; the camera stands back from it
 	var centre := px_to_world(si) + cam_back() * _focus.dot(cam_back())
 	cam.position = centre + cam_back() * cam_distance
+	# (the shaders' w3_screen / w3_to_cam: where the camera is; w 0 for the orthographic camera)
+	var cp := cam.position
+	RenderingServer.global_shader_parameter_set("w3_cam", Vector4(cp.x, cp.y, cp.z, cam_distance if is_perspective() else 0.0))
 	# the image content sits frac px away from where it should; move the image back (window px)
 	var off := (frac * scale_factor).round() / float(scale_factor)
 	view.position = -Vector2.ONE - Vector2(off.x, -off.y)

@@ -6,4 +6,6 @@ stencil_mode read, compare_equal, 5;
 #define OL_CREASE 0.0
 #define OL_TINT vec3(1.0)
 #define OL_RIM 0
+#define OL_DOF 1
+#define OL_CLASS 5
 #include "res://render3d/shaders/post_body.gdshaderinc"

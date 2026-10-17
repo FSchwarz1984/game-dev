@@ -31,6 +31,7 @@ uniform bool cutaway = true;
 uniform float cutaway_scale = 1.0;                // big canopies: the renderer raises it
 uniform float cutaway_keep_px = 0.0;              // > 0: what lies this far above her stays (the top of the view)
 instance uniform float obj_fade = 0.0;            // the cut-away mode "fade": this share of the object's pixels let through
+instance uniform float w3_hang = 0.0;             // a hung thing: its origin's height above the ground (toon_solid_body)
 // the shadow pass draws each card this much larger, so a crown casts big solid masses of shade (on
 // itself and on the ground; G5R2 review: "大块明暗") rather than a sieve of leaf-sized holes. The sun
 // flecks on the ground are the terrain's own (small, clustered, crisp).
@@ -51,11 +52,13 @@ varying float v_fill;
 varying float v_fill_low;   // the sky's fill in the sun's shadow (w3_shadow_fill): what grows low gets it, a crown up in the air keeps its own shade
 varying vec3 v_detail;      // albedo / the shade's albedo (the shade's tint; light() undoes it)
 varying vec3 v_detail_sun;  // the same for the sunlit side (its green quieter, round 3)
+varying float v_lshift;     // to where the orthographic camera drew it (w3_light_shift): the light's place
 
 void vertex() {
 	vec3 origin = MODEL_MATRIX[3].xyz;
 	vec3 anchor = (MODEL_MATRIX * vec4(CUSTOM0.xyz, 1.0)).xyz;
 	float flex = CUSTOM0.w;
+	float v_wu_y_for_light = VERTEX.y;
 	vec3 wp;
 	if (foliage_mode == 1) {
 		vec3 a = anchor;
@@ -80,17 +83,20 @@ void vertex() {
 					sway.y -= round(push_px * 0.75 * k);
 				}
 			}
-			wp = a + w3_px_to_world(UV2 + sway);
+			// (the sway in whole screen pixels at any depth: G5R3-27)
+			wp = a + w3_px_to_world(UV2 + sway * w3_px_scale(a));
 		}
 	} else {
 		wp = VERTEX;
 		if (!IN_SHADOW_PASS) {
 			wp = w3_lean(wp, origin.y, lean);
-			wp += w3_px_to_world(w3_wind_px(anchor, flex, wind_px));
+			wp += w3_px_to_world(w3_wind_px(anchor, flex, wind_px) * w3_px_scale(anchor));
 		}
 	}
 	VERTEX = wp;
 	v_wp = wp;
+	// (cards lean by their anchor's height, meshes by each vertex's)
+	v_lshift = w3_light_shift((foliage_mode == 1 ? anchor.y : v_wu_y_for_light) - origin.y, lean) + w3_light_shift(w3_hang, 1.0);
 	v_wu = foliage_mode == 1 ? anchor : VERTEX;
 	v_wn = NORMAL;
 	v_fill_low = 1.0 - smoothstep(1.2, 3.5, v_wu.y - origin.y);
@@ -114,6 +120,9 @@ void fragment() {
 	}
 	if (obj_fade > 0.0 && !IN_SHADOW_PASS && w3_stipple(cell) < obj_fade) {
 		discard;
+	}
+	if (w3_cam.w > 0.0 && !IN_SHADOW_PASS) {
+		LIGHT_VERTEX = w3_light_vertex(VIEW_MATRIX, v_wp, v_lshift);
 	}
 	// cards are rebuilt facing the camera whatever their winding: undo the engine's back-face flip
 	if (foliage_mode == 1 && !FRONT_FACING) {
@@ -175,8 +184,11 @@ void light() {
 		// (the leaves turned full to the sun a touch brighter and warmer: round 3's top band, continuous)
 		float ndl = dot(NORMAL, LIGHT);
 		c *= mix(vec3(1.0), vec3(1.13, 1.12, 1.06), hi_band * smoothstep(0.7, 0.9, ndl) * ATTENUATION * (1.0 - w3_night));
-		// (light through the leaves against the sun: round 4's, a little of it by day)
-		c += w3_transmit(NORMAL, LIGHT, VIEW, LIGHT_COLOR, ATTENUATION, vec3(0.9, 1.0, 0.6) * transmit * mix(0.35, 1.0, w3_night));
+		// (light through the leaves against the sun: round 4's, a little of it by day. Seen along the
+		// orthographic camera's fixed axis whatever the camera (w3_view_ref): a perspective camera's
+		// VIEW turns toward the sun at the screen's edge and lit the same crown paler there, G5R3-27)
+		vec3 v_light = w3_cam.w > 0.0 ? w3_view_ref(VIEW_MATRIX) : VIEW;    // (orthographic: exactly as it was)
+		c += w3_transmit(NORMAL, LIGHT, v_light, LIGHT_COLOR, ATTENUATION, vec3(0.9, 1.0, 0.6) * transmit * mix(0.35, 1.0, w3_night));
 		c *= mix(v_detail_sun, v_detail, w3_night);
 		// big crowns: what reaches the shaded side anyway (sky through the gaps, bounce), so a crown
 		// seen from its shaded side keeps its masses instead of turning into a dark lid

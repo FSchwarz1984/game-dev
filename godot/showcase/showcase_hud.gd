@@ -4,6 +4,8 @@ extends Control
 ## corner, the keys along the bottom (they fade after a while; H brings them back), and the controls
 ## for the light: hold Q / E (gamepad LB / RB) to move the hour back / on, 1-4 jump to morning, noon,
 ## dusk, night, T lets the hour run on its own, R (gamepad Y) brings the rain or takes it away.
+## V and B (the sample's own keys) change the camera (G5R3-27) and the depth of field (G5R3-28);
+## both show under the hour.
 ## Walking is the sample's own (WASD / arrows; the gamepad's left stick where the sample reads it).
 ## The air follows the hour with the field recordings in audio/ (CC0 / public domain, SOURCES.json):
 ## wind by day, the night's insects after dark, birds in the morning, crows towards evening.
@@ -19,6 +21,7 @@ const RAIN := 0.85
 var sample: Node = null
 var lookout := false
 var clock: Label
+var cam_name: Label
 var keys: Label
 var tip: Label
 var _hint_t := 14.0
@@ -42,8 +45,9 @@ func _init() -> void:
 
 func _ready() -> void:
 	clock = _label(12, TEXT)
+	cam_name = _label(12, DIM)
 	keys = _label(12, DIM)
-	keys.text = "WASD 走　Q/E 时刻　1–4 晨午昏夜　T 时间流动　R 雨　H 隐藏　Esc 菜单"
+	keys.text = "WASD 走　Q/E 时刻　1–4 晨午昏夜　T 时间流动　R 雨　V 镜头　B 景深　H 隐藏　Esc 菜单"
 	tip = _label(12, DIM)
 	tip.text = "走上岩石，站定一会儿就会远眺；A/D 转头，W/S 回来" if lookout else ""
 	resized.connect(_layout)
@@ -65,6 +69,10 @@ func _label(px: int, c: Color) -> Label:
 
 func _layout() -> void:
 	clock.position = Vector2(8, 6)
+	# the camera preset under the hour (G5R3-27); not while she looks out: the far view has its own
+	# projection, and the lines take that place then
+	cam_name.position = Vector2(8, 22)
+	cam_name.visible = not _up
 	if _up:
 		# looking out: she and さぢ stand at the bottom of the picture, so the lines go under the clock
 		tip.position = Vector2(8, 22)
@@ -110,6 +118,10 @@ func _process(dt: float) -> void:
 		if up != _up:
 			_up = up
 			_layout()
+	if sample.has_method("camera_name"):
+		cam_name.text = "镜头　" + String(sample.call("camera_name"))
+		if sample.has_method("dof_name"):
+			cam_name.text += "　景深　" + String(sample.call("dof_name"))
 	_air(dt, env.hours)
 	if _hint_t > 0.0:
 		_hint_t -= dt
